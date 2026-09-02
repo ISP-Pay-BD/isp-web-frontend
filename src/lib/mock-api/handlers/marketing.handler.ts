@@ -2,6 +2,7 @@
 import { landingData, pricingPlans } from '@/data/marketing/landing.data';
 import { paygCalculator, pricingTiers, calculatePaygMonthly } from '@/data/marketing/pricing.data';
 import { landingSections, landingFaqExtended, landingTestimonialsExtended } from '@/data/marketing/sections.data';
+import { landingSectionsAData } from '@/data/marketing/landing-sections-a.data';
 import { pluginsMarketplaceFull, pluginCategories } from '@/data/marketing/plugins.data';
 
 export async function getLandingData() {
@@ -11,6 +12,8 @@ export async function getLandingData() {
     sections: landingSections,
     faqExtended: landingFaqExtended,
     testimonialsExtended: landingTestimonialsExtended,
+    /** WT01 — sections 1–14 composed payload for LandingPage */
+    sectionsA: landingSectionsAData,
   };
 }
 

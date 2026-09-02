@@ -21,22 +21,22 @@ Complete list of every screen to build. Mark status: `[ ]` todo, `[x]` done.
 
 Mirror **all** `app/Views/landing/partials/`:
 
-| Section ID | Partial file | Component name |
-|------------|--------------|----------------|
-| `#hero` | hero.php | `HeroSection` |
-| `#stats` | stats.php | `StatsBand` |
-| `#features` | features.php | `FeaturesGrid` |
-| `#benefits` | benefits.php | `BenefitsSection` |
-| `#why-choose` | why_choose.php | `WhyChooseSection` |
-| `#how-it-works` | how_it_works.php | `HowItWorks` |
-| `#product-preview` | product_preview.php | `ProductPreview` |
-| `#auto-reconcile` | auto_reconciliation.php | `AutoReconcile` |
-| `#roi` | roi.php | `RoiSection` |
-| `#pricing` | pricing.php | `PricingSection` |
-| `#comparison` | comparison.php | `ComparisonTable` |
-| `#testimonials` | testimonials.php | `Testimonials` |
-| `#faq` | faq.php | `FAQSection` |
-| `#integrations` | integrations.php | `IntegrationsOrbit` |
+| Section ID | Partial file | Component name | Status |
+|------------|--------------|----------------|--------|
+| `#hero` | hero.php | `HeroSection` | [x] |
+| `#stats` | stats.php | `StatsBand` | [x] |
+| `#features` | features.php | `FeaturesGrid` | [x] |
+| `#benefits` | benefits.php | `BenefitsSection` | [x] |
+| `#why-choose` | why_choose.php | `WhyChooseSection` | [x] |
+| `#how-it-works` | how_it_works.php | `HowItWorks` | [x] |
+| `#product-preview` | product_preview.php | `ProductPreview` | [x] |
+| `#auto-reconcile` | auto_reconciliation.php | `AutoReconcile` | [x] |
+| `#roi` | roi.php | `RoiSection` | [x] |
+| `#pricing` | pricing.php | `PricingSection` | [x] |
+| `#comparison` | comparison.php | `ComparisonTable` | [x] |
+| `#testimonials` | testimonials.php | `Testimonials` | [x] |
+| `#faq` | faq.php | `FAQSection` | [x] |
+| `#integrations` | integrations.php | `IntegrationsOrbit` | [x] |
 | `#plugins` | plugins.php | `PluginsHighlight` |
 | `#mobile-app` | mobile_app.php | `MobileAppPromo` |
 | `#reseller` | reseller_hierarchy.php | `ResellerHierarchy` |
