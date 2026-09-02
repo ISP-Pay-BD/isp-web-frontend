@@ -139,22 +139,22 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [ ] |
-| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [ ] |
-| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [ ] |
-| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [ ] |
-| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [ ] |
+| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [x] |
+| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [x] |
+| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [x] |
+| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [x] |
+| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [x] |
 
 ### D6. Accounting
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [ ] |
-| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [ ] |
-| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [ ] |
-| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [ ] |
-| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [ ] |
-| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [ ] |
+| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [x] |
+| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [x] |
+| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [x] |
+| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [x] |
+| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [x] |
+| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [x] |
 
 ### D7. POP (resellers)
 
@@ -179,20 +179,20 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [ ] |
-| D9b | `/admin/purchase/requisitions` | Requisitions | [ ] |
-| D9c | `/admin/purchase/bills` | Purchase bills | [ ] |
-| D9d | `/admin/inventory/units` | Units | [ ] |
-| D9e | `/admin/inventory/locations` | Store locations | [ ] |
-| D9f | `/admin/inventory/categories` | Categories | [ ] |
-| D9g | `/admin/inventory/items` | Items | [ ] |
-| D9h | `/admin/inventory/stock` | Stock | [ ] |
+| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [x] |
+| D9b | `/admin/purchase/requisitions` | Requisitions | — | [x] |
+| D9c | `/admin/purchase/bills` | Purchase bills | — | [x] |
+| D9d | `/admin/inventory/units` | Units | — | [x] |
+| D9e | `/admin/inventory/locations` | Store locations | — | [x] |
+| D9f | `/admin/inventory/categories` | Categories | — | [x] |
+| D9g | `/admin/inventory/items` | Items | — | [x] |
+| D9h | `/admin/inventory/stock` | Stock | — | [x] |
 
 ### D10. Reports
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [ ] |
+| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [x] |
 
 ### D11. Network ops
 
@@ -231,7 +231,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [ ] |
 | D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [ ] |
 | D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [ ] |
-| D13e | `/admin/wallet` | My Wallet | admin only | [ ] |
+| D13e | `/admin/wallet` | My Wallet | admin only | [x] |
 | D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
 | D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
 | D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |

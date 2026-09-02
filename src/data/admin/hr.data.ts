@@ -13,7 +13,7 @@ export const employees: Employee[] = Array.from({ length: 12 }, (_, i) => ({
   status: i === 11 ? 'inactive' : 'active',
 }));
 
-export const salaryPayments = employees.filter((e) => e.status === 'active').flatMap((e, i) =>
+export const salaryPayments = employees.filter((e) => e.status === 'active').flatMap((e) =>
   ['2026-08', '2026-07'].map((month, mi) => ({
     id: `sal_${e.id}_${month}`,
     employeeId: e.id,

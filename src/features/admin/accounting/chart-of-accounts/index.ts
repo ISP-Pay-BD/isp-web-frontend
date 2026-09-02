@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/accounting/chart-of-accounts
- * Public exports only — import from '@/features/admin/accounting/chart-of-accounts'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { ChartOfAccountsPage } from './pages/ChartOfAccountsPage';
+export { useChartOfAccounts } from './hooks/use-chart-of-accounts';

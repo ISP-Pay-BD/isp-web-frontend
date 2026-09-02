@@ -1,6 +1,6 @@
-﻿/**
- * @module features/admin/inventory
- * Public exports only — import from '@/features/admin/inventory'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { InventoryUnitsPage } from './pages/InventoryUnitsPage';
+export { InventoryLocationsPage } from './pages/InventoryLocationsPage';
+export { InventoryCategoriesPage } from './pages/InventoryCategoriesPage';
+export { InventoryItemsPage } from './pages/InventoryItemsPage';
+export { InventoryStockPage } from './pages/InventoryStockPage';
+export { useInventory } from './hooks/use-inventory';

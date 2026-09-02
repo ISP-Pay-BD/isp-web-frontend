@@ -8,6 +8,10 @@ import * as accounting from '@/data/admin/accounting.data';
 import * as hr from '@/data/admin/hr.data';
 import * as bandwidth from '@/data/admin/bandwidth.data';
 import * as networkOps from '@/data/admin/network-ops.data';
+import * as purchase from '@/data/admin/purchase.data';
+import * as inventory from '@/data/admin/inventory.data';
+import * as wallet from '@/data/admin/wallet.data';
+import * as reports from '@/data/admin/reports.data';
 import { supportTickets, adminSupportStats, getTicketById } from '@/data/customer/support.data';
 import { customerSubscription, customerPackages, customerRewards, routerTools, connectedDevices } from '@/data/customer/subscription.data';
 import { newsItems, getNewsById } from '@/data/customer/news.data';
@@ -53,6 +57,10 @@ export async function getAdminDomain(domain: string) {
     hr,
     bandwidth,
     network: networkOps,
+    purchase,
+    inventory,
+    wallet,
+    reports,
     support: { tickets: supportTickets, stats: adminSupportStats },
     freeRequests: freeUserRequests,
     resellerDashboard: resellerDashboardStats,

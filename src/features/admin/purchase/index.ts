@@ -1,6 +1,4 @@
-﻿/**
- * @module features/admin/purchase
- * Public exports only — import from '@/features/admin/purchase'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { VendorsPage } from './pages/VendorsPage';
+export { RequisitionsPage } from './pages/RequisitionsPage';
+export { PurchaseBillsPage } from './pages/PurchaseBillsPage';
+export { usePurchase } from './hooks/use-purchase';

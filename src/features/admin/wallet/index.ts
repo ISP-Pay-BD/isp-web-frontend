@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/wallet
- * Public exports only — import from '@/features/admin/wallet'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { WalletPage } from './pages/WalletPage';
+export { useWallet } from './hooks/use-wallet';
