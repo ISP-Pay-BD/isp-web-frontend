@@ -62,8 +62,8 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Page | Features | Mock | P | Status |
 |---|-------|------|----------|------|---|--------|
-| B1 | `/login` | Login | Email/phone, password, demo quick-pick, role redirect | `auth.login` | — | [ ] |
-| B2 | `/forgot-password` | Forgot password | Email form → toast sent | mock | — | [ ] |
+| B1 | `/login` | Login | Email/phone, password, demo quick-pick, role redirect | `auth.login` | — | [x] |
+| B2 | `/forgot-password` | Forgot password | Email form → toast sent | mock | — | [x] |
 | B3 | `/register` | (if separate from A5) | Customer registration | mock | — | [ ] |
 
 ---
@@ -232,7 +232,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [ ] |
 | D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [ ] |
 | D13e | `/admin/wallet` | My Wallet | admin only | [ ] |
-| D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
+| D13f | `/admin/user-access` | User access mgmt | admin | [x] |
 | D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
 | D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |
 | D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [ ] |
@@ -258,7 +258,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | E8 | `/platform/contacts` | Contact infos | mock | [ ] |
 | E9 | `/platform/plugins` | Plugins admin | `platform/plugins-admin` | [ ] |
 | E10 | `/platform/file-manager` | File manager | static tree UI | [ ] |
-| E11 | `/platform/user-access` | User access | same as D13f | [ ] |
+| E11 | `/platform/user-access` | User access | same as D13f | [x] |
 | E12 | `/platform/settings/software` | Software settings | mock | [ ] |
 | E13 | `/platform/support-tickets` | Admin support | shared support mock | [ ] |
 
@@ -280,7 +280,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Status |
 |---|-------|-------|--------|
-| G1 | `/403` | Forbidden | [ ] |
+| G1 | `/403` | Forbidden | [x] |
 | G2 | `/404` | Not found | [ ] |
 | G3 | `/500` | Error | [ ] |
 
