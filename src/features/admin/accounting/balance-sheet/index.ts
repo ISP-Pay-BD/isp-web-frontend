@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/accounting/balance-sheet
- * Public exports only — import from '@/features/admin/accounting/balance-sheet'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { BalanceSheetPage } from './pages/BalanceSheetPage';
+export { useBalanceSheet } from './hooks/use-balance-sheet';

@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/reports
- * Public exports only — import from '@/features/admin/reports'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { BtrcReportPage } from './pages/BtrcReportPage';
+export { useBtrcReport } from './hooks/use-btrc-report';

@@ -11,32 +11,32 @@ Complete list of every screen to build. Mark status: `[ ]` todo, `[x]` done.
 | # | Route | Page title | Sections / components | Data file | Status |
 |---|-------|------------|----------------------|-----------|--------|
 | A1 | `/` | Landing | See section list below (28 sections) | `data/marketing/landing.data.ts` | [ ] |
-| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `data/marketing/pricing.data.ts` | [x] |
-| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `data/marketing/plugins.data.ts` | [x] |
-| A4 | `/contact` | Contact | Form, office info, map placeholder | `data/marketing/landing.data.ts` | [x] |
-| A5 | `/register` | Start free trial | Multi-step tenant signup form | `data/marketing/` inline | [x] |
-| A6 | `/register/referral` | Referral signup | Referral code field, lead form | `data/marketing/` inline | [x] |
+| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `data/marketing/pricing.data.ts` | [ ] |
+| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `data/marketing/plugins.data.ts` | [ ] |
+| A4 | `/contact` | Contact | Form, office info, map placeholder | `data/marketing/landing.data.ts` | [ ] |
+| A5 | `/register` | Start free trial | Multi-step tenant signup form | `data/marketing/` inline | [ ] |
+| A6 | `/register/referral` | Referral signup | Referral code field, lead form | `data/marketing/` inline | [ ] |
 
 ### A1 Landing sections (28 total — single page, anchor nav)
 
 Mirror **all** `app/Views/landing/partials/`:
 
-| Section ID | Partial file | Component name | Status |
-|------------|--------------|----------------|--------|
-| `#hero` | hero.php | `HeroSection` | [x] |
-| `#stats` | stats.php | `StatsBand` | [x] |
-| `#features` | features.php | `FeaturesGrid` | [x] |
-| `#benefits` | benefits.php | `BenefitsSection` | [x] |
-| `#why-choose` | why_choose.php | `WhyChooseSection` | [x] |
-| `#how-it-works` | how_it_works.php | `HowItWorks` | [x] |
-| `#product-preview` | product_preview.php | `ProductPreview` | [x] |
-| `#auto-reconcile` | auto_reconciliation.php | `AutoReconcile` | [x] |
-| `#roi` | roi.php | `RoiSection` | [x] |
-| `#pricing` | pricing.php | `PricingSection` | [x] |
-| `#comparison` | comparison.php | `ComparisonTable` | [x] |
-| `#testimonials` | testimonials.php | `Testimonials` | [x] |
-| `#faq` | faq.php | `FAQSection` | [x] |
-| `#integrations` | integrations.php | `IntegrationsOrbit` | [x] |
+| Section ID | Partial file | Component name |
+|------------|--------------|----------------|
+| `#hero` | hero.php | `HeroSection` |
+| `#stats` | stats.php | `StatsBand` |
+| `#features` | features.php | `FeaturesGrid` |
+| `#benefits` | benefits.php | `BenefitsSection` |
+| `#why-choose` | why_choose.php | `WhyChooseSection` |
+| `#how-it-works` | how_it_works.php | `HowItWorks` |
+| `#product-preview` | product_preview.php | `ProductPreview` |
+| `#auto-reconcile` | auto_reconciliation.php | `AutoReconcile` |
+| `#roi` | roi.php | `RoiSection` |
+| `#pricing` | pricing.php | `PricingSection` |
+| `#comparison` | comparison.php | `ComparisonTable` |
+| `#testimonials` | testimonials.php | `Testimonials` |
+| `#faq` | faq.php | `FAQSection` |
+| `#integrations` | integrations.php | `IntegrationsOrbit` |
 | `#plugins` | plugins.php | `PluginsHighlight` |
 | `#mobile-app` | mobile_app.php | `MobileAppPromo` |
 | `#reseller` | reseller_hierarchy.php | `ResellerHierarchy` |
@@ -62,8 +62,8 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Page | Features | Mock | P | Status |
 |---|-------|------|----------|------|---|--------|
-| B1 | `/login` | Login | Email/phone, password, demo quick-pick, role redirect | `auth.login` | — | [x] |
-| B2 | `/forgot-password` | Forgot password | Email form → toast sent | mock | — | [x] |
+| B1 | `/login` | Login | Email/phone, password, demo quick-pick, role redirect | `auth.login` | — | [ ] |
+| B2 | `/forgot-password` | Forgot password | Email form → toast sent | mock | — | [ ] |
 | B3 | `/register` | (if separate from A5) | Customer registration | mock | — | [ ] |
 
 ---
@@ -74,21 +74,21 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Key UI | Mock handler | P | Status |
 |---|-------|-------|--------|--------------|---|--------|
-| C1 | `/customer/dashboard` | Dashboard | Expiry banner, package card, quick actions, usage chart | `customer.dashboard` | — | [x] |
-| C2 | `/customer/subscription` | My Subscription | Current plan, renew button, quota, history | `customer.subscription` | subscription:read | [x] |
-| C3 | `/customer/packages` | Packages | Available packages grid, upgrade CTA | `customer.packages` | — | [x] |
-| C4 | `/customer/payments` | Payment History | Table, filters, invoice download btn | `customer.payments` | payment:read | [x] |
-| C5 | `/customer/payments/pay` | Pay Now | Amount, gateway select (bKash/Nagad), confirm modal | `customer.payments.pay` | payment:payment | [x] |
-| C6 | `/customer/support` | Support | Ticket list, status badges | `customer.support` | support_ticket:read | [x] |
-| C7 | `/customer/support/[id]` | Ticket detail | Message thread, reply form | `customer.support` | support_ticket:send_msg | [x] |
-| C8 | `/customer/support/new` | New ticket | Subject, body, submit | `customer.support` | support_ticket:create | [x] |
-| C9 | `/customer/rewards` | Referrals & Rewards | Points wallet, referral link, redeem | `customer.rewards` | — | [x] |
-| C10 | `/customer/news` | News & Notices | Card list, read modal | `customer.news` | — | [x] |
-| C11 | `/customer/router` | Router Tools | Quick fix buttons grid | `customer.router` | — | [x] |
-| C12 | `/customer/router/wifi` | Change WiFi | SSID + password form | `customer.router` | — | [x] |
-| C13 | `/customer/router/devices` | Connected Devices | Device list table | `customer.router` | — | [x] |
-| C14 | `/customer/profile` | My Profile | Edit name, phone, email | `customer.profile` | profile_update | [x] |
-| C15 | `/customer/change-password` | Change Password | Old/new/confirm | mock | password_change | [x] |
+| C1 | `/customer/dashboard` | Dashboard | Expiry banner, package card, quick actions, usage chart | `customer.dashboard` | — | [ ] |
+| C2 | `/customer/subscription` | My Subscription | Current plan, renew button, quota, history | `customer.subscription` | subscription:read | [ ] |
+| C3 | `/customer/packages` | Packages | Available packages grid, upgrade CTA | `customer.packages` | — | [ ] |
+| C4 | `/customer/payments` | Payment History | Table, filters, invoice download btn | `customer.payments` | payment:read | [ ] |
+| C5 | `/customer/payments/pay` | Pay Now | Amount, gateway select (bKash/Nagad), confirm modal | `customer.payments.pay` | payment:payment | [ ] |
+| C6 | `/customer/support` | Support | Ticket list, status badges | `customer.support` | support_ticket:read | [ ] |
+| C7 | `/customer/support/[id]` | Ticket detail | Message thread, reply form | `customer.support` | support_ticket:send_msg | [ ] |
+| C8 | `/customer/support/new` | New ticket | Subject, body, submit | `customer.support` | support_ticket:create | [ ] |
+| C9 | `/customer/rewards` | Referrals & Rewards | Points wallet, referral link, redeem | `customer.rewards` | — | [ ] |
+| C10 | `/customer/news` | News & Notices | Card list, read modal | `customer.news` | — | [ ] |
+| C11 | `/customer/router` | Router Tools | Quick fix buttons grid | `customer.router` | — | [ ] |
+| C12 | `/customer/router/wifi` | Change WiFi | SSID + password form | `customer.router` | — | [ ] |
+| C13 | `/customer/router/devices` | Connected Devices | Device list table | `customer.router` | — | [ ] |
+| C14 | `/customer/profile` | My Profile | Edit name, phone, email | `customer.profile` | profile_update | [ ] |
+| C15 | `/customer/change-password` | Change Password | Old/new/confirm | mock | password_change | [ ] |
 
 ### Customer mobile UX
 
@@ -106,63 +106,63 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Key UI | Mock | P | R | Status |
 |---|-------|-------|--------|------|---|---|--------|
-| D1 | `/admin/dashboard` | Dashboard | KPI cards, charts, recent activity | `admin.dashboard` | — | admin,reseller | [x] |
+| D1 | `/admin/dashboard` | Dashboard | KPI cards, charts, recent activity | `admin.dashboard` | — | admin,reseller | [ ] |
 
 ### D2. Customers
 
 | # | Route | Title | Key UI | Mock | P | Status |
 |---|-------|-------|--------|------|---|--------|
-| D2a | `/admin/customers` | All Customers | DataTable, search, filters, bulk actions | `admin.customers` | customer:read | [x] |
-| D2b | `/admin/customers/expired` | Expired | Filtered table | same | customer:read | [x] |
-| D2c | `/admin/customers/free-requests` | Free User Requests | Approval table | mock | free_customer_create | [x] |
-| D2d | `/admin/customers/new` | Add Customer | Multi-field form | mock | customer:create | [x] |
-| D2e | `/admin/customers/import` | Import Excel | Upload UI, preview table | mock | customer:create | [x] |
-| D2f | `/admin/customers/[id]` | Customer detail | Tabs: info, subscription, payments, logs | mock | customer:read | [x] |
-| D2g | `/admin/customers/[id]/edit` | Edit customer | Form | mock | customer:update | [x] |
+| D2a | `/admin/customers` | All Customers | DataTable, search, filters, bulk actions | `admin.customers` | customer:read | [ ] |
+| D2b | `/admin/customers/expired` | Expired | Filtered table | same | customer:read | [ ] |
+| D2c | `/admin/customers/free-requests` | Free User Requests | Approval table | mock | free_customer_create | [ ] |
+| D2d | `/admin/customers/new` | Add Customer | Multi-field form | mock | customer:create | [ ] |
+| D2e | `/admin/customers/import` | Import Excel | Upload UI, preview table | mock | customer:create | [ ] |
+| D2f | `/admin/customers/[id]` | Customer detail | Tabs: info, subscription, payments, logs | mock | customer:read | [ ] |
+| D2g | `/admin/customers/[id]/edit` | Edit customer | Form | mock | customer:update | [ ] |
 
 ### D3. Customer payments
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D3a | `/admin/customer-payments` | Payments list | `admin.customer-payments` | customer_payment:read | [x] |
-| D3b | `/admin/customer-payments/new` | Record payment | mock | customer_payment:create | [x] |
+| D3a | `/admin/customer-payments` | Payments list | `admin.customer-payments` | customer_payment:read | [ ] |
+| D3b | `/admin/customer-payments/new` | Record payment | mock | customer_payment:create | [ ] |
 
 ### D4. Areas & packages
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D4a | `/admin/areas` | Service Areas | Tree: areas + subareas | `admin.areas` | area:read | [x] |
-| D4b | `/admin/packages` | Packages | CRUD table | `admin.packages` | packages:read | [x] |
-| D4c | `/admin/pop-packages` | POP Packages | Reseller packages | mock | packages:read | [x] |
+| D4a | `/admin/areas` | Service Areas | Tree: areas + subareas | `admin.areas` | area:read | [ ] |
+| D4b | `/admin/packages` | Packages | CRUD table | `admin.packages` | packages:read | [ ] |
+| D4c | `/admin/pop-packages` | POP Packages | Reseller packages | mock | packages:read | [ ] |
 
 ### D5. HR
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [ ] |
-| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [ ] |
-| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [ ] |
-| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [ ] |
-| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [ ] |
+| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [x] |
+| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [x] |
+| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [x] |
+| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [x] |
+| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [x] |
 
 ### D6. Accounting
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [ ] |
-| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [ ] |
-| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [ ] |
-| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [ ] |
-| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [ ] |
-| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [ ] |
+| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [x] |
+| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [x] |
+| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [x] |
+| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [x] |
+| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [x] |
+| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [x] |
 
 ### D7. POP (resellers)
 
 | # | Route | Title | Mock | P | R | Status |
 |---|-------|-------|------|---|---|--------|
-| D7a | `/admin/pop/resellers` | POP list | `admin.pop` | Resellers:read | admin | [x] |
-| D7b | `/admin/pop/funding` | POP Funding | mock | customer_payment:read | admin,reseller | [x] |
-| D7c | `/admin/pop/transactions` | POP Transactions | mock | customer_payment:read | admin,reseller | [x] |
+| D7a | `/admin/pop/resellers` | POP list | `admin.pop` | Resellers:read | admin | [ ] |
+| D7b | `/admin/pop/funding` | POP Funding | mock | customer_payment:read | admin,reseller | [ ] |
+| D7c | `/admin/pop/transactions` | POP Transactions | mock | customer_payment:read | admin,reseller | [ ] |
 
 ### D8. Bandwidth (admin only)
 
@@ -179,20 +179,20 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [ ] |
-| D9b | `/admin/purchase/requisitions` | Requisitions | [ ] |
-| D9c | `/admin/purchase/bills` | Purchase bills | [ ] |
-| D9d | `/admin/inventory/units` | Units | [ ] |
-| D9e | `/admin/inventory/locations` | Store locations | [ ] |
-| D9f | `/admin/inventory/categories` | Categories | [ ] |
-| D9g | `/admin/inventory/items` | Items | [ ] |
-| D9h | `/admin/inventory/stock` | Stock | [ ] |
+| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [x] |
+| D9b | `/admin/purchase/requisitions` | Requisitions | — | [x] |
+| D9c | `/admin/purchase/bills` | Purchase bills | — | [x] |
+| D9d | `/admin/inventory/units` | Units | — | [x] |
+| D9e | `/admin/inventory/locations` | Store locations | — | [x] |
+| D9f | `/admin/inventory/categories` | Categories | — | [x] |
+| D9g | `/admin/inventory/items` | Items | — | [x] |
+| D9h | `/admin/inventory/stock` | Stock | — | [x] |
 
 ### D10. Reports
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [ ] |
+| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [x] |
 
 ### D11. Network ops
 
@@ -231,12 +231,12 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [ ] |
 | D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [ ] |
 | D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [ ] |
-| D13e | `/admin/wallet` | My Wallet | admin only | [ ] |
-| D13f | `/admin/user-access` | User access mgmt | admin | [x] |
+| D13e | `/admin/wallet` | My Wallet | admin only | [x] |
+| D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
 | D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
 | D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |
-| D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [x] |
-| D13j | `/admin/payment` | My payment | payment:read | [x] |
+| D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [ ] |
+| D13j | `/admin/payment` | My payment | payment:read | [ ] |
 | D13k | `/admin/profile` | Profile | profile_update | [ ] |
 | D13l | `/admin/change-password` | Change password | password_change | [ ] |
 
@@ -258,7 +258,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | E8 | `/platform/contacts` | Contact infos | mock | [ ] |
 | E9 | `/platform/plugins` | Plugins admin | `platform/plugins-admin` | [ ] |
 | E10 | `/platform/file-manager` | File manager | static tree UI | [ ] |
-| E11 | `/platform/user-access` | User access | same as D13f | [x] |
+| E11 | `/platform/user-access` | User access | same as D13f | [ ] |
 | E12 | `/platform/settings/software` | Software settings | mock | [ ] |
 | E13 | `/platform/support-tickets` | Admin support | shared support mock | [ ] |
 
@@ -280,7 +280,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Status |
 |---|-------|-------|--------|
-| G1 | `/403` | Forbidden | [x] |
+| G1 | `/403` | Forbidden | [ ] |
 | G2 | `/404` | Not found | [ ] |
 | G3 | `/500` | Error | [ ] |
 

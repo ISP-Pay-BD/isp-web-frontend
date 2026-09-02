@@ -7,6 +7,28 @@ export * from './employees.data';
 export * from './hr.data';
 export * from './accounting.data';
 export * from './bandwidth.data';
-export * from './network-ops.data';
-export * from './subscription.data';
-export * from './tenant-billing.data';
+export * from './purchase.data';
+export * from './inventory.data';
+export * from './wallet.data';
+export * from './reports.data';
+export {
+  routers,
+  ipPools,
+  oltDevices,
+  hotspotProfiles,
+  smsMessages,
+  smsTemplates,
+  voiceSmsCampaigns,
+  whatsappThreads,
+  whatsappTemplates,
+  walletData,
+  popResellers,
+  popTransactions,
+  purchaseOrders,
+  recycleBinItems,
+  btrcReportRows,
+  networkMapNodes,
+  rewardsProgram,
+  softwareSettings,
+  userAccessRoles,
+} from './network-ops.data';

@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/accounting/reports
- * Public exports only — import from '@/features/admin/accounting/reports'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { AccountingReportsPage } from './pages/AccountingReportsPage';
+export { useAccountingReports } from './hooks/use-accounting-reports';
