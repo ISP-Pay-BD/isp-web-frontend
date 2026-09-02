@@ -36,8 +36,9 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 7. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
 8. **`REFERENCE-MAP.md`** ← old ISP website PHP paths (before any UI)
 9. **`FONTS.md`** ← typography (5 fonts, folders, usage)
-10. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
-11. **`12-AI-CODING-RULES.md`** ← coding rules
+10. **`PROJECT-STRUCTURE-MAP.md`** ← helpers, config, colors, formatters, i18n
+11. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
+12. **`12-AI-CODING-RULES.md`** ← coding rules
 
 ---
 
@@ -51,6 +52,7 @@ Data       →  src/data/ via mock-api only
 Fonts      →  Satoshi (portals) + Plus Jakarta/Inter (marketing) — see docs/FONTS.md
 Reference  →  Old ISP website: ../isppaybd_isp — see docs/REFERENCE-MAP.md
 UI libs      →  USE/DO NOT USE: docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
+Structure   →  Helpers/config/tokens: docs/PROJECT-STRUCTURE-MAP.md
 ```
 
 ---

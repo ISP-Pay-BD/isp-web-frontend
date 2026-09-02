@@ -16,7 +16,7 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 | **Quality & rules** | `QUALITY-STANDARDS.md`, `DEFINITION-OF-DONE.md`, `13-STRICT-AGENT-MANDATE.md`, `12-AI-CODING-RULES.md` | ✅ |
 | **Design** | `UI-FUSION-GUIDE.md`, `04-DESIGN-SYSTEM.md`, **`FONTS.md`** | ✅ |
 | **Reference (old ISP website)** | **`REFERENCE-MAP.md`**, **`UI-REFERENCES-LIBS.md`** | ✅ |
-| **Default AI skill** | **`.cursor/skills/isp-pay-bd/`** | ✅ |
+| **Parallel 10 worktrees** | **`PARALLEL-WORKTREE-PLAN.md`** + `.worktrees/*/AGENT-TASK.md` | ✅ |
 | **Architecture** | `01-ARCHITECTURE.md`, `02-FOLDER-STRUCTURE.md`, `FOLDER-STRUCTURE-COMPLETE.md`, `03-TECH-STACK.md` | ✅ |
 | **Data & permissions** | `06-MOCK-DATA-SPEC.md`, `05-PERMISSIONS-AND-ROLES.md` | ✅ |
 | **UX** | `09-COMPONENTS-AND-PATTERNS.md`, `10-RESPONSIVE-AND-MOBILE.md`, `11-I18N.md` | ✅ |

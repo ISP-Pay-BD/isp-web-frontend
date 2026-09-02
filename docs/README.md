@@ -27,7 +27,8 @@
 | [**DEFINITION-OF-DONE.md**](./DEFINITION-OF-DONE.md) | **Per-screen checklist** | **Before marking done** |
 | [**UI-FUSION-GUIDE.md**](./UI-FUSION-GUIDE.md) | ISP + shadcn + 21st.dev | Before any UI work |
 | [**P0-READY.md**](./P0-READY.md) | **P0 complete — start Phase 1** | **Before landing code** |
-| [**PLAN-STATUS.md**](./PLAN-STATUS.md) | **Plan docs index + phase status** | **Is the MD plan complete?** |
+| [**PROJECT-STRUCTURE-MAP.md**](./PROJECT-STRUCTURE-MAP.md) | **Helpers, config, tokens map** | **Where is X?** |
+| [**PARALLEL-WORKTREE-PLAN.md**](./PARALLEL-WORKTREE-PLAN.md) | **10 worktrees + agent tasks** | **Parallel agents** |
 | [**UI-REFERENCES-LIBS.md**](./UI-REFERENCES-LIBS.md) | **USE / DO NOT USE libs & UI sites** | **Before any UI work** |
 | [**REFERENCE-MAP.md**](./REFERENCE-MAP.md) | **Old ISP website paths for AI** | **Where to find PHP reference code** |
 | [**FONTS.md**](./FONTS.md) | **Font setup & agent rules** | **Typography / self-hosting** |

@@ -132,6 +132,19 @@ Details: `docs/FONTS.md` · Sync: `pnpm fonts:sync`
 
 ---
 
+## Formatters & constants
+
+| Need | Import |
+|------|--------|
+| ৳ / date / BD phone / MAC | `@/lib/format` |
+| Status enums, page size | `@/lib/constants` |
+| Tenant colors / brand | `@/config/theme` |
+| EN/BN strings | `@/i18n` (`messages/en.json`, `bn.json`) |
+
+Map: `docs/PROJECT-STRUCTURE-MAP.md`
+
+---
+
 ## Phase gate
 
 | Phase | Status | Trigger |

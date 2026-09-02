@@ -5,7 +5,8 @@
 
 Companion docs: `QUALITY-STANDARDS.md`, `DEFINITION-OF-DONE.md`, `UI-FUSION-GUIDE.md`, `FONTS.md`, `PRE-PHASE-AUDIT.md`, `P0-READY.md`
 
-**Plan docs status:** ✅ Specification complete (P0–Phase 8 written). **Execution:** Phase 1 next.
+**Plan docs status:** ✅ Specification complete (P0–Phase 8 written). **Execution:** Phase 1 next.  
+**Parallel agents:** 10 worktrees — see `PARALLEL-WORKTREE-PLAN.md` + each `.worktrees/*/AGENT-TASK.md`.
 
 ---
 

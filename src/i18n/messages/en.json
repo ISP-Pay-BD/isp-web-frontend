@@ -1,0 +1,105 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "actions": "Actions",
+    "status": "Status",
+    "noResults": "No results found",
+    "confirm": "Confirm",
+    "close": "Close",
+    "viewAll": "View all",
+    "currency": "BDT"
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "demoAccounts": "Demo accounts"
+  },
+  "marketing": {
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "plugins": "Plugins",
+      "contact": "Contact",
+      "login": "Login",
+      "startTrial": "Start free trial"
+    },
+    "hero": {
+      "title": "Run your whole ISP from one operator console",
+      "subtitle": "Billing, MikroTik, payments, and support — built for Bangladesh ISPs."
+    },
+    "cta": {
+      "primary": "Start free trial",
+      "secondary": "See pricing"
+    }
+  },
+  "customer": {
+    "dashboard": {
+      "title": "Dashboard",
+      "expiryBanner": "Your subscription expires on {date}",
+      "renew": "Renew now"
+    },
+    "subscription": {
+      "title": "My Subscription",
+      "currentPlan": "Current plan"
+    },
+    "payments": {
+      "title": "Payment History",
+      "payBill": "Pay bill"
+    },
+    "support": {
+      "title": "Support",
+      "newTicket": "New ticket"
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Dashboard"
+    },
+    "customers": {
+      "title": "Customers",
+      "addCustomer": "Add customer",
+      "expired": "Expired customers"
+    },
+    "packages": {
+      "title": "Packages"
+    },
+    "payments": {
+      "title": "Customer payments"
+    }
+  },
+  "platform": {
+    "tenants": {
+      "title": "Tenants",
+      "addTenant": "Add tenant"
+    },
+    "revenue": {
+      "title": "Platform revenue"
+    }
+  },
+  "status": {
+    "active": "Active",
+    "expired": "Expired",
+    "expiring": "Expiring soon",
+    "suspended": "Suspended",
+    "pending": "Pending",
+    "paid": "Paid",
+    "online": "Online",
+    "offline": "Offline",
+    "open": "Open",
+    "closed": "Closed"
+  }
+}

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { formatBdt, CURRENCY_SYMBOL } from '@/lib/format';
 
 interface CurrencyDisplayProps {
   amount: number;
@@ -6,17 +7,12 @@ interface CurrencyDisplayProps {
   showSymbol?: boolean;
 }
 
-export function formatBdt(amount: number): string {
-  return new Intl.NumberFormat('en-BD', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+export { formatBdt } from '@/lib/format';
 
 export function CurrencyDisplay({ amount, className, showSymbol = true }: CurrencyDisplayProps) {
   return (
     <span className={cn('font-mono tabular-nums', className)}>
-      {showSymbol ? '৳' : ''}
+      {showSymbol ? CURRENCY_SYMBOL : ''}
       {formatBdt(amount)}
     </span>
   );

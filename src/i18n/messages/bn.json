@@ -1,0 +1,105 @@
+{
+  "common": {
+    "save": "সংরক্ষণ",
+    "cancel": "বাতিল",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা",
+    "create": "তৈরি করুন",
+    "search": "খুঁজুন",
+    "filter": "ফিল্টার",
+    "loading": "লোড হচ্ছে...",
+    "retry": "আবার চেষ্টা",
+    "back": "পিছনে",
+    "next": "পরবর্তী",
+    "previous": "পূর্ববর্তী",
+    "actions": "অ্যাকশন",
+    "status": "স্ট্যাটাস",
+    "noResults": "কোনো ফলাফল নেই",
+    "confirm": "নিশ্চিত করুন",
+    "close": "বন্ধ",
+    "viewAll": "সব দেখুন",
+    "currency": "টাকা"
+  },
+  "auth": {
+    "login": "লগইন",
+    "logout": "লগআউট",
+    "email": "ইমেইল",
+    "password": "পাসওয়ার্ড",
+    "forgotPassword": "পাসওয়ার্ড ভুলে গেছেন?",
+    "demoAccounts": "ডেমো অ্যাকাউন্ট"
+  },
+  "marketing": {
+    "nav": {
+      "features": "ফিচার",
+      "pricing": "মূল্য",
+      "plugins": "প্লাগইন",
+      "contact": "যোগাযোগ",
+      "login": "লগইন",
+      "startTrial": "ফ্রি ট্রায়াল শুরু"
+    },
+    "hero": {
+      "title": "পুরো ISP চালান একটি অপারেটর কনসোল থেকে",
+      "subtitle": "বিলিং, MikroTik, পেমেন্ট ও সাপোর্ট — বাংলাদেশের ISP-এর জন্য।"
+    },
+    "cta": {
+      "primary": "ফ্রি ট্রায়াল শুরু",
+      "secondary": "মূল্য দেখুন"
+    }
+  },
+  "customer": {
+    "dashboard": {
+      "title": "ড্যাশবোর্ড",
+      "expiryBanner": "আপনার সাবস্ক্রিপশন শেষ হবে {date}",
+      "renew": "এখনই রিনিউ"
+    },
+    "subscription": {
+      "title": "আমার সাবস্ক্রিপশন",
+      "currentPlan": "বর্তমান প্ল্যান"
+    },
+    "payments": {
+      "title": "পেমেন্ট হিস্টোরি",
+      "payBill": "বিল পরিশোধ"
+    },
+    "support": {
+      "title": "সাপোর্ট",
+      "newTicket": "নতুন টিকেট"
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "ড্যাশবোর্ড"
+    },
+    "customers": {
+      "title": "কাস্টমার",
+      "addCustomer": "কাস্টমার যোগ",
+      "expired": "মেয়াদোত্তীর্ণ কাস্টমার"
+    },
+    "packages": {
+      "title": "প্যাকেজ"
+    },
+    "payments": {
+      "title": "কাস্টমার পেমেন্ট"
+    }
+  },
+  "platform": {
+    "tenants": {
+      "title": "টেন্যান্ট",
+      "addTenant": "টেন্যান্ট যোগ"
+    },
+    "revenue": {
+      "title": "প্ল্যাটফর্ম রেভিনিউ"
+    }
+  },
+  "status": {
+    "active": "সক্রিয়",
+    "expired": "মেয়াদোত্তীর্ণ",
+    "expiring": "শীঘ্রই শেষ",
+    "suspended": "সাসপেন্ডেড",
+    "pending": "পেন্ডিং",
+    "paid": "পরিশোধিত",
+    "online": "অনলাইন",
+    "offline": "অফলাইন",
+    "open": "খোলা",
+    "closed": "বন্ধ"
+  }
+}
