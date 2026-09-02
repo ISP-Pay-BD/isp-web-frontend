@@ -1,6 +1,1 @@
-﻿/**
- * @module features/customer/news
- * Public exports only — import from '@/features/customer/news'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { CustomerNewsPage } from './pages/CustomerNewsPage';

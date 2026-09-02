@@ -1,6 +1,3 @@
-﻿/**
- * @module features/customer/support
- * Public exports only — import from '@/features/customer/support'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { CustomerSupportPage } from './pages/CustomerSupportPage';
+export { CustomerTicketDetailPage } from './pages/CustomerTicketDetailPage';
+export { CustomerNewTicketPage } from './pages/CustomerNewTicketPage';

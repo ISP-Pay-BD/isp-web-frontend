@@ -1,6 +1,6 @@
 import type { SupportTicket } from '../shared/types';
 import { customers } from '../admin/customers.data';
-import { pick, BD_FIRST_NAMES, BD_LAST_NAMES } from '../shared/generators';
+import { pick, BD_FIRST_NAMES } from '../shared/generators';
 
 const subjects = [
   'Internet slow after 8 PM',

@@ -1,16 +1,14 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { AuthGuard, ExpiredBanner } from '@/features/shared/permission';
+import { CustomerBottomNav } from '@/features/customer/shared';
 
 export default function CustomerPortalLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthGuard allowedRoles={['user']}>
+    <div className="relative min-h-screen flex flex-col">
       <AppShell portal="customer">
-        <ExpiredBanner />
         {children}
       </AppShell>
-    </AuthGuard>
+      <CustomerBottomNav />
+    </div>
   );
 }

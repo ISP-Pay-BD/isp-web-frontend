@@ -1,6 +1,8 @@
-﻿/**
- * @module features/customer/shared
- * Public exports only — import from '@/features/customer/shared'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { CustomerBottomNav } from './components/CustomerBottomNav';
+export { CustomerPageShell } from './components/CustomerPageShell';
+export {
+  CustomerLoadingSkeleton,
+  CustomerEmptyState,
+  CustomerErrorState,
+} from './components/CustomerStates';
+export * from './schemas/customer-forms.schema';

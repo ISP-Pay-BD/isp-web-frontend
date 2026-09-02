@@ -16,7 +16,6 @@ import {
   getCustomer,
   listExpiredCustomers,
   getAdminDashboard,
-  getCustomerDashboard,
   getAdminDomain,
   getCustomerDomain,
   getPlatformDomain,
@@ -24,6 +23,34 @@ import {
   getSupportTicket,
   getNewsItem,
 } from './handlers/data.handler';
+import {
+  getCustomerDashboard,
+  getCustomerSubscription,
+  renewSubscription,
+  getCustomerPackages,
+  getCustomerPayments,
+  payCustomerInvoice,
+  getCustomerSupportTickets,
+  getCustomerTicket,
+  createCustomerTicket,
+  replyCustomerTicket,
+  getCustomerRewards,
+  redeemCustomerRewards,
+  getCustomerNews,
+  getCustomerNewsDetails,
+  getCustomerRouterInfo,
+  runRouterQuickFix,
+  updateCustomerWifi,
+  getCustomerProfile,
+  updateCustomerProfile,
+  changeCustomerPassword,
+  type PayInvoicePayload,
+  type CreateTicketPayload,
+  type TicketReplyPayload,
+  type UpdateWifiPayload,
+  type UpdateProfilePayload,
+  type ChangePasswordPayload,
+} from './handlers/customer.handler';
 import { mockDelay } from './delay';
 
 type HandlerMap = {
@@ -45,6 +72,25 @@ type HandlerMap = {
   'admin.dashboard': () => ReturnType<typeof getAdminDashboard>;
   'admin.domain': (domain: string) => ReturnType<typeof getAdminDomain>;
   'customer.dashboard': () => ReturnType<typeof getCustomerDashboard>;
+  'customer.subscription': () => ReturnType<typeof getCustomerSubscription>;
+  'customer.subscription.renew': (packageId?: string) => ReturnType<typeof renewSubscription>;
+  'customer.packages': () => ReturnType<typeof getCustomerPackages>;
+  'customer.payments': () => ReturnType<typeof getCustomerPayments>;
+  'customer.payments.pay': (payload: PayInvoicePayload) => ReturnType<typeof payCustomerInvoice>;
+  'customer.support.list': () => ReturnType<typeof getCustomerSupportTickets>;
+  'customer.support.get': (id: string) => ReturnType<typeof getCustomerTicket>;
+  'customer.support.create': (payload: CreateTicketPayload) => ReturnType<typeof createCustomerTicket>;
+  'customer.support.reply': (payload: TicketReplyPayload) => ReturnType<typeof replyCustomerTicket>;
+  'customer.rewards': () => ReturnType<typeof getCustomerRewards>;
+  'customer.rewards.redeem': (points: number) => ReturnType<typeof redeemCustomerRewards>;
+  'customer.news.list': () => ReturnType<typeof getCustomerNews>;
+  'customer.news.get': (id: string) => ReturnType<typeof getCustomerNewsDetails>;
+  'customer.router.tools': () => ReturnType<typeof getCustomerRouterInfo>;
+  'customer.router.quickFix': (actionId: string) => ReturnType<typeof runRouterQuickFix>;
+  'customer.router.updateWifi': (payload: UpdateWifiPayload) => ReturnType<typeof updateCustomerWifi>;
+  'customer.profile.get': () => ReturnType<typeof getCustomerProfile>;
+  'customer.profile.update': (payload: UpdateProfilePayload) => ReturnType<typeof updateCustomerProfile>;
+  'customer.password.change': (payload: ChangePasswordPayload) => ReturnType<typeof changeCustomerPassword>;
   'customer.domain': (domain: string) => ReturnType<typeof getCustomerDomain>;
   'platform.domain': (domain: string) => ReturnType<typeof getPlatformDomain>;
   'employee.domain': () => ReturnType<typeof getEmployeeDomain>;
@@ -74,6 +120,25 @@ const handlers: HandlerMap = {
   'admin.dashboard': getAdminDashboard,
   'admin.domain': getAdminDomain,
   'customer.dashboard': getCustomerDashboard,
+  'customer.subscription': getCustomerSubscription,
+  'customer.subscription.renew': renewSubscription,
+  'customer.packages': getCustomerPackages,
+  'customer.payments': getCustomerPayments,
+  'customer.payments.pay': payCustomerInvoice,
+  'customer.support.list': getCustomerSupportTickets,
+  'customer.support.get': getCustomerTicket,
+  'customer.support.create': createCustomerTicket,
+  'customer.support.reply': replyCustomerTicket,
+  'customer.rewards': getCustomerRewards,
+  'customer.rewards.redeem': redeemCustomerRewards,
+  'customer.news.list': getCustomerNews,
+  'customer.news.get': getCustomerNewsDetails,
+  'customer.router.tools': getCustomerRouterInfo,
+  'customer.router.quickFix': runRouterQuickFix,
+  'customer.router.updateWifi': updateCustomerWifi,
+  'customer.profile.get': getCustomerProfile,
+  'customer.profile.update': updateCustomerProfile,
+  'customer.password.change': changeCustomerPassword,
   'customer.domain': getCustomerDomain,
   'platform.domain': getPlatformDomain,
   'employee.domain': getEmployeeDomain,

@@ -1,48 +1,45 @@
-# AGENT TASK — WT03 Auth + Permissions
+# AGENT TASK — WT04 Customer Portal
 
-**Worktree:** `.worktrees/wt03-auth-permissions`  
-**Branch:** `wt/03-auth-permissions`  
-**Agent ID:** 03 of 10
+**Worktree:** `.worktrees/wt04-customer-portal`  
+**Branch:** `wt/04-customer-portal`  
+**Agent ID:** 04 of 10
 
 ---
 
 ## Mission
 
-Complete **Phase 2**: login, forgot password, route guards, 403 page, user-access UI, demo role switcher polish.
+Build **full customer portal** (~15 screens) + `CustomerBottomNav`.
 
 ## Owned paths
 
 | Path | Action |
 |------|--------|
-| `src/features/auth/login/` | Login page + demo user quick-pick |
-| `src/features/auth/forgot-password/` | Forgot password toast flow |
-| `src/features/shared/permission/` | Route guard hooks |
-| `src/features/admin/user-access/` | Permission matrix UI (static) |
-| `src/app/(auth)/` or login routes | `/login`, `/forgot-password` |
-| `src/app/(portal)/403/` | Forbidden page |
-| `src/middleware.ts` | Permission-aware guards (careful) |
-| `src/hooks/use-filtered-nav.ts` | Enhance only if needed |
-| `src/data/users/` | Demo users / permissions if needed |
+| `src/features/customer/**` | All customer modules |
+| `src/app/(portal)/customer/**` | All customer routes |
+| `src/data/customer/` | Customer mock data |
+| `src/lib/mock-api/handlers/` | Customer domain keys |
+| `src/config/navigation/customer.ts` | Only if needed |
 
-## Deliverables
+## Modules
 
-- [x] Login → redirect by role (6 demo users)
-- [x] Logout → `/login`
-- [x] Forgot password → toast
-- [x] Unauthorized URL → 403
-- [x] User Access Management static UI
-- [x] Expired-user nav rules documented/wired
+dashboard · subscription · packages · payments · support · rewards · news · router tools · profile · change-password · shared (bottom nav)
 
 ## Reference
 
-- `isppaybd_isp/app/Views/auth/`
-- `isppaybd_isp/app/Views/access/`
-- `docs/05-PERMISSIONS-AND-ROLES.md`
+- `docs/REFERENCE-MAP.md` → customer views
+- `isppaybd_isp/app/Views/dashboard/user.php`, `customers/`, `tickets/`, `payments/customer/`
 
 ## DO NOT touch
 
-- Marketing landing sections (WT01/02)
-- Customer/admin feature pages (WT04–09)
+- Admin/platform/employee modules
+- Marketing (except links out)
+
+## Done when
+
+- [x] All customer inventory screens (C*) pass DoD
+- [x] Mobile bottom nav works
+- [x] Expired customer demo limited nav
+- [x] Verify commands pass
 
 ## Skill
 
