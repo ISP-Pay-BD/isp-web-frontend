@@ -7,7 +7,7 @@ alwaysApply: true
 
 # ISP Web Frontend Rules
 
-Read `docs/12-AI-CODING-RULES.md` and `AGENTS.md` before coding.
+Read `docs/PROJECT-MEMORY.md` and `docs/12-AI-CODING-RULES.md` before coding.
 
 ## Scope (Phase 1)
 - Static mock data ONLY — no API calls to isppaybd.com

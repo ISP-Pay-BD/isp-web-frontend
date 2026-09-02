@@ -18,6 +18,7 @@
 
 | Doc | Title | Use when |
 |-----|-------|----------|
+| [**PROJECT-MEMORY.md**](./PROJECT-MEMORY.md) | **AI quick context** | **Every AI session start** |
 | [00-OVERVIEW.md](./00-OVERVIEW.md) | Project overview | Starting the project |
 | [01-ARCHITECTURE.md](./01-ARCHITECTURE.md) | System architecture | Structuring code |
 | [02-FOLDER-STRUCTURE.md](./02-FOLDER-STRUCTURE.md) | Folder layout | Creating files |
@@ -52,4 +53,18 @@
 
 ## Current phase
 
-**Phase 0 — Not started.** Repo is empty. Begin with `08-IMPLEMENTATION-PHASES.md` → Phase 0 checklist.
+**Phase 0 — Foundation initialized.** Next: Phase 1 (marketing landing).
+
+### Phase 0 checklist (completed via CLI)
+
+- [x] `pnpm create next-app@latest` — Next.js 16 + TypeScript + Tailwind
+- [x] `pnpm dlx shadcn@latest init` + core components
+- [x] App dependencies (TanStack Query, Zustand, Zod, etc.)
+- [x] Vitest + `tests/` folder outside `src/app`
+- [x] Mock API layer + demo users + auth store
+- [x] Permissions (`can`) + `<Can>` component
+- [x] Providers (Query, Theme, Tooltip, Sonner)
+- [x] `docs/PROJECT-MEMORY.md` + `AGENTS.md` + `.cursor/rules`
+- [x] `pnpm build` passes
+- [ ] Copy Satoshi/Noto fonts to `public/fonts/` (optional offline fonts)
+- [ ] Portal shell layouts (Sidebar, AppShell) — Phase 0 remainder
