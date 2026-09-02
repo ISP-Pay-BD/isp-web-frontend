@@ -14,6 +14,11 @@ import { newsItems, getNewsById } from '@/data/customer/news.data';
 import { customerProfile, customerNotifications } from '@/data/customer/profile.data';
 import { tenants, platformRevenue } from '@/data/platform/tenants.data';
 import * as platformContacts from '@/data/platform/contacts.data';
+import * as commsData from '@/data/admin/comms.data';
+import * as voiceSmsData from '@/data/admin/voice-sms.data';
+import * as rewardsData from '@/data/admin/rewards.data';
+import * as settingsData from '@/data/admin/settings.data';
+import * as recycleBinData from '@/data/admin/recycle-bin.data';
 import * as employee from '@/data/employee/salaries.data';
 
 export async function listCustomers() {
@@ -56,6 +61,33 @@ export async function getAdminDomain(domain: string) {
     support: { tickets: supportTickets, stats: adminSupportStats },
     freeRequests: freeUserRequests,
     resellerDashboard: resellerDashboardStats,
+    sms: {
+      templates: commsData.smsTemplatesData,
+      events: commsData.smsEventsData,
+      logs: commsData.smsLogsData,
+    },
+    whatsapp: {
+      conversations: commsData.whatsappConversationsData,
+      templates: commsData.whatsappTemplatesData,
+      logs: commsData.whatsappMessageLogsData,
+      optIns: commsData.whatsappOptInsData,
+      campaigns: commsData.whatsappCampaignsData,
+      settings: commsData.whatsappSettingsData,
+    },
+    voiceSms: {
+      gateways: voiceSmsData.voiceGatewaysData,
+      messages: voiceSmsData.voiceMessagesData,
+      broadcasts: voiceSmsData.voiceBroadcastsData,
+    },
+    rewards: {
+      config: rewardsData.rewardConfigData,
+      transactions: rewardsData.referralTransactionsData,
+      topReferrers: rewardsData.topReferrersData,
+    },
+    settings: settingsData.softwareSettingsData,
+    recycleBin: {
+      items: recycleBinData.recycleBinItemsData,
+    },
   };
   return map[domain] ?? { items: [] };
 }

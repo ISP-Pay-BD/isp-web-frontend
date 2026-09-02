@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/sms
- * Public exports only — import from '@/features/admin/sms'
- */
+export { SmsPage } from './pages/SmsPage';
 
-// export { XxxPage } from './pages/XxxPage';

@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/support
- * Public exports only — import from '@/features/admin/support'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { SupportTicketsPage } from './pages/SupportTicketsPage';
+export { SupportTicketDetailPage } from './pages/SupportTicketDetailPage';

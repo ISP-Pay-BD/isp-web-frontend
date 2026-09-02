@@ -213,32 +213,32 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D12a | `/admin/sms` | Send SMS | sms_message | [ ] |
-| D12b | `/admin/sms/templates` | SMS templates | [ ] |
-| D12c | `/admin/voice-sms` | Voice SMS | [ ] |
-| D12d | `/admin/whatsapp/inbox` | WA Inbox | whatsapp_business:read | [ ] |
-| D12e | `/admin/whatsapp/templates` | WA Templates | [ ] |
-| D12f | `/admin/whatsapp/message-log` | Message log | [ ] |
-| D12g | `/admin/whatsapp/opt-ins` | Opt-ins | whatsapp_business:marketing | [ ] |
-| D12h | `/admin/whatsapp/campaigns` | Campaigns | [ ] |
-| D12i | `/admin/whatsapp/settings` | WA Settings | whatsapp_business:update | [ ] |
+| D12a | `/admin/sms` | Send SMS | sms_message | [x] |
+| D12b | `/admin/sms/templates` | SMS templates | [x] |
+| D12c | `/admin/voice-sms` | Voice SMS | [x] |
+| D12d | `/admin/whatsapp/inbox` | WA Inbox | whatsapp_business:read | [x] |
+| D12e | `/admin/whatsapp/templates` | WA Templates | [x] |
+| D12f | `/admin/whatsapp/message-log` | Message log | [x] |
+| D12g | `/admin/whatsapp/opt-ins` | Opt-ins | whatsapp_business:marketing | [x] |
+| D12h | `/admin/whatsapp/campaigns` | Campaigns | [x] |
+| D12i | `/admin/whatsapp/settings` | WA Settings | whatsapp_business:update | [x] |
 
 ### D13. Other admin
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D13a | `/admin/reward-center` | Referral & Reward admin | referral:read | [ ] |
-| D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [ ] |
-| D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [ ] |
-| D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [ ] |
+| D13a | `/admin/reward-center` | Referral & Reward admin | referral:read | [x] |
+| D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [x] |
+| D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [x] |
+| D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [x] |
 | D13e | `/admin/wallet` | My Wallet | admin only | [ ] |
 | D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
-| D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
-| D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |
+| D13g | `/admin/settings/software` | Software settings | software_settings | [x] |
+| D13h | `/admin/theme-studio` | Theme studio | all roles | [x] |
 | D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [ ] |
 | D13j | `/admin/payment` | My payment | payment:read | [ ] |
-| D13k | `/admin/profile` | Profile | profile_update | [ ] |
-| D13l | `/admin/change-password` | Change password | password_change | [ ] |
+| D13k | `/admin/profile` | Profile | profile_update | [x] |
+| D13l | `/admin/change-password` | Change password | password_change | [x] |
 
 ---
 

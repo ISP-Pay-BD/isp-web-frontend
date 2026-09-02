@@ -1,6 +1,6 @@
-﻿/**
- * @module features/admin/whatsapp
- * Public exports only — import from '@/features/admin/whatsapp'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { WhatsAppInboxPage } from './pages/WhatsAppInboxPage';
+export { WhatsAppTemplatesPage } from './pages/WhatsAppTemplatesPage';
+export { WhatsAppMessageLogPage } from './pages/WhatsAppMessageLogPage';
+export { WhatsAppOptInsPage } from './pages/WhatsAppOptInsPage';
+export { WhatsAppCampaignsPage } from './pages/WhatsAppCampaignsPage';
+export { WhatsAppSettingsPage } from './pages/WhatsAppSettingsPage';
