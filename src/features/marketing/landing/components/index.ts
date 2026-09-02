@@ -1,0 +1,27 @@
+export { HeroSection } from './HeroSection';
+export { StatsBand } from './StatsBand';
+export { FeaturesGrid } from './FeaturesGrid';
+export { BenefitsSection } from './BenefitsSection';
+export { WhyChooseSection } from './WhyChooseSection';
+export { HowItWorks } from './HowItWorks';
+export { ProductPreview } from './ProductPreview';
+export { AutoReconcile } from './AutoReconcile';
+export { RoiSection } from './RoiSection';
+export { PricingSection } from './PricingSection';
+export { ComparisonTable } from './ComparisonTable';
+export { Testimonials } from './Testimonials';
+export { FAQSection } from './FAQSection';
+export { IntegrationsOrbit } from './IntegrationsOrbit';
+// Sections 15–26
+export { PluginsHighlight } from './PluginsHighlight';
+export { MobileAppPromo } from './MobileAppPromo';
+export { ResellerHierarchy } from './ResellerHierarchy';
+export { RolesAccess } from './RolesAccess';
+export { PermissionsMatrix } from './PermissionsMatrix';
+export { CaseStudy } from './CaseStudy';
+export { PartnersLogos } from './PartnersLogos';
+export { TrustBadges } from './TrustBadges';
+export { ProofBand } from './ProofBand';
+export { ConnectsSection } from './ConnectsSection';
+export { TryItSection } from './TryItSection';
+export { CTASection } from './CTASection';

@@ -11,11 +11,11 @@ Complete list of every screen to build. Mark status: `[ ]` todo, `[x]` done.
 | # | Route | Page title | Sections / components | Data file | Status |
 |---|-------|------------|----------------------|-----------|--------|
 | A1 | `/` | Landing | See section list below (28 sections) | `data/marketing/landing.data.ts` | [ ] |
-| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `data/marketing/pricing.data.ts` | [ ] |
-| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `data/marketing/plugins.data.ts` | [ ] |
-| A4 | `/contact` | Contact | Form, office info, map placeholder | `data/marketing/landing.data.ts` | [ ] |
-| A5 | `/register` | Start free trial | Multi-step tenant signup form | `data/marketing/` inline | [ ] |
-| A6 | `/register/referral` | Referral signup | Referral code field, lead form | `data/marketing/` inline | [ ] |
+| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `data/marketing/pricing.data.ts` | [x] |
+| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `data/marketing/plugins.data.ts` | [x] |
+| A4 | `/contact` | Contact | Form, office info, map placeholder | `data/marketing/landing.data.ts` | [x] |
+| A5 | `/register` | Start free trial | Multi-step tenant signup form | `data/marketing/` inline | [x] |
+| A6 | `/register/referral` | Referral signup | Referral code field, lead form | `data/marketing/` inline | [x] |
 
 ### A1 Landing sections (28 total — single page, anchor nav)
 
