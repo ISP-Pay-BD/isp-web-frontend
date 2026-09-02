@@ -8,27 +8,30 @@ Complete list of every screen to build. Mark status: `[ ]` todo, `[x]` done.
 
 ## A. Public marketing
 
-| # | Route | Page title | Sections / components | Mock file | Status |
+| # | Route | Page title | Sections / components | Data file | Status |
 |---|-------|------------|----------------------|-----------|--------|
-| A1 | `/` | Landing | See section list below | `marketing/landing.mock.ts` | [ ] |
-| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `marketing/pricing.mock.ts` | [ ] |
-| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `marketing/plugins.mock.ts` | [ ] |
-| A4 | `/contact` | Contact | Form, office info, map placeholder | `marketing/landing.mock.ts` | [ ] |
-| A5 | `/register` | Start free trial | Multi-step tenant signup form | inline mock | [ ] |
-| A6 | `/register/referral` | Referral signup | Referral code field, lead form | inline mock | [ ] |
+| A1 | `/` | Landing | See section list below (28 sections) | `data/marketing/landing.data.ts` | [ ] |
+| A2 | `/pricing` | Pricing | Pricing tiers, FAQ snippet, CTA | `data/marketing/pricing.data.ts` | [ ] |
+| A3 | `/plugins` | Plugins marketplace | Plugin cards, categories | `data/marketing/plugins.data.ts` | [ ] |
+| A4 | `/contact` | Contact | Form, office info, map placeholder | `data/marketing/landing.data.ts` | [ ] |
+| A5 | `/register` | Start free trial | Multi-step tenant signup form | `data/marketing/` inline | [ ] |
+| A6 | `/register/referral` | Referral signup | Referral code field, lead form | `data/marketing/` inline | [ ] |
 
-### A1 Landing sections (single page, anchor nav)
+### A1 Landing sections (28 total — single page, anchor nav)
 
-Mirror `app/Views/landing/partials/`:
+Mirror **all** `app/Views/landing/partials/`:
 
 | Section ID | Partial file | Component name |
 |------------|--------------|----------------|
 | `#hero` | hero.php | `HeroSection` |
 | `#stats` | stats.php | `StatsBand` |
 | `#features` | features.php | `FeaturesGrid` |
+| `#benefits` | benefits.php | `BenefitsSection` |
+| `#why-choose` | why_choose.php | `WhyChooseSection` |
 | `#how-it-works` | how_it_works.php | `HowItWorks` |
 | `#product-preview` | product_preview.php | `ProductPreview` |
 | `#auto-reconcile` | auto_reconciliation.php | `AutoReconcile` |
+| `#roi` | roi.php | `RoiSection` |
 | `#pricing` | pricing.php | `PricingSection` |
 | `#comparison` | comparison.php | `ComparisonTable` |
 | `#testimonials` | testimonials.php | `Testimonials` |
@@ -41,11 +44,17 @@ Mirror `app/Views/landing/partials/`:
 | `#permissions` | permissions.php | `PermissionsMatrix` |
 | `#case-study` | case_study.php | `CaseStudy` |
 | `#partners` | partners.php, our_partners.php | `PartnersLogos` |
+| `#trust` | trust.php | `TrustBadges` |
+| `#proof` | proof.php, proof_band.php | `ProofBand` |
+| `#connects` | connects.php | `ConnectsSection` |
+| `#try-it` | try_it.php | `TryItSection` |
 | `#cta` | cta_contact.php | `CTASection` |
 | — | nav.php | `MarketingNav` |
 | — | footer.php | `MarketingFooter` |
 
-Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs.
+Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile sticky CTA bar.
+
+**Quality bar:** See `QUALITY-STANDARDS.md` — ≥90% PHP parity, Lighthouse mobile ≥85.
 
 ---
 
@@ -281,7 +290,7 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs.
 
 | Portal | Screens |
 |--------|---------|
-| Marketing | 6 routes + 20 sections |
+| Marketing | 6 routes + **28 sections** |
 | Auth | 3 |
 | Customer | 15 |
 | Admin/Reseller | ~75 |
@@ -294,15 +303,41 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs.
 
 ## Per-screen deliverable checklist (copy for each screen)
 
-When implementing screen `#___`:
+When implementing screen `#___`, pass **`DEFINITION-OF-DONE.md`** in full:
 
-- [ ] `app/.../page.tsx` created
-- [ ] Feature components in `features/`
-- [ ] Mock handler wired
+- [ ] `app/.../page.tsx` created (thin)
+- [ ] Page in `features/.../pages/`
+- [ ] Data in `src/data/` + handler wired
 - [ ] Permissions checked (route + buttons)
-- [ ] Loading skeleton
-- [ ] Empty state
-- [ ] Mobile layout verified
-- [ ] Dark mode verified
+- [ ] Loading skeleton + empty + error states
+- [ ] Mobile layout verified (320px–1440px)
+- [ ] Dark mode verified (portals)
 - [ ] Toast on mutations
+- [ ] Quality bar passed (`QUALITY-STANDARDS.md`)
+- [ ] `pnpm lint && typecheck && test && build` pass
 - [ ] Status updated in this doc
+
+---
+
+## H. Additional screens (from backend audit — add during admin phases)
+
+These features exist in `isppaybd_isp` but were not in the original inventory. Add as modules are built.
+
+| # | Route (planned) | Title | Permission | Status |
+|---|-----------------|-------|------------|--------|
+| H1 | `/admin/ai-chat` | AI Chat Assistant | `ai_chat` | [ ] |
+| H2 | `/admin/audit-logs` | System audit logs | `audit_logs` | [ ] |
+| H3 | `/admin/movie-servers` | Movie servers | `movie_servers` | [ ] |
+| H4 | `/admin/news/manage` | News admin CRUD | `news` | [ ] |
+| H5 | `/platform/redis-logs` | Redis & logs inspector | `super_admin` | [ ] |
+| H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [ ] |
+| H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [ ] |
+| H8 | `/admin/reports/otc` | OTC report | `accounting` | [ ] |
+| H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [ ] |
+| H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [ ] |
+| H11 | `/admin/customers/:id/audit` | Customer audit logs | `customers` | [ ] |
+| H12 | `/admin/corporate/queues` | Corporate sync queues | `customers` | [ ] |
+| H13 | `/admin/payment-gateways/*` | Payment gateway UIs (bKash, Nagad…) | `payment_gateway` | [ ] |
+| H14 | `/admin/sidebar-pins` | Sidebar pinned items | `settings` | [ ] |
+
+**Updated total:** ~118 base routes + ~14 audit additions ≈ **~132 screens**

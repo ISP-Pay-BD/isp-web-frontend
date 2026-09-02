@@ -1,107 +1,100 @@
-# PROJECT MEMORY — ISP Web Frontend
+# PROJECT MEMORY — ISP Pay BD Frontend
 
-> **AI agents:** Read this file at the start of every session for instant project context.
+> **AI agents: READ THIS FIRST every session.**  
+> **Goal: premium ISP platform — NOT a generic CRM.** Follow strict mandate in `13-STRICT-AGENT-MANDATE.md`.
 
 ## One-line summary
 
-Next.js 16 frontend for **ISP Pay BD** — full UI migration from `isppaybd_isp` using **offline static mock data** first; real `zapi/` API later.
+Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_isp`, offline static data, real `zapi/` API later. **High quality, professional, modern ISP website.**
 
-## Current status
+## Current phase
+
+**P0 ✅ COMPLETE — ready to start Phase 1 (28 landing sections).**
 
 | Item | State |
 |------|-------|
-| Phase | **0 — Foundation** (CLI initialized) |
-| Next.js | 16.3.4 (create-next-app) |
-| UI | shadcn/ui (base-nova) + Tailwind v4 |
-| Data | Mock API only (`NEXT_PUBLIC_USE_MOCK=true`) |
-| Backend | Not connected |
+| P0 foundation | ✅ Done |
+| MarketingLayout | ✅ Done |
+| Full navigation | ✅ Done |
+| Shared components | ✅ Done |
+| Phase 1 landing (28 sections) | ⏳ **Next — awaiting your go** |
 
-## What this repo is
+---
+
+## Mandatory doc reading order
+
+1. **`PROJECT-MEMORY.md`** ← this file
+2. **`13-STRICT-AGENT-MANDATE.md`** ← non-negotiable rules
+3. **`QUALITY-STANDARDS.md`** ← anti-CRM quality bar
+4. **`UI-FUSION-GUIDE.md`** ← ISP + shadcn + 21st.dev
+5. **`MASTER-BUILD-PLAN.md`** ← complete plan + current phase
+6. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
+7. **`12-AI-CODING-RULES.md`** ← coding rules
+
+---
+
+## UI fusion (CRITICAL)
 
 ```
-isp-web-frontend/     ← YOU ARE HERE (Next.js UI)
-isppaybd_isp/         ← Reference backend (CodeIgniter 4 + zapi/)
+Marketing  →  ISP landing.css dark (#0c0118) + 21st.dev inspiration + Framer Motion
+Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
+Quality    →  Premium ISP ops platform — complete states, permissions, responsive
+Data       →  src/data/ via mock-api only
 ```
 
-## Architecture (clean layers)
+---
+
+## Architecture (9.2/10)
 
 ```
-src/app/              Routes only (thin pages)
-src/features/         Domain modules (UI + hooks + schemas)
-src/components/       Shared UI (ui/, layout/, shared/, marketing/)
-src/lib/mock-api/     ONLY data access in Phase 1
-src/mocks/            Static data (handlers import this — NOT components)
-src/stores/           Zustand (auth, UI)
-src/config/           navigation, site metadata
-src/types/            Shared TypeScript types
-
-tests/                OUTSIDE src/app — architecture + unit tests
-  tests/architecture/ Folder boundary & structure tests
-  tests/unit/         Pure logic tests (permissions, utils)
-  tests/setup/        Vitest setup
+src/app/           → thin routes ONLY
+src/features/      → 84 modules (pages/ components/ hooks/ schemas/ types/)
+src/data/          → ALL static dummy data
+src/lib/mock-api/  → ONLY data access
+tests/             → OUTSIDE src/app
 ```
 
-## Golden rules
+**Golden rules:**
+- One feature = one folder. All module code inside.
+- Features → mockFetch() → handlers → @/data. Never import @/data in UI.
 
-1. **Never** import `@/mocks/*` from `features/` or `components/` — use `mockFetch()` from `@/lib/mock-api/client`
-2. **Never** call external APIs in Phase 1
-3. Every form → Zod + toast (Sonner)
-4. Every admin button → `<Can menu action>`
-5. Follow phases in `docs/08-IMPLEMENTATION-PHASES.md`
+---
 
-## Portals to build (~118 screens)
+## Scope (~132 screens)
 
-| Portal | Route prefix | Role |
-|--------|--------------|------|
-| Marketing | `/`, `/pricing`, `/plugins` | guest |
-| Auth | `/login` | all |
-| Customer | `/customer/*` | `user` |
-| Admin/Reseller | `/admin/*` | `admin`, `resellerAdmin` |
-| Super admin | `/platform/*` | `super_admin` |
-| Employee | `/employee/*` | `employee` |
+| Portal | Modules | Routes |
+|--------|---------|--------|
+| Marketing | 6 | 6 + 28 landing sections |
+| Auth | 2 | 3 |
+| Customer | 11 | 15 |
+| Admin | 42 | ~75 |
+| Platform | 12 | 13 |
+| Employee | 4 | 3 |
+| System | — | 403, 404, 500 |
 
-Full screen list: `docs/07-SCREEN-INVENTORY.md`
+Full list: `07-SCREEN-INVENTORY.md` + `MASTER-BUILD-PLAN.md`
 
-## Demo logins (mock auth)
+---
 
-| Email | Password | Role |
-|-------|----------|------|
-| customer@demo.isppaybd.com | demo1234 | user |
-| customer-expired@demo.isppaybd.com | demo1234 | user (expired) |
-| reseller@demo.isppaybd.com | demo1234 | resellerAdmin |
-| admin@demo.isppaybd.com | demo1234 | admin |
-| employee@demo.isppaybd.com | demo1234 | employee |
-| super@demo.isppaybd.com | demo1234 | super_admin |
+## Demo logins
 
-## Brand tokens
+All password: `demo1234` — see `src/data/users/users.data.ts`
 
-- Primary: `#f75803` (orange)
-- Secondary: `#1a0b38` (violet)
-- Radius: 12px
-- Fonts: Satoshi + Noto Sans Bengali (self-host in `public/fonts/` — Phase 1)
+---
 
-## Key files
+## Quality bar (never compromise)
 
-| File | Purpose |
-|------|---------|
-| `src/lib/mock-api/client.ts` | Mock data access |
-| `src/stores/auth-store.ts` | Auth session |
-| `src/lib/permissions/can.ts` | Permission checks |
-| `src/config/navigation.ts` | Sidebar items |
-| `src/mocks/users/demo-users.mock.ts` | Demo accounts |
-| `docs/07-SCREEN-INVENTORY.md` | All screens |
-| `docs/12-AI-CODING-RULES.md` | Coding rules |
+- NOT a generic CRM — ISP domain fidelity required
+- All 4 states: loading, empty, error, success
+- All breakpoints: 320, 375, 768, 1024, 1440
+- Permissions: nav + route + buttons
+- Marketing Lighthouse mobile ≥85
+- Verify: `pnpm lint && typecheck && test && build`
 
-## CLI setup history
+---
 
-Project initialized with official commands:
+## Next action
 
-```bash
-pnpm create next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --turbopack --yes
-pnpm dlx shadcn@latest init --defaults --force
-pnpm dlx shadcn@latest add sonner card input ... sidebar --yes
-```
+**✅ P0 complete.** Say **"start Phase 1"** to build all 28 landing sections.
 
-## Next work
-
-Phase 1: Marketing landing page — see `docs/08-IMPLEMENTATION-PHASES.md`
+See `docs/P0-READY.md` for verification checklist.

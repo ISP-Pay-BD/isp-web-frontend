@@ -12,52 +12,39 @@ All static data for offline UI. **Phase 1 only** — replace handlers in Phase 2
 
 ## Directory layout
 
+**All dummy data lives in `src/data/`** (not `src/mocks/`).
+
 ```
-src/mocks/
+src/data/
+├── index.ts                        # Central exports
+├── README.md
+├── shared/
+│   ├── types.ts                    # Customer, Package, Payment...
+│   └── constants.ts
 ├── users/
-│   ├── demo-users.mock.ts          # All 6 demo accounts
-│   └── permission-presets.mock.ts  # Full, reseller, employee-minimal
+│   ├── users.data.ts               # 6 demo accounts
+│   └── permissions.data.ts
 ├── marketing/
-│   ├── landing.mock.ts             # Hero stats, features, FAQ, testimonials
-│   ├── pricing.mock.ts
-│   └── plugins.mock.ts
+│   └── landing.data.ts             # Hero, FAQ, pricing, plugins
 ├── customer/
-│   ├── subscription.mock.ts
-│   ├── payments.mock.ts
-│   ├── packages.mock.ts
-│   ├── support-tickets.mock.ts
-│   ├── rewards.mock.ts
-│   ├── news.mock.ts
-│   └── router.mock.ts
+│   ├── subscription.data.ts
+│   ├── support.data.ts
+│   └── news.data.ts
 ├── admin/
-│   ├── dashboard.mock.ts
-│   ├── customers.mock.ts           # 50 customers
-│   ├── customer-payments.mock.ts
-│   ├── areas.mock.ts
-│   ├── packages.mock.ts
-│   ├── employees.mock.ts
-│   ├── accounting.mock.ts
-│   ├── pop.mock.ts
-│   ├── bandwidth.mock.ts
-│   ├── inventory.mock.ts
-│   ├── hotspot.mock.ts
-│   ├── olt.mock.ts
-│   ├── routers.mock.ts
-│   ├── network.mock.ts
-│   ├── sms.mock.ts
-│   ├── whatsapp.mock.ts
-│   ├── support.mock.ts
-│   ├── wallet.mock.ts
-│   └── settings.mock.ts
+│   ├── customers.data.ts           # 40 customers
+│   ├── packages.data.ts
+│   ├── areas.data.ts
+│   ├── customer-payments.data.ts
+│   ├── dashboard.data.ts
+│   ├── employees.data.ts
+│   └── network-ops.data.ts         # routers, OLT, SMS, WhatsApp, wallet...
 ├── platform/
-│   ├── tenants.mock.ts
-│   ├── admins.mock.ts
-│   ├── revenue.mock.ts
-│   └── plugins-admin.mock.ts
-└── shared/
-    ├── enums.ts                    # Status, roles, payment methods
-    └── constants.ts                # App name, date formats
+│   └── tenants.data.ts
+└── employee/
+    └── index.ts
 ```
+
+Legacy `src/mocks/` re-exports from `@/data` — use `src/data/` for all new work.
 
 ## Handler mapping (`lib/mock-api/handlers/`)
 

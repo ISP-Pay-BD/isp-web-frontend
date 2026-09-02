@@ -1,8 +1,32 @@
 # 04 — Design System
 
-Ported from `isppaybd_isp/public/assets/css/saas/tokens.css` and `brand-boot.js`.
+Ported from `isppaybd_isp` — **two surfaces**, one brand.
 
-## Brand identity
+> **Full UI fusion rules:** `docs/UI-FUSION-GUIDE.md`
+
+## Two surfaces (do not mix)
+
+| Surface | Theme | Tokens source | Fonts |
+|---------|-------|---------------|-------|
+| **Marketing** (`/`, `/pricing`…) | Dark only — `#0c0118` bg | `landing.css` | Plus Jakarta Sans + Inter |
+| **Portals** (`/admin`, `/customer`…) | Light + dark toggle | `tokens.css` | Satoshi + Noto Sans Bengali |
+
+### Marketing-only tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| Background | `#0c0118` | Entire landing — no white sections |
+| CTA | `#f75803` | Primary buttons only |
+| Accent | `#2E8BFF` | Links, eyebrows, highlights |
+| Panel | `#180a30` | Cards on dark bg |
+
+### Portal tokens (below)
+
+Used with shadcn/ui CSS variables in logged-in app shells.
+
+---
+
+## Brand identity (portals + shared CTAs)
 
 | Token | Value | Usage |
 |-------|-------|-------|
@@ -102,10 +126,12 @@ Reference: `isppaybd_isp/app/Views/landing/partials/`
 | FAQ | Accordion (shadcn) |
 | CTA | Orange shimmer button |
 
-Design inspiration (copy patterns, not dependencies):
-- [21st.dev](https://21st.dev) — hero, bento features
-- [shadcn blocks](https://ui.shadcn.com/blocks) — dashboard shells
-- Existing PHP landing — content/copy source of truth
+Design inspiration (copy patterns, not npm dependencies):
+- [21st.dev/community/components](https://21st.dev/community/components) — hero, bento, pricing, testimonials
+- [shadcn blocks](https://ui.shadcn.com/blocks) — portal dashboard shells only
+- PHP landing partials — content/copy source of truth
+
+See `docs/UI-FUSION-GUIDE.md` for section-by-section mapping.
 
 ## Portal (app) aesthetic
 

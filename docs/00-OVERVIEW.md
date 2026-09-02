@@ -14,13 +14,16 @@
 
 ## Phase 1 goal (current scope)
 
-Build **100% of the UI** with **static/mock data only**:
+Build **100% of the UI** with **static/mock data only** — as a **premium ISP operations platform**, not a generic CRM:
 
-- ✅ Every portal screen from landing page through super-admin
+- ✅ Every portal screen from landing through super-admin (~132 screens)
 - ✅ Permission-based navigation and button visibility
 - ✅ Forms validate and submit → toast + local state update
 - ✅ Fully offline after `pnpm build` — no API, no CDN fonts/images
+- ✅ High visual quality — ISP brand fidelity + modern components + purposeful animation
 - ❌ No real JWT, no payment gateway, no MikroTik — **backend comes later**
+
+**Quality docs:** `QUALITY-STANDARDS.md`, `DEFINITION-OF-DONE.md`, `MASTER-BUILD-PLAN.md`
 
 ## Five user portals to replicate
 
@@ -43,18 +46,19 @@ Build **100% of the UI** with **static/mock data only**:
 
 ## Success criteria (Definition of Done)
 
-A screen is **done** when ALL of the following are true:
+A screen is **done** when ALL criteria in **`DEFINITION-OF-DONE.md`** pass, including:
 
 1. Route exists and is listed in `07-SCREEN-INVENTORY.md`
 2. Renders correctly at **320px, 768px, 1024px, 1440px**
-3. Uses mock data via `lib/mock-api/` — never imports `@/mocks/*` in components
+3. Uses mock data via `lib/mock-api/` — never imports `@/data` in components
 4. Permission gates applied (sidebar item, page access, action buttons)
 5. Loading skeleton, empty state, and error state implemented
 6. Form screens: Zod validation + Sonner toast on success/error
-7. Dark mode works (`data-theme` or class-based)
+7. Dark mode works on portals; marketing is dark-only
 8. No external network requests at runtime (fonts/images local)
 9. TypeScript strict — no `any` without comment
-10. Matches design tokens in `04-DESIGN-SYSTEM.md`
+10. Matches design tokens + UI fusion guide
+11. Looks like **ISP Pay BD** — not generic CRM (see `QUALITY-STANDARDS.md`)
 
 ## Estimated scope
 

@@ -1,5 +1,5 @@
 import type { AuthSession, User } from '@/types/auth';
-import { demoUsers } from '@/mocks/users/demo-users.mock';
+import { demoUsers } from '@/data/users';
 import { mockDelay } from '../delay';
 import { MockApiError } from '../errors';
 

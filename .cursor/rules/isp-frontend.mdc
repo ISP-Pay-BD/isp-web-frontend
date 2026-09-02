@@ -1,5 +1,5 @@
 ---
-description: ISP Pay BD frontend — Next.js static UI rules
+description: ISP Pay BD frontend — strict premium ISP platform rules
 globs:
   - "**/*.{ts,tsx,js,jsx,css,md,json}"
 alwaysApply: true
@@ -7,35 +7,57 @@ alwaysApply: true
 
 # ISP Web Frontend Rules
 
-Read `docs/PROJECT-MEMORY.md` and `docs/12-AI-CODING-RULES.md` before coding.
+**Goal: premium ISP Pay BD platform — NOT a generic CRM.** Complete, professional, modern.
+
+Read before ANY code:
+1. `docs/PROJECT-MEMORY.md`
+2. `docs/13-STRICT-AGENT-MANDATE.md`
+3. `docs/QUALITY-STANDARDS.md`
+4. `docs/UI-FUSION-GUIDE.md`
+5. `docs/MASTER-BUILD-PLAN.md` — check current phase
+
+## UI fusion (two surfaces)
+
+| Surface | Stack |
+|---------|-------|
+| **Marketing** | ISP `landing.css` dark (`#0c0118`, CTA `#f75803`, accent `#2E8BFF`) + [21st.dev](https://21st.dev/community/components) + Framer Motion |
+| **Portals** | shadcn/ui + ISP tokens (`#f75803`, `#1a0b38`, Satoshi) |
+
+- Landing: dark-only, 28 sections, ≥90% PHP parity
+- Portals: polished shadcn, full ISP sidebar, TanStack Table
+- NO generic CRM dashboards, NO lorem ipsum, NO placeholder-only screens
+
+## Quality (mandatory on every screen)
+
+- All 4 states: loading skeleton, empty, error, success
+- Responsive: 320px → 1440px
+- Permissions: nav filter + route guard + `<Can>` on buttons
+- ISP domain copy from `isppaybd_isp` reference
+- Pass `docs/DEFINITION-OF-DONE.md` before marking done
 
 ## Scope (Phase 1)
-- Static mock data ONLY — no API calls to isppaybd.com
+
+- Static mock data ONLY — `src/data/` via mock-api
+- NEVER import `@/data` in features/components
 - All fonts/images local in `public/`
 - Mirror all portals from `isppaybd_isp` sidebar
 
-## Code boundaries
-- Pages in `src/app/` — thin, compose from `src/features/`
-- Data via `src/lib/mock-api/client` — NEVER import `@/mocks` in features
-- shadcn/ui + Tailwind — no MUI/Chakra/Ant/DaisyUI
-- Lucide icons only
+## Architecture
 
-## Required on every screen
-- Loading skeleton + empty state
-- Sonner toast on form submit
-- Permission gates (`<Can menu action>`) on admin actions
-- Responsive: 320px mobile + desktop
-- Dark mode support
+- One feature = one folder under `src/features/{portal}/{module}/`
+- Pages in `features/.../pages/` — app routes thin (~3 lines)
+- Tests in `tests/` — never inside `src/app/`
 
-## Design tokens
-- Primary `#f75803`, Secondary `#1a0b38`
-- See `docs/04-DESIGN-SYSTEM.md`
+## Phase gate
 
-## When done
-- Mark screen in `docs/07-SCREEN-INVENTORY.md`
-- Run `pnpm lint && pnpm build`
+- **P0 must complete before Phase 1 landing code**
+- P0 = tokens, fonts, MarketingLayout, shared components, full nav config
+- See `docs/MASTER-BUILD-PLAN.md`
 
 ## Do not
+
 - Modify `isppaybd_isp` during frontend-only work
 - Commit unless user asks
-- Skip phases in `docs/08-IMPLEMENTATION-PHASES.md`
+- Skip phases or quality gates
+- Mark screens done without DoD + verify commands
+- Build generic template UI

@@ -23,7 +23,13 @@ Lock-in list. Do not substitute libraries without updating this doc and `AGENTS.
 | `@radix-ui/*` | Accessible primitives (via shadcn) |
 | `lucide-react` | Icons |
 | `next-themes` | Light/dark toggle |
-| `framer-motion` | Landing animations, subtle transitions |
+| `framer-motion` | Landing animations |
+| `embla-carousel-react` | Testimonials/partner carousels |
+| `@number-flow/react` | Animated stat counters |
+| `@fontsource-variable/inter` | Landing body font (self-hosted) |
+| `@fontsource-variable/plus-jakarta-sans` | Landing display font |
+| `@fontsource/noto-sans-bengali` | Bengali copy |
+| `@fontsource/ibm-plex-mono` | Monospace IDs/amounts |
 
 ## Data & forms
 

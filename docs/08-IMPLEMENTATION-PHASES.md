@@ -2,28 +2,59 @@
 
 Execute in order. Do not start Phase N+1 until Phase N checklist is complete.
 
+**UI rules:** Read `docs/UI-FUSION-GUIDE.md` before any UI work.
+
+**Readiness:** See `docs/PRE-PHASE-AUDIT.md` for gaps and scores.
+
 ---
 
-## Phase 0 — Foundation
+## Phase 0 — Foundation (~70% complete)
 
-**Goal:** Runnable app with design system, auth mock, portal shell.
+**Goal:** Runnable app with design system, auth mock, data layer, feature scaffold.
 
 ### Checklist
 
-- [ ] Init Next.js 15 + TypeScript + Tailwind + pnpm
-- [ ] Init shadcn/ui + install core components (see `03-TECH-STACK.md`)
-- [ ] Copy fonts to `public/fonts/` from backend repo
-- [ ] `globals.css` with design tokens (`04-DESIGN-SYSTEM.md`)
-- [ ] `lib/utils/cn.ts`, root layout, providers (Query, Theme, Toaster)
-- [ ] `lib/mock-api/client.ts` + delay helper
-- [ ] `stores/auth-store.ts` + demo users mock
-- [ ] `lib/permissions/can.ts` + `<Can>` component
-- [ ] `config/navigation.ts` — full sidebar structure
+- [x] Init Next.js 16 + TypeScript + Tailwind + pnpm (CLI)
+- [x] Init shadcn/ui + core components (see `03-TECH-STACK.md`)
+- [x] `lib/utils/cn.ts`, root layout, providers (Query, Theme, Toaster)
+- [x] `lib/mock-api/client.ts` + delay helper + handlers
+- [x] `src/data/` — static dummy data (canonical source)
+- [x] `stores/auth-store.ts` + 6 demo users
+- [x] `lib/permissions/can.ts` + `<Can>` component
+- [x] `src/features/` — 84 module folders scaffolded
+- [x] `middleware.ts` — basic route prefix guards
+- [x] Vitest + `tests/` outside `src/app`
+- [x] `.env.example`, `AGENTS.md`, `.cursor/rules`, UI fusion docs
+- [x] ESLint + Prettier + `pnpm build` passes
+- [ ] Copy fonts to `public/fonts/` (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali)
+- [ ] `globals.css` — dual tokens: landing vs portal (`04-DESIGN-SYSTEM.md`)
+- [ ] `config/navigation.ts` — **full** sidebar (~50+ items)
 - [ ] Portal layout: `AppShell`, `Sidebar`, `Header`, `MobileNav`
-- [ ] Marketing layout: `MarketingNav`, `MarketingFooter`
-- [ ] `middleware.ts` — route prefix guards (mock cookie)
-- [ ] `.gitignore`, `.env.example`, `AGENTS.md`, `.cursor/rules`
-- [ ] ESLint + Prettier + `pnpm build` passes
+- [ ] Marketing layout: `MarketingNav`, `MarketingFooter` in `features/marketing/shared/`
+
+---
+
+## P0 — Before Phase 1 landing (mandatory)
+
+Complete before building marketing pages.
+
+| # | Task | Doc |
+|---|------|-----|
+| 1 | Port landing CSS tokens to Tailwind/globals | `04-DESIGN-SYSTEM.md`, `UI-FUSION-GUIDE.md` |
+| 2 | Self-host fonts in `public/fonts/` | `03-TECH-STACK.md` |
+| 3 | Expand `src/data/marketing/` — pricing tiers + PAYG from `landing.js` | `06-MOCK-DATA-SPEC.md` |
+| 4 | Build `MarketingLayout` (nav + footer + mobile CTA) | `UI-FUSION-GUIDE.md` |
+| 5 | Setup `next-intl` EN/BN | `11-I18N.md` |
+| 6 | Logo/placeholder assets in `public/images/` | — |
+
+### P0.5 — Parallel with Phase 1 (recommended)
+
+| # | Task |
+|---|------|
+| 7 | Full sidebar nav + permission filter |
+| 8 | User Access Management UI (static mock) |
+| 9 | Expired user limited nav |
+| 10 | Route guards by permission (403 page) |
 
 ### Verify
 
@@ -39,21 +70,29 @@ pnpm lint         # Zero errors
 
 **Goal:** Full landing + pricing + plugins + contact + register.
 
+**UI:** ISP `landing.css` dark theme + [21st.dev](https://21st.dev/community/components) layout inspiration + Framer Motion. **Not** generic shadcn light theme.
+
 ### Checklist
 
-- [ ] `mocks/marketing/*.mock.ts` with EN + BN copy
-- [ ] All 20 landing sections (`07-SCREEN-INVENTORY` A1)
+- [ ] `src/data/marketing/` — full EN + BN copy, pricing tiers, PAYG calculator data
+- [ ] All **28** landing sections from PHP partials (`07-SCREEN-INVENTORY` A1)
+- [ ] Hero orbital integration diagram (from `hero.php`)
+- [ ] Stats counter animation (from `landing.js`)
+- [ ] Pricing tier slider + PAYG calculator
 - [ ] `/pricing`, `/plugins`, `/contact`, `/register` pages
-- [ ] Marketing nav: smooth scroll anchors, mobile hamburger
+- [ ] Marketing nav: sticky blur, smooth scroll anchors, mobile hamburger
+- [ ] Mobile sticky CTA bar
 - [ ] EN/BN language toggle (next-intl)
 - [ ] SEO metadata per page
 - [ ] Responsive 320px–1440px
 - [ ] No external image/font requests
+- [ ] `prefers-reduced-motion` respected
 
 ### Verify
 
-- [ ] Landing page matches content from PHP partials (hero, pricing, FAQ)
-- [ ] Lighthouse mobile score > 85 (performance)
+- [ ] Landing matches PHP partials content (~90% visual parity)
+- [ ] Lighthouse mobile score ≥ 85
+- [ ] Landing JS gzipped < 150 KB
 
 ---
 

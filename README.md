@@ -1,6 +1,6 @@
 # ISP Pay BD — Web Frontend
 
-Modern Next.js frontend for the ISP Pay BD platform.
+Modern Next.js frontend for the ISP Pay BD platform — **premium ISP operations UI**, not a generic CRM.
 
 ## Quick start
 
@@ -12,50 +12,35 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## Scripts
+## Documentation (read before coding)
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Dev server (Turbopack) |
-| `pnpm build` | Production build |
-| `pnpm lint` | ESLint |
-| `pnpm typecheck` | TypeScript check |
-| `pnpm test` | All Vitest tests |
-| `pnpm test:architecture` | Architecture boundary tests |
-| `pnpm test:unit` | Unit tests |
+| Doc | Purpose |
+|-----|---------|
+| [**PROJECT-MEMORY.md**](./docs/PROJECT-MEMORY.md) | AI context — every session |
+| [**13-STRICT-AGENT-MANDATE.md**](./docs/13-STRICT-AGENT-MANDATE.md) | Non-negotiable rules |
+| [**QUALITY-STANDARDS.md**](./docs/QUALITY-STANDARDS.md) | Premium ISP quality bar |
+| [**MASTER-BUILD-PLAN.md**](./docs/MASTER-BUILD-PLAN.md) | Complete plan — all 84 modules |
+| [**DEFINITION-OF-DONE.md**](./docs/DEFINITION-OF-DONE.md) | Per-screen checklist |
+| [**UI-FUSION-GUIDE.md**](./docs/UI-FUSION-GUIDE.md) | ISP + shadcn + 21st.dev |
+| [docs/README.md](./docs/README.md) | Full index |
 
-## Documentation
+## User goal
 
-| Doc | Description |
-|-----|-------------|
-| [**PROJECT-MEMORY.md**](./docs/PROJECT-MEMORY.md) | AI context — read first |
-| [docs/README.md](./docs/README.md) | Full doc index |
-| [docs/07-SCREEN-INVENTORY.md](./docs/07-SCREEN-INVENTORY.md) | All ~118 screens |
-| [docs/08-IMPLEMENTATION-PHASES.md](./docs/08-IMPLEMENTATION-PHASES.md) | Build phases |
-
-## Project structure
-
-```
-src/
-├── app/              Next.js routes
-├── features/         Domain modules
-├── components/       UI + layout + shared
-├── lib/mock-api/     Mock data layer (Phase 1)
-├── mocks/            Static data
-├── stores/           Zustand stores
-├── config/           Site + navigation
-└── types/            Shared types
-
-tests/                Tests OUTSIDE src/app
-├── architecture/     Structure & boundary tests
-├── unit/             Logic tests
-└── setup/            Vitest setup
-```
-
-## Reference backend
-
-Read-only: [`isppaybd_isp`](../isppaybd_isp) — menus, permissions, landing copy.
+High-quality, professional, modern **ISP Pay BD website** — complete in every module, every screen, every state. Reference: `../isppaybd_isp`.
 
 ## Status
 
-**Phase 0 initialized** — Next.js + shadcn via CLI. Run `pnpm dev` to start. Phase 1 (marketing) is next.
+| Item | State |
+|------|-------|
+| P0 foundation | ✅ Complete |
+| Phase 1 landing (28 sections) | ⏳ Ready — say **"start Phase 1"** |
+
+**Preview:** `pnpm dev` → open `/` (dark marketing shell + hero).
+
+See [P0-READY.md](./docs/P0-READY.md).
+
+## Verify
+
+```bash
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+```

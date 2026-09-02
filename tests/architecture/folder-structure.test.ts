@@ -12,7 +12,12 @@ const requiredPaths = [
   'src/components/shared',
   'src/lib/mock-api',
   'src/lib/permissions',
-  'src/mocks/users',
+  'src/data',
+  'src/data/users',
+  'src/data/marketing',
+  'src/data/customer',
+  'src/data/admin',
+  'src/data/platform',
   'src/stores',
   'src/config',
   'src/types',
@@ -41,7 +46,11 @@ describe('architecture / mock-api boundary', () => {
     expect(existsSync(join(root, 'src/lib/mock-api/client.ts'))).toBe(true);
   });
 
-  it('demo users mock exists for offline auth', () => {
-    expect(existsSync(join(root, 'src/mocks/users/demo-users.mock.ts'))).toBe(true);
+  it('demo users data exists for offline auth', () => {
+    expect(existsSync(join(root, 'src/data/users/users.data.ts'))).toBe(true);
+  });
+
+  it('central data index exists', () => {
+    expect(existsSync(join(root, 'src/data/index.ts'))).toBe(true);
   });
 });
