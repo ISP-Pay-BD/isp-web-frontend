@@ -1,10 +1,11 @@
-import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
+import { PlatformDashboardPage } from '@/features/platform/dashboard';
+import type { Metadata } from 'next';
 
-export default function PlatformDashboardPage() {
-  return (
-    <PortalPlaceholder
-      title="Platform Dashboard"
-      description="Tenants, revenue, and system health — built in wt09-platform."
-    />
-  );
+export const metadata: Metadata = {
+  title: 'Platform Dashboard | ISP Pay BD',
+  description: 'Super-admin platform overview, tenant telemetry and revenue metrics',
+};
+
+export default function Page() {
+  return <PlatformDashboardPage />;
 }

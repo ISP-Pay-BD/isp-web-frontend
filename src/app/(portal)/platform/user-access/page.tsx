@@ -1,7 +1,10 @@
-'use client';
+import { UserAccessPage } from '@/features/platform/user-access';
+import type { Metadata } from 'next';
 
-import { UserAccessPage } from '@/features/admin/user-access';
+export const metadata: Metadata = {
+  title: 'User Access | ISP Pay BD Platform',
+};
 
-export default function PlatformUserAccessRoutePage() {
-  return <UserAccessPage portal="platform" />;
+export default function Page() {
+  return <UserAccessPage />;
 }

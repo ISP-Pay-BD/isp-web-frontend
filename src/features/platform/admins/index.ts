@@ -1,6 +1,2 @@
-﻿/**
- * @module features/platform/admins
- * Public exports only — import from '@/features/platform/admins'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { AdminsListPage } from './pages/AdminsListPage';
+export { AdminPackagesPage } from './pages/AdminPackagesPage';

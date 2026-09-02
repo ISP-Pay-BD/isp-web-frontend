@@ -1,44 +1,43 @@
-# AGENT TASK — WT08 Admin Comms + Settings
+# AGENT TASK — WT09 Platform Super-Admin
 
-**Worktree:** `.worktrees/wt08-admin-comms`  
-**Branch:** `wt/08-admin-comms`  
-**Agent ID:** 08 of 10
+**Worktree:** `.worktrees/wt09-platform`  
+**Branch:** `wt/09-platform`  
+**Agent ID:** 09 of 10
 
 ---
 
 ## Mission
 
-Build **communications + settings**: SMS, templates, WhatsApp, voice SMS, support tickets, rewards, profile, theme studio, settings, recycle bin.
+Build **entire platform portal** (super-admin): tenants, dashboard, revenue, plugins, file manager, contacts, admins, settings, support, showcase, user-access.
 
 ## Owned paths
 
 | Path |
 |------|
-| `src/features/admin/sms/` |
-| `src/features/admin/sms-templates/` |
-| `src/features/admin/whatsapp/` |
-| `src/features/admin/voice-sms/` |
-| `src/features/admin/support/` |
-| `src/features/admin/rewards/` |
-| `src/features/admin/profile/` |
-| `src/features/admin/theme-studio/` |
-| `src/features/admin/settings/` |
-| `src/features/admin/recycle-bin/` |
-| Matching app routes + data |
+| `src/features/platform/**` |
+| `src/app/(portal)/platform/**` |
+| `src/data/platform/` |
+| `src/config/navigation/platform.ts` (if needed) |
+| Platform mock-api handlers |
+
+## Modules
+
+dashboard · tenants · revenue · plugins · file-manager · contacts · admins · settings · support · showcase · user-access · shared
 
 ## Reference
 
-- `isppaybd_isp/app/Views/sms/`, `whatsapp/`, `voice_sms/`, `tickets/`, `settings/`, `recyclebin/`, `profile/`
+- `isppaybd_isp/app/Views/tenants/`, `file-manager/`, `plugins/`, `SecondAdmin/`
+- `_sidebar_platform.php`
 
 ## DO NOT touch
 
-- Customers/network/HR (WT05–07), platform (WT09)
+- Tenant admin modules (WT05–08), customer, marketing
 
 ## Done when
 
-- [x] All owned screens pass DoD
-- [x] Ticket thread UI
-- [x] Verify commands pass
+- [ ] All platform inventory (E*) screens pass DoD
+- [ ] Tenant branding fields in forms
+- [ ] Verify commands pass
 
 ## Skill
 
