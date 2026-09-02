@@ -270,9 +270,9 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Mock | Status |
 |---|-------|-------|------|--------|
-| F1 | `/employee/salaries` | My Salaries | mock | [ ] |
-| F2 | `/employee/advance-salary` | Advance salary | mock | [ ] |
-| F3 | `/employee/profile` | Profile | mock | [ ] |
+| F1 | `/employee/salaries` | My Salaries | mock | [x] |
+| F2 | `/employee/advance-salary` | Advance salary | mock | [x] |
+| F3 | `/employee/profile` | Profile | mock | [x] |
 
 ---
 
@@ -280,9 +280,9 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Status |
 |---|-------|-------|--------|
-| G1 | `/403` | Forbidden | [ ] |
-| G2 | `/404` | Not found | [ ] |
-| G3 | `/500` | Error | [ ] |
+| G1 | `/403` | Forbidden | [x] |
+| G2 | `/404` | Not found | [x] |
+| G3 | `/500` | Error | [x] |
 
 ---
 

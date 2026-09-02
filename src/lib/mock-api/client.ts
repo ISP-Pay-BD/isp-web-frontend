@@ -13,6 +13,15 @@ import {
   getSupportTicket,
   getNewsItem,
 } from './handlers/data.handler';
+import {
+  getEmployeeSalaries,
+  getEmployeeAdvanceRequests,
+  getEmployeeProfile,
+  requestAdvanceSalary,
+  updateEmployeeProfile,
+  type AdvanceRequestPayload,
+  type ProfileUpdatePayload,
+} from './handlers/employee.handler';
 import { mockDelay } from './delay';
 
 type HandlerMap = {
@@ -32,6 +41,11 @@ type HandlerMap = {
   'customer.domain': (domain: string) => ReturnType<typeof getCustomerDomain>;
   'platform.domain': (domain: string) => ReturnType<typeof getPlatformDomain>;
   'employee.domain': () => ReturnType<typeof getEmployeeDomain>;
+  'employee.salaries.list': () => ReturnType<typeof getEmployeeSalaries>;
+  'employee.advance.list': () => ReturnType<typeof getEmployeeAdvanceRequests>;
+  'employee.profile.get': () => ReturnType<typeof getEmployeeProfile>;
+  'employee.advance.request': (payload: AdvanceRequestPayload) => ReturnType<typeof requestAdvanceSalary>;
+  'employee.profile.update': (payload: ProfileUpdatePayload) => ReturnType<typeof updateEmployeeProfile>;
   'support.ticket': (id: string) => ReturnType<typeof getSupportTicket>;
   'news.item': (id: string) => ReturnType<typeof getNewsItem>;
 };
@@ -56,6 +70,11 @@ const handlers: HandlerMap = {
   'customer.domain': getCustomerDomain,
   'platform.domain': getPlatformDomain,
   'employee.domain': getEmployeeDomain,
+  'employee.salaries.list': getEmployeeSalaries,
+  'employee.advance.list': getEmployeeAdvanceRequests,
+  'employee.profile.get': getEmployeeProfile,
+  'employee.advance.request': requestAdvanceSalary,
+  'employee.profile.update': updateEmployeeProfile,
   'support.ticket': getSupportTicket,
   'news.item': getNewsItem,
 };

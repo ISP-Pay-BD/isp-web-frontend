@@ -1,0 +1,170 @@
+'use client';
+
+import { useMemo } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { Banknote } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { DataTable } from '@/features/shared/data-table';
+import { StatCard } from '@/components/shared/StatCard';
+import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DateDisplay } from '@/components/shared/DateDisplay';
+import { ChartCard } from '@/components/shared/ChartCard';
+import { FilterBar } from '@/components/shared/FilterBar';
+import { formatBdt } from '@/lib/format';
+import {
+  EmployeePageShell,
+  EmployeeLoadingSkeleton,
+  EmployeeEmptyState,
+  EmployeeErrorState,
+} from '@/features/employee/shared';
+import { useEmployeeSalaries } from '../hooks/use-employee-salaries';
+import type { EmployeeSalary } from '@/features/employee/shared';
+
+function formatSalaryMonth(month: string): string {
+  const [year, m] = month.split('-');
+  const date = new Date(Number(year), Number(m) - 1, 1);
+  return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+}
+
+export function EmployeeSalariesPage() {
+  const { data, isLoading, isError, refetch } = useEmployeeSalaries();
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
+
+  const columns = useMemo<LegacyColumnDef<EmployeeSalary, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'month',
+        header: 'Month',
+        cell: ({ row }) => (
+          <span className="font-medium">{formatSalaryMonth(row.original.month)}</span>
+        ),
+      },
+      {
+        accessorKey: 'amountBdt',
+        header: 'Net Amount',
+        cell: ({ row }) => <CurrencyDisplay amount={row.original.amountBdt} className="font-semibold" />,
+      },
+      {
+        id: 'breakdown',
+        header: 'Breakdown',
+        cell: ({ row }) => {
+          const b = row.original.breakdown;
+          return (
+            <span className="text-muted-foreground text-xs">
+              Basic {formatBdt(b.basic)} · Allowance {formatBdt(b.allowance)} · Deduction{' '}
+              {formatBdt(b.deduction)}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'paidAt',
+        header: 'Paid On',
+        cell: ({ row }) => <DateDisplay value={row.original.paidAt} />,
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+    ],
+    [],
+  );
+
+  const chartData = useMemo(
+    () =>
+      [...items]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map((s) => ({
+          month: formatSalaryMonth(s.month),
+          amount: s.amountBdt,
+        })),
+    [items],
+  );
+
+  const totalPaid = items.reduce((sum, s) => sum + s.amountBdt, 0);
+  const lastPayment = items[0];
+
+  if (isLoading) {
+    return (
+      <EmployeePageShell title="My Salaries" subtitle="Loading salary history...">
+        <EmployeeLoadingSkeleton />
+      </EmployeePageShell>
+    );
+  }
+
+  if (isError) {
+    return (
+      <EmployeePageShell title="My Salaries" subtitle="Salary slips and payment history">
+        <EmployeeErrorState onRetry={() => refetch()} />
+      </EmployeePageShell>
+    );
+  }
+
+  return (
+    <EmployeePageShell
+      title="My Salaries"
+      subtitle="View your salary slips and payment history"
+      breadcrumbs={[
+        { label: 'Employee', href: '/employee/salaries' },
+        { label: 'Salaries' },
+      ]}
+    >
+      <div className="space-y-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            title="Total Received"
+            value={<CurrencyDisplay amount={totalPaid} />}
+            icon={Banknote}
+            description={`${items.length} payments on record`}
+          />
+          <StatCard
+            title="Last Payment"
+            value={lastPayment ? <CurrencyDisplay amount={lastPayment.amountBdt} /> : '—'}
+            description={lastPayment ? formatSalaryMonth(lastPayment.month) : 'No payments yet'}
+          />
+          <StatCard
+            title="Monthly Net"
+            value={lastPayment ? <CurrencyDisplay amount={lastPayment.amountBdt} /> : '—'}
+            description="Most recent net salary"
+          />
+        </div>
+
+        {chartData.length > 0 ? (
+          <ChartCard title="Salary trend" description="Net salary by month">
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `৳${v / 1000}k`} />
+                  <Tooltip
+                    formatter={(value) => [`৳${formatBdt(Number(value))}`, 'Net']}
+                  />
+                  <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ChartCard>
+        ) : null}
+
+        <FilterBar filters={<span className="text-muted-foreground text-sm">Payment history</span>} />
+
+        {items.length === 0 ? (
+          <EmployeeEmptyState
+            title="No salary records"
+            description="Your salary payments will appear here once processed by HR."
+          />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={items}
+            emptyTitle="No salary records"
+            emptyDescription="Your salary payments will appear here once processed."
+          />
+        )}
+      </div>
+    </EmployeePageShell>
+  );
+}

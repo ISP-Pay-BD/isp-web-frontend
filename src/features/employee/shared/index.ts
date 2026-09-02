@@ -1,6 +1,11 @@
-﻿/**
- * @module features/employee/shared
- * Public exports only — import from '@/features/employee/shared'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { EmployeePageShell } from './components/EmployeePageShell';
+export {
+  EmployeeLoadingSkeleton,
+  EmployeeEmptyState,
+  EmployeeErrorState,
+} from './components/EmployeeStates';
+export type {
+  EmployeeSalary,
+  EmployeeAdvanceRequest,
+  EmployeeProfile,
+} from './types';
