@@ -1,44 +1,45 @@
-# AGENT TASK — WT06 Admin HR + Finance
+# AGENT TASK — WT07 Admin Network
 
-**Worktree:** `.worktrees/wt06-admin-hr-finance`  
-**Branch:** `wt/06-admin-hr-finance`  
-**Agent ID:** 06 of 10
+**Worktree:** `.worktrees/wt07-admin-network`  
+**Branch:** `wt/07-admin-network`  
+**Agent ID:** 07 of 10
 
 ---
 
 ## Mission
 
-Build **HR + accounting + wallet + reports + purchase/inventory**.
+Build **network ops**: routers, OLT, bandwidth buy/sell, hotspot, network map/diagram, IP pools.
 
 ## Owned paths
 
 | Path |
 |------|
-| `src/features/admin/hr/**` |
-| `src/features/admin/accounting/**` |
-| `src/features/admin/wallet/` |
-| `src/features/admin/reports/` |
-| `src/features/admin/purchase/` |
-| `src/features/admin/inventory/` |
-| Matching `src/app/(portal)/admin/` routes |
-| Matching `src/data/admin/` |
-
-## Modules
-
-employees · salaries · attendance · accounts · advance-salary · chart-of-accounts · journal · incomes · expenses · balance-sheet · accounting reports · wallet · BTRC/reports · purchase · inventory
+| `src/features/admin/routers/` |
+| `src/features/admin/olt/` |
+| `src/features/admin/bandwidth/**` |
+| `src/features/admin/hotspot/` |
+| `src/features/admin/network/**` |
+| `src/features/admin/ip-pools/` |
+| Matching app routes + `src/data/admin/` |
 
 ## Reference
 
-- `isppaybd_isp/app/Views/employee/`, `accounts/`, `wallet/`, `reports/`, `purchase/`, `inventory/`
+- `isppaybd_isp/app/Views/routers/`, `olt/`, `bandwidth/`, `bandwidth_sell/`, `hotspot/`, `network/`, `ip_pools/`
+
+## Notes
+
+- Network diagram: static SVG / React Flow with mock nodes
+- Network map: static image + pins (no live Mapbox key)
 
 ## DO NOT touch
 
-- Customers/packages (WT05), network (WT07), SMS (WT08)
+- Customers (WT05), HR/finance (WT06), SMS (WT08)
 
 ## Done when
 
 - [x] All owned screens pass DoD
-- [x] CurrencyDisplay ৳ formatting
+- [x] Status badges for online/offline
+- [x] `font-mono` for IP/MAC
 - [x] Verify commands pass
 
 ## Skill

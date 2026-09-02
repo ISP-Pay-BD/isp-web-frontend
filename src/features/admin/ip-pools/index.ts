@@ -1,6 +1,4 @@
-﻿/**
- * @module features/admin/ip-pools
- * Public exports only — import from '@/features/admin/ip-pools'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { IpPoolsPage } from './pages/IpPoolsPage';
+export { IpPoolModal } from './components/IpPoolModal';
+export { useIpPools } from './hooks/useIpPools';
+export type { IpPoolFormValues } from './schemas/ip-pool.schema';

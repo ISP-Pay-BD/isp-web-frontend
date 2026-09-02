@@ -1,11 +1,10 @@
-import type { Metadata } from 'next';
-import { CustomerSubscriptionPage } from '@/features/customer/subscription';
+import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
 
-export const metadata: Metadata = {
-  title: 'My Subscription',
-  description: 'Active Broadband Subscription and Renewal',
-};
-
-export default function Page() {
-  return <CustomerSubscriptionPage />;
+export default function CustomerSubscriptionPage() {
+  return (
+    <PortalPlaceholder
+      title="My Subscription"
+      description="View and renew your PPPoE subscription — built in wt04-customer-portal."
+    />
+  );
 }

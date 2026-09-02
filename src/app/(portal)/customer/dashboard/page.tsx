@@ -1,11 +1,10 @@
-import type { Metadata } from 'next';
-import { CustomerDashboardPage } from '@/features/customer/dashboard';
+import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
 
-export const metadata: Metadata = {
-  title: 'Customer Dashboard',
-  description: 'ISP Pay BD Customer Operations and Network Overview',
-};
-
-export default function Page() {
-  return <CustomerDashboardPage />;
+export default function CustomerDashboardPage() {
+  return (
+    <PortalPlaceholder
+      title="Customer Dashboard"
+      description="Subscription status, usage, and quick pay — built in wt04-customer-portal."
+    />
+  );
 }

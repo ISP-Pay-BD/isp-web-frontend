@@ -1,11 +1,10 @@
-import type { Metadata } from 'next';
-import { SelfRechargePage } from '@/features/admin/subscription';
+import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
 
-export const metadata: Metadata = {
-  title: 'Self Recharge | Admin',
-  description: 'Renew ISP Pay BD SaaS subscription license',
-};
-
-export default function SelfRechargeRoute() {
-  return <SelfRechargePage />;
+export default function AdminSubscriptionPage() {
+  return (
+    <PortalPlaceholder
+      title="Self Recharge"
+      description="Renew your admin subscription when expired — built in wt05-admin-ops."
+    />
+  );
 }
