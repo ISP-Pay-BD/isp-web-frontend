@@ -9,7 +9,7 @@ Last verified: build + tests pass.
 | # | Task | Location |
 |---|------|----------|
 | 1 | Landing tokens (`#0c0118`, `#f75803`, `#2E8BFF`) | `src/app/globals.css` |
-| 2 | Self-hosted fonts (no runtime CDN) | `@fontsource` via `src/lib/fonts.ts` |
+| 2 | Self-hosted fonts (5 families, folder per font) | `@fontsource` + `public/fonts/satoshi/` via `src/styles/fonts/` — see `docs/FONTS.md` |
 | 3 | Brand logo + payment/partner SVGs | `public/images/` |
 | 4 | Polish libs: embla-carousel, number-flow | `package.json` |
 | 5 | shadcn components (table, accordion, command…) | `src/components/ui/` |
@@ -31,7 +31,6 @@ pnpm typecheck && pnpm test && pnpm build
 
 | Item | Notes |
 |------|-------|
-| Satoshi `.woff2` | Add to `public/fonts/` — portal falls back to Inter |
 | OG image | `public/images/brand/og-image.png` |
 | `next-intl` wiring | Do alongside Phase 1 sections |
 

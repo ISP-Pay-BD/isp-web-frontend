@@ -42,17 +42,23 @@ Used with shadcn/ui CSS variables in logged-in app shells.
 
 ## Typography
 
-| Role | Font | Fallback |
-|------|------|----------|
-| UI / headings | **Satoshi** | system-ui, sans-serif |
-| Monospace / IDs | **IBM Plex Mono** | monospace |
-| Bengali | **Noto Sans Bengali** | sans-serif |
+| Role | Font | Fallback | Surface |
+|------|------|----------|---------|
+| Marketing display | **Plus Jakarta Sans** | system-ui | Landing |
+| Marketing body | **Inter** | system-ui | Landing |
+| Portal UI / headings | **Satoshi** | Inter, system-ui | Admin, customer, platform, employee |
+| Monospace / IDs | **IBM Plex Mono** | monospace | All |
+| Bengali | **Noto Sans Bengali** | sans-serif | All (locale `bn`) |
+
+**Full setup guide:** `docs/FONTS.md`
 
 ```css
-/* globals.css — font faces point to /public/fonts/ */
---font-sans: 'Satoshi', system-ui, sans-serif;
---font-mono: 'IBM Plex Mono', monospace;
---font-bengali: 'Noto Sans Bengali', 'Satoshi', sans-serif;
+/* globals.css */
+--font-portal-sans: 'Satoshi', 'Inter Variable', 'Inter', system-ui, sans-serif;
+--font-portal-mono: 'IBM Plex Mono', ui-monospace, monospace;
+--font-landing-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+--font-landing-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+--font-bengali: 'Noto Sans Bengali', var(--font-landing-body);
 ```
 
 Apply Bengali font when `locale === 'bn'` on body or `.font-bengali`.

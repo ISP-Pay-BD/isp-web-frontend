@@ -30,6 +30,7 @@ Lock-in list. Do not substitute libraries without updating this doc and `AGENTS.
 | `@fontsource-variable/plus-jakarta-sans` | Landing display font |
 | `@fontsource/noto-sans-bengali` | Bengali copy |
 | `@fontsource/ibm-plex-mono` | Monospace IDs/amounts |
+| Satoshi (local) | Portal UI — `public/fonts/satoshi/` + `src/styles/fonts/satoshi.css` |
 
 ## Data & forms
 
@@ -98,7 +99,7 @@ pnpm add -D vitest @testing-library/react @playwright/test prettier prettier-plu
 
 | Asset | Rule |
 |-------|------|
-| Fonts | Self-host in `public/fonts/` — copy from `isppaybd_isp/public/assets/fonts/` |
+| Fonts | Self-host — `@fontsource` + Satoshi in `public/fonts/` — see **`docs/FONTS.md`** |
 | Images | `public/images/` only |
 | Icons | Lucide (bundled) — no Font Awesome CDN |
 | Maps | Static image placeholder in Phase 1 — no Mapbox API key |

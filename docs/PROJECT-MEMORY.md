@@ -13,7 +13,7 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 
 | Item | State |
 |------|-------|
-| P0 foundation | ✅ Done |
+| P0 foundation | ✅ Done (incl. Satoshi fonts) |
 | MarketingLayout | ✅ Done |
 | Full navigation | ✅ Done |
 | Shared components | ✅ Done |
@@ -40,6 +40,7 @@ Marketing  →  ISP landing.css dark (#0c0118) + 21st.dev inspiration + Framer M
 Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
 Quality    →  Premium ISP ops platform — complete states, permissions, responsive
 Data       →  src/data/ via mock-api only
+Fonts      →  Satoshi (portals) + Plus Jakarta/Inter (marketing) — see docs/FONTS.md
 ```
 
 ---

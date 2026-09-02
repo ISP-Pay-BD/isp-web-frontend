@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:architecture": "vitest run tests/architecture",
-    "test:unit": "vitest run tests/unit"
+    "test:unit": "vitest run tests/unit",
+    "fonts:sync": "node scripts/sync-fonts.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

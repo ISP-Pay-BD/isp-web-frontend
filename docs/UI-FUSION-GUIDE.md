@@ -135,7 +135,7 @@ Install via CLI: `pnpm dlx shadcn@latest add <component> --yes`
 | Landing JS (gzipped) | **< 150 KB** |
 | Portal route JS | **< 200 KB** per major page |
 | Images | `next/image`, WebP, lazy below fold |
-| Fonts | Self-host in `public/fonts/`, `font-display: swap` |
+| Fonts | Self-host in `public/fonts/`, `font-display: swap` — see `docs/FONTS.md` |
 | Charts | `dynamic(() => import('recharts'), { ssr: false })` |
 | 21st shader blocks | Max **0–1** per page, lazy loaded |
 

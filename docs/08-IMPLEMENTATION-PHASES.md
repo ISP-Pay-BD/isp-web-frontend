@@ -26,11 +26,11 @@ Execute in order. Do not start Phase N+1 until Phase N checklist is complete.
 - [x] Vitest + `tests/` outside `src/app`
 - [x] `.env.example`, `AGENTS.md`, `.cursor/rules`, UI fusion docs
 - [x] ESLint + Prettier + `pnpm build` passes
-- [ ] Copy fonts to `public/fonts/` (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali)
-- [ ] `globals.css` — dual tokens: landing vs portal (`04-DESIGN-SYSTEM.md`)
-- [ ] `config/navigation.ts` — **full** sidebar (~50+ items)
-- [ ] Portal layout: `AppShell`, `Sidebar`, `Header`, `MobileNav`
-- [ ] Marketing layout: `MarketingNav`, `MarketingFooter` in `features/marketing/shared/`
+- [x] Copy fonts to `public/fonts/` (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali) — see `docs/FONTS.md`
+- [x] `globals.css` — dual tokens: landing vs portal (`04-DESIGN-SYSTEM.md`)
+- [x] `config/navigation.ts` — **full** sidebar (~50+ items)
+- [x] Portal layout: `AppShell`, `Sidebar`, `Header`, `MobileNav`
+- [x] Marketing layout: `MarketingNav`, `MarketingFooter` in `features/marketing/shared/`
 
 ---
 
@@ -41,7 +41,7 @@ Complete before building marketing pages.
 | # | Task | Doc |
 |---|------|-----|
 | 1 | Port landing CSS tokens to Tailwind/globals | `04-DESIGN-SYSTEM.md`, `UI-FUSION-GUIDE.md` |
-| 2 | Self-host fonts in `public/fonts/` | `03-TECH-STACK.md` |
+| 2 | Self-host fonts in `public/fonts/` | `docs/FONTS.md`, `03-TECH-STACK.md` |
 | 3 | Expand `src/data/marketing/` — pricing tiers + PAYG from `landing.js` | `06-MOCK-DATA-SPEC.md` |
 | 4 | Build `MarketingLayout` (nav + footer + mobile CTA) | `UI-FUSION-GUIDE.md` |
 | 5 | Setup `next-intl` EN/BN | `11-I18N.md` |

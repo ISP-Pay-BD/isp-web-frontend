@@ -14,9 +14,11 @@ isp-web-frontend/
 ├── docs/                          # This documentation set
 ├── public/
 │   ├── fonts/
-│   │   ├── satoshi-variable.woff2
-│   │   ├── noto-sans-bengali-regular.woff2
-│   │   └── noto-sans-bengali-bold.woff2
+│   │   ├── satoshi/                 # woff2 — portal UI
+│   │   ├── inter/                   # README — @fontsource
+│   │   ├── plus-jakarta-sans/       # README — @fontsource
+│   │   ├── noto-sans-bengali/       # README — @fontsource
+│   │   └── ibm-plex-mono/           # README — @fontsource
 │   ├── images/
 │   │   ├── logo.svg
 │   │   ├── logo-dark.svg

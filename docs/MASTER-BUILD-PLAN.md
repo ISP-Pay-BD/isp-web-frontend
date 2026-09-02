@@ -52,9 +52,25 @@ Phase 8 API integration (future — out of scope now)
 |------|----------------|-----------|
 | Landing CSS vars in Tailwind | `src/app/globals.css`, `tailwind` config | `landing.css` |
 | Portal shadcn vars | `globals.css` `.dark` / `:root` | `tokens.css` |
-| Self-host fonts | `public/fonts/*` | Plus Jakarta, Inter, Satoshi, Noto BN |
+| Self-host fonts | `public/fonts/{family}/`, `src/styles/fonts/`, `src/config/fonts.ts` | **`docs/FONTS.md`** |
 | Logo + placeholders | `public/images/` | `_brand_logo.php` |
 | Favicon | `public/favicon.ico` | ISP brand |
+
+#### Font setup (mandatory — see `docs/FONTS.md`)
+
+**One folder per font in `public/fonts/`. One CSS file per font in `src/styles/fonts/`.**
+
+| Font | Folder | CSS file | Class | Use on |
+|------|--------|----------|-------|--------|
+| Plus Jakarta Sans | `public/fonts/plus-jakarta-sans/` | `plus-jakarta-sans.css` | `font-landing-display` | Marketing headings, hero |
+| Inter | `public/fonts/inter/` | `inter.css` | `font-landing-body` | Marketing body, nav, footer |
+| **Satoshi** | `public/fonts/satoshi/*.woff2` | `satoshi.css` | `font-portal` | All portals (admin, customer, platform, employee) |
+| Noto Sans Bengali | `public/fonts/noto-sans-bengali/` | `noto-sans-bengali.css` | `font-bengali` | BN locale (all surfaces) |
+| IBM Plex Mono | `public/fonts/ibm-plex-mono/` | `ibm-plex-mono.css` | `font-mono` | Invoice #, TrxID, IP, MAC |
+
+Registry: `src/config/fonts.ts` · Load: `src/lib/fonts.ts` → `src/styles/fonts/index.css`
+
+**Do NOT use Roboto, Open Sans, or single-font-everywhere.**
 
 ### P0-B: Shared layouts (build once, reuse everywhere)
 
@@ -112,7 +128,7 @@ Phase 8 API integration (future — out of scope now)
 
 - [ ] MarketingLayout renders with nav + footer
 - [ ] Landing tokens applied (dark `#0c0118`)
-- [ ] Fonts self-hosted and loading
+- [x] Fonts self-hosted and loading (Satoshi + @fontsource — see `docs/FONTS.md`)
 - [ ] Full navigation config written (even if pages empty)
 - [ ] Shared DataTable + EmptyState + StatCard exist
 - [ ] `pnpm build` passes

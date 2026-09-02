@@ -104,6 +104,6 @@ All password: `demo1234`
 
 ## Optional additions (when UI built)
 
-- Satoshi font files in `public/fonts/`
+- Satoshi font files in `public/fonts/satoshi/`
 - Real product screenshots in `public/images/`
 - Per-module data for remaining empty admin screens (~8% gap)

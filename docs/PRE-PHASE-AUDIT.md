@@ -16,7 +16,7 @@ Last updated: before Phase 1 (marketing landing).
 | Portal shells | 8/10 | ✅ AppShell scaffold |
 | Shared components | 9/10 | ✅ Done |
 | Marketing layout | 10/10 | ✅ Done |
-| Fonts self-hosted | 9/10 | ✅ @fontsource (Satoshi optional) |
+| Fonts self-hosted | 10/10 | ✅ Satoshi + @fontsource — `docs/FONTS.md` |
 | **Ready for Phase 1?** | **10/10** | ✅ **YES — start landing** |
 
 ---
@@ -39,7 +39,7 @@ Last updated: before Phase 1 (marketing landing).
 | # | Task | Owner |
 |---|------|-------|
 | 1 | Port **landing tokens** to Tailwind/CSS (`#0c0118`, `#f75803`, `#2E8BFF`) | Dev |
-| 2 | Self-host fonts: Plus Jakarta Sans, Inter, Satoshi, Noto Bengali | Dev |
+| 2 | Self-host fonts: Plus Jakarta Sans, Inter, Satoshi, Noto Bengali | Dev ✅ — `docs/FONTS.md` |
 | 3 | Expand `src/data/marketing/` — full pricing tiers + PAYG from `landing.js` | Dev |
 | 4 | Build `MarketingLayout` (nav + footer) in `features/marketing/shared/` | Dev |
 | 5 | Setup `next-intl` EN/BN | Dev |

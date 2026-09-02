@@ -32,6 +32,7 @@
 | [02-FOLDER-STRUCTURE.md](./02-FOLDER-STRUCTURE.md) | Folder layout | Creating files |
 | [03-TECH-STACK.md](./03-TECH-STACK.md) | Libraries & tools | Installing deps |
 | [04-DESIGN-SYSTEM.md](./04-DESIGN-SYSTEM.md) | Brand & UI tokens | Styling |
+| [**FONTS.md**](./FONTS.md) | **Font setup & agent rules** | **Typography / self-hosting** |
 | [05-PERMISSIONS-AND-ROLES.md](./05-PERMISSIONS-AND-ROLES.md) | Roles & permissions | Auth & nav |
 | [06-MOCK-DATA-SPEC.md](./06-MOCK-DATA-SPEC.md) | Static data spec | Mock layer |
 | [07-SCREEN-INVENTORY.md](./07-SCREEN-INVENTORY.md) | Every screen & route | Building pages |
@@ -74,13 +75,14 @@ Run `pnpm dev` and open `/` to see dark marketing shell with hero preview.
 - [x] Vitest + architecture tests
 - [x] UI fusion docs + project memory updated
 - [x] `pnpm build` passes
+- [x] Self-host fonts (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali) — see `FONTS.md`
 
-### P0 — before Phase 1 landing ⏳
+### P0 — before Phase 1 landing ✅
 
-- [ ] Port landing CSS tokens to Tailwind/globals
-- [ ] Self-host fonts (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali)
-- [ ] Full marketing data (pricing tiers + PAYG calculator)
-- [ ] `MarketingLayout` (nav + footer)
+- [x] Port landing CSS tokens to Tailwind/globals
+- [x] Self-host fonts (Plus Jakarta Sans, Inter, Satoshi, Noto Bengali)
+- [x] Full marketing data (pricing tiers + PAYG calculator)
+- [x] `MarketingLayout` (nav + footer)
 - [ ] `next-intl` EN/BN setup
 
 ### P0.5 — parallel ⏳

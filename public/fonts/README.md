@@ -1,21 +1,41 @@
-# Fonts
+# Fonts — folder index
 
-Bundled via `@fontsource` packages (build-time, no runtime CDN).
+Each font has its **own folder** with **woff2 files**. CSS in `src/styles/fonts/`.
 
-| Font | Package | Usage |
-|------|---------|-------|
-| Inter | `@fontsource-variable/inter` | Landing body |
-| Plus Jakarta Sans | `@fontsource-variable/plus-jakarta-sans` | Landing display |
-| Noto Sans Bengali | `@fontsource/noto-sans-bengali` | BN copy |
-| IBM Plex Mono | `@fontsource/ibm-plex-mono` | IDs, amounts |
-
-## Satoshi (portal UI)
-
-Satoshi is referenced in ISP portal tokens. Add manually when available:
+Re-sync from npm after install: `pnpm fonts:sync`
 
 ```
-public/fonts/satoshi-variable.woff2
-public/fonts/satoshi-variable-italic.woff2
+public/fonts/
+├── satoshi/              ← 4 woff2 (portal UI)
+├── inter/                ← inter-latin.woff2 (marketing body)
+├── plus-jakarta-sans/    ← plus-jakarta-sans-latin.woff2 (marketing display)
+├── noto-sans-bengali/    ← 8 woff2 (BN + latin subsets)
+└── ibm-plex-mono/        ← 2 woff2 (400, 500)
+
+src/styles/fonts/
+├── index.css             ← imports all families
+├── satoshi.css
+├── inter.css
+├── plus-jakarta-sans.css
+├── noto-sans-bengali.css
+└── ibm-plex-mono.css
+
+src/config/fonts.ts       ← where to use what (registry)
+src/lib/fonts.ts          ← single import in root layout
 ```
 
-Until then, CSS falls back to Inter for portal `--font-sans`.
+**Full usage map:** `docs/FONTS.md`
+
+## Quick reference — which font where
+
+| Use this class | Font | Where |
+|----------------|------|-------|
+| `font-landing-display` | Plus Jakarta Sans | Marketing headings, hero |
+| `font-landing-body` | Inter | Marketing paragraphs, nav |
+| `font-portal` (default on `html`) | Satoshi | Admin, customer, platform, employee |
+| `font-bengali` | Noto Sans Bengali | When locale = `bn` |
+| `font-mono` | IBM Plex Mono | Invoice #, TrxID, IP, MAC |
+
+## Do NOT add
+
+Roboto, Open Sans, Geist, DM Sans — generic CRM look.

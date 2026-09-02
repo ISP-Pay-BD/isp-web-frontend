@@ -152,6 +152,9 @@
   .font-landing-body {
     font-family: var(--font-landing-body);
   }
+  .font-portal {
+    font-family: var(--font-portal-sans);
+  }
   .font-bengali {
     font-family: var(--font-bengali);
   }
