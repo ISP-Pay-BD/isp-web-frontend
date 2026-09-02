@@ -27,7 +27,7 @@ export const EXPIRED_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
 
 export function getRoleForPath(pathname: string): UserRole | null {
   if (pathname.startsWith('/platform')) return 'super_admin';
-  if (pathname.startsWith('/admin')) return null; // admin vs reseller resolved from cookie
+  if (pathname.startsWith('/admin')) return null;
   if (pathname.startsWith('/customer')) return 'user';
   if (pathname.startsWith('/employee')) return 'employee';
   return null;
