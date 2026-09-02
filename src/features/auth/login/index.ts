@@ -1,6 +1,3 @@
-﻿/**
- * @module features/auth/login
- * Public exports only — import from '@/features/auth/login'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { LoginPage } from './pages/LoginPage';
+export { LoginForm } from './components/LoginForm';
+export { DemoUserPicker } from './components/DemoUserPicker';

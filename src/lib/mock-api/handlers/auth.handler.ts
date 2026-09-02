@@ -8,6 +8,10 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
 export async function mockLogin(payload: LoginPayload): Promise<AuthSession> {
   await mockDelay();
 
@@ -35,4 +39,20 @@ export async function mockGetCurrentUser(userId: string): Promise<User | null> {
 
   const { password: _password, ...safeUser } = user;
   return safeUser as User;
+}
+
+export async function mockForgotPassword(
+  payload: ForgotPasswordPayload,
+): Promise<{ success: boolean; message: string }> {
+  await mockDelay(200);
+
+  const email = payload.email.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    throw new MockApiError('Please enter a valid email address', 'AUTH_INVALID_EMAIL');
+  }
+
+  return {
+    success: true,
+    message: 'If an account exists for that address, a secure reset link has been dispatched.',
+  };
 }

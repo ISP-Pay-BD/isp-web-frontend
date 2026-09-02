@@ -168,12 +168,12 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Status |
 |---|-------|-------|--------|
-| D8a | `/admin/bandwidth/buy/items` | Bandwidth items | [ ] |
-| D8b | `/admin/bandwidth/buy/categories` | Categories | [ ] |
-| D8c | `/admin/bandwidth/buy/providers` | Providers | [ ] |
-| D8d | `/admin/bandwidth/buy/bills` | Purchase bills | [ ] |
-| D8e | `/admin/bandwidth/sell/clients` | Sell clients | [ ] |
-| D8f | `/admin/bandwidth/sell/invoices` | Sales invoices | [ ] |
+| D8a | `/admin/bandwidth/buy/items` | Bandwidth items | [x] |
+| D8b | `/admin/bandwidth/buy/categories` | Categories | [x] |
+| D8c | `/admin/bandwidth/buy/providers` | Providers | [x] |
+| D8d | `/admin/bandwidth/buy/bills` | Purchase bills | [x] |
+| D8e | `/admin/bandwidth/sell/clients` | Sell clients | [x] |
+| D8f | `/admin/bandwidth/sell/invoices` | Sales invoices | [x] |
 
 ### D9. Inventory & purchase (admin only)
 
@@ -198,16 +198,16 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | P | R | Status |
 |---|-------|-------|---|---|--------|
-| D11a | `/admin/hotspot` | Hotspot hub | hotspot | admin | [ ] |
-| D11b | `/admin/hotspot/dashboard` | Hotspot dashboard | [ ] |
-| D11c | `/admin/hotspot/packages` | Hotspot packages | [ ] |
-| D11d | `/admin/hotspot/users` | Hotspot users | [ ] |
-| D11e | `/admin/hotspot/reports` | Hotspot reports | [ ] |
-| D11f | `/admin/olt` | OLT list | olt | admin | [ ] |
-| D11g | `/admin/routers` | MikroTik routers | routers | admin | [ ] |
-| D11h | `/admin/ip-pools` | IP pools | routers | admin | [ ] |
-| D11i | `/admin/network/diagram` | Network diagram | network | admin | [ ] |
-| D11j | `/admin/network/map` | Network map | network | admin | [ ] |
+| D11a | `/admin/hotspot` | Hotspot hub | hotspot | admin | [x] |
+| D11b | `/admin/hotspot/dashboard` | Hotspot dashboard | [x] |
+| D11c | `/admin/hotspot/packages` | Hotspot packages | [x] |
+| D11d | `/admin/hotspot/users` | Hotspot users | [x] |
+| D11e | `/admin/hotspot/reports` | Hotspot reports | [x] |
+| D11f | `/admin/olt` | OLT list | olt | admin | [x] |
+| D11g | `/admin/routers` | MikroTik routers | routers | admin | [x] |
+| D11h | `/admin/ip-pools` | IP pools | routers | admin | [x] |
+| D11i | `/admin/network/diagram` | Network diagram | network | admin | [x] |
+| D11j | `/admin/network/map` | Network map | network | admin | [x] |
 
 ### D12. Communications
 
@@ -333,7 +333,7 @@ These features exist in `isppaybd_isp` but were not in the original inventory. A
 | H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [ ] |
 | H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [ ] |
 | H8 | `/admin/reports/otc` | OTC report | `accounting` | [ ] |
-| H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [ ] |
+| H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [x] |
 | H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [ ] |
 | H11 | `/admin/customers/:id/audit` | Customer audit logs | `customers` | [ ] |
 | H12 | `/admin/corporate/queues` | Corporate sync queues | `customers` | [ ] |

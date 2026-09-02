@@ -1,4 +1,4 @@
-import { mockLogin, mockGetCurrentUser, type LoginPayload } from './handlers/auth.handler';
+import { mockLogin, mockGetCurrentUser, mockForgotPassword, type LoginPayload, type ForgotPasswordPayload } from './handlers/auth.handler';
 import { getLandingData, getPricingData, getPluginsData, getContactData } from './handlers/marketing.handler';
 import {
   listCustomers,
@@ -18,6 +18,7 @@ import { mockDelay } from './delay';
 type HandlerMap = {
   'auth.login': (payload: LoginPayload) => ReturnType<typeof mockLogin>;
   'auth.me': (userId: string) => ReturnType<typeof mockGetCurrentUser>;
+  'auth.forgotPassword': (payload: ForgotPasswordPayload) => ReturnType<typeof mockForgotPassword>;
   'health.ping': () => Promise<{ ok: true; mode: 'mock' }>;
   'marketing.landing': () => ReturnType<typeof getLandingData>;
   'marketing.pricing': () => ReturnType<typeof getPricingData>;
@@ -39,6 +40,7 @@ type HandlerMap = {
 const handlers: HandlerMap = {
   'auth.login': mockLogin,
   'auth.me': mockGetCurrentUser,
+  'auth.forgotPassword': mockForgotPassword,
   'health.ping': async () => {
     await mockDelay(50);
     return { ok: true as const, mode: 'mock' as const };
