@@ -1,6 +1,5 @@
-﻿/**
- * @module features/shared/permission
- * Public exports only — import from '@/features/shared/permission'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { AuthGuard } from './components/AuthGuard';
+export { PermissionGuard } from './components/PermissionGuard';
+export { ForbiddenPage } from './components/ForbiddenPage';
+export { ExpiredBanner } from './components/ExpiredBanner';
+export { useRequireAuth, useRequirePermission } from './hooks/useRequireAuth';

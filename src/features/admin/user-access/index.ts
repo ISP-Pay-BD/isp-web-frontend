@@ -1,6 +1,3 @@
-﻿/**
- * @module features/admin/user-access
- * Public exports only — import from '@/features/admin/user-access'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { UserAccessPage } from './pages/UserAccessPage';
+export { PermissionMatrix, PermissionMatrixEditor } from './components/PermissionMatrix';
+export { CustomAccessTable } from './components/CustomAccessTable';

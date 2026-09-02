@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserRole } from '@/types/auth';
 import { mockFetch } from '@/lib/mock-api/client';
+import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session-cookie';
+import { ROLE_HOME } from '@/lib/auth/route-access';
 
 interface AuthState {
   user: User | null;
@@ -11,6 +13,7 @@ interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
+  syncSessionCookie: () => void;
   role: () => UserRole | null;
 }
 
@@ -28,11 +31,30 @@ export const useAuthStore = create<AuthState>()(
           token: session.token,
           isAuthenticated: true,
         });
+        setAuthCookie({
+          userId: session.user.id,
+          role: session.user.role,
+          status: session.user.status,
+        });
         return session.user;
       },
 
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false });
+        clearAuthCookie();
+      },
+
+      syncSessionCookie: () => {
+        const user = get().user;
+        if (user) {
+          setAuthCookie({
+            userId: user.id,
+            role: user.role,
+            status: user.status,
+          });
+        } else {
+          clearAuthCookie();
+        }
       },
 
       role: () => get().user?.role ?? null,
@@ -48,18 +70,7 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
+/** @deprecated Use ROLE_HOME from @/lib/auth/route-access */
 export function getRoleHomePath(role: UserRole): string {
-  switch (role) {
-    case 'user':
-      return '/customer/dashboard';
-    case 'resellerAdmin':
-    case 'admin':
-      return '/admin/dashboard';
-    case 'super_admin':
-      return '/platform/dashboard';
-    case 'employee':
-      return '/employee/salaries';
-    default:
-      return '/login';
-  }
+  return ROLE_HOME[role] ?? '/login';
 }
