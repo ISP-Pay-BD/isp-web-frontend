@@ -74,21 +74,21 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Key UI | Mock handler | P | Status |
 |---|-------|-------|--------|--------------|---|--------|
-| C1 | `/customer/dashboard` | Dashboard | Expiry banner, package card, quick actions, usage chart | `customer.dashboard` | — | [ ] |
-| C2 | `/customer/subscription` | My Subscription | Current plan, renew button, quota, history | `customer.subscription` | subscription:read | [ ] |
-| C3 | `/customer/packages` | Packages | Available packages grid, upgrade CTA | `customer.packages` | — | [ ] |
-| C4 | `/customer/payments` | Payment History | Table, filters, invoice download btn | `customer.payments` | payment:read | [ ] |
-| C5 | `/customer/payments/pay` | Pay Now | Amount, gateway select (bKash/Nagad), confirm modal | `customer.payments.pay` | payment:payment | [ ] |
-| C6 | `/customer/support` | Support | Ticket list, status badges | `customer.support` | support_ticket:read | [ ] |
-| C7 | `/customer/support/[id]` | Ticket detail | Message thread, reply form | `customer.support` | support_ticket:send_msg | [ ] |
-| C8 | `/customer/support/new` | New ticket | Subject, body, submit | `customer.support` | support_ticket:create | [ ] |
-| C9 | `/customer/rewards` | Referrals & Rewards | Points wallet, referral link, redeem | `customer.rewards` | — | [ ] |
-| C10 | `/customer/news` | News & Notices | Card list, read modal | `customer.news` | — | [ ] |
-| C11 | `/customer/router` | Router Tools | Quick fix buttons grid | `customer.router` | — | [ ] |
-| C12 | `/customer/router/wifi` | Change WiFi | SSID + password form | `customer.router` | — | [ ] |
-| C13 | `/customer/router/devices` | Connected Devices | Device list table | `customer.router` | — | [ ] |
-| C14 | `/customer/profile` | My Profile | Edit name, phone, email | `customer.profile` | profile_update | [ ] |
-| C15 | `/customer/change-password` | Change Password | Old/new/confirm | mock | password_change | [ ] |
+| C1 | `/customer/dashboard` | Dashboard | Expiry banner, package card, quick actions, usage chart | `customer.dashboard` | — | [x] |
+| C2 | `/customer/subscription` | My Subscription | Current plan, renew button, quota, history | `customer.subscription` | subscription:read | [x] |
+| C3 | `/customer/packages` | Packages | Available packages grid, upgrade CTA | `customer.packages` | — | [x] |
+| C4 | `/customer/payments` | Payment History | Table, filters, invoice download btn | `customer.payments` | payment:read | [x] |
+| C5 | `/customer/payments/pay` | Pay Now | Amount, gateway select (bKash/Nagad), confirm modal | `customer.payments.pay` | payment:payment | [x] |
+| C6 | `/customer/support` | Support | Ticket list, status badges | `customer.support` | support_ticket:read | [x] |
+| C7 | `/customer/support/[id]` | Ticket detail | Message thread, reply form | `customer.support` | support_ticket:send_msg | [x] |
+| C8 | `/customer/support/new` | New ticket | Subject, body, submit | `customer.support` | support_ticket:create | [x] |
+| C9 | `/customer/rewards` | Referrals & Rewards | Points wallet, referral link, redeem | `customer.rewards` | — | [x] |
+| C10 | `/customer/news` | News & Notices | Card list, read modal | `customer.news` | — | [x] |
+| C11 | `/customer/router` | Router Tools | Quick fix buttons grid | `customer.router` | — | [x] |
+| C12 | `/customer/router/wifi` | Change WiFi | SSID + password form | `customer.router` | — | [x] |
+| C13 | `/customer/router/devices` | Connected Devices | Device list table | `customer.router` | — | [x] |
+| C14 | `/customer/profile` | My Profile | Edit name, phone, email | `customer.profile` | profile_update | [x] |
+| C15 | `/customer/change-password` | Change Password | Old/new/confirm | mock | password_change | [x] |
 
 ### Customer mobile UX
 

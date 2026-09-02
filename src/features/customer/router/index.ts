@@ -1,6 +1,3 @@
-﻿/**
- * @module features/customer/router
- * Public exports only — import from '@/features/customer/router'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { CustomerRouterPage } from './pages/CustomerRouterPage';
+export { CustomerWifiSettingsPage } from './pages/CustomerWifiSettingsPage';
+export { CustomerDevicesPage } from './pages/CustomerDevicesPage';
