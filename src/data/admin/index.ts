@@ -8,3 +8,5 @@ export * from './hr.data';
 export * from './accounting.data';
 export * from './bandwidth.data';
 export * from './network-ops.data';
+export * from './subscription.data';
+export * from './tenant-billing.data';

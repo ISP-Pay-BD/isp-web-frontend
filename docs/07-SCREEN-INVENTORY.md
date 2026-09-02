@@ -106,34 +106,34 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Key UI | Mock | P | R | Status |
 |---|-------|-------|--------|------|---|---|--------|
-| D1 | `/admin/dashboard` | Dashboard | KPI cards, charts, recent activity | `admin.dashboard` | — | admin,reseller | [ ] |
+| D1 | `/admin/dashboard` | Dashboard | KPI cards, charts, recent activity | `admin.dashboard` | — | admin,reseller | [x] |
 
 ### D2. Customers
 
 | # | Route | Title | Key UI | Mock | P | Status |
 |---|-------|-------|--------|------|---|--------|
-| D2a | `/admin/customers` | All Customers | DataTable, search, filters, bulk actions | `admin.customers` | customer:read | [ ] |
-| D2b | `/admin/customers/expired` | Expired | Filtered table | same | customer:read | [ ] |
-| D2c | `/admin/customers/free-requests` | Free User Requests | Approval table | mock | free_customer_create | [ ] |
-| D2d | `/admin/customers/new` | Add Customer | Multi-field form | mock | customer:create | [ ] |
-| D2e | `/admin/customers/import` | Import Excel | Upload UI, preview table | mock | customer:create | [ ] |
-| D2f | `/admin/customers/[id]` | Customer detail | Tabs: info, subscription, payments, logs | mock | customer:read | [ ] |
-| D2g | `/admin/customers/[id]/edit` | Edit customer | Form | mock | customer:update | [ ] |
+| D2a | `/admin/customers` | All Customers | DataTable, search, filters, bulk actions | `admin.customers` | customer:read | [x] |
+| D2b | `/admin/customers/expired` | Expired | Filtered table | same | customer:read | [x] |
+| D2c | `/admin/customers/free-requests` | Free User Requests | Approval table | mock | free_customer_create | [x] |
+| D2d | `/admin/customers/new` | Add Customer | Multi-field form | mock | customer:create | [x] |
+| D2e | `/admin/customers/import` | Import Excel | Upload UI, preview table | mock | customer:create | [x] |
+| D2f | `/admin/customers/[id]` | Customer detail | Tabs: info, subscription, payments, logs | mock | customer:read | [x] |
+| D2g | `/admin/customers/[id]/edit` | Edit customer | Form | mock | customer:update | [x] |
 
 ### D3. Customer payments
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D3a | `/admin/customer-payments` | Payments list | `admin.customer-payments` | customer_payment:read | [ ] |
-| D3b | `/admin/customer-payments/new` | Record payment | mock | customer_payment:create | [ ] |
+| D3a | `/admin/customer-payments` | Payments list | `admin.customer-payments` | customer_payment:read | [x] |
+| D3b | `/admin/customer-payments/new` | Record payment | mock | customer_payment:create | [x] |
 
 ### D4. Areas & packages
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D4a | `/admin/areas` | Service Areas | Tree: areas + subareas | `admin.areas` | area:read | [ ] |
-| D4b | `/admin/packages` | Packages | CRUD table | `admin.packages` | packages:read | [ ] |
-| D4c | `/admin/pop-packages` | POP Packages | Reseller packages | mock | packages:read | [ ] |
+| D4a | `/admin/areas` | Service Areas | Tree: areas + subareas | `admin.areas` | area:read | [x] |
+| D4b | `/admin/packages` | Packages | CRUD table | `admin.packages` | packages:read | [x] |
+| D4c | `/admin/pop-packages` | POP Packages | Reseller packages | mock | packages:read | [x] |
 
 ### D5. HR
 
@@ -160,9 +160,9 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Mock | P | R | Status |
 |---|-------|-------|------|---|---|--------|
-| D7a | `/admin/pop/resellers` | POP list | `admin.pop` | Resellers:read | admin | [ ] |
-| D7b | `/admin/pop/funding` | POP Funding | mock | customer_payment:read | admin,reseller | [ ] |
-| D7c | `/admin/pop/transactions` | POP Transactions | mock | customer_payment:read | admin,reseller | [ ] |
+| D7a | `/admin/pop/resellers` | POP list | `admin.pop` | Resellers:read | admin | [x] |
+| D7b | `/admin/pop/funding` | POP Funding | mock | customer_payment:read | admin,reseller | [x] |
+| D7c | `/admin/pop/transactions` | POP Transactions | mock | customer_payment:read | admin,reseller | [x] |
 
 ### D8. Bandwidth (admin only)
 
@@ -235,8 +235,8 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 | D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
 | D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
 | D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |
-| D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [ ] |
-| D13j | `/admin/payment` | My payment | payment:read | [ ] |
+| D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [x] |
+| D13j | `/admin/payment` | My payment | payment:read | [x] |
 | D13k | `/admin/profile` | Profile | profile_update | [ ] |
 | D13l | `/admin/change-password` | Change password | password_change | [ ] |
 
