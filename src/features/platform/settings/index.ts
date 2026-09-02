@@ -1,6 +1,3 @@
-﻿/**
- * @module features/platform/settings
- * Public exports only — import from '@/features/platform/settings'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { SoftwareSettingsPage } from './pages/SoftwareSettingsPage';
+export { RedisLogsPage } from './pages/RedisLogsPage';
+export { MaintenancePage } from './pages/MaintenancePage';

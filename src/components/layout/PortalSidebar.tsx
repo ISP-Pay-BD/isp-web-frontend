@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';

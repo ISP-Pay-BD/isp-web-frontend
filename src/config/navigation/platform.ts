@@ -62,7 +62,7 @@ export const platformNavigation: NavItem[] = [
   {
     id: 'platform-support',
     label: 'Support Tickets',
-    href: '/platform/support',
+    href: '/platform/support-tickets',
     icon: 'Ticket',
     roles: ['super_admin'],
   },
@@ -76,7 +76,7 @@ export const platformNavigation: NavItem[] = [
   {
     id: 'platform-settings',
     label: 'Software Settings',
-    href: '/platform/settings',
+    href: '/platform/settings/software',
     icon: 'Settings',
     roles: ['super_admin'],
   },

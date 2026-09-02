@@ -248,19 +248,19 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Mock | Status |
 |---|-------|-------|------|--------|
-| E1 | `/platform/dashboard` | Platform dashboard | `platform/revenue` | [ ] |
-| E2 | `/platform/tenants` | Tenant portals | `platform/tenants` | [ ] |
-| E3 | `/platform/tenants/new` | Create portal | mock | [ ] |
-| E4 | `/platform/admins` | Second admins | `platform/admins` | [ ] |
-| E5 | `/platform/admins/packages` | Admin packages | mock | [ ] |
-| E6 | `/platform/revenue` | Platform revenue | mock | [ ] |
-| E7 | `/platform/showcase` | Product showcase | mock | [ ] |
-| E8 | `/platform/contacts` | Contact infos | mock | [ ] |
-| E9 | `/platform/plugins` | Plugins admin | `platform/plugins-admin` | [ ] |
-| E10 | `/platform/file-manager` | File manager | static tree UI | [ ] |
-| E11 | `/platform/user-access` | User access | same as D13f | [ ] |
-| E12 | `/platform/settings/software` | Software settings | mock | [ ] |
-| E13 | `/platform/support-tickets` | Admin support | shared support mock | [ ] |
+| E1 | `/platform/dashboard` | Platform dashboard | `platform/revenue` | [x] |
+| E2 | `/platform/tenants` | Tenant portals | `platform/tenants` | [x] |
+| E3 | `/platform/tenants/new` | Create portal | mock | [x] |
+| E4 | `/platform/admins` | Second admins | `platform/admins` | [x] |
+| E5 | `/platform/admins/packages` | Admin packages | mock | [x] |
+| E6 | `/platform/revenue` | Platform revenue | mock | [x] |
+| E7 | `/platform/showcase` | Product showcase | mock | [x] |
+| E8 | `/platform/contacts` | Contact infos | mock | [x] |
+| E9 | `/platform/plugins` | Plugins admin | `platform/plugins-admin` | [x] |
+| E10 | `/platform/file-manager` | File manager | static tree UI | [x] |
+| E11 | `/platform/user-access` | User access | same as D13f | [x] |
+| E12 | `/platform/settings/software` | Software settings | mock | [x] |
+| E13 | `/platform/support-tickets` | Admin support | shared support mock | [x] |
 
 ---
 
@@ -329,9 +329,9 @@ These features exist in `isppaybd_isp` but were not in the original inventory. A
 | H2 | `/admin/audit-logs` | System audit logs | `audit_logs` | [ ] |
 | H3 | `/admin/movie-servers` | Movie servers | `movie_servers` | [ ] |
 | H4 | `/admin/news/manage` | News admin CRUD | `news` | [ ] |
-| H5 | `/platform/redis-logs` | Redis & logs inspector | `super_admin` | [ ] |
+| H5 | `/platform/redis-logs` | Redis & logs inspector | `super_admin` | [x] |
 | H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [ ] |
-| H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [ ] |
+| H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [x] |
 | H8 | `/admin/reports/otc` | OTC report | `accounting` | [ ] |
 | H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [ ] |
 | H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [ ] |
