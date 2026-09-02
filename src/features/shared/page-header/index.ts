@@ -1,1 +1,3 @@
-﻿export { PageHeader, type BreadcrumbItem } from '@/components/shared/PageHeader';
+export { PageHeader } from './components/PageHeader';
+export type { PageHeaderProps, BreadcrumbItem } from './components/PageHeader';
+
