@@ -1,0 +1,41 @@
+---
+description: ISP Pay BD frontend — Next.js static UI rules
+globs:
+  - "**/*.{ts,tsx,js,jsx,css,md,json}"
+alwaysApply: true
+---
+
+# ISP Web Frontend Rules
+
+Read `docs/12-AI-CODING-RULES.md` and `AGENTS.md` before coding.
+
+## Scope (Phase 1)
+- Static mock data ONLY — no API calls to isppaybd.com
+- All fonts/images local in `public/`
+- Mirror all portals from `isppaybd_isp` sidebar
+
+## Code boundaries
+- Pages in `src/app/` — thin, compose from `src/features/`
+- Data via `src/lib/mock-api/client` — NEVER import `@/mocks` in features
+- shadcn/ui + Tailwind — no MUI/Chakra/Ant/DaisyUI
+- Lucide icons only
+
+## Required on every screen
+- Loading skeleton + empty state
+- Sonner toast on form submit
+- Permission gates (`<Can menu action>`) on admin actions
+- Responsive: 320px mobile + desktop
+- Dark mode support
+
+## Design tokens
+- Primary `#f75803`, Secondary `#1a0b38`
+- See `docs/04-DESIGN-SYSTEM.md`
+
+## When done
+- Mark screen in `docs/07-SCREEN-INVENTORY.md`
+- Run `pnpm lint && pnpm build`
+
+## Do not
+- Modify `isppaybd_isp` during frontend-only work
+- Commit unless user asks
+- Skip phases in `docs/08-IMPLEMENTATION-PHASES.md`
