@@ -156,5 +156,6 @@ If user did not specify:
 | Permission keys | `docs/05-PERMISSIONS-AND-ROLES.md` |
 | Mock data shapes | `docs/06-MOCK-DATA-SPEC.md`, `src/data/` |
 | Colors/fonts | `docs/04-DESIGN-SYSTEM.md`, `docs/FONTS.md` |
-| Landing copy | `isppaybd_isp/app/Views/landing/partials/` |
+| Landing copy | **`docs/REFERENCE-MAP.md`** → `isppaybd_isp/app/Views/landing/partials/` |
+| Any admin/customer screen | **`docs/REFERENCE-MAP.md`** → `app/Views/{module}/` |
 | Landing CSS/JS | `isppaybd_isp/public/assets/css/landing/landing.css`, `landing.js` |

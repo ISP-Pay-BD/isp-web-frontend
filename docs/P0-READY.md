@@ -2,14 +2,14 @@
 
 **Status: Ready to start Phase 1 landing sections.**
 
-Last verified: build + tests pass.
+Last verified: build + tests pass. Plan docs synced Sep 2026.
 
 ## P0 gate — all done ✅
 
 | # | Task | Location |
 |---|------|----------|
 | 1 | Landing tokens (`#0c0118`, `#f75803`, `#2E8BFF`) | `src/app/globals.css` |
-| 2 | Self-hosted fonts (5 families, folder per font) | `@fontsource` + `public/fonts/satoshi/` via `src/styles/fonts/` — see `docs/FONTS.md` |
+| 2 | Self-hosted fonts (5 families, 17 woff2, folder per font) | `public/fonts/` + `docs/FONTS.md` |
 | 3 | Brand logo + payment/partner SVGs | `public/images/` |
 | 4 | Polish libs: embla-carousel, number-flow | `package.json` |
 | 5 | shadcn components (table, accordion, command…) | `src/components/ui/` |

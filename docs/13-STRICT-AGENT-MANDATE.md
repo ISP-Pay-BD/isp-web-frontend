@@ -7,7 +7,7 @@
 
 ## Non-negotiable principles
 
-1. **Reference first** — read `isppaybd_isp` before inventing anything
+1. **Reference first** — read `docs/REFERENCE-MAP.md` → `isppaybd_isp` before inventing anything
 2. **Quality gate** — every screen passes `DEFINITION-OF-DONE.md` or stays incomplete
 3. **Phase order** — follow `MASTER-BUILD-PLAN.md`; P0 before Phase 1
 4. **ISP domain** — Bangladesh ISP terminology, ৳, bKash, PPPoE, POP, MikroTik
@@ -29,7 +29,7 @@
 4. docs/MASTER-BUILD-PLAN.md        ← check current phase
 5. docs/12-AI-CODING-RULES.md
 6. docs/07-SCREEN-INVENTORY.md      ← screen you're building
-7. isppaybd_isp reference file      ← PHP view for that screen
+7. docs/REFERENCE-MAP.md              ← PHP path for that screen in isppaybd_isp
 ```
 
 ---
@@ -101,7 +101,7 @@ Only then mark `[x]` in `07-SCREEN-INVENTORY.md`.
 | Quality bar | `QUALITY-STANDARDS.md` |
 | UI rules | `UI-FUSION-GUIDE.md` |
 | Screen list | `07-SCREEN-INVENTORY.md` |
-| PHP behavior | `isppaybd_isp/app/Views/` |
+| PHP behavior | **`docs/REFERENCE-MAP.md`** → `isppaybd_isp/app/Views/` |
 | Permissions | `05-PERMISSIONS-AND-ROLES.md` |
 | Data shapes | `06-MOCK-DATA-SPEC.md` |
 

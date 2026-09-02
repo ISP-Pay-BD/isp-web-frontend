@@ -2,7 +2,7 @@
 
 ## What this project is
 
-**ISP Pay BD Web Frontend** is a modern **Next.js 15** application that replaces the server-rendered UI of the legacy **ISP Pay BD** platform (`isppaybd_isp`).
+**ISP Pay BD Web Frontend** is a modern **Next.js 16** application that replaces the server-rendered UI of the legacy **ISP Pay BD** platform (`isppaybd_isp`).
 
 | Attribute | Value |
 |-----------|-------|

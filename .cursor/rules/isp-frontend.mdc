@@ -50,9 +50,9 @@ Read before ANY code:
 
 ## Phase gate
 
-- **P0 must complete before Phase 1 landing code**
-- P0 = tokens, fonts, MarketingLayout, shared components, full nav config
-- See `docs/MASTER-BUILD-PLAN.md`
+- **P0 ✅ complete** — see `docs/P0-READY.md` and `docs/PLAN-STATUS.md`
+- **Next:** Phase 1 — 28 landing sections (await user go)
+- Fonts: 5 families in `public/fonts/` — see `docs/FONTS.md`
 
 ## Do not
 

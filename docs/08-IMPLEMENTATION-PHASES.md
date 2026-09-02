@@ -8,7 +8,7 @@ Execute in order. Do not start Phase N+1 until Phase N checklist is complete.
 
 ---
 
-## Phase 0 — Foundation (~70% complete)
+## Phase 0 — Foundation ✅ complete
 
 **Goal:** Runnable app with design system, auth mock, data layer, feature scaffold.
 
@@ -34,27 +34,25 @@ Execute in order. Do not start Phase N+1 until Phase N checklist is complete.
 
 ---
 
-## P0 — Before Phase 1 landing (mandatory)
+## P0 — Before Phase 1 landing ✅ complete
 
-Complete before building marketing pages.
+| # | Task | Doc | Status |
+|---|------|-----|--------|
+| 1 | Port landing CSS tokens to Tailwind/globals | `04-DESIGN-SYSTEM.md`, `UI-FUSION-GUIDE.md` | ✅ |
+| 2 | Self-host fonts in `public/fonts/` (5 families) | `docs/FONTS.md`, `03-TECH-STACK.md` | ✅ |
+| 3 | Expand `src/data/marketing/` — pricing tiers + PAYG | `06-MOCK-DATA-SPEC.md` | ✅ |
+| 4 | Build `MarketingLayout` (nav + footer + mobile CTA) | `UI-FUSION-GUIDE.md` | ✅ |
+| 5 | Setup `next-intl` EN/BN | `11-I18N.md` | ⏳ Phase 1 |
+| 6 | Logo/placeholder assets in `public/images/` | — | ✅ |
 
-| # | Task | Doc |
-|---|------|-----|
-| 1 | Port landing CSS tokens to Tailwind/globals | `04-DESIGN-SYSTEM.md`, `UI-FUSION-GUIDE.md` |
-| 2 | Self-host fonts in `public/fonts/` | `docs/FONTS.md`, `03-TECH-STACK.md` |
-| 3 | Expand `src/data/marketing/` — pricing tiers + PAYG from `landing.js` | `06-MOCK-DATA-SPEC.md` |
-| 4 | Build `MarketingLayout` (nav + footer + mobile CTA) | `UI-FUSION-GUIDE.md` |
-| 5 | Setup `next-intl` EN/BN | `11-I18N.md` |
-| 6 | Logo/placeholder assets in `public/images/` | — |
+### P0.5 — Parallel with Phase 1 / Phase 2
 
-### P0.5 — Parallel with Phase 1 (recommended)
-
-| # | Task |
-|---|------|
-| 7 | Full sidebar nav + permission filter |
-| 8 | User Access Management UI (static mock) |
-| 9 | Expired user limited nav |
-| 10 | Route guards by permission (403 page) |
+| # | Task | Status |
+|---|------|--------|
+| 7 | Full sidebar nav + permission filter | ✅ |
+| 8 | User Access Management UI (static mock) | ⏳ Phase 2 |
+| 9 | Expired user limited nav | ⏳ Phase 3 |
+| 10 | Route guards by permission (403 page) | ⏳ Phase 2 |
 
 ### Verify
 
@@ -74,7 +72,8 @@ pnpm lint         # Zero errors
 
 ### Checklist
 
-- [ ] `src/data/marketing/` — full EN + BN copy, pricing tiers, PAYG calculator data
+- [ ] `src/data/marketing/` — full EN + BN copy (`i18n/` with next-intl)
+- [x] Pricing tiers + PAYG calculator data (`pricing.data.ts`)
 - [ ] All **28** landing sections from PHP partials (`07-SCREEN-INVENTORY` A1)
 - [ ] Hero orbital integration diagram (from `hero.php`)
 - [ ] Stats counter animation (from `landing.js`)

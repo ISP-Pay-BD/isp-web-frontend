@@ -11,9 +11,10 @@
 5. Read **`MASTER-BUILD-PLAN.md`** — complete plan + current phase gate.
 6. Read **`DEFINITION-OF-DONE.md`** — per-screen checklist before marking done.
 7. Read **`12-AI-CODING-RULES.md`** — mandatory coding rules.
-8. Check **`PRE-PHASE-AUDIT.md`** — readiness gaps.
-9. Follow **`08-IMPLEMENTATION-PHASES.md`** in order.
-10. For each screen: **`07-SCREEN-INVENTORY.md`** + PHP reference in `isppaybd_isp`.
+8. Check **`PLAN-STATUS.md`** — plan docs complete + current phase.
+9. Check **`PRE-PHASE-AUDIT.md`** — readiness gaps.
+10. Follow **`08-IMPLEMENTATION-PHASES.md`** in order.
+11. For each screen: **`07-SCREEN-INVENTORY.md`** + **`REFERENCE-MAP.md`** → PHP files in `isppaybd_isp`.
 
 ## Document map
 
@@ -26,13 +27,15 @@
 | [**DEFINITION-OF-DONE.md**](./DEFINITION-OF-DONE.md) | **Per-screen checklist** | **Before marking done** |
 | [**UI-FUSION-GUIDE.md**](./UI-FUSION-GUIDE.md) | ISP + shadcn + 21st.dev | Before any UI work |
 | [**P0-READY.md**](./P0-READY.md) | **P0 complete — start Phase 1** | **Before landing code** |
+| [**PLAN-STATUS.md**](./PLAN-STATUS.md) | **Plan docs index + phase status** | **Is the MD plan complete?** |
+| [**REFERENCE-MAP.md**](./REFERENCE-MAP.md) | **Old ISP website paths for AI** | **Where to find PHP reference code** |
+| [**FONTS.md**](./FONTS.md) | **Font setup & agent rules** | **Typography / self-hosting** |
 | [**FOLDER-STRUCTURE-COMPLETE.md**](./FOLDER-STRUCTURE-COMPLETE.md) | Rating + full tree | Before coding any module |
 | [00-OVERVIEW.md](./00-OVERVIEW.md) | Project overview | Starting the project |
 | [01-ARCHITECTURE.md](./01-ARCHITECTURE.md) | System architecture | Structuring code |
 | [02-FOLDER-STRUCTURE.md](./02-FOLDER-STRUCTURE.md) | Folder layout | Creating files |
 | [03-TECH-STACK.md](./03-TECH-STACK.md) | Libraries & tools | Installing deps |
 | [04-DESIGN-SYSTEM.md](./04-DESIGN-SYSTEM.md) | Brand & UI tokens | Styling |
-| [**FONTS.md**](./FONTS.md) | **Font setup & agent rules** | **Typography / self-hosting** |
 | [05-PERMISSIONS-AND-ROLES.md](./05-PERMISSIONS-AND-ROLES.md) | Roles & permissions | Auth & nav |
 | [06-MOCK-DATA-SPEC.md](./06-MOCK-DATA-SPEC.md) | Static data spec | Mock layer |
 | [07-SCREEN-INVENTORY.md](./07-SCREEN-INVENTORY.md) | Every screen & route | Building pages |
@@ -45,8 +48,11 @@
 
 ## Reference backend (read-only)
 
+**Full path map for AI:** [`REFERENCE-MAP.md`](./REFERENCE-MAP.md)
+
 | Resource | Path in `isppaybd_isp` |
 |----------|------------------------|
+| **All reference paths (master index)** | **`docs/REFERENCE-MAP.md`** |
 | Sidebar / menu map | `app/Views/layout/sidebar.php` |
 | Platform sidebar | `app/Views/layout/_sidebar_platform.php` |
 | Permission matrix | `app/Views/access/partial/default-access-fields.php` |
@@ -87,8 +93,11 @@ Run `pnpm dev` and open `/` to see dark marketing shell with hero preview.
 
 ### P0.5 — parallel ⏳
 
-- [ ] Full sidebar navigation + permission filter
-- [ ] User Access Management UI (static)
-- [ ] Expired user limited nav
+- [x] Full sidebar navigation + permission filter
+- [ ] User Access Management UI (static) — Phase 2
+- [ ] Expired user limited nav — Phase 3
+- [ ] 403 Forbidden page — Phase 2
+
+**Plan docs:** ✅ Complete — see [`PLAN-STATUS.md`](./PLAN-STATUS.md)
 
 **Next:** Phase 1 — marketing landing (see `08-IMPLEMENTATION-PHASES.md`)

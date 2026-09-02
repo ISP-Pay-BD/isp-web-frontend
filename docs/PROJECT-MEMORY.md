@@ -9,11 +9,13 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 
 ## Current phase
 
-**P0 ✅ COMPLETE — ready to start Phase 1 (28 landing sections).**
+**P0 ✅ COMPLETE — plan docs ✅ COMPLETE — ready to start Phase 1 (28 landing sections).**
 
 | Item | State |
 |------|-------|
-| P0 foundation | ✅ Done (incl. Satoshi fonts) |
+| **Plan documentation (MD)** | ✅ Complete — see `PLAN-STATUS.md` |
+| P0 foundation (code) | ✅ Done |
+| Fonts (5 families) | ✅ Done — `FONTS.md` |
 | MarketingLayout | ✅ Done |
 | Full navigation | ✅ Done |
 | Shared components | ✅ Done |
@@ -28,8 +30,13 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 3. **`QUALITY-STANDARDS.md`** ← anti-CRM quality bar
 4. **`UI-FUSION-GUIDE.md`** ← ISP + shadcn + 21st.dev
 5. **`MASTER-BUILD-PLAN.md`** ← complete plan + current phase
-6. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
-7. **`12-AI-CODING-RULES.md`** ← coding rules
+6. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
+7. **`FONTS.md`** ← typography (5 fonts, folders, usage)
+8. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
+9. **`REFERENCE-MAP.md`** ← old ISP website PHP paths (read before any UI)
+10. **`FONTS.md`** ← typography (5 fonts, folders, usage)
+11. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
+12. **`12-AI-CODING-RULES.md`** ← coding rules
 
 ---
 
@@ -41,6 +48,7 @@ Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
 Quality    →  Premium ISP ops platform — complete states, permissions, responsive
 Data       →  src/data/ via mock-api only
 Fonts      →  Satoshi (portals) + Plus Jakarta/Inter (marketing) — see docs/FONTS.md
+Reference  →  Old ISP website: ../isppaybd_isp — see docs/REFERENCE-MAP.md
 ```
 
 ---

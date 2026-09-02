@@ -3,7 +3,9 @@
 > **Read this before writing any UI code.**  
 > Goal: premium ISP Pay BD platform — **not** a generic CRM. Every module listed. Every gate defined.
 
-Companion docs: `QUALITY-STANDARDS.md`, `DEFINITION-OF-DONE.md`, `UI-FUSION-GUIDE.md`, `PRE-PHASE-AUDIT.md`
+Companion docs: `QUALITY-STANDARDS.md`, `DEFINITION-OF-DONE.md`, `UI-FUSION-GUIDE.md`, `FONTS.md`, `PRE-PHASE-AUDIT.md`, `P0-READY.md`
+
+**Plan docs status:** ✅ Specification complete (P0–Phase 8 written). **Execution:** Phase 1 next.
 
 ---
 
@@ -74,64 +76,68 @@ Registry: `src/config/fonts.ts` · Load: `src/lib/fonts.ts` → `src/styles/font
 
 ### P0-B: Shared layouts (build once, reuse everywhere)
 
-| Component | Location | Used by |
-|-----------|----------|---------|
-| `MarketingLayout` | `features/marketing/shared/` | All marketing routes |
-| `MarketingNav` | `features/marketing/shared/components/` | Sticky blur nav |
-| `MarketingFooter` | `features/marketing/shared/components/` | All marketing |
-| `MobileStickyCta` | `features/marketing/shared/components/` | Landing mobile |
-| `AppShell` | `components/layout/` | All portals |
-| `PortalSidebar` | `components/layout/` | Admin, platform |
-| `PortalHeader` | `components/layout/` | All portals |
-| `CustomerBottomNav` | `features/customer/shared/` | Customer mobile |
-| `PageHeader` | `features/shared/page-header/` | All list/detail pages |
-| `ForbiddenPage` | `app/(portal)/403/` | Permission denied |
-| `NotFoundPage` | `app/not-found.tsx` | 404 |
+| Component | Location | Used by | Status |
+|-----------|----------|---------|--------|
+| `MarketingLayout` | `features/marketing/shared/` | All marketing routes | ✅ |
+| `MarketingNav` | `features/marketing/shared/components/` | Sticky blur nav | ✅ |
+| `MarketingFooter` | `features/marketing/shared/components/` | All marketing | ✅ |
+| `MobileStickyCta` | `features/marketing/shared/components/` | Landing mobile | ✅ |
+| `AppShell` | `components/layout/` | All portals | ✅ |
+| `PortalSidebar` | `components/layout/` | Admin, platform | ✅ |
+| `PortalHeader` | `components/layout/` | All portals | ✅ |
+| `CustomerBottomNav` | `features/customer/shared/` | Customer mobile | ⏳ Phase 3 |
+| `PageHeader` | `features/shared/page-header/` | All list/detail pages | ⏳ Phase 1+ |
+| `ForbiddenPage` | `app/(portal)/403/` | Permission denied | ⏳ Phase 2 |
+| `NotFoundPage` | `app/not-found.tsx` | 404 | ✅ |
 
 ### P0-C: Shared components (build before modules)
 
-| Component | Location | Priority |
-|-----------|----------|----------|
-| `DataTable` | `features/shared/data-table/` | P0 — used everywhere |
-| `StatCard` | `components/shared/` | P0 — dashboards |
-| `EmptyState` | `components/shared/` | P0 |
-| `LoadingSkeleton` variants | `components/shared/` | P0 |
-| `ConfirmDialog` | `components/shared/` | P0 |
-| `StatusBadge` | `components/shared/` | P0 — active/expired/online |
-| `CurrencyDisplay` | `components/shared/` | P0 — ৳ formatting |
-| `DateDisplay` | `components/shared/` | P1 |
-| `SearchInput` | `components/shared/` | P0 — sidebar + tables |
-| `FilterBar` | `components/shared/` | P1 |
-| `ChartCard` | `components/shared/` | P1 — lazy Recharts |
+| Component | Location | Priority | Status |
+|-----------|----------|----------|--------|
+| `DataTable` | `features/shared/data-table/` | P0 — used everywhere | ✅ |
+| `StatCard` | `components/shared/` | P0 — dashboards | ✅ |
+| `EmptyState` | `components/shared/` | P0 | ✅ |
+| `LoadingSkeleton` variants | `components/shared/` | P0 | ✅ |
+| `ConfirmDialog` | `components/shared/` | P0 | ✅ |
+| `StatusBadge` | `components/shared/` | P0 — active/expired/online | ✅ |
+| `CurrencyDisplay` | `components/shared/` | P0 — ৳ formatting | ✅ |
+| `DateDisplay` | `components/shared/` | P1 | ⏳ P1 |
+| `SearchInput` | `components/shared/` | P0 — sidebar + tables | ⏳ Phase 1+ |
+| `FilterBar` | `components/shared/` | P1 | ⏳ P1 |
+| `ChartCard` | `components/shared/` | P1 — lazy Recharts | ⏳ P1 |
 
 ### P0-D: Config & navigation
 
-| Task | File | Requirement |
-|------|------|-------------|
-| Full sidebar structure | `src/config/navigation.ts` | Mirror `sidebar.php` (~50+ items) |
-| Platform sidebar | `src/config/navigation-platform.ts` | Mirror `_sidebar_platform.php` |
-| Customer nav | `src/config/navigation-customer.ts` | 5 bottom tabs + drawer |
-| Site metadata | `src/config/site.ts` | Brand, URLs |
-| i18n setup | `src/i18n/` + `next-intl` | EN + BN |
+| Task | File | Requirement | Status |
+|------|------|-------------|--------|
+| Full sidebar structure | `src/config/navigation/admin.ts` | Mirror `sidebar.php` (~50+ items) | ✅ |
+| Platform sidebar | `src/config/navigation/platform.ts` | Mirror `_sidebar_platform.php` | ✅ |
+| Customer nav | `src/config/navigation/customer.ts` | 5 bottom tabs + drawer | ✅ |
+| Nav filter hook | `src/hooks/use-filtered-nav.ts` | Permission + role filter | ✅ |
+| Site metadata | `src/config/site.ts` | Brand, URLs | ✅ |
+| i18n setup | `src/i18n/` + `next-intl` | EN + BN | ⏳ Phase 1 parallel |
 
 ### P0-E: Data layer completion (marketing first)
 
 | Data file | Status | Needed for |
 |-----------|--------|------------|
-| `data/marketing/landing.data.ts` | ⚠️ partial | All 28 sections |
-| `data/marketing/pricing.data.ts` | ⚠️ partial | Tiers + PAYG |
-| `data/marketing/plugins.data.ts` | ⚠️ partial | Plugin marketplace |
-| `data/marketing/i18n/` | ❌ | EN + BN strings |
-| Handlers wired | ⚠️ partial | `marketing.handler.ts` |
+| `data/marketing/landing.data.ts` | ✅ | Hero, FAQ, contact copy |
+| `data/marketing/sections.data.ts` | ✅ | All 28 section content |
+| `data/marketing/pricing.data.ts` | ✅ | Tiers + PAYG calculator |
+| `data/marketing/plugins.data.ts` | ✅ | Plugin marketplace |
+| `data/marketing/i18n/` | ⏳ Phase 1 | EN + BN strings (with next-intl) |
+| Handlers wired | ✅ | `lib/mock-api/handlers/data.handler.ts` |
 
 ### P0 gate (ALL must pass)
 
-- [ ] MarketingLayout renders with nav + footer
-- [ ] Landing tokens applied (dark `#0c0118`)
-- [x] Fonts self-hosted and loading (Satoshi + @fontsource — see `docs/FONTS.md`)
-- [ ] Full navigation config written (even if pages empty)
-- [ ] Shared DataTable + EmptyState + StatCard exist
-- [ ] `pnpm build` passes
+- [x] MarketingLayout renders with nav + footer
+- [x] Landing tokens applied (dark `#0c0118`)
+- [x] Fonts self-hosted — 5 families in `public/fonts/` — see `docs/FONTS.md`
+- [x] Full navigation config written (`config/navigation/`)
+- [x] Shared DataTable + EmptyState + StatCard exist
+- [x] `pnpm build` passes
+
+**P0 gate: ✅ PASSED.** Optional before Phase 1: `next-intl`, OG image, `403` page, `SearchInput`.
 
 ---
 
@@ -412,6 +418,8 @@ Before writing code, confirm:
 10. [ ] Run verify commands before marking done
 
 **If P0 not complete → do NOT start Phase 1 landing sections.**
+
+**Current:** P0 ✅ complete — proceed with Phase 1 when user approves. See `P0-READY.md`.
 
 ---
 
