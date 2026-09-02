@@ -1,44 +1,43 @@
-# AGENT TASK — WT04 Customer Portal
+# AGENT TASK — WT05 Admin Ops Core
 
-**Worktree:** `.worktrees/wt04-customer-portal`  
-**Branch:** `wt/04-customer-portal`  
-**Agent ID:** 04 of 10
+**Worktree:** `.worktrees/wt05-admin-ops`  
+**Branch:** `wt/05-admin-ops`  
+**Agent ID:** 05 of 10
 
 ---
 
 ## Mission
 
-Build **full customer portal** (~15 screens) + `CustomerBottomNav`.
+Build **admin operations core**: dashboard, customers, packages, areas, customer payments, POP packages, subscription, self-recharge/payment flows.
 
 ## Owned paths
 
-| Path | Action |
-|------|--------|
-| `src/features/customer/**` | All customer modules |
-| `src/app/(portal)/customer/**` | All customer routes |
-| `src/data/customer/` | Customer mock data |
-| `src/lib/mock-api/handlers/` | Customer domain keys |
-| `src/config/navigation/customer.ts` | Only if needed |
-
-## Modules
-
-dashboard · subscription · packages · payments · support · rewards · news · router tools · profile · change-password · shared (bottom nav)
+| Path |
+|------|
+| `src/features/admin/dashboard/` |
+| `src/features/admin/customers/` |
+| `src/features/admin/customer-payments/` |
+| `src/features/admin/packages/` |
+| `src/features/admin/pop-packages/` |
+| `src/features/admin/areas/` |
+| `src/features/admin/subscription/` |
+| `src/features/admin/payment/` |
+| `src/features/admin/pop/` (funding/resellers/transactions if ops-related) |
+| `src/app/(portal)/admin/` routes for above only |
+| `src/data/admin/` for above domains |
 
 ## Reference
 
-- `docs/REFERENCE-MAP.md` → customer views
-- `isppaybd_isp/app/Views/dashboard/user.php`, `customers/`, `tickets/`, `payments/customer/`
+- `isppaybd_isp/app/Views/customers/`, `packages/`, `areas/`, `payments/customer/`, `dashboard/sAdmin.php`
 
 ## DO NOT touch
 
-- Admin/platform/employee modules
-- Marketing (except links out)
+- HR, accounting, network, SMS/WhatsApp, platform, customer portal
 
 ## Done when
 
-- [x] All customer inventory screens (C*) pass DoD
-- [x] Mobile bottom nav works
-- [x] Expired customer demo limited nav
+- [x] List/detail/create flows with DataTable + EmptyState + Can
+- [x] Inventory D* ops screens marked
 - [x] Verify commands pass
 
 ## Skill

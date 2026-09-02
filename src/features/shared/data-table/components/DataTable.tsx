@@ -7,7 +7,7 @@ import {
   useLegacyTable,
   type LegacyColumnDef,
 } from '@tanstack/react-table/legacy';
-import { flexRender, type SortingState } from '@tanstack/react-table';
+import { flexRender, type RowData, type SortingState } from '@tanstack/react-table';
 import { useState } from 'react';
 import {
   Table,
@@ -22,7 +22,7 @@ import { TableSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { cn } from '@/lib/utils';
 
-interface DataTableProps<TData extends Record<string, unknown>> {
+interface DataTableProps<TData extends RowData> {
   columns: LegacyColumnDef<TData, unknown>[];
   data: TData[];
   isLoading?: boolean;
@@ -31,7 +31,7 @@ interface DataTableProps<TData extends Record<string, unknown>> {
   className?: string;
 }
 
-export function DataTable<TData extends Record<string, unknown>>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   isLoading,

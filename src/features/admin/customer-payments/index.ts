@@ -1,6 +1,2 @@
-﻿/**
- * @module features/admin/customer-payments
- * Public exports only — import from '@/features/admin/customer-payments'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { CustomerPaymentsPage } from './pages/CustomerPaymentsPage';
+export { NewCustomerPaymentPage } from './pages/NewCustomerPaymentPage';

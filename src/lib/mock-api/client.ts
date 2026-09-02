@@ -14,7 +14,19 @@ import { getLandingData, getPricingData, getPluginsData, getContactData } from '
 import {
   listCustomers,
   getCustomer,
+  createCustomer,
+  updateCustomer,
+  deleteCustomer,
   listExpiredCustomers,
+  createCustomerPayment,
+  createPackage,
+  updatePackage,
+  deletePackage,
+  createArea,
+  updateArea,
+  deleteArea,
+  createPopFunding,
+  rechargeAdminSubscription,
   getAdminDashboard,
   getAdminDomain,
   getCustomerDomain,
@@ -68,7 +80,19 @@ type HandlerMap = {
   'marketing.contact': () => ReturnType<typeof getContactData>;
   'admin.customers.list': () => ReturnType<typeof listCustomers>;
   'admin.customers.get': (id: string) => ReturnType<typeof getCustomer>;
+  'admin.customers.create': (payload: Parameters<typeof createCustomer>[0]) => ReturnType<typeof createCustomer>;
+  'admin.customers.update': (id: string, payload: Parameters<typeof updateCustomer>[1]) => ReturnType<typeof updateCustomer>;
+  'admin.customers.delete': (id: string) => ReturnType<typeof deleteCustomer>;
   'admin.customers.expired': () => ReturnType<typeof listExpiredCustomers>;
+  'admin.customer-payments.create': (payload: Parameters<typeof createCustomerPayment>[0]) => ReturnType<typeof createCustomerPayment>;
+  'admin.packages.create': (payload: Parameters<typeof createPackage>[0]) => ReturnType<typeof createPackage>;
+  'admin.packages.update': (id: string, payload: Parameters<typeof updatePackage>[1]) => ReturnType<typeof updatePackage>;
+  'admin.packages.delete': (id: string) => ReturnType<typeof deletePackage>;
+  'admin.areas.create': (payload: Parameters<typeof createArea>[0]) => ReturnType<typeof createArea>;
+  'admin.areas.update': (id: string, payload: Parameters<typeof updateArea>[1]) => ReturnType<typeof updateArea>;
+  'admin.areas.delete': (id: string) => ReturnType<typeof deleteArea>;
+  'admin.pop.funding.create': (payload: Parameters<typeof createPopFunding>[0]) => ReturnType<typeof createPopFunding>;
+  'admin.subscription.recharge': (payload: Parameters<typeof rechargeAdminSubscription>[0]) => ReturnType<typeof rechargeAdminSubscription>;
   'admin.dashboard': () => ReturnType<typeof getAdminDashboard>;
   'admin.domain': (domain: string) => ReturnType<typeof getAdminDomain>;
   'customer.dashboard': () => ReturnType<typeof getCustomerDashboard>;
@@ -116,7 +140,19 @@ const handlers: HandlerMap = {
   'marketing.contact': getContactData,
   'admin.customers.list': listCustomers,
   'admin.customers.get': getCustomer,
+  'admin.customers.create': createCustomer,
+  'admin.customers.update': updateCustomer,
+  'admin.customers.delete': deleteCustomer,
   'admin.customers.expired': listExpiredCustomers,
+  'admin.customer-payments.create': createCustomerPayment,
+  'admin.packages.create': createPackage,
+  'admin.packages.update': updatePackage,
+  'admin.packages.delete': deletePackage,
+  'admin.areas.create': createArea,
+  'admin.areas.update': updateArea,
+  'admin.areas.delete': deleteArea,
+  'admin.pop.funding.create': createPopFunding,
+  'admin.subscription.recharge': rechargeAdminSubscription,
   'admin.dashboard': getAdminDashboard,
   'admin.domain': getAdminDomain,
   'customer.dashboard': getCustomerDashboard,

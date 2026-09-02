@@ -1,10 +1,11 @@
-import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
+import type { Metadata } from 'next';
+import { AdminDashboardPage } from '@/features/admin/dashboard';
 
-export default function AdminDashboardPage() {
-  return (
-    <PortalPlaceholder
-      title="Admin Dashboard"
-      description="KPI overview, charts, and quick actions — built in wt05-admin-ops."
-    />
-  );
+export const metadata: Metadata = {
+  title: 'Dashboard | Admin',
+  description: 'ISP Pay BD Admin Dashboard — operations, active users, collections',
+};
+
+export default function AdminDashboardRoute() {
+  return <AdminDashboardPage />;
 }

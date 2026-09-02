@@ -1,6 +1,7 @@
-﻿/**
- * @module features/admin/customers
- * Public exports only — import from '@/features/admin/customers'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+export { AllCustomersPage } from './pages/AllCustomersPage';
+export { ExpiredCustomersPage } from './pages/ExpiredCustomersPage';
+export { FreeRequestsPage } from './pages/FreeRequestsPage';
+export { NewCustomerPage } from './pages/NewCustomerPage';
+export { EditCustomerPage } from './pages/EditCustomerPage';
+export { CustomerDetailPage } from './pages/CustomerDetailPage';
+export { ImportCustomersPage } from './pages/ImportCustomersPage';

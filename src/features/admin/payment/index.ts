@@ -1,6 +1,1 @@
-﻿/**
- * @module features/admin/payment
- * Public exports only — import from '@/features/admin/payment'
- */
-
-// export { XxxPage } from './pages/XxxPage';
+﻿export { AdminPaymentPage } from './pages/AdminPaymentPage';
