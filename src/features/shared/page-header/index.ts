@@ -1,6 +1,3 @@
-﻿/**
- * @module features/shared/page-header
- * Public exports only — import from '@/features/shared/page-header'
- */
+export { PageHeader } from './components/PageHeader';
+export type { PageHeaderProps, BreadcrumbItem } from './components/PageHeader';
 
-// export { XxxPage } from './pages/XxxPage';

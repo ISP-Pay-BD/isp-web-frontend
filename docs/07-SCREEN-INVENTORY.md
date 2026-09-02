@@ -139,22 +139,22 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [x] |
-| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [x] |
-| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [x] |
-| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [x] |
-| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [x] |
+| D5a | `/admin/hr/employees` | Staff List | `admin.employees` | employee:read | [ ] |
+| D5b | `/admin/hr/salaries` | Salary Payments | mock | employee_payment:read | [ ] |
+| D5c | `/admin/hr/attendance` | Attendance | Calendar + table | mock | employee_attendance:read | [ ] |
+| D5d | `/admin/hr/accounts` | Employee Accounts | Ledger view | mock | employee_payment | [ ] |
+| D5e | `/admin/hr/advance-salary` | Advance Salary | Request/approve table | mock | advance_salary:read | [ ] |
 
 ### D6. Accounting
 
 | # | Route | Title | Mock | P | Status |
 |---|-------|-------|------|---|--------|
-| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [x] |
-| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [x] |
-| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [x] |
-| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [x] |
-| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [x] |
-| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [x] |
+| D6a | `/admin/accounting/incomes` | Incomes | mock | accounting:read | [ ] |
+| D6b | `/admin/accounting/expenses` | Expenses | mock | accounting:read | [ ] |
+| D6c | `/admin/accounting/reports` | Accounts Report | Date range + chart | mock | accounting:read | [ ] |
+| D6d | `/admin/accounting/chart-of-accounts` | COA | Tree table | `admin.accounting` | — | [ ] |
+| D6e | `/admin/accounting/journal-entries` | Journal | Entry list + form | mock | — | [ ] |
+| D6f | `/admin/accounting/balance-sheet` | Balance Sheet | Report layout | mock | — | [ ] |
 
 ### D7. POP (resellers)
 
@@ -168,77 +168,77 @@ Marketing layout: sticky nav, EN/BN toggle, dark hero, orange CTAs, mobile stick
 
 | # | Route | Title | Status |
 |---|-------|-------|--------|
-| D8a | `/admin/bandwidth/buy/items` | Bandwidth items | [x] |
-| D8b | `/admin/bandwidth/buy/categories` | Categories | [x] |
-| D8c | `/admin/bandwidth/buy/providers` | Providers | [x] |
-| D8d | `/admin/bandwidth/buy/bills` | Purchase bills | [x] |
-| D8e | `/admin/bandwidth/sell/clients` | Sell clients | [x] |
-| D8f | `/admin/bandwidth/sell/invoices` | Sales invoices | [x] |
+| D8a | `/admin/bandwidth/buy/items` | Bandwidth items | [ ] |
+| D8b | `/admin/bandwidth/buy/categories` | Categories | [ ] |
+| D8c | `/admin/bandwidth/buy/providers` | Providers | [ ] |
+| D8d | `/admin/bandwidth/buy/bills` | Purchase bills | [ ] |
+| D8e | `/admin/bandwidth/sell/clients` | Sell clients | [ ] |
+| D8f | `/admin/bandwidth/sell/invoices` | Sales invoices | [ ] |
 
 ### D9. Inventory & purchase (admin only)
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [x] |
-| D9b | `/admin/purchase/requisitions` | Requisitions | — | [x] |
-| D9c | `/admin/purchase/bills` | Purchase bills | — | [x] |
-| D9d | `/admin/inventory/units` | Units | — | [x] |
-| D9e | `/admin/inventory/locations` | Store locations | — | [x] |
-| D9f | `/admin/inventory/categories` | Categories | — | [x] |
-| D9g | `/admin/inventory/items` | Items | — | [x] |
-| D9h | `/admin/inventory/stock` | Stock | — | [x] |
+| D9a | `/admin/purchase/vendors` | Vendors | inventory_purchess:read | [ ] |
+| D9b | `/admin/purchase/requisitions` | Requisitions | [ ] |
+| D9c | `/admin/purchase/bills` | Purchase bills | [ ] |
+| D9d | `/admin/inventory/units` | Units | [ ] |
+| D9e | `/admin/inventory/locations` | Store locations | [ ] |
+| D9f | `/admin/inventory/categories` | Categories | [ ] |
+| D9g | `/admin/inventory/items` | Items | [ ] |
+| D9h | `/admin/inventory/stock` | Stock | [ ] |
 
 ### D10. Reports
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [x] |
+| D10 | `/admin/reports/btrc` | BTRC Report | reports:read | [ ] |
 
 ### D11. Network ops
 
 | # | Route | Title | P | R | Status |
 |---|-------|-------|---|---|--------|
-| D11a | `/admin/hotspot` | Hotspot hub | hotspot | admin | [x] |
-| D11b | `/admin/hotspot/dashboard` | Hotspot dashboard | [x] |
-| D11c | `/admin/hotspot/packages` | Hotspot packages | [x] |
-| D11d | `/admin/hotspot/users` | Hotspot users | [x] |
-| D11e | `/admin/hotspot/reports` | Hotspot reports | [x] |
-| D11f | `/admin/olt` | OLT list | olt | admin | [x] |
-| D11g | `/admin/routers` | MikroTik routers | routers | admin | [x] |
-| D11h | `/admin/ip-pools` | IP pools | routers | admin | [x] |
-| D11i | `/admin/network/diagram` | Network diagram | network | admin | [x] |
-| D11j | `/admin/network/map` | Network map | network | admin | [x] |
+| D11a | `/admin/hotspot` | Hotspot hub | hotspot | admin | [ ] |
+| D11b | `/admin/hotspot/dashboard` | Hotspot dashboard | [ ] |
+| D11c | `/admin/hotspot/packages` | Hotspot packages | [ ] |
+| D11d | `/admin/hotspot/users` | Hotspot users | [ ] |
+| D11e | `/admin/hotspot/reports` | Hotspot reports | [ ] |
+| D11f | `/admin/olt` | OLT list | olt | admin | [ ] |
+| D11g | `/admin/routers` | MikroTik routers | routers | admin | [ ] |
+| D11h | `/admin/ip-pools` | IP pools | routers | admin | [ ] |
+| D11i | `/admin/network/diagram` | Network diagram | network | admin | [ ] |
+| D11j | `/admin/network/map` | Network map | network | admin | [ ] |
 
 ### D12. Communications
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D12a | `/admin/sms` | Send SMS | sms_message | [ ] |
-| D12b | `/admin/sms/templates` | SMS templates | [ ] |
-| D12c | `/admin/voice-sms` | Voice SMS | [ ] |
-| D12d | `/admin/whatsapp/inbox` | WA Inbox | whatsapp_business:read | [ ] |
-| D12e | `/admin/whatsapp/templates` | WA Templates | [ ] |
-| D12f | `/admin/whatsapp/message-log` | Message log | [ ] |
-| D12g | `/admin/whatsapp/opt-ins` | Opt-ins | whatsapp_business:marketing | [ ] |
-| D12h | `/admin/whatsapp/campaigns` | Campaigns | [ ] |
-| D12i | `/admin/whatsapp/settings` | WA Settings | whatsapp_business:update | [ ] |
+| D12a | `/admin/sms` | Send SMS | sms_message | [x] |
+| D12b | `/admin/sms/templates` | SMS templates | [x] |
+| D12c | `/admin/voice-sms` | Voice SMS | [x] |
+| D12d | `/admin/whatsapp/inbox` | WA Inbox | whatsapp_business:read | [x] |
+| D12e | `/admin/whatsapp/templates` | WA Templates | [x] |
+| D12f | `/admin/whatsapp/message-log` | Message log | [x] |
+| D12g | `/admin/whatsapp/opt-ins` | Opt-ins | whatsapp_business:marketing | [x] |
+| D12h | `/admin/whatsapp/campaigns` | Campaigns | [x] |
+| D12i | `/admin/whatsapp/settings` | WA Settings | whatsapp_business:update | [x] |
 
 ### D13. Other admin
 
 | # | Route | Title | P | Status |
 |---|-------|-------|---|--------|
-| D13a | `/admin/reward-center` | Referral & Reward admin | referral:read | [ ] |
-| D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [ ] |
-| D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [ ] |
-| D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [ ] |
-| D13e | `/admin/wallet` | My Wallet | admin only | [x] |
+| D13a | `/admin/reward-center` | Referral & Reward admin | referral:read | [x] |
+| D13b | `/admin/support-tickets` | Support tickets | support_ticket:read | [x] |
+| D13c | `/admin/support-tickets/[id]` | Ticket detail | support_ticket:send_msg | [x] |
+| D13d | `/admin/recycle-bin` | Recycle bin | recycle_bin:read | [x] |
+| D13e | `/admin/wallet` | My Wallet | admin only | [ ] |
 | D13f | `/admin/user-access` | User access mgmt | admin | [ ] |
-| D13g | `/admin/settings/software` | Software settings | software_settings | [ ] |
-| D13h | `/admin/theme-studio` | Theme studio | all roles | [ ] |
+| D13g | `/admin/settings/software` | Software settings | software_settings | [x] |
+| D13h | `/admin/theme-studio` | Theme studio | all roles | [x] |
 | D13i | `/admin/subscription/self-recharge` | Self recharge | admin,reseller | [ ] |
 | D13j | `/admin/payment` | My payment | payment:read | [ ] |
-| D13k | `/admin/profile` | Profile | profile_update | [ ] |
-| D13l | `/admin/change-password` | Change password | password_change | [ ] |
+| D13k | `/admin/profile` | Profile | profile_update | [x] |
+| D13l | `/admin/change-password` | Change password | password_change | [x] |
 
 ---
 
@@ -333,7 +333,7 @@ These features exist in `isppaybd_isp` but were not in the original inventory. A
 | H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [ ] |
 | H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [ ] |
 | H8 | `/admin/reports/otc` | OTC report | `accounting` | [ ] |
-| H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [x] |
+| H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [ ] |
 | H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [ ] |
 | H11 | `/admin/customers/:id/audit` | Customer audit logs | `customers` | [ ] |
 | H12 | `/admin/corporate/queues` | Corporate sync queues | `customers` | [ ] |

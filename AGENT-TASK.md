@@ -1,45 +1,43 @@
-# AGENT TASK — WT07 Admin Network
+# AGENT TASK — WT08 Admin Comms + Settings
 
-**Worktree:** `.worktrees/wt07-admin-network`  
-**Branch:** `wt/07-admin-network`  
-**Agent ID:** 07 of 10
+**Worktree:** `.worktrees/wt08-admin-comms`  
+**Branch:** `wt/08-admin-comms`  
+**Agent ID:** 08 of 10
 
 ---
 
 ## Mission
 
-Build **network ops**: routers, OLT, bandwidth buy/sell, hotspot, network map/diagram, IP pools.
+Build **communications + settings**: SMS, templates, WhatsApp, voice SMS, support tickets, rewards, profile, theme studio, settings, recycle bin.
 
 ## Owned paths
 
 | Path |
 |------|
-| `src/features/admin/routers/` |
-| `src/features/admin/olt/` |
-| `src/features/admin/bandwidth/**` |
-| `src/features/admin/hotspot/` |
-| `src/features/admin/network/**` |
-| `src/features/admin/ip-pools/` |
-| Matching app routes + `src/data/admin/` |
+| `src/features/admin/sms/` |
+| `src/features/admin/sms-templates/` |
+| `src/features/admin/whatsapp/` |
+| `src/features/admin/voice-sms/` |
+| `src/features/admin/support/` |
+| `src/features/admin/rewards/` |
+| `src/features/admin/profile/` |
+| `src/features/admin/theme-studio/` |
+| `src/features/admin/settings/` |
+| `src/features/admin/recycle-bin/` |
+| Matching app routes + data |
 
 ## Reference
 
-- `isppaybd_isp/app/Views/routers/`, `olt/`, `bandwidth/`, `bandwidth_sell/`, `hotspot/`, `network/`, `ip_pools/`
-
-## Notes
-
-- Network diagram: static SVG / React Flow with mock nodes
-- Network map: static image + pins (no live Mapbox key)
+- `isppaybd_isp/app/Views/sms/`, `whatsapp/`, `voice_sms/`, `tickets/`, `settings/`, `recyclebin/`, `profile/`
 
 ## DO NOT touch
 
-- Customers (WT05), HR/finance (WT06), SMS (WT08)
+- Customers/network/HR (WT05–07), platform (WT09)
 
 ## Done when
 
 - [x] All owned screens pass DoD
-- [x] Status badges for online/offline
-- [x] `font-mono` for IP/MAC
+- [x] Ticket thread UI
 - [x] Verify commands pass
 
 ## Skill
