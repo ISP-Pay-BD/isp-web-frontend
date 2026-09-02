@@ -1,6 +1,6 @@
 'use client';
 
-import { Server, CreditCard, MessageSquare, MessageCircle, Radio, ShieldCheck, Cpu } from 'lucide-react';
+import { Server, CreditCard, MessageSquare, Radio, ShieldCheck, Cpu } from 'lucide-react';
 import type { IntegrationItem } from '../types';
 
 interface IntegrationsOrbitProps {
@@ -11,7 +11,6 @@ const iconMap: Record<string, React.ElementType> = {
   Server,
   CreditCard,
   MessageSquare,
-  MessageCircle,
   Radio,
   ShieldCheck,
   Cpu,

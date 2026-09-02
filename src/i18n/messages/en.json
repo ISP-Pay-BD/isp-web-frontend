@@ -18,7 +18,8 @@
     "confirm": "Confirm",
     "close": "Close",
     "viewAll": "View all",
-    "currency": "BDT"
+    "currency": "BDT",
+    "free": "Free"
   },
   "auth": {
     "login": "Sign in",
@@ -31,12 +32,24 @@
   "marketing": {
     "nav": {
       "features": "Features",
+      "howItWorks": "How it works",
       "pricing": "Pricing",
       "plugins": "Plugins",
+      "faq": "FAQ",
       "contact": "Contact",
       "login": "Login",
-      "startTrial": "Start free trial"
+      "startTrial": "Start free trial",
+      "tagline": "ISP billing & operations"
     },
+    "footer": {
+      "description": "Multi-tenant ISP billing, MikroTik sync, and bKash/Nagad reconciliation — built for Bangladesh ISPs.",
+      "product": "Product",
+      "company": "Company",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "rights": "All rights reserved."
+    },
+    "stickyCta": "Start free trial — no card required",
     "hero": {
       "title": "Run your whole ISP from one operator console",
       "subtitle": "Billing, MikroTik, payments, and support — built for Bangladesh ISPs."
@@ -44,6 +57,121 @@
     "cta": {
       "primary": "Start free trial",
       "secondary": "See pricing"
+    },
+    "sections": {
+      "plugins": {
+        "badge": "Plugins & Addons",
+        "title": "Extend your platform with modular plugins",
+        "desc": "Optional add-ons you can turn on anytime — WhatsApp Business API, OLT optical tools, and HR payroll. Billed only when active.",
+        "instantActivation": "Instant Activation",
+        "details": "Details",
+        "browseAll": "Browse All 15+ Plugins & Integrations"
+      },
+      "mobileApp": {
+        "badge": "Customer Self-Service App",
+        "title": "Your subscribers pay themselves. You stop chasing bills.",
+        "desc": "A self-service app under your ISP name and logo — subscribers pay via bKash or Nagad, view every invoice, check bandwidth usage, and open support tickets. Your desk phone stops ringing on the 1st of the month.",
+        "cta": "Launch Under Your Brand"
+      },
+      "reseller": {
+        "badge": "User & Organization Hierarchy",
+        "title": "Operator → Staff & Resellers → Customers",
+        "operatorTitle": "Operator / ISP Admin (Your Account)",
+        "operatorDesc": "Full control — packages, MikroTik routers, billing rules, multi-branch ledger, and every scoped permission below.",
+        "staffTitle": "Staff & Employees",
+        "staffDesc": "Scoped logins for your NOC, support desk, and bill collectors. Support only sees tickets; accounting stays locked.",
+        "popTitle": "POP Resellers",
+        "popDesc": "Their own branded portal, allocated bandwidth quotas, customer list, and auto commission on every recharge.",
+        "customerTitle": "End Subscribers (Customers)",
+        "customerDesc": "Self-service customer portal & mobile app in Bangla. Pay bills, view usage history, and open tickets. Zero access to network configs."
+      },
+      "roles": {
+        "badge": "Role-Based Access",
+        "title": "A multi-tier structure — every role locked to its scope",
+        "desc": "From Super Admin down to subscriber, each level gets its own panel, its own permissions, and full isolation. Nobody sees a taka more than their role allows.",
+        "isolatedScope": "Isolated Scope",
+        "strictRbac": "Strict RBAC"
+      },
+      "permissions": {
+        "badge": "Granular Permissions",
+        "title": "24 Permission modules with full CRUD isolation",
+        "desc": "Control exactly what each Admin, NOC engineer, Collector, or POP reseller can see, create, edit, or delete. Override permissions for a single user without creating a new role.",
+        "moduleCol": "Permission Module",
+        "readCol": "Read",
+        "createCol": "Create",
+        "updateCol": "Update",
+        "deleteCol": "Delete",
+        "footnote": "* Shown for illustrative staff scope. Every role supports custom capability override per field."
+      },
+      "caseStudy": {
+        "badge": "Operator Success Story"
+      },
+      "partners": {
+        "badge": "Trusted By Operators",
+        "title": "120+ ISPs across Bangladesh run on ISP Pay BD"
+      },
+      "trust": {
+        "badge": "Platform Trust"
+      },
+      "proof": {
+        "badge": "By The Numbers"
+      },
+      "connects": {
+        "badge": "Developer Connects",
+        "title": "Integrate with your existing stack",
+        "desc": "REST API, webhooks, and mobile SDK — extend billing, provisioning, and customer self-care without leaving your workflow.",
+        "docsLink": "v1 Docs →"
+      },
+      "tryIt": {
+        "badge": "Interactive Sandbox",
+        "title": "Try it before you buy it",
+        "desc": "Explore the full admin panel, reseller console, and subscriber app. The credentials below are pre-configured; just click sign in.",
+        "userLabel": "User:",
+        "passLabel": "Pass:",
+        "openPanel": "Open {role}"
+      },
+      "ctaFinal": {
+        "badge": "Ready to Modernize Your ISP?",
+        "title": "Stop reconciling payments by hand.",
+        "desc": "Connect your MikroTik, switch on bKash & Nagad auto-matching, and bill your entire subscriber tree from one clean panel — set up in an afternoon.",
+        "primary": "Start Free Trial — 14 Days, No Card",
+        "whatsapp": "Book WhatsApp Demo",
+        "sales": "Talk to Sales",
+        "bullet1": "✓ Instant account activation",
+        "bullet2": "✓ Free subscriber & billing data migration",
+        "bullet3": "✓ Live telephone & WhatsApp support in Bangla"
+      }
+    },
+    "pages": {
+      "pricing": {
+        "badge": "Transparent Pricing",
+        "title": "Plans that scale with your subscriber count",
+        "subtitle": "Fixed monthly tiers or pay-as-you-grow — no per-seat traps, no router license fees."
+      },
+      "plugins": {
+        "badge": "Plugin Marketplace",
+        "title": "15+ modular add-ons for your ISP stack",
+        "subtitle": "Turn on WhatsApp, OLT tools, accounting, and more — billed only when active."
+      },
+      "contact": {
+        "badge": "Direct NOC & Sales Line",
+        "title": "Talk to people who run ISPs",
+        "subtitle": "Trial the platform yourself, or get a 20-minute walkthrough from someone who understands MikroTik RouterOS and automated bKash reconciliation.",
+        "trialTitle": "Start Free Trial",
+        "trialDesc": "Full console, 14 days, no card required",
+        "whatsappTitle": "WhatsApp Demo",
+        "whatsappDesc": "20-min walkthrough with an ISP expert",
+        "salesTitle": "Sales Inquiry",
+        "salesDesc": "Custom POP or enterprise pricing"
+      },
+      "register": {
+        "badge": "Start Your Free Trial",
+        "title": "Create your ISP operator account",
+        "subtitle": "14 days free — connect MikroTik, import subscribers, and enable bKash reconciliation today.",
+        "referralBadge": "Partner Referral Signup",
+        "referralTitle": "Join via partner referral",
+        "referralSubtitle": "Your referral code unlocks onboarding priority and extended trial support."
+      }
     }
   },
   "customer": {

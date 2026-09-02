@@ -1,47 +1,51 @@
-# AGENT TASK — WT01 Marketing Landing A
+# AGENT TASK — WT02 Marketing Landing B + Routes
 
-**Worktree:** `.worktrees/wt01-marketing-landing-a`  
-**Branch:** `wt/01-marketing-landing-a`  
-**Agent ID:** 01 of 10
+**Worktree:** `.worktrees/wt02-marketing-landing-b`  
+**Branch:** `wt/02-marketing-landing-b`  
+**Agent ID:** 02 of 10
 
 ---
 
 ## Mission
 
-Build **landing sections 1–14** on `/` (dark ISP marketing). Do **not** build sections 15–28 (that is WT02).
+Build **landing sections 15–28** plus marketing routes `/pricing`, `/plugins`, `/contact`, `/register`, `/register/referral`. Wire `next-intl` EN/BN for marketing.
 
-## Owned paths (ONLY edit these)
+## Owned paths
 
 | Path | Action |
 |------|--------|
-| `src/features/marketing/landing/` | Components for sections 1–14 + compose into LandingPage |
-| `src/app/(marketing)/page.tsx` | Wire LandingPage (coordinate with WT02 — keep section slots) |
-| `src/data/marketing/` | Data for sections 1–14 only |
-| `src/lib/mock-api/handlers/` | Marketing landing keys only |
+| `src/features/marketing/landing/` | Sections 15–28 components |
+| `src/features/marketing/pricing/` | Pricing page |
+| `src/features/marketing/plugins/` | Plugins marketplace |
+| `src/features/marketing/contact/` | Contact page |
+| `src/features/marketing/register/` | Register + referral |
+| `src/features/marketing/shared/` | EN/BN toggle if needed (careful merge with WT01) |
+| `src/app/(marketing)/` | Routes for pricing/plugins/contact/register |
+| `src/data/marketing/` | Data for sections 15–28 + route pages |
+| `src/i18n/` | next-intl setup (marketing strings) |
 
 ## Sections to build
 
-1. Hero + orbital · 2. Stats · 3. Features · 4. Benefits · 5. Why choose · 6. How it works · 7. Product preview · 8. Auto reconciliation · 9. ROI · 10. Pricing + PAYG · 11. Comparison · 12. Testimonials · 13. FAQ · 14. Integrations orbit
+15 Plugins · 16 Mobile app · 17 Reseller hierarchy · 18 Roles · 19 Permissions · 20 Case study · 21 Partners · 22 Trust · 23 Proof · 24 Connects · 25 Try it · 26 CTA · 27 Nav polish · 28 Footer polish
 
 ## Reference
 
-- `docs/REFERENCE-MAP.md` → `../isppaybd_isp/app/Views/landing/partials/`
-- `docs/UI-FUSION-GUIDE.md` + skill `isp-pay-bd`
-- Colors: `#0c0118` / `#f75803` / `#2E8BFF` · Fonts: `font-landing-display` / `font-landing-body`
+- PHP: `isppaybd_isp/app/Views/landing/partials/` + `auth/registration.php`
+- `docs/11-I18N.md`
 
 ## DO NOT touch
 
-- Sections 15–28, `/pricing` `/plugins` `/contact` `/register` (WT02)
-- Auth, portals, `package.json`, shared components (unless missing critical export)
+- Sections 1–14 primary implementation (WT01)
+- Auth login (WT03), portals
 
 ## Done when
 
-- [x] Sections 1–14 render on `/`
-- [x] Dark theme + Framer Motion (respect reduced-motion)
-- [x] PAYG/pricing slider works with mock data
-- [x] `pnpm lint && typecheck && test && build` pass
-- [x] Inventory A1 sections 1–14 marked in your PR description
+- [x] Sections 15–28 on `/`
+- [x] All 5 extra marketing routes work
+- [x] EN/BN toggle works for marketing
+- [x] Mobile sticky CTA OK
+- [x] Verify commands pass
 
 ## Skill
 
-Read `.cursor/skills/isp-pay-bd/SKILL.md` first.
+`.cursor/skills/isp-pay-bd/SKILL.md`

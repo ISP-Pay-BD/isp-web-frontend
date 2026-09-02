@@ -1,26 +1,29 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
+import { useTranslations } from '../context/LocaleContext';
 
 const footerLinks = {
   product: [
-    { label: 'Features', href: '/#features' },
-    { label: 'Pricing', href: '/pricing' },
-    { label: 'Plugins', href: '/plugins' },
-    { label: 'Register', href: '/register' },
+    { labelKey: 'marketing.nav.features', href: '/#features' },
+    { labelKey: 'marketing.nav.pricing', href: '/pricing' },
+    { labelKey: 'marketing.nav.plugins', href: '/plugins' },
+    { labelKey: 'marketing.nav.startTrial', href: '/register' },
   ],
   company: [
-    { label: 'Contact', href: '/contact' },
-    { label: 'Login', href: '/login' },
-  ],
-  legal: [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
+    { labelKey: 'marketing.nav.contact', href: '/contact' },
+    { labelKey: 'marketing.nav.login', href: '/login' },
+    { labelKey: 'marketing.footer.privacy', href: '/privacy' },
+    { labelKey: 'marketing.footer.terms', href: '/terms' },
   ],
 };
 
 export function MarketingFooter() {
+  const t = useTranslations();
+
   return (
     <footer className="border-t border-white/10 bg-landing-bg text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 md:grid-cols-4 md:px-6">
@@ -29,30 +32,27 @@ export function MarketingFooter() {
             <Image src={brandAssets.logo} alt="" width={40} height={40} />
             <span className="font-landing-display text-lg font-bold">{siteConfig.name}</span>
           </Link>
-          <p className="text-sm text-white/70 max-w-md">
-            Multi-tenant ISP billing, MikroTik sync, and bKash/Nagad reconciliation — built for
-            Bangladesh ISPs.
-          </p>
+          <p className="text-sm text-white/70 max-w-md">{t('marketing.footer.description')}</p>
         </div>
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-white">Product</h3>
+          <h3 className="mb-3 text-sm font-semibold text-white">{t('marketing.footer.product')}</h3>
           <ul className="space-y-2 text-sm text-white/70">
             {footerLinks.product.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="hover:text-landing-accent transition-colors">
-                  {l.label}
+                  {t(l.labelKey)}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-white">Company</h3>
+          <h3 className="mb-3 text-sm font-semibold text-white">{t('marketing.footer.company')}</h3>
           <ul className="space-y-2 text-sm text-white/70">
-            {[...footerLinks.company, ...footerLinks.legal].map((l) => (
+            {footerLinks.company.map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="hover:text-landing-accent transition-colors">
-                  {l.label}
+                  {t(l.labelKey)}
                 </Link>
               </li>
             ))}
@@ -60,7 +60,7 @@ export function MarketingFooter() {
         </div>
       </div>
       <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
-        © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+        © {new Date().getFullYear()} {siteConfig.name}. {t('marketing.footer.rights')}
       </div>
     </footer>
   );

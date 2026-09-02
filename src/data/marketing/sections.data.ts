@@ -87,6 +87,16 @@ export const landingSections = {
     { name: 'Webhooks', desc: 'Payment and expiry events' },
     { name: 'Mobile SDK', desc: 'Embed in your customer app' },
   ],
+  permissionsMatrix: [
+    { module: 'Customers & Subscribers', read: true, create: true, update: true, delete: true },
+    { module: 'Billing & Payments', read: true, create: true, update: true, delete: false },
+    { module: 'MikroTik RouterOS API', read: true, create: true, update: true, delete: true },
+    { module: 'OLT & Fiber ONUs', read: true, create: true, update: true, delete: false },
+    { module: 'Accounting & Ledger', read: true, create: false, update: false, delete: false },
+    { module: 'Support Tickets', read: true, create: true, update: true, delete: false },
+    { module: 'HR & Payroll Staff', read: false, create: false, update: false, delete: false },
+    { module: 'Settings & Gateways', read: false, create: false, update: false, delete: false },
+  ],
 };
 
 export const landingFaqExtended = [

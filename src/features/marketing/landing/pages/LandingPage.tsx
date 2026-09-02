@@ -16,6 +16,18 @@ import {
   Testimonials,
   FAQSection,
   IntegrationsOrbit,
+  PluginsHighlight,
+  MobileAppPromo,
+  ResellerHierarchy,
+  RolesAccess,
+  PermissionsMatrix,
+  CaseStudy,
+  PartnersLogos,
+  TrustBadges,
+  ProofBand,
+  ConnectsSection,
+  TryItSection,
+  CTASection,
 } from '../components';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -109,8 +121,42 @@ export function LandingPage() {
       {/* 14. Integrations Orbit & BD Payment Rails */}
       <IntegrationsOrbit integrations={data.integrations} />
 
-      {/* Slot demarcation for WT02 Sections 15–28 */}
-      <div id="landing-sections-15-28-slot" data-slot="wt02" aria-hidden="true" />
+      {/* 15. Plugins Marketplace Highlight */}
+      <PluginsHighlight plugins={data.pluginsList} />
+
+      {/* 16. Mobile Customer App Promo */}
+      <MobileAppPromo data={data.mobileApp} />
+
+      {/* 17. Reseller Hierarchy Flow */}
+      <ResellerHierarchy data={data.resellerHierarchy} />
+
+      {/* 18. Roles & Scoped Access */}
+      <RolesAccess roles={data.rolesAccess} />
+
+      {/* 19. Permissions Matrix */}
+      <PermissionsMatrix matrix={data.permissionsMatrix} />
+
+      {/* 20. Case Study */}
+      <CaseStudy data={data.caseStudy} />
+
+      {/* 21. Partners Logos Marquee */}
+      <PartnersLogos partners={data.partners} />
+
+      {/* 22. Trust Badges */}
+      <TrustBadges badges={data.trustBadges} />
+
+      {/* 23. Proof Band */}
+      <ProofBand stats={data.stats} />
+
+      {/* 24. Connects (APIs & Webhooks) */}
+      <ConnectsSection connects={data.connects} />
+
+      {/* 25. Try It Before You Buy It */}
+      <TryItSection />
+
+      {/* 26. Final Conversion CTA */}
+      <CTASection />
     </div>
   );
 }
+

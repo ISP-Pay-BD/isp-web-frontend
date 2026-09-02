@@ -113,6 +113,60 @@ export interface IntegrationItem {
   icon?: string;
 }
 
+export interface PluginItem {
+  id: string;
+  name: string;
+  category: string;
+  priceBdt: number;
+  period?: string;
+  installed: boolean;
+  rating?: number;
+  installs?: number;
+  desc?: string;
+}
+
+export interface MobileAppData {
+  title: string;
+  features: string[];
+  stores: { android: string; ios: string };
+}
+
+export interface ResellerHierarchyData {
+  levels: string[];
+  description: string;
+}
+
+export interface RoleAccessItem {
+  role: string;
+  access: string;
+}
+
+export interface CaseStudyData {
+  company: string;
+  location: string;
+  customers: number;
+  quote: string;
+  results: Array<{ metric: string; label: string }>;
+}
+
+export interface TrustBadgeItem {
+  label: string;
+  sub: string;
+}
+
+export interface ConnectItem {
+  name: string;
+  desc: string;
+}
+
+export interface PermissionMatrixRow {
+  module: string;
+  read: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
 export interface LandingSectionsData {
   hero: HeroData;
   stats: StatsData;
@@ -134,4 +188,14 @@ export interface LandingSectionsData {
   testimonials: TestimonialItem[];
   faq: FaqItem[];
   integrations: IntegrationItem[];
+  // Sections 15–28
+  pluginsList: PluginItem[];
+  mobileApp: MobileAppData;
+  resellerHierarchy: ResellerHierarchyData;
+  rolesAccess: RoleAccessItem[];
+  caseStudy: CaseStudyData;
+  partners: string[];
+  trustBadges: TrustBadgeItem[];
+  connects: ConnectItem[];
+  permissionsMatrix: PermissionMatrixRow[];
 }

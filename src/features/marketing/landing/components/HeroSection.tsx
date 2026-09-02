@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Rocket, PlayCircle, CheckCircle2, Server, ShieldCheck, CreditCard, Wifi, Globe, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { HeroData } from '../types';
@@ -23,17 +23,6 @@ const orbitNodes = [
 ];
 
 export function HeroSection({ data }: HeroSectionProps) {
-  const reduceMotion = useReducedMotion();
-
-  const fadeUp = (delay = 0) =>
-    reduceMotion
-      ? {}
-      : {
-          initial: { opacity: 0, y: delay > 0 ? 20 : 16 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.5, delay },
-        };
-
   return (
     <section id="hero" className="relative overflow-hidden pt-12 pb-20 md:pt-16 md:pb-28">
       {/* Background ambient lighting */}
@@ -48,29 +37,43 @@ export function HeroSection({ data }: HeroSectionProps) {
           {/* Content Column */}
           <div className="flex flex-col items-center text-center lg:col-span-7 lg:items-start lg:text-left">
             <motion.div
-              {...fadeUp(0)}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1 text-xs md:text-sm font-medium text-white/90 shadow-inner backdrop-blur-md"
             >
-              <span className={`h-2 w-2 rounded-full bg-landing-cta ${reduceMotion ? '' : 'animate-pulse'}`} />
+              <span className="h-2 w-2 rounded-full bg-landing-cta animate-pulse" />
               <span>{data.badge}</span>
             </motion.div>
 
             <motion.h1
-              {...fadeUp(0.1)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="font-landing-display mt-6 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl lg:text-5xl lg:leading-[1.15]"
             >
-              {data.titleEn}
+              Run your whole ISP from{' '}
+              <span className="bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">
+                one operator&apos;s console
+              </span>
+              <span className="block mt-2 text-landing-accent text-2xl sm:text-3xl md:text-4xl font-bold">
+                Billing, MikroTik sync &amp; bKash matched automatically.
+              </span>
             </motion.h1>
 
             <motion.p
-              {...fadeUp(0.2)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
               className="mt-6 text-base md:text-lg leading-relaxed text-white/70 max-w-xl"
             >
-              {data.subtitleEn}
+              Auto-reconciles every bKash and Nagad payment to the subscriber in ~0.8s, syncs MikroTik PPPoE in real time, disconnects at midnight expiry, and empowers your users with a branded Bangla customer portal.
             </motion.p>
 
             <motion.div
-              {...fadeUp(0.3)}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
               className="mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start"
             >
               <Link href="/register">
@@ -92,7 +95,9 @@ export function HeroSection({ data }: HeroSectionProps) {
 
             {/* Trust points */}
             <motion.div
-              {...(reduceMotion ? {} : { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.5, delay: 0.4 } })}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
               className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-white/60 sm:text-sm lg:justify-start"
             >
               <div className="flex items-center gap-2">
@@ -134,10 +139,10 @@ export function HeroSection({ data }: HeroSectionProps) {
               </div>
 
               {/* Inner Orbit Ring (130px radius) */}
-              <div className={`absolute h-[210px] w-[210px] sm:h-[260px] sm:w-[260px] rounded-full border border-white/10 border-dashed ${reduceMotion ? '' : 'animate-[spin_40s_linear_infinite]'}`} />
+              <div className="absolute h-[210px] w-[210px] sm:h-[260px] sm:w-[260px] rounded-full border border-white/10 border-dashed animate-[spin_40s_linear_infinite]" />
 
               {/* Outer Orbit Ring (190px radius) */}
-              <div className={`absolute h-[310px] w-[310px] sm:h-[390px] sm:w-[390px] rounded-full border border-white/10 ${reduceMotion ? '' : 'animate-[spin_60s_linear_infinite_reverse]'}`} />
+              <div className="absolute h-[310px] w-[310px] sm:h-[390px] sm:w-[390px] rounded-full border border-white/10 animate-[spin_60s_linear_infinite_reverse]" />
 
               {/* Orbit Nodes */}
               {orbitNodes.map((node, i) => {
