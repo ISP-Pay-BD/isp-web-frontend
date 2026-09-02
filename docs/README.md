@@ -28,6 +28,7 @@
 | [**UI-FUSION-GUIDE.md**](./UI-FUSION-GUIDE.md) | ISP + shadcn + 21st.dev | Before any UI work |
 | [**P0-READY.md**](./P0-READY.md) | **P0 complete — start Phase 1** | **Before landing code** |
 | [**PLAN-STATUS.md**](./PLAN-STATUS.md) | **Plan docs index + phase status** | **Is the MD plan complete?** |
+| [**UI-REFERENCES-LIBS.md**](./UI-REFERENCES-LIBS.md) | **USE / DO NOT USE libs & UI sites** | **Before any UI work** |
 | [**REFERENCE-MAP.md**](./REFERENCE-MAP.md) | **Old ISP website paths for AI** | **Where to find PHP reference code** |
 | [**FONTS.md**](./FONTS.md) | **Font setup & agent rules** | **Typography / self-hosting** |
 | [**FOLDER-STRUCTURE-COMPLETE.md**](./FOLDER-STRUCTURE-COMPLETE.md) | Rating + full tree | Before coding any module |
@@ -66,6 +67,7 @@
 
 - **`AGENTS.md`** — session start + stack + UI fusion for all contributors and AI
 - **`.cursor/rules/isp-frontend.mdc`** — Cursor rule loaded automatically
+- **`.cursor/skills/isp-pay-bd/SKILL.md`** — **default project skill** (USE/DO NOT USE, workflow)
 
 ## Current phase
 

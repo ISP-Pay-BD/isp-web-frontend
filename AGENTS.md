@@ -6,14 +6,17 @@ Build a **high-quality, professional, modern ISP Pay BD platform** — complete 
 
 ## Start every session (in order)
 
-1. **`docs/PROJECT-MEMORY.md`** — project context
-2. **`docs/13-STRICT-AGENT-MANDATE.md`** — non-negotiable rules
-3. **`docs/QUALITY-STANDARDS.md`** — premium quality bar
-4. **`docs/UI-FUSION-GUIDE.md`** — ISP + shadcn + 21st.dev
-5. **`docs/MASTER-BUILD-PLAN.md`** — complete plan + current phase
-6. **`docs/FONTS.md`** — typography (5 fonts, folders, usage)
-7. **`docs/DEFINITION-OF-DONE.md`** — per-screen checklist
-8. **`docs/12-AI-CODING-RULES.md`** — coding rules
+1. **Skill `isp-pay-bd`** — `.cursor/skills/isp-pay-bd/SKILL.md` (project default)
+2. **`docs/PROJECT-MEMORY.md`** — project context
+3. **`docs/13-STRICT-AGENT-MANDATE.md`** — non-negotiable rules
+4. **`docs/QUALITY-STANDARDS.md`** — premium quality bar
+5. **`docs/UI-FUSION-GUIDE.md`** — ISP + shadcn + 21st.dev
+6. **`docs/UI-REFERENCES-LIBS.md`** — USE / DO NOT USE libraries & UI sites
+7. **`docs/MASTER-BUILD-PLAN.md`** — complete plan + current phase
+8. **`docs/REFERENCE-MAP.md`** — old PHP website paths
+9. **`docs/FONTS.md`** — typography
+10. **`docs/DEFINITION-OF-DONE.md`** — per-screen checklist
+11. **`docs/12-AI-CODING-RULES.md`** — coding rules
 
 ## Stack (CLI-installed — do not replace)
 
@@ -34,6 +37,7 @@ Build a **high-quality, professional, modern ISP Pay BD platform** — complete 
 Marketing  →  ISP landing.css (#0c0118) + 21st.dev inspiration + Framer Motion
 Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
 Forbidden  →  Generic CRM look, MUI, Chakra, Ant, DaisyUI, Font Awesome CDN
+USE/DO NOT →  docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
 ```
 
 ## Architecture
@@ -54,6 +58,7 @@ Static mock UI only. No backend API. All data from `src/data/` via mock-api.
 
 ## Current status
 
+- **Default skill:** `isp-pay-bd` — `.cursor/skills/isp-pay-bd/SKILL.md`
 - **P0:** ✅ Complete — see `docs/P0-READY.md`
 - **Plan docs (MD):** ✅ Complete — see `docs/PLAN-STATUS.md`
 - **Phase 1:** ⏳ Ready to start (28 landing sections)

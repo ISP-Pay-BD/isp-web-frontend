@@ -12,6 +12,8 @@ Never                 →  3 UI libraries on one page
 
 Full inspiration catalog: [21st.dev community components](https://21st.dev/community/components)
 
+**USE / DO NOT USE lists (libraries + UI sites):** [`UI-REFERENCES-LIBS.md`](./UI-REFERENCES-LIBS.md) · Default skill: `.cursor/skills/isp-pay-bd/SKILL.md`
+
 ---
 
 ## Source roles

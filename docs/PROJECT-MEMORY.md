@@ -19,24 +19,25 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 | MarketingLayout | ✅ Done |
 | Full navigation | ✅ Done |
 | Shared components | ✅ Done |
+| **Default AI skill** | ✅ `.cursor/skills/isp-pay-bd/` |
 | Phase 1 landing (28 sections) | ⏳ **Next — awaiting your go** |
 
 ---
 
 ## Mandatory doc reading order
 
+0. **`.cursor/skills/isp-pay-bd/SKILL.md`** ← default project skill (USE/DO NOT USE)
 1. **`PROJECT-MEMORY.md`** ← this file
 2. **`13-STRICT-AGENT-MANDATE.md`** ← non-negotiable rules
 3. **`QUALITY-STANDARDS.md`** ← anti-CRM quality bar
 4. **`UI-FUSION-GUIDE.md`** ← ISP + shadcn + 21st.dev
-5. **`MASTER-BUILD-PLAN.md`** ← complete plan + current phase
-6. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
-7. **`FONTS.md`** ← typography (5 fonts, folders, usage)
-8. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
-9. **`REFERENCE-MAP.md`** ← old ISP website PHP paths (read before any UI)
-10. **`FONTS.md`** ← typography (5 fonts, folders, usage)
-11. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
-12. **`12-AI-CODING-RULES.md`** ← coding rules
+5. **`UI-REFERENCES-LIBS.md`** ← USE / DO NOT USE libraries & UI sites
+6. **`MASTER-BUILD-PLAN.md`** ← complete plan + current phase
+7. **`PLAN-STATUS.md`** ← plan docs complete? + phase index
+8. **`REFERENCE-MAP.md`** ← old ISP website PHP paths (before any UI)
+9. **`FONTS.md`** ← typography (5 fonts, folders, usage)
+10. **`DEFINITION-OF-DONE.md`** ← per-screen checklist
+11. **`12-AI-CODING-RULES.md`** ← coding rules
 
 ---
 
@@ -49,6 +50,7 @@ Quality    →  Premium ISP ops platform — complete states, permissions, respo
 Data       →  src/data/ via mock-api only
 Fonts      →  Satoshi (portals) + Plus Jakarta/Inter (marketing) — see docs/FONTS.md
 Reference  →  Old ISP website: ../isppaybd_isp — see docs/REFERENCE-MAP.md
+UI libs      →  USE/DO NOT USE: docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
 ```
 
 ---

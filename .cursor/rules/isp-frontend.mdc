@@ -1,5 +1,5 @@
 ---
-description: ISP Pay BD frontend — strict premium ISP platform rules
+description: ISP Pay BD frontend — strict premium ISP platform rules (loads default skill isp-pay-bd)
 globs:
   - "**/*.{ts,tsx,js,jsx,css,md,json}"
 alwaysApply: true
@@ -7,57 +7,42 @@ alwaysApply: true
 
 # ISP Web Frontend Rules
 
-**Goal: premium ISP Pay BD platform — NOT a generic CRM.** Complete, professional, modern.
+**Default skill:** `.cursor/skills/isp-pay-bd/SKILL.md` — USE/DO NOT USE libraries, UI references, workflow.
 
-Read before ANY code:
-1. `docs/PROJECT-MEMORY.md`
-2. `docs/13-STRICT-AGENT-MANDATE.md`
-3. `docs/QUALITY-STANDARDS.md`
-4. `docs/UI-FUSION-GUIDE.md`
-5. `docs/MASTER-BUILD-PLAN.md` — check current phase
+**Goal: premium ISP Pay BD platform — NOT a generic CRM.**
 
-## UI fusion (two surfaces)
+## Session start
 
-| Surface | Stack |
-|---------|-------|
-| **Marketing** | ISP `landing.css` dark (`#0c0118`, CTA `#f75803`, accent `#2E8BFF`) + [21st.dev](https://21st.dev/community/components) + Framer Motion |
-| **Portals** | shadcn/ui + ISP tokens (`#f75803`, `#1a0b38`, Satoshi) |
+1. Apply skill **`isp-pay-bd`** (project default)
+2. `docs/PROJECT-MEMORY.md` → `docs/13-STRICT-AGENT-MANDATE.md` → `docs/QUALITY-STANDARDS.md`
+3. Before UI: `docs/UI-FUSION-GUIDE.md` + `docs/UI-REFERENCES-LIBS.md`
+4. Before screen: `docs/REFERENCE-MAP.md` → read PHP in `../isppaybd_isp`
+5. Phase: `docs/MASTER-BUILD-PLAN.md` + `docs/PLAN-STATUS.md`
 
-- Landing: dark-only, 28 sections, ≥90% PHP parity
-- Portals: polished shadcn, full ISP sidebar, TanStack Table
-- NO generic CRM dashboards, NO lorem ipsum, NO placeholder-only screens
+## USE (default)
 
-## Quality (mandatory on every screen)
+| Area | Stack |
+|------|-------|
+| Marketing | ISP dark `#0c0118` + [21st.dev](https://21st.dev/community/components) + Framer Motion + Plus Jakarta/Inter |
+| Portals | shadcn/ui + Satoshi + TanStack Table + Lucide |
+| Reference | `../isppaybd_isp` via `docs/REFERENCE-MAP.md` |
+| Data | `src/data/` → mock-api only |
 
-- All 4 states: loading skeleton, empty, error, success
-- Responsive: 320px → 1440px
-- Permissions: nav filter + route guard + `<Can>` on buttons
-- ISP domain copy from `isppaybd_isp` reference
-- Pass `docs/DEFINITION-OF-DONE.md` before marking done
+## DO NOT USE
 
-## Scope (Phase 1)
+MUI · Chakra · Ant Design · DaisyUI · jQuery · Redux · Font Awesome CDN · Google Fonts CDN · Roboto · generic CRM templates · heavy 21st shaders
 
-- Static mock data ONLY — `src/data/` via mock-api
-- NEVER import `@/data` in features/components
-- All fonts/images local in `public/`
-- Mirror all portals from `isppaybd_isp` sidebar
-
-## Architecture
-
-- One feature = one folder under `src/features/{portal}/{module}/`
-- Pages in `features/.../pages/` — app routes thin (~3 lines)
-- Tests in `tests/` — never inside `src/app/`
+Full lists: `docs/UI-REFERENCES-LIBS.md` · `.cursor/skills/isp-pay-bd/ui-libraries.md`
 
 ## Phase gate
 
-- **P0 ✅ complete** — see `docs/P0-READY.md` and `docs/PLAN-STATUS.md`
-- **Next:** Phase 1 — 28 landing sections (await user go)
-- Fonts: 5 families in `public/fonts/` — see `docs/FONTS.md`
+- **P0 ✅** — `docs/P0-READY.md`
+- **Next:** Phase 1 landing — user says **"start Phase 1"**
+- Fonts: `docs/FONTS.md` · Verify: `pnpm lint && typecheck && test && build`
 
 ## Do not
 
 - Modify `isppaybd_isp` during frontend-only work
 - Commit unless user asks
-- Skip phases or quality gates
-- Mark screens done without DoD + verify commands
-- Build generic template UI
+- Skip phases or DoD
+- Import `@/data` in features/components
