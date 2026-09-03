@@ -40,12 +40,16 @@ import {
   Area,
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  ComposedChart,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -504,53 +508,133 @@ export function AdminDashboardPage() {
         </div>
       </motion.div>
 
-      {/* Analytics Charts Grid: Customer Payment Report (Area) + Weekly Collections (Bar) */}
+      {/* Analytics Charts Grid: Customer Payment Report (Combo Bar+Line) + Weekly Collections (Bar) */}
       <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-12">
-        {/* Customer Payment Report */}
-        <Card className="lg:col-span-8 border-border/70 bg-card shadow-2xs">
+        {/* Customer Payment Report — Combo Chart (Bar + Line) */}
+        <Card className="lg:col-span-8 border-border/70 bg-card shadow-2xs overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle className="text-base font-bold">Customer Payment Report</CardTitle>
+              <CardTitle className="text-base font-bold">Comparing Actual vs Target by Month</CardTitle>
               <CardDescription className="text-xs">Jan – Sep 2026 Collection Trends vs Monthly Target</CardDescription>
             </div>
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                <span>Collected</span>
+                <span className="h-3 w-3 rounded-sm bg-primary" />
+                <span className="font-medium">Actual</span>
               </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-                <span>Target</span>
+              <div className="flex items-center gap-1.5">
+                <span className="h-0.5 w-3 bg-cyan-500 rounded-full" />
+                <span className="font-medium text-muted-foreground">Target</span>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            <div className="h-64 w-full">
+            <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.monthlyTrend ?? []}>
+                <ComposedChart data={stats.monthlyTrend ?? []} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorCol" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.0} />
-                    </linearGradient>
+                    <filter id="comboDotGlow">
+                      <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="var(--primary)" floodOpacity="0.5" />
+                    </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `৳${v / 1000}k`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)' }}
-                    formatter={(val: unknown) => [typeof val === 'number' ? `৳${val.toLocaleString()}` : String(val), 'Amount']}
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="rgba(255,255,255,0.06)"
+                    vertical={false}
                   />
-                  <Area type="monotone" dataKey="collection" stroke="var(--primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorCol)" />
-                  <Area type="monotone" dataKey="target" stroke="var(--muted-foreground)" strokeDasharray="4 4" strokeWidth={1.5} fillOpacity={0} />
-                </AreaChart>
+                  <XAxis
+                    dataKey="month"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    dy={10}
+                  />
+                  <YAxis
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v / 1000}k`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    dx={-5}
+                  />
+                  <Tooltip
+                    content={
+                      <ChartTooltip
+                        formatter={(val: number) => `৳${val.toLocaleString()}`}
+                      />
+                    }
+                    cursor={{ fill: 'rgba(56, 189, 248, 0.06)' }}
+                  />
+                  {/* Bars — Actual collected */}
+                  <Bar
+                    dataKey="collection"
+                    name="collection"
+                    fill="var(--primary)"
+                    radius={[4, 4, 0, 0]}
+                    barSize={32}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    label={{
+                      position: 'top',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      fill: 'hsl(var(--muted-foreground))',
+                    }}
+                  />
+                  {/* Line — Target */}
+                  <Line
+                    type="monotone"
+                    dataKey="target"
+                    name="target"
+                    stroke="#0e7490"
+                    strokeWidth={2.5}
+                    dot={{
+                      r: 5,
+                      fill: '#0e7490',
+                      stroke: '#fff',
+                      strokeWidth: 2,
+                    }}
+                    activeDot={{
+                      r: 7,
+                      fill: '#0e7490',
+                      stroke: '#fff',
+                      strokeWidth: 2,
+                      filter: 'url(#comboDotGlow)',
+                    }}
+                    animationDuration={2000}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
+            </div>
+            {/* Summary Stats */}
+            <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Total Collected</div>
+                <div className="text-sm font-bold font-mono text-foreground">
+                  ৳{((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.collection, 0) / 1000000).toFixed(2)}M
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Target</div>
+                <div className="text-sm font-bold font-mono text-muted-foreground">
+                  ৳{((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.target, 0) / 1000000).toFixed(2)}M
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Achievement</div>
+                <div className="text-sm font-bold font-mono text-emerald-500">
+                  {((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.collection, 0) /
+                    (stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.target, 0) *
+                    100).toFixed(1)}%
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Weekly Revenue Daily Bars */}
-        <Card className="lg:col-span-4 border-border/70 bg-card shadow-2xs">
+        <Card className="lg:col-span-4 border-border/70 bg-card shadow-2xs overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold">Weekly Revenue</CardTitle>
@@ -561,19 +645,78 @@ export function AdminDashboardPage() {
             </Badge>
           </CardHeader>
           <CardContent className="pt-4">
-            <div className="h-64 w-full">
+            <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.weeklyCollections ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="day" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `৳${v / 1000}k`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)' }}
-                    formatter={(val: unknown) => [typeof val === 'number' ? `৳${val.toLocaleString()}` : String(val), 'Collected']}
+                <BarChart data={stats.weeklyCollections ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradientBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f75803" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#c44103" stopOpacity={0.7} />
+                    </linearGradient>
+                    <filter id="barShadow">
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#f75803" floodOpacity="0.25" />
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    dy={5}
                   />
-                  <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                  <YAxis
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `৳${v / 1000}k`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    dx={-5}
+                  />
+                  <Tooltip
+                    content={
+                      <ChartTooltip
+                        formatter={(val: number) => `৳${val.toLocaleString()}`}
+                      />
+                    }
+                    cursor={{ fill: 'rgba(247, 88, 3, 0.08)' }}
+                  />
+                  <Bar
+                    dataKey="amount"
+                    fill="url(#gradientBar)"
+                    radius={[6, 6, 0, 0]}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    maxBarSize={40}
+                  />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            {/* Weekly Summary */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="text-center flex-1">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
+                  <div className="text-sm font-bold font-mono">
+                    ৳{((stats.weeklyCollections ?? []).reduce((sum, d) => sum + d.amount, 0) / 1000).toFixed(0)}k
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-border/50" />
+                <div className="text-center flex-1">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg/Day</div>
+                  <div className="text-sm font-bold font-mono">
+                    ৳{((stats.weeklyCollections ?? []).reduce((sum, d) => sum + d.amount, 0) / 7 / 1000).toFixed(1)}k
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-border/50" />
+                <div className="text-center flex-1">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Peak</div>
+                  <div className="text-sm font-bold font-mono text-emerald-500">
+                    ৳{Math.max(...(stats.weeklyCollections ?? []).map((d) => d.amount)) / 1000}k
+                  </div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -656,36 +799,82 @@ export function AdminDashboardPage() {
         </Card>
 
         {/* Daily Data Consumption (Bandwidth) */}
-        <Card className="border-border/70 bg-card shadow-2xs">
+        <Card className="border-border/70 bg-card shadow-2xs overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-1.5">
-                <HardDrive className="h-4 w-4 text-primary" /> Daily Bandwidth
+                <HardDrive className="h-4 w-4 text-emerald-500" /> Daily Bandwidth
               </CardTitle>
               <CardDescription className="text-xs">Live throughput profile</CardDescription>
             </div>
-            <Badge variant="outline" className="font-mono text-[11px]">
+            <Badge variant="outline" className="font-mono text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
               {(stats.totalDataGb ?? 48250.5).toLocaleString()} GB
             </Badge>
           </CardHeader>
           <CardContent className="pt-4 space-y-3">
-            <div className="h-44 w-full">
+            <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.bandwidthHourly ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="time" fontSize={10} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}G`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'var(--card)', borderRadius: '8px', border: '1px solid var(--border)' }}
-                    formatter={(val: unknown) => [typeof val === 'number' ? `${val} Gbps` : String(val), 'Peak Rate']}
+                <AreaChart data={stats.bandwidthHourly ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradientBandwidth" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#10b981" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradientBandwidthStroke" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#10b981" />
+                      <stop offset="100%" stopColor="#34d399" />
+                    </linearGradient>
+                    <filter id="bandwidthGlow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                      <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis
+                    dataKey="time"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
                   />
-                  <Area type="monotone" dataKey="gbps" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} />
+                  <YAxis
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `${v}G`}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <Tooltip
+                    content={
+                      <ChartTooltip
+                        formatter={(val: number) => `${val} Gbps`}
+                      />
+                    }
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="gbps"
+                    stroke="url(#gradientBandwidthStroke)"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#gradientBandwidth)"
+                    filter="url(#bandwidthGlow)"
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-between text-xs pt-1 border-t text-muted-foreground">
-              <span>Peak: 9.6 Gbps at 20:00</span>
-              <span className="text-emerald-500 font-semibold">Healthy link capacity</span>
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-border/50">
+              <span className="text-muted-foreground">Peak: <span className="font-bold text-emerald-500">9.6 Gbps</span> at 20:00</span>
+              <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Healthy capacity
+              </span>
             </div>
           </CardContent>
         </Card>

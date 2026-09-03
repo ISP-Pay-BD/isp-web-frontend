@@ -33,6 +33,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 
 export function PlatformDashboardPage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -106,7 +107,7 @@ export function PlatformDashboardPage() {
       {/* Charts & Operational Row */}
       <div className="grid gap-6 lg:grid-cols-7">
         {/* Revenue Trend Chart */}
-        <Card className="border-border/60 lg:col-span-4">
+        <Card className="border-border/60 lg:col-span-4 overflow-hidden">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -123,31 +124,53 @@ export function PlatformDashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f75803" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#f75803" stopOpacity={0} />
+                    <linearGradient id="gradientPlatformRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f75803" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#f75803" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#f75803" stopOpacity={0} />
                     </linearGradient>
+                    <linearGradient id="gradientPlatformRevenueStroke" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#f75803" />
+                      <stop offset="100%" stopColor="#f7a311" />
+                    </linearGradient>
+                    <filter id="platformGlow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                      <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} className="text-xs text-muted-foreground" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
+                  <XAxis
+                    dataKey="month"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                  />
                   <YAxis
                     tickFormatter={(v) => `৳${(v / 1000000).toFixed(1)}M`}
                     tickLine={false}
                     axisLine={false}
-                    className="text-xs text-muted-foreground"
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                   />
                   <Tooltip
-                    formatter={(val) => [`৳${formatBdt(Number(val ?? 0))}`, 'Revenue']}
-                    labelStyle={{ fontWeight: 'bold' }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                    content={
+                      <ChartTooltip
+                        formatter={(val: number) => `৳${formatBdt(val)}`}
+                      />
+                    }
                   />
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke="#f75803"
+                    stroke="url(#gradientPlatformRevenueStroke)"
                     strokeWidth={2.5}
                     fillOpacity={1}
-                    fill="url(#colorRev)"
+                    fill="url(#gradientPlatformRevenue)"
+                    filter="url(#platformGlow)"
+                    animationDuration={1500}
+                    animationEasing="ease-out"
                   />
                 </AreaChart>
               </ResponsiveContainer>

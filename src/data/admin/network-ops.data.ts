@@ -230,20 +230,54 @@ export const ipPools: IpPoolItem[] = [
   },
 ];
 
+export type OltBrand =
+  | 'Huawei' | 'ZTE' | 'BDCOM' | 'V_sol' | 'C_data' | 'Ecom'
+  | 'ATOP' | 'Airmedia' | 'Avies' | 'Corelink' | 'DBC' | 'Dn_optic'
+  | 'Fucascom' | 'Hsgq' | 'Tbs_pothon';
+
 export interface OltDeviceItem {
   id: string;
   name: string;
-  brand: 'Huawei' | 'ZTE' | 'BDCOM' | 'V_sol' | 'C_data' | 'Ecom';
+  brand: OltBrand;
   ip: string;
   port: number;
   protocol: 'http' | 'https' | 'telnet' | 'snmp';
   username: string;
+  loginKey?: string;
   snmpOid?: string;
   onuTotal: number;
   onuOnline: number;
   area: string;
   status: 'active' | 'disabled';
   ponPortsCount: number;
+}
+
+export type OnuStatus = 'online' | 'offline' | 'wire_down';
+
+export interface OnuPortItem {
+  id: string;
+  oltId: string;
+  ponPort: string;
+  onuIndex: string;
+  macAddress: string;
+  vendor: string;
+  distance: number;
+  customerName: string | null;
+  pppoeId: string | null;
+  status: OnuStatus;
+  rxPower: number | null;
+  txPower: number | null;
+  voltage: number | null;
+  temperature: number | null;
+  deregisterReason: string | null;
+  lastSeen: string;
+}
+
+export interface OltDiagnostics {
+  onlineCount: number;
+  wireDownCount: number;
+  powerOffCount: number;
+  onus: OnuPortItem[];
 }
 
 export const oltDevices: OltDeviceItem[] = [
@@ -308,6 +342,62 @@ export const oltDevices: OltDeviceItem[] = [
     ponPortsCount: 4,
   },
 ];
+
+export const oltDiagnostics: Record<string, OltDiagnostics> = {
+  olt_1: {
+    onlineCount: 118,
+    wireDownCount: 6,
+    powerOffCount: 4,
+    onus: [
+      { id: 'onu_1_1', oltId: 'olt_1', ponPort: 'PON1', onuIndex: '1', macAddress: 'C4:3D:C7:AA:11:01', vendor: 'HWTC', distance: 1240, customerName: 'Rahman Telecom', pppoeId: 'rahman_01', status: 'online', rxPower: -18.2, txPower: 2.1, voltage: 3.3, temperature: 42, deregisterReason: null, lastSeen: '2026-09-03 14:22:00' },
+      { id: 'onu_1_2', oltId: 'olt_1', ponPort: 'PON1', onuIndex: '2', macAddress: 'C4:3D:C7:AA:11:02', vendor: 'HWTC', distance: 890, customerName: 'Kabir IT', pppoeId: 'kabir_it', status: 'online', rxPower: -16.5, txPower: 2.3, voltage: 3.3, temperature: 40, deregisterReason: null, lastSeen: '2026-09-03 14:21:55' },
+      { id: 'onu_1_3', oltId: 'olt_1', ponPort: 'PON1', onuIndex: '3', macAddress: 'C4:3D:C7:AA:11:03', vendor: 'HWTC', distance: 2100, customerName: null, pppoeId: null, status: 'offline', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'LOSi/OFFLINE', lastSeen: '2026-09-02 08:15:00' },
+      { id: 'onu_1_4', oltId: 'olt_1', ponPort: 'PON1', onuIndex: '4', macAddress: 'C4:3D:C7:AA:11:04', vendor: 'HWTC', distance: 560, customerName: 'Nodi Enterprise', pppoeId: 'nodi_ent', status: 'online', rxPower: -14.8, txPower: 2.5, voltage: 3.4, temperature: 38, deregisterReason: null, lastSeen: '2026-09-03 14:22:10' },
+      { id: 'onu_1_5', oltId: 'olt_1', ponPort: 'PON2', onuIndex: '5', macAddress: 'C4:3D:C7:AA:21:01', vendor: 'HWTC', distance: 1580, customerName: 'Shafi Com', pppoeId: 'shafi_com', status: 'online', rxPower: -19.1, txPower: 1.8, voltage: 3.2, temperature: 44, deregisterReason: null, lastSeen: '2026-09-03 14:20:30' },
+      { id: 'onu_1_6', oltId: 'olt_1', ponPort: 'PON2', onuIndex: '6', macAddress: 'C4:3D:C7:AA:21:02', vendor: 'HWTC', distance: 3200, customerName: null, pppoeId: null, status: 'wire_down', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'LOS', lastSeen: '2026-09-01 22:10:00' },
+      { id: 'onu_1_7', oltId: 'olt_1', ponPort: 'PON2', onuIndex: '7', macAddress: 'C4:3D:C7:AA:21:03', vendor: 'HWTC', distance: 780, customerName: 'Al-Razzaq Net', pppoeId: 'razzaq_net', status: 'online', rxPower: -15.3, txPower: 2.4, voltage: 3.3, temperature: 39, deregisterReason: null, lastSeen: '2026-09-03 14:22:05' },
+      { id: 'onu_1_8', oltId: 'olt_1', ponPort: 'PON3', onuIndex: '8', macAddress: 'C4:3D:C7:AA:31:01', vendor: 'HWTC', distance: 1920, customerName: 'Digital Hub', pppoeId: 'digi_hub', status: 'online', rxPower: -20.4, txPower: 1.5, voltage: 3.1, temperature: 46, deregisterReason: null, lastSeen: '2026-09-03 14:19:50' },
+      { id: 'onu_1_9', oltId: 'olt_1', ponPort: 'PON3', onuIndex: '9', macAddress: 'C4:3D:C7:AA:31:02', vendor: 'HWTC', distance: 440, customerName: 'Bismillah ISP', pppoeId: 'bismillah', status: 'online', rxPower: -13.2, txPower: 2.8, voltage: 3.4, temperature: 37, deregisterReason: null, lastSeen: '2026-09-03 14:22:12' },
+      { id: 'onu_1_10', oltId: 'olt_1', ponPort: 'PON4', onuIndex: '10', macAddress: 'C4:3D:C7:AA:41:01', vendor: 'HWTC', distance: 2650, customerName: null, pppoeId: null, status: 'offline', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'Dying Gasp', lastSeen: '2026-09-02 14:30:00' },
+    ],
+  },
+  olt_2: {
+    onlineCount: 90,
+    wireDownCount: 4,
+    powerOffCount: 2,
+    onus: [
+      { id: 'onu_2_1', oltId: 'olt_2', ponPort: 'PON1', onuIndex: '1', macAddress: 'ZTE:GF:12:34:01', vendor: 'ZTE', distance: 1100, customerName: 'Sathi Cable', pppoeId: 'sathi_cable', status: 'online', rxPower: -17.6, txPower: 1.9, voltage: 3.3, temperature: 41, deregisterReason: null, lastSeen: '2026-09-03 14:21:45' },
+      { id: 'onu_2_2', oltId: 'olt_2', ponPort: 'PON1', onuIndex: '2', macAddress: 'ZTE:GF:12:34:02', vendor: 'ZTE', distance: 2300, customerName: null, pppoeId: null, status: 'wire_down', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'LOS', lastSeen: '2026-09-01 18:45:00' },
+      { id: 'onu_2_3', oltId: 'olt_2', ponPort: 'PON2', onuIndex: '3', macAddress: 'ZTE:GF:12:34:03', vendor: 'ZTE', distance: 670, customerName: 'Galaxy Net', pppoeId: 'galaxy_net', status: 'online', rxPower: -14.1, txPower: 2.6, voltage: 3.4, temperature: 38, deregisterReason: null, lastSeen: '2026-09-03 14:22:08' },
+      { id: 'onu_2_4', oltId: 'olt_2', ponPort: 'PON2', onuIndex: '4', macAddress: 'ZTE:GF:12:34:04', vendor: 'ZTE', distance: 1850, customerName: 'Pallabi WiFi', pppoeId: 'pallabi_wifi', status: 'online', rxPower: -19.8, txPower: 1.6, voltage: 3.2, temperature: 45, deregisterReason: null, lastSeen: '2026-09-03 14:20:55' },
+      { id: 'onu_2_5', oltId: 'olt_2', ponPort: 'PON3', onuIndex: '5', macAddress: 'ZTE:GF:12:34:05', vendor: 'ZTE', distance: 950, customerName: 'Islam Telecom', pppoeId: 'islam_tel', status: 'online', rxPower: -15.9, txPower: 2.2, voltage: 3.3, temperature: 40, deregisterReason: null, lastSeen: '2026-09-03 14:21:30' },
+      { id: 'onu_2_6', oltId: 'olt_2', ponPort: 'PON4', onuIndex: '6', macAddress: 'ZTE:GF:12:34:06', vendor: 'ZTE', distance: 3100, customerName: null, pppoeId: null, status: 'offline', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'Power Off', lastSeen: '2026-09-02 20:00:00' },
+    ],
+  },
+  olt_3: {
+    onlineCount: 61,
+    wireDownCount: 2,
+    powerOffCount: 1,
+    onus: [
+      { id: 'onu_3_1', oltId: 'olt_3', ponPort: 'PON1', onuIndex: '1', macAddress: 'VSOL:00:AA:BB:01', vendor: 'V-Sol', distance: 1350, customerName: 'Block C Network', pppoeId: 'block_c', status: 'online', rxPower: -18.7, txPower: 1.7, voltage: 3.2, temperature: 43, deregisterReason: null, lastSeen: '2026-09-03 14:20:00' },
+      { id: 'onu_3_2', oltId: 'olt_3', ponPort: 'PON1', onuIndex: '2', macAddress: 'VSOL:00:AA:BB:02', vendor: 'V-Sol', distance: 780, customerName: 'NRB Broadband', pppoeId: 'nrb_bb', status: 'online', rxPower: -14.3, txPower: 2.5, voltage: 3.4, temperature: 38, deregisterReason: null, lastSeen: '2026-09-03 14:22:15' },
+      { id: 'onu_3_3', oltId: 'olt_3', ponPort: 'PON2', onuIndex: '3', macAddress: 'VSOL:00:AA:BB:03', vendor: 'V-Sol', distance: 2800, customerName: null, pppoeId: null, status: 'wire_down', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'LOS', lastSeen: '2026-09-02 12:00:00' },
+      { id: 'onu_3_4', oltId: 'olt_3', ponPort: 'PON3', onuIndex: '4', macAddress: 'VSOL:00:AA:BB:04', vendor: 'V-Sol', distance: 1600, customerName: 'Rangpur Digital', pppoeId: 'rangpur_dig', status: 'online', rxPower: -17.2, txPower: 2.0, voltage: 3.3, temperature: 41, deregisterReason: null, lastSeen: '2026-09-03 14:21:10' },
+    ],
+  },
+  olt_4: {
+    onlineCount: 39,
+    wireDownCount: 5,
+    powerOffCount: 4,
+    onus: [
+      { id: 'onu_4_1', oltId: 'olt_4', ponPort: 'PON1', onuIndex: '1', macAddress: 'BD:CM:11:22:01', vendor: 'BDCOM', distance: 980, customerName: 'Dhanmondi Net', pppoeId: 'dhan_net', status: 'online', rxPower: -16.1, txPower: 2.1, voltage: 3.3, temperature: 39, deregisterReason: null, lastSeen: '2026-09-03 14:22:00' },
+      { id: 'onu_4_2', oltId: 'olt_4', ponPort: 'PON1', onuIndex: '2', macAddress: 'BD:CM:11:22:02', vendor: 'BDCOM', distance: 1420, customerName: 'Life Cable', pppoeId: 'life_cable', status: 'online', rxPower: -18.9, txPower: 1.6, voltage: 3.2, temperature: 44, deregisterReason: null, lastSeen: '2026-09-03 14:20:40' },
+      { id: 'onu_4_3', oltId: 'olt_4', ponPort: 'PON2', onuIndex: '3', macAddress: 'BD:CM:11:22:03', vendor: 'BDCOM', distance: 3500, customerName: null, pppoeId: null, status: 'offline', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'LOSi/OFFLINE', lastSeen: '2026-09-01 09:20:00' },
+      { id: 'onu_4_4', oltId: 'olt_4', ponPort: 'PON2', onuIndex: '4', macAddress: 'BD:CM:11:22:04', vendor: 'BDCOM', distance: 2100, customerName: null, pppoeId: null, status: 'wire_down', rxPower: null, txPower: null, voltage: null, temperature: null, deregisterReason: 'Dying Gasp', lastSeen: '2026-09-02 16:45:00' },
+      { id: 'onu_4_5', oltId: 'olt_4', ponPort: 'PON3', onuIndex: '5', macAddress: 'BD:CM:11:22:05', vendor: 'BDCOM', distance: 650, customerName: 'Azizpur WiFi', pppoeId: 'azizpur', status: 'online', rxPower: -13.8, txPower: 2.7, voltage: 3.4, temperature: 36, deregisterReason: null, lastSeen: '2026-09-03 14:22:18' },
+    ],
+  },
+};
 
 export interface HotspotProfileItem {
   id: string;

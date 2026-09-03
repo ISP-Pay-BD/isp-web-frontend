@@ -17,6 +17,24 @@ interface OltModalProps {
   onSuccess: (values: OltFormValues) => void;
 }
 
+const brandLabels: Record<string, string> = {
+  Huawei: 'Huawei',
+  ZTE: 'ZTE',
+  BDCOM: 'BDCOM',
+  V_sol: 'V-Sol',
+  C_data: 'C-Data',
+  Ecom: 'Ecom',
+  ATOP: 'ATOP',
+  Airmedia: 'Airmedia',
+  Avies: 'Avies',
+  Corelink: 'Corelink',
+  DBC: 'DBC',
+  Dn_optic: 'Dn-Optic',
+  Fucascom: 'Fucascom',
+  Hsgq: 'Hsgq',
+  Tbs_pothon: 'Tbs Pothon',
+};
+
 export function OltModal({ open, onOpenChange, initialData, onSuccess }: OltModalProps) {
   const {
     register,
@@ -35,6 +53,7 @@ export function OltModal({ open, onOpenChange, initialData, onSuccess }: OltModa
       protocol: 'telnet',
       username: 'root',
       password: '',
+      loginKey: '',
       snmpOid: '1.3.6.1.2.1.1.1.0',
       area: 'Uttara',
       ponPortsCount: 8,
@@ -83,12 +102,9 @@ export function OltModal({ open, onOpenChange, initialData, onSuccess }: OltModa
                   <SelectValue placeholder="Select Brand" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Huawei">Huawei</SelectItem>
-                  <SelectItem value="ZTE">ZTE</SelectItem>
-                  <SelectItem value="BDCOM">BDCOM</SelectItem>
-                  <SelectItem value="V_sol">V-Sol</SelectItem>
-                  <SelectItem value="C_data">C-Data</SelectItem>
-                  <SelectItem value="Ecom">Ecom</SelectItem>
+                  {Object.entries(brandLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -150,15 +166,26 @@ export function OltModal({ open, onOpenChange, initialData, onSuccess }: OltModa
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Login Username *</Label>
-              <Input id="username" placeholder="root / admin" {...register('username')} />
+              <Label htmlFor="username">
+                {protocol === 'snmp' ? 'SNMP Community *' : 'Login Username *'}
+              </Label>
+              <Input
+                id="username"
+                placeholder={protocol === 'snmp' ? 'public' : 'root / admin'}
+                {...register('username')}
+              />
               {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="password">Login Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
+              <Input id="password" type="password" placeholder="Leave blank to keep current" {...register('password')} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="loginKey">Login Key (optional)</Label>
+            <Input id="loginKey" placeholder="Optional auth key for OLT session" {...register('loginKey')} />
           </div>
 
           <div className="space-y-1.5">

@@ -44,3 +44,16 @@ See [P0-READY.md](./docs/P0-READY.md).
 ```bash
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
+
+
+=========================================================================================
+
+Role & Context:
+- Target Project (Write code here): [isp-web-frontend](file:///c:/Users/SHOHAN/Documents/GitHub/isp-web-frontend) (Next.js modern UI, static mock data only).
+- Reference Project (Read-only knowledge): [isppaybd_isp](file:///c:/Users/SHOHAN/Documents/GitHub/isppaybd_isp) (Old PHP/CodeIgniter backend & views).
+
+Rules:
+1. Write/edit code ONLY in `isp-web-frontend`. NEVER touch or modify `isppaybd_isp`.
+2. Inspect `isppaybd_isp` to understand business logic, forms, fields, tables, states, and workflow requirements.
+3. In `isp-web-frontend`, implement modern, premium UI matching the design system (shadcn/ui + ISP tokens), fully interactive with static mock data in `src/data/` and mock API calls.
+4. Ensure no missing states (empty, loading, error, success modal) and verify with typecheck/lint.

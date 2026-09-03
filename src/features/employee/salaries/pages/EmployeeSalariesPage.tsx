@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { Banknote } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
 import { StatCard } from '@/components/shared/StatCard';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
@@ -135,14 +136,43 @@ export function EmployeeSalariesPage() {
           <ChartCard title="Salary trend" description="Net salary by month">
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `৳${v / 1000}k`} />
-                  <Tooltip
-                    formatter={(value) => [`৳${formatBdt(Number(value))}`, 'Net']}
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradientSalaryBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                    </linearGradient>
+                    <filter id="salaryBarShadow">
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={false}
+                    axisLine={false}
                   />
-                  <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v) => `৳${v / 1000}k`}
+                  />
+                  <Tooltip
+                    content={
+                      <ChartTooltip
+                        formatter={(val: number) => `৳${formatBdt(val)}`}
+                      />
+                    }
+                  />
+                  <Bar
+                    dataKey="amount"
+                    fill="url(#gradientSalaryBar)"
+                    radius={[6, 6, 0, 0]}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
