@@ -1,26 +1,51 @@
 'use client';
 
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  BookOpen,
+  Layers,
+  DollarSign,
+  ChevronRight,
+  ArrowUpRight,
+  CreditCard,
+  TrendingUp,
+  TrendingDown,
+  Landmark,
+} from 'lucide-react';
 import { useChartOfAccounts } from '../hooks/use-chart-of-accounts';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay } from '@/components/shared';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BookOpen, Layers, DollarSign } from 'lucide-react';
+import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
+import { StatCard } from '@/components/shared/StatCard';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { staggerContainer, fadeUp } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
-const typeLabels: Record<string, string> = {
-  asset: 'Asset',
-  liability: 'Liability',
-  equity: 'Equity',
-  income: 'Income',
-  expense: 'Expense',
+const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
+  asset: { label: 'Asset', icon: <Landmark className="h-3 w-3" />, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  liability: { label: 'Liability', icon: <CreditCard className="h-3 w-3" />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
+  equity: { label: 'Equity', icon: <Landmark className="h-3 w-3" />, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  income: { label: 'Income', icon: <TrendingUp className="h-3 w-3" />, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  expense: { label: 'Expense', icon: <TrendingDown className="h-3 w-3" />, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20' },
 };
 
 export function ChartOfAccountsPage() {
   const { accounts, isLoading, isError, refetch } = useChartOfAccounts();
 
-  const totalBalance = useMemo(
-    () => accounts.filter((a) => !a.parentId).reduce((sum, a) => sum + a.balanceBdt, 0),
-    [accounts],
-  );
+  const stats = useMemo(() => {
+    const rootAccounts = accounts.filter((a) => !a.parentId);
+    const totalBalance = rootAccounts.reduce((sum, a) => sum + a.balanceBdt, 0);
+    const rootCount = rootAccounts.length;
+    return { rootCount, totalBalance };
+  }, [accounts]);
 
   if (isLoading) return <PageSkeleton rows={8} />;
 
@@ -36,48 +61,148 @@ export function ChartOfAccountsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Chart of Accounts</h1>
-        <p className="text-muted-foreground text-sm">General ledger hierarchy for ISP revenue, bandwidth costs, and assets.</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="GL Accounts" value={accounts.length} description="Active ledger codes" icon={BookOpen} />
-        <StatCard title="Root Categories" value={accounts.filter((a) => !a.parentId).length} description="Top-level groups" icon={Layers} />
-        <StatCard title="Root Balance Sum" value={<CurrencyDisplay amount={totalBalance} />} description="Parent account totals" icon={DollarSign} />
-      </div>
-
-      {accounts.length === 0 ? (
-        <EmptyState title="No accounts configured" description="Add chart of accounts to start journal entries." />
-      ) : (
-        <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Account Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Balance (৳)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map((acc) => (
-                <TableRow key={acc.id}>
-                  <TableCell className="font-mono text-xs font-semibold">{acc.code}</TableCell>
-                  <TableCell className={acc.parentId ? 'pl-8' : 'font-medium'}>{acc.name}</TableCell>
-                  <TableCell>
-                    <span className="bg-muted rounded px-2 py-0.5 text-xs capitalize">{typeLabels[acc.type] ?? acc.type}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <CurrencyDisplay amount={acc.balanceBdt} className="font-semibold" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-12"
+    >
+      {/* Header */}
+      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <BookOpen className="h-6 w-6" />
+            </div>
+            Chart of Accounts
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1.5">
+            General ledger hierarchy for ISP revenue, bandwidth costs, and assets.
+          </p>
         </div>
-      )}
-    </div>
+      </motion.div>
+
+      {/* Stats */}
+      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          title="GL Accounts"
+          value={accounts.length}
+          description="Active ledger codes"
+          icon={BookOpen}
+        />
+        <StatCard
+          title="Root Categories"
+          value={stats.rootCount}
+          description="Top-level groups"
+          icon={Layers}
+        />
+        <StatCard
+          title="Root Balance Sum"
+          value={<CurrencyDisplay amount={stats.totalBalance} className="font-mono text-foreground font-bold" />}
+          description="Parent account totals"
+          icon={DollarSign}
+        />
+      </motion.div>
+
+      {/* Table */}
+      <motion.div variants={fadeUp}>
+        {accounts.length === 0 ? (
+          <div className="py-16">
+            <EmptyState
+              title="No accounts configured"
+              description="Add chart of accounts to start journal entries."
+            />
+          </div>
+        ) : (
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="w-[100px]">
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Code</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Account Name</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Type</span>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Balance (৳)</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts.map((acc, idx) => {
+                    const isChild = Boolean(acc.parentId);
+                    const cfg = typeConfig[acc.type];
+                    return (
+                      <motion.tr
+                        key={acc.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03, duration: 0.3 }}
+                        className={cn(
+                          'group border-border/40 hover:bg-muted/30 transition-colors',
+                          isChild && 'bg-muted/10'
+                        )}
+                      >
+                        <TableCell className="py-3.5">
+                          <span className={cn(
+                            'font-mono text-xs font-bold px-2 py-1 rounded-md',
+                            isChild
+                              ? 'bg-muted/40 text-muted-foreground'
+                              : 'bg-primary/10 text-primary'
+                          )}>
+                            {acc.code}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3.5">
+                          <div className="flex items-center gap-2">
+                            {isChild && (
+                              <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+                            )}
+                            <span className={cn(
+                              'text-sm',
+                              isChild ? 'text-muted-foreground' : 'font-semibold text-foreground group-hover:text-primary transition-colors'
+                            )}>
+                              {acc.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3.5">
+                          {cfg ? (
+                            <Badge
+                              variant="outline"
+                              className={cn('text-[10px] font-semibold gap-1', cfg.color, cfg.bg, cfg.border)}
+                            >
+                              {cfg.icon}
+                              {cfg.label}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-semibold capitalize">
+                              {acc.type}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3.5 text-right">
+                          <span className={cn(
+                            'font-mono text-sm font-bold',
+                            acc.balanceBdt >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'
+                          )}>
+                            <CurrencyDisplay amount={acc.balanceBdt} />
+                          </span>
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }

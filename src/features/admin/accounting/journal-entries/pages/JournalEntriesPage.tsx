@@ -1,14 +1,38 @@
 'use client';
 
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  FileText,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  TrendingUp,
+} from 'lucide-react';
 import { useJournalEntries } from '../hooks/use-journal-entries';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, StatusBadge } from '@/components/shared';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, CheckCircle2, Clock } from 'lucide-react';
+import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
+import { StatCard } from '@/components/shared/StatCard';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { staggerContainer, fadeUp } from '@/lib/animations';
+import { cn } from '@/lib/utils';
 
 export function JournalEntriesPage() {
   const { entries, isLoading, isError, refetch } = useJournalEntries();
 
-  const postedCount = entries.filter((e) => e.status === 'posted').length;
+  const stats = useMemo(() => {
+    const posted = entries.filter((e) => e.status === 'posted').length;
+    const draft = entries.length - posted;
+    return { posted, draft };
+  }, [entries]);
 
   if (isLoading) return <PageSkeleton rows={8} />;
 
@@ -24,50 +48,137 @@ export function JournalEntriesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Journal Entries</h1>
-        <p className="text-muted-foreground text-sm">Double-entry vouchers for collections, bandwidth purchases, and payroll.</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Total Entries" value={entries.length} description="All vouchers" icon={FileText} />
-        <StatCard title="Posted" value={postedCount} description="Locked to ledger" icon={CheckCircle2} />
-        <StatCard title="Draft" value={entries.length - postedCount} description="Pending review" icon={Clock} />
-      </div>
-
-      {entries.length === 0 ? (
-        <EmptyState title="No journal entries" description="Create a journal entry to post transactions." />
-      ) : (
-        <div className="bg-card rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Entry ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Debit</TableHead>
-                <TableHead>Credit</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell className="font-mono text-xs">{entry.id}</TableCell>
-                  <TableCell className="font-mono text-xs">{entry.date}</TableCell>
-                  <TableCell>{entry.description}</TableCell>
-                  <TableCell><CurrencyDisplay amount={entry.debitBdt} /></TableCell>
-                  <TableCell><CurrencyDisplay amount={entry.creditBdt} /></TableCell>
-                  <TableCell>
-                    <StatusBadge status={entry.status === 'posted' ? 'active' : 'pending'} label={entry.status} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 max-w-7xl mx-auto pb-12"
+    >
+      {/* Header */}
+      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <FileText className="h-6 w-6" />
+            </div>
+            Journal Entries
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1.5">
+            Double-entry vouchers for collections, bandwidth purchases, and payroll.
+          </p>
         </div>
-      )}
-    </div>
+      </motion.div>
+
+      {/* Stats */}
+      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          title="Total Entries"
+          value={entries.length}
+          description="All vouchers"
+          icon={FileText}
+        />
+        <StatCard
+          title="Posted"
+          value={stats.posted}
+          description="Locked to ledger"
+          icon={CheckCircle2}
+        />
+        <StatCard
+          title="Draft"
+          value={stats.draft}
+          description="Pending review"
+          icon={Clock}
+        />
+      </motion.div>
+
+      {/* Table */}
+      <motion.div variants={fadeUp}>
+        {entries.length === 0 ? (
+          <div className="py-16">
+            <EmptyState
+              title="No journal entries"
+              description="Create a journal entry to post transactions."
+            />
+          </div>
+        ) : (
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Entry ID</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Date</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Description</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Debit</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Credit</span>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Status</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {entries.map((entry, idx) => (
+                    <motion.tr
+                      key={entry.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.04, duration: 0.3 }}
+                      className="group border-border/40 hover:bg-muted/30 transition-colors"
+                    >
+                      <TableCell className="py-3.5">
+                        <span className="font-mono text-xs font-bold px-2 py-1 rounded-md bg-primary/10 text-primary">
+                          {entry.id}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3.5">
+                        <span className="font-mono text-xs">{entry.date}</span>
+                      </TableCell>
+                      <TableCell className="py-3.5">
+                        <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                          {entry.description}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3.5">
+                        <span className="font-mono text-sm font-bold">
+                          <CurrencyDisplay amount={entry.debitBdt} />
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3.5">
+                        <span className="font-mono text-sm font-bold">
+                          <CurrencyDisplay amount={entry.creditBdt} />
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3.5 text-right">
+                        {entry.status === 'posted' ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                            Posted
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-medium gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+                            Draft
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+      </motion.div>
+    </motion.div>
   );
 }

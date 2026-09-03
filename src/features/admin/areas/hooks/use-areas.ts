@@ -52,3 +52,42 @@ export function useDeleteArea() {
     onError: (err: Error) => toast.error(err.message || 'Failed to delete area'),
   });
 }
+
+export function useAddSubArea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ areaId, payload }: { areaId: string; payload: { name: string; areaCode: string } }) =>
+      mockFetch('admin.areas.subarea.add', areaId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
+      toast.success('Sub-area added');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to add sub-area'),
+  });
+}
+
+export function useUpdateSubArea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ areaId, subId, payload }: { areaId: string; subId: string; payload: { name: string; areaCode: string; status: 'active' | 'inactive' } }) =>
+      mockFetch('admin.areas.subarea.update', areaId, subId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
+      toast.success('Sub-area updated');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to update sub-area'),
+  });
+}
+
+export function useDeleteSubArea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ areaId, subId }: { areaId: string; subId: string }) =>
+      mockFetch('admin.areas.subarea.delete', areaId, subId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
+      toast.success('Sub-area deleted');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to delete sub-area'),
+  });
+}

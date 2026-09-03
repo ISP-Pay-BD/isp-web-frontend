@@ -32,6 +32,9 @@ import {
   createArea,
   updateArea,
   deleteArea,
+  addSubArea,
+  updateSubArea,
+  deleteSubArea,
   createPopFunding,
   rechargeAdminSubscription,
 } from './handlers/data.handler';
@@ -101,6 +104,9 @@ import { mockDelay } from './delay';
 type HandlerMap = {
   'admin.areas.create': (payload: Parameters<typeof createArea>[0]) => ReturnType<typeof createArea>;
   'admin.areas.delete': (id: string) => ReturnType<typeof deleteArea>;
+  'admin.areas.subarea.add': (areaId: string, payload: { name: string; areaCode: string }) => Promise<{ id: string; name: string; areaCode: string; areaId: string }>;
+  'admin.areas.subarea.update': (areaId: string, subId: string, payload: { name: string; areaCode: string; status: string }) => Promise<{ id: string; name: string; areaCode: string; status: string; areaId: string }>;
+  'admin.areas.subarea.delete': (areaId: string, subId: string) => Promise<{ deleted: boolean; areaId: string; subId: string }>;
   'admin.areas.update': (id: string, payload: Parameters<typeof updateArea>[1]) => ReturnType<typeof updateArea>;
   'admin.customer-payments.create': (payload: Parameters<typeof createCustomerPayment>[0]) => ReturnType<typeof createCustomerPayment>;
   'admin.customers.create': (payload: Parameters<typeof createCustomer>[0]) => ReturnType<typeof createCustomer>;
@@ -186,6 +192,9 @@ const handlers: HandlerMap = {
   'admin.areas.create': createArea,
   'admin.areas.delete': deleteArea,
   'admin.areas.update': updateArea,
+  'admin.areas.subarea.add': async (areaId: string, payload: { name: string; areaCode: string }) => { await mockDelay(); return { id: `sub_${Date.now()}`, ...payload, areaId }; },
+  'admin.areas.subarea.update': async (areaId: string, subId: string, payload: { name: string; areaCode: string; status: string }) => { await mockDelay(); return { id: subId, ...payload, areaId }; },
+  'admin.areas.subarea.delete': async (areaId: string, subId: string) => { await mockDelay(); return { deleted: true, areaId, subId }; },
   'admin.customer-payments.create': createCustomerPayment,
   'admin.customers.create': createCustomer,
   'admin.customers.delete': deleteCustomer,

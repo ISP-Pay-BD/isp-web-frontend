@@ -48,6 +48,7 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 Marketing  →  ISP landing.css dark (#0c0118) + 21st.dev inspiration + Framer Motion
 Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
 Quality    →  Premium ISP ops platform — complete states, permissions, responsive
+Aesthetics →  Anti-flat, anti-scrap AI look: Framer Motion, lightweight transitions, rich depth, color harmony
 Data       →  src/data/ via mock-api only
 Fonts      →  Satoshi (portals) + Plus Jakarta/Inter (marketing) — see docs/FONTS.md
 Reference  →  Old ISP website: ../isppaybd_isp — see docs/REFERENCE-MAP.md
@@ -56,6 +57,7 @@ Structure   →  Helpers/config/tokens: docs/PROJECT-STRUCTURE-MAP.md
 ```
 
 ---
+
 
 ## Architecture (9.2/10)
 

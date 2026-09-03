@@ -169,12 +169,12 @@ export function EditCustomerPage({ id }: { id: string }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="macAddress">MAC Address</Label>
-              <Input id="macAddress" font-mono {...register('macAddress')} />
+              <Input id="macAddress" className="font-mono" {...register('macAddress')} />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="ipAddress">IP Address</Label>
-              <Input id="ipAddress" font-mono {...register('ipAddress')} />
+              <Input id="ipAddress" className="font-mono" {...register('ipAddress')} />
             </div>
           </CardContent>
         </Card>

@@ -144,7 +144,12 @@ export async function deletePackage(id: string) {
 export async function createArea(payload: { name: string; subareas?: string[] }) {
   await mockDelay();
   const newId = `area_${Date.now()}`;
-  const subs = (payload.subareas || []).map((name, i) => ({ id: `sub_${newId}_${i}`, name }));
+  const subs = (payload.subareas || []).map((name, i) => ({
+    id: `sub_${newId}_${i}`,
+    name,
+    areaCode: name.toUpperCase().slice(0, 3),
+    status: 'active' as const,
+  }));
   const newArea = { id: newId, name: payload.name, subareas: subs };
   adminAreas = [...adminAreas, newArea];
   return newArea;
@@ -163,6 +168,38 @@ export async function updateArea(id: string, payload: { name: string }) {
 export async function deleteArea(id: string) {
   await mockDelay();
   adminAreas = adminAreas.filter((a) => a.id !== id);
+  return { success: true };
+}
+
+export async function addSubArea(areaId: string, payload: { name: string; areaCode: string }) {
+  await mockDelay();
+  const area = adminAreas.find((a) => a.id === areaId);
+  if (!area) return { error: 'Area not found' };
+  const newSub = {
+    id: `sub_${Date.now()}`,
+    name: payload.name,
+    areaCode: payload.areaCode,
+    status: 'active' as const,
+  };
+  area.subareas = [...area.subareas, newSub];
+  return newSub;
+}
+
+export async function updateSubArea(areaId: string, subId: string, payload: { name: string; areaCode: string; status: 'active' | 'inactive' }) {
+  await mockDelay();
+  const area = adminAreas.find((a) => a.id === areaId);
+  if (!area) return { error: 'Area not found' };
+  const subIdx = area.subareas.findIndex((s) => s.id === subId);
+  if (subIdx === -1) return { error: 'Sub-area not found' };
+  area.subareas[subIdx] = { ...area.subareas[subIdx]!, ...payload };
+  return area.subareas[subIdx]!;
+}
+
+export async function deleteSubArea(areaId: string, subId: string) {
+  await mockDelay();
+  const area = adminAreas.find((a) => a.id === areaId);
+  if (!area) return { error: 'Area not found' };
+  area.subareas = area.subareas.filter((s) => s.id !== subId);
   return { success: true };
 }
 

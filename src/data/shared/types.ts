@@ -9,6 +9,48 @@ export type PaymentStatus = 'completed' | 'pending' | 'failed';
 export type TicketStatus = 'open' | 'pending' | 'closed';
 export type ConnectionType = 'pppoe' | 'hotspot' | 'static';
 
+export interface ConnectionDetails {
+  connectionType?: string;
+  cableRequirement?: string;
+  fiberCode?: string;
+  numberOfCore?: string;
+  coreColor?: string;
+  clientType?: string;
+  billingStatus?: string;
+  otc?: string;
+  routerUsername?: string;
+  routerPassword?: string;
+}
+
+export interface PppoeDetails {
+  name: string;
+  password: string;
+  service: string;
+  profile: string;
+  disabled: boolean;
+  lastLoggedOut?: string;
+  lastCallerId?: string;
+}
+
+export interface OltDetails {
+  name: string;
+  onuId: string;
+  status: string;
+  rxPower: string;
+  macAddress: string;
+  callId: string;
+  matchedId: string;
+  description: string;
+  lastSeen?: string;
+  reason?: string;
+}
+
+export interface BandwidthUsage {
+  date: string;
+  downloadMb: number;
+  uploadMb: number;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -17,8 +59,11 @@ export interface Customer {
   email?: string;
   packageId: string;
   packageName: string;
+  packagePrice?: number;
   areaId: string;
   areaName: string;
+  subAreaName?: string;
+  subAreaCode?: string;
   resellerId?: string;
   status: CustomerStatus;
   expiryDate: string;
@@ -28,6 +73,17 @@ export interface Customer {
   ipAddress?: string;
   online: boolean;
   createdAt: string;
+  nidNumber?: string;
+  code?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  routerId?: string;
+  routerName?: string;
+  connectionDetails?: ConnectionDetails;
+  pppoeDetails?: PppoeDetails;
+  oltDetails?: OltDetails;
+  bandwidthUsage?: BandwidthUsage[];
 }
 
 export interface Package {
@@ -72,10 +128,17 @@ export interface TicketMessage {
   sentAt: string;
 }
 
+export interface SubArea {
+  id: string;
+  name: string;
+  areaCode: string;
+  status: 'active' | 'inactive';
+}
+
 export interface Area {
   id: string;
   name: string;
-  subareas: { id: string; name: string }[];
+  subareas: SubArea[];
 }
 
 export interface DashboardStats {

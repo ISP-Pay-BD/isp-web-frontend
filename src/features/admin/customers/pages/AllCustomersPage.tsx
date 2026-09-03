@@ -1,29 +1,29 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search,
   Plus,
-  Filter,
   FileSpreadsheet,
   Trash2,
   Edit,
   Eye,
   MoreHorizontal,
-  RefreshCw,
   Phone,
   Wifi,
   WifiOff,
   Users,
   AlertCircle,
-  Clock,
   Wallet,
   Download,
   Copy,
   Receipt,
   MessageSquare,
-  ShieldAlert,
+  Link2,
+  Bolt,
+  UserCheck,
 } from 'lucide-react';
 import { useCustomers, useDeleteCustomer } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -45,19 +45,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Customer } from '../types';
 
 export function AllCustomersPage() {
+  const router = useRouter();
   const { data, isLoading, isError, refetch } = useCustomers();
   const deleteMutation = useDeleteCustomer();
 
@@ -65,10 +58,10 @@ export function AllCustomersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [connFilter, setConnFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
 
   const rawList = data?.items ?? [];
 
-  // Metrics
   const onlineCount = useMemo(() => rawList.filter((c) => c.online).length, [rawList]);
   const expiredCount = useMemo(() => rawList.filter((c) => c.status === 'expired').length, [rawList]);
   const totalDueBdt = useMemo(
@@ -100,6 +93,12 @@ export function AllCustomersPage() {
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard`);
+  };
+
+  const handleCopySubscriptionLink = (customerId: string) => {
+    const url = `${window.location.origin}/customer/subscription?ref=${customerId}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Subscription link copied to clipboard');
   };
 
   const handleExportCsv = () => {
@@ -140,7 +139,6 @@ export function AllCustomersPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Top Header */}
       <PageHeader
         title="Customer Directory"
         subtitle="Manage broadband subscribers, PPPoE credentials, bandwidth tiers, and payment statuses"
@@ -154,18 +152,18 @@ export function AllCustomersPage() {
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
+              className="text-xs border-border/80 hover:bg-accent transition-all duration-150"
             >
               <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export CSV
             </Button>
             <Can menu="customer" action="create">
               <Link href="/admin/customers/import">
-                <Button variant="outline" size="sm" className="text-xs border-border/80 hover:bg-accent">
+                <Button variant="outline" size="sm" className="text-xs border-border/80 hover:bg-accent transition-all duration-150">
                   <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Import Excel
                 </Button>
               </Link>
               <Link href="/admin/customers/new">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs transition-all duration-150">
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Customer
                 </Button>
               </Link>
@@ -174,7 +172,7 @@ export function AllCustomersPage() {
         }
       />
 
-      {/* KPI Overview Row */}
+      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Subscribers"
@@ -216,8 +214,8 @@ export function AllCustomersPage() {
         />
       </div>
 
-      {/* Toolbar & Filter Pills */}
-      <Card className="border-border/70 shadow-2xs bg-card">
+      {/* Toolbar */}
+      <Card className="border-border/70 shadow-2xs bg-card animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both" style={{ animationDelay: '200ms' }}>
         <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -225,19 +223,18 @@ export function AllCustomersPage() {
               placeholder="Search by subscriber name, username, phone, or IP..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9 text-xs bg-background/50 rounded-lg"
+              className="pl-8 h-9 text-xs bg-background/50 rounded-lg transition-shadow duration-200 focus:shadow-[0_0_0_2px] focus:shadow-primary/20"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Status Pills */}
             <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
               <Button
                 type="button"
                 size="sm"
                 variant={statusFilter === 'all' ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter('all')}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-7 px-2.5 transition-all duration-150"
               >
                 All ({rawList.length})
               </Button>
@@ -246,7 +243,7 @@ export function AllCustomersPage() {
                 size="sm"
                 variant={statusFilter === 'online' ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter('online')}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-7 px-2.5 transition-all duration-150"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
                 Online ({onlineCount})
@@ -256,14 +253,13 @@ export function AllCustomersPage() {
                 size="sm"
                 variant={statusFilter === 'expired' ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter('expired')}
-                className="text-xs h-7 px-2.5"
+                className="text-xs h-7 px-2.5 transition-all duration-150"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mr-1" />
                 Expired ({expiredCount})
               </Button>
             </div>
 
-            {/* Protocol Selector */}
             <Select value={connFilter} onValueChange={(v) => v && setConnFilter(v)}>
               <SelectTrigger className="w-[125px] h-9 text-xs">
                 <SelectValue placeholder="Protocol" />
@@ -279,8 +275,8 @@ export function AllCustomersPage() {
         </CardContent>
       </Card>
 
-      {/* Customers Data Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden">
+      {/* Customers Table */}
+      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both" style={{ animationDelay: '280ms' }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -302,15 +298,19 @@ export function AllCustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((c) => {
+                filteredData.map((c, index) => {
                   const isExpired = c.status === 'expired';
                   return (
-                    <tr key={c.id} className="hover:bg-muted/30 transition-colors group">
-                      {/* Customer Info */}
+                    <tr
+                      key={c.id}
+                      className="hover:bg-muted/30 transition-colors group animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+                      style={{ animationDelay: `${320 + index * 30}ms` }}
+                    >
+                      {/* Subscriber */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
                           <div className="relative">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 transition-transform duration-200 group-hover:scale-110">
                               {c.name.slice(0, 2).toUpperCase()}
                             </div>
                             <span
@@ -321,14 +321,14 @@ export function AllCustomersPage() {
                               title={c.online ? 'Online' : 'Offline'}
                             />
                           </div>
-
                           <div>
-                            <Link
-                              href={`/admin/customers/${c.id}`}
-                              className="font-bold text-foreground hover:text-primary hover:underline transition-colors text-sm"
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/admin/customers/${c.id}`)}
+                              className="font-bold text-foreground hover:text-primary hover:underline transition-colors text-sm text-left"
                             >
                               {c.name}
-                            </Link>
+                            </button>
                             <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono mt-0.5">
                               <span>{c.username}</span>
                               <span>•</span>
@@ -340,13 +340,13 @@ export function AllCustomersPage() {
                         </div>
                       </td>
 
-                      {/* Package & Area */}
+                      {/* Package */}
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-foreground">{c.packageName}</div>
                         <div className="text-[11px] text-muted-foreground mt-0.5">{c.areaName}</div>
                       </td>
 
-                      {/* Connection & IP */}
+                      {/* Connection */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] font-mono uppercase px-1.5 py-0">
@@ -368,7 +368,7 @@ export function AllCustomersPage() {
                             <button
                               type="button"
                               onClick={() => handleCopy(c.ipAddress!, 'IP Address')}
-                              className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
+                              className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity duration-150"
                               title="Copy IP"
                             >
                               <Copy className="h-2.5 w-2.5" />
@@ -415,48 +415,72 @@ export function AllCustomersPage() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 hover:bg-muted/60 transition-colors"
+                        <div className="relative inline-block">
+                          <button
+                            type="button"
+                            onClick={() => setOpenActionId(openActionId === c.id ? null : c.id)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 hover:bg-muted/60 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/20"
                           >
                             <MoreHorizontal className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 text-xs p-1 shadow-xl">
-                            <DropdownMenuLabel className="text-[11px]">Subscriber Actions</DropdownMenuLabel>
-                            <Link href={`/admin/customers/${c.id}`}>
-                              <DropdownMenuItem className="cursor-pointer">
-                                <Eye className="mr-2 h-3.5 w-3.5 text-primary" /> View Details
-                              </DropdownMenuItem>
-                            </Link>
-                            <Can menu="customer" action="update">
-                              <Link href={`/admin/customers/${c.id}/edit`}>
-                                <DropdownMenuItem className="cursor-pointer">
-                                  <Edit className="mr-2 h-3.5 w-3.5" /> Edit Profile
-                                </DropdownMenuItem>
-                              </Link>
-                            </Can>
-                            <Link href={`/admin/customer-payments/new?customerId=${c.id}`}>
-                              <DropdownMenuItem className="cursor-pointer">
-                                <Receipt className="mr-2 h-3.5 w-3.5 text-emerald-500" /> Collect Payment
-                              </DropdownMenuItem>
-                            </Link>
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={() => toast.success(`SMS reminder sent to ${c.phone}`)}
-                            >
-                              <MessageSquare className="mr-2 h-3.5 w-3.5 text-amber-500" /> Send SMS Alert
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <Can menu="customer" action="delete">
-                              <DropdownMenuItem
-                                onClick={() => setDeleteId(c.id)}
-                                className="text-destructive focus:text-destructive cursor-pointer"
-                              >
-                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Account
-                              </DropdownMenuItem>
-                            </Can>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </button>
+                          {openActionId === c.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setOpenActionId(null)} />
+                              <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-border/80 bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                                <div className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground">Subscriber Actions</div>
+                                <div className="h-px bg-border my-1" />
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
+                                  onClick={() => { setOpenActionId(null); router.push(`/admin/customers/${c.id}`); }}
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-primary" /> View Details
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
+                                  onClick={() => { setOpenActionId(null); handleCopySubscriptionLink(c.id); }}
+                                >
+                                  <Link2 className="h-3.5 w-3.5 text-violet-500" /> Copy Subscription Link
+                                </button>
+                                <Can menu="customer" action="update">
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
+                                    onClick={() => { setOpenActionId(null); router.push(`/admin/customers/${c.id}/edit`); }}
+                                  >
+                                    <Edit className="h-3.5 w-3.5" /> Edit Profile
+                                  </button>
+                                </Can>
+                                <div className="h-px bg-border my-1" />
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
+                                  onClick={() => { setOpenActionId(null); router.push(`/admin/customer-payments/new?customerId=${c.id}`); }}
+                                >
+                                  <Receipt className="h-3.5 w-3.5 text-emerald-500" /> Collect Payment
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
+                                  onClick={() => { setOpenActionId(null); toast.success(`SMS reminder sent to ${c.phone}`); }}
+                                >
+                                  <MessageSquare className="h-3.5 w-3.5 text-amber-500" /> Send SMS Alert
+                                </button>
+                                <div className="h-px bg-border my-1" />
+                                <Can menu="customer" action="delete">
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left"
+                                    onClick={() => { setOpenActionId(null); setDeleteId(c.id); }}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" /> Delete Account
+                                  </button>
+                                </Can>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -467,7 +491,7 @@ export function AllCustomersPage() {
         </div>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}

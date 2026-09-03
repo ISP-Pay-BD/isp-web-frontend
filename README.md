@@ -57,3 +57,10 @@ Rules:
 2. Inspect `isppaybd_isp` to understand business logic, forms, fields, tables, states, and workflow requirements.
 3. In `isp-web-frontend`, implement modern, premium UI matching the design system (shadcn/ui + ISP tokens), fully interactive with static mock data in `src/data/` and mock API calls.
 4. Ensure no missing states (empty, loading, error, success modal) and verify with typecheck/lint.
+
+Visual & UX Standards (Anti-Flat / Premium Feel):
+- Motion & Transitions: Use Framer Motion for smooth, deliberate entry/exit and hover effects; use lightweight CSS transitions (`duration-200 ease-out`) for snappy, non-sluggish interactions.
+- Anti-Flat / Anti-Generic: Avoid generic flat CRM templates, boring monotone boxes, or raw Bootstrap looks. Use subtle surface depth, soft borders, modern backdrop-blur (glassmorphism accents), and layered shadows.
+- Color Harmony: Harmonize dark canvas (`#0c0118`), brand orange (`#f75803`), sidebar purple (`#1a0b38`), and crisp accents (`#2E8BFF`) without color clashing or visual clutter.
+- Responsive & User-Friendly: Prioritize micro-interactions (hover chips, clear active states, smooth tab switches, skeleton loaders, and touch-friendly padding) for a world-class, fluid user experience.
+

@@ -36,9 +36,17 @@ Build a **high-quality, professional, modern ISP Pay BD platform** — complete 
 ```
 Marketing  →  ISP landing.css (#0c0118) + 21st.dev inspiration + Framer Motion
 Portals    →  shadcn/ui + ISP tokens (#f75803, #1a0b38)
-Forbidden  →  Generic CRM look, MUI, Chakra, Ant, DaisyUI, Font Awesome CDN
+Forbidden  →  Generic flat CRM look, scrap AI templates, MUI, Chakra, Ant, DaisyUI, Font Awesome CDN
 USE/DO NOT →  docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
 ```
+
+## Visual & UX Standards (Anti-Flat / Premium Feel)
+
+- **Framer Motion & Transitions**: Smooth, purposeful micro-animations, effortless entry reveals, and lightweight snappy CSS transitions (`duration-200 ease-out`). No sluggishness.
+- **Anti-Flat / Depth & Visuals**: Never build flat, monotone AI junk or plain spreadsheet CRM boxes. Use subtle depth, elegant border glow/accents, layered cards, modern glassmorphism (backdrop-blur), and clean elevations.
+- **Color Harmony**: Perfect cohesion across dark canvas (`#0c0118`), brand orange (`#f75803`), sidebar purple (`#1a0b38`), and crisp blue accents (`#2E8BFF`).
+- **User-Friendly UX**: Responsive layouts, interactive hover states, tactile feedback, skeleton loaders, and zero jarring layout shifts.
+
 
 ## Architecture
 

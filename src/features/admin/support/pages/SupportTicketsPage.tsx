@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { PageHeader } from '@/features/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Can } from '@/components/shared/Can';
 import { Search, Eye, LifeBuoy } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { useSupportTickets } from '../hooks/use-support';
+import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 
 const statusVariant = (status: string) => {
   if (status === 'open') return 'default';
@@ -54,31 +56,47 @@ export function SupportTicketsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Support Tickets"
-        subtitle="Manage customer support requests and response SLA"
-        breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Support Tickets' },
-        ]}
-      />
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
+      <motion.div variants={fadeUp}>
+        <PageHeader
+          title="Support Tickets"
+          subtitle="Manage customer support requests and response SLA"
+          breadcrumb={[
+            { label: 'Dashboard', url: '/admin/dashboard' },
+            { label: 'Support Tickets' },
+          ]}
+        />
+      </motion.div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <motion.div variants={fadeUp} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Open', value: data.stats.open, color: 'text-primary' },
           { label: 'Pending', value: data.stats.pending, color: 'text-amber-600' },
           { label: 'Closed', value: data.stats.closed, color: 'text-muted-foreground' },
           { label: 'Avg Response', value: `${data.stats.avgResponseHours}h`, color: 'text-emerald-600' },
-        ].map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground font-normal">{stat.label}</CardTitle></CardHeader>
-            <CardContent><p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p></CardContent>
-          </Card>
+        ].map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.1 + index * 0.06 }}
+            whileHover={hoverLift}
+          >
+            <Card>
+              <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground font-normal">{stat.label}</CardTitle></CardHeader>
+              <CardContent><p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p></CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
-      <Card>
+      <motion.div variants={fadeUp}>
+        <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <CardTitle className="text-base flex items-center gap-2">
             <LifeBuoy className="h-4 w-4 text-primary" />
@@ -143,6 +161,7 @@ export function SupportTicketsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
