@@ -17,12 +17,26 @@ interface AuthState {
   role: () => UserRole | null;
 }
 
+import { customerPermissions } from '@/data/users/permissions.data';
+
+const DEFAULT_MOCK_USER: User = {
+  id: 'user_001',
+  name: 'Rahim Uddin',
+  email: 'customer@demo.isppaybd.com',
+  phone: '01710000001',
+  role: 'user',
+  status: 'active',
+  tenantId: 'tenant_demo',
+  organizationName: 'Demo ISP Network',
+  permissions: customerPermissions,
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
+      user: DEFAULT_MOCK_USER,
+      token: 'mock-token-user-001',
+      isAuthenticated: true,
 
       login: async (email, password) => {
         const session = await mockFetch('auth.login', { email, password });

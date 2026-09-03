@@ -6,13 +6,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function CustomerLoadingSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
+      {/* Hero Bento Skeleton */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        <Skeleton className="lg:col-span-5 h-72 rounded-2xl" />
+        <Skeleton className="lg:col-span-7 h-72 rounded-2xl" />
       </div>
-      <Skeleton className="h-80 rounded-xl" />
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* 4 KPIs */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+      </div>
+      {/* 3 Bottom Bento Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-48 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
       </div>

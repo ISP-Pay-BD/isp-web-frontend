@@ -20,8 +20,7 @@ export function AuthGuard({ allowedRoles, children }: AuthGuardProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setReady(true), 0);
-    return () => clearTimeout(timer);
+    setReady(true);
   }, []);
 
   useEffect(() => {
