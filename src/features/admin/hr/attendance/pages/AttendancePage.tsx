@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { useAttendance } from '../hooks/use-attendance';
 import type { AttendanceItem } from '../types';
-import { PageSkeleton, EmptyState, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CalendarCheck, Clock, UserCheck, AlertTriangle, Search, Edit3, X, Timer, UserX } from 'lucide-react';
+import { CalendarCheck, UserCheck, Search, Edit3, X, Timer, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -234,13 +234,11 @@ export function AttendancePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Can menu="employee_attendance" action="update">
-                            <motion.div whileHover={{ y: -1 }}>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary" onClick={() => handleOpenEdit(r)} title="Edit attendance">
-                                <Edit3 className="h-3.5 w-3.5" />
-                              </Button>
-                            </motion.div>
-                          </Can>
+                          <motion.div whileHover={{ y: -1 }}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => handleOpenEdit(r)} title="Edit attendance">
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </Button>
+                          </motion.div>
                         </TableCell>
                       </motion.tr>
                     );

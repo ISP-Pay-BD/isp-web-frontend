@@ -210,7 +210,7 @@ export function EmployeeAccountsPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <motion.div whileHover={{ y: -1 }} className="inline-flex">
-                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/10 hover:text-primary" render={<Link href="/admin/hr/salaries" />}>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 hover:bg-primary/10 hover:text-primary" render={<Link href="/admin/hr/salaries" />}>
                               Pay <ArrowUpRight className="h-3 w-3" />
                             </Button>
                           </motion.div>

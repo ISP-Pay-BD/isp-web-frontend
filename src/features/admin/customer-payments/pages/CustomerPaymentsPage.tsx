@@ -293,7 +293,7 @@ export function CustomerPaymentsPage() {
                                   e.stopPropagation();
                                   handleCopy(row.invoiceNo, 'Invoice');
                                 }}
-                                className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
+                                className="hover:text-primary transition-colors"
                                 title="Copy invoice number"
                               >
                                 <Copy className="h-3 w-3" />

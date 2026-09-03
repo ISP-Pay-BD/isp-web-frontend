@@ -97,13 +97,13 @@ export function PopTransactionsPage() {
         <StatCard
           title="Credit Inflows"
           value={stats.creditCount}
-          description={<CurrencyDisplay amount={stats.totalCredit} className="text-xs" />}
+          description={`${stats.totalCredit.toLocaleString()} BDT total`}
           icon={TrendingUp}
         />
         <StatCard
           title="Debit Outflows"
           value={stats.debitCount}
-          description={<CurrencyDisplay amount={stats.totalDebit} className="text-xs" />}
+          description={`${stats.totalDebit.toLocaleString()} BDT total`}
           icon={TrendingDown}
         />
         <StatCard

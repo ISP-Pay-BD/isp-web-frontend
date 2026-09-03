@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { useSalaries } from '../hooks/use-salaries';
-import { PageSkeleton, EmptyState, CurrencyDisplay, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { SalaryPaymentModal } from '../components/SalaryPaymentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,13 +102,11 @@ export function SalariesPage() {
             Disburse and review monthly employee payroll, bank transfers, and payment vouchers.
           </p>
         </div>
-        <Can menu="employee_payment" action="create">
-          <motion.div whileHover={hoverLift}>
-            <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
-              <PlusCircle className="h-4 w-4" /> New Salary Payment
-            </Button>
-          </motion.div>
-        </Can>
+        <motion.div whileHover={hoverLift}>
+          <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
+            <PlusCircle className="h-4 w-4" /> New Salary Payment
+          </Button>
+        </motion.div>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">

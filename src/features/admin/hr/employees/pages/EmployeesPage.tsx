@@ -5,7 +5,7 @@ import { motion, type Variants } from 'framer-motion';
 import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
-import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog } from '@/components/shared';
 import { EmployeeModal } from '../components/EmployeeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,7 +135,7 @@ export function EmployeesPage() {
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
     return sortDir === 'asc' ? <ChevronUp className="h-3 w-3 text-primary" /> : <ChevronDown className="h-3 w-3 text-primary" />;
   };
@@ -191,13 +191,11 @@ export function EmployeesPage() {
             Manage organization team members, field technicians, designations, and salary structures.
           </p>
         </div>
-        <Can menu="employee" action="create">
-          <motion.div whileHover={hoverLift}>
-            <Button onClick={handleOpenCreate} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
-              <UserPlus className="h-4 w-4" /> New Employee
-            </Button>
-          </motion.div>
-        </Can>
+        <motion.div whileHover={hoverLift}>
+          <Button onClick={handleOpenCreate} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
+            <UserPlus className="h-4 w-4" /> New Employee
+          </Button>
+        </motion.div>
       </motion.div>
 
       {/* Stats */}
@@ -286,14 +284,14 @@ export function EmployeesPage() {
                     <TableHead className="w-12 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">#</TableHead>
                     <TableHead>
                       <button type="button" onClick={() => toggleSort('name')} className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-                        Name & Role <SortIcon field="name" />
+                        Name & Role {sortIcon('name')}
                       </button>
                     </TableHead>
                     <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
                     <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Service Area</TableHead>
                     <TableHead>
                       <button type="button" onClick={() => toggleSort('salary')} className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-                        Salary <SortIcon field="salary" />
+                        Salary {sortIcon('salary')}
                       </button>
                     </TableHead>
                     <TableHead className="hidden md:table-cell text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Joined At</TableHead>
@@ -359,33 +357,29 @@ export function EmployeesPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <Can menu="employee" action="update">
-                              <motion.div whileHover={hoverLift}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                  onClick={() => handleOpenEdit(emp)}
-                                  title="Edit employee"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </motion.div>
-                            </Can>
-                            <Can menu="employee" action="delete">
-                              <motion.div whileHover={hoverLift}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleOpenDelete(emp)}
-                                  title="Delete employee"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </motion.div>
-                            </Can>
+                          <div className="flex items-center justify-end gap-0.5">
+                            <motion.div whileHover={hoverLift}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                onClick={() => handleOpenEdit(emp)}
+                                title="Edit employee"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </motion.div>
+                            <motion.div whileHover={hoverLift}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                onClick={() => handleOpenDelete(emp)}
+                                title="Delete employee"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </motion.div>
                           </div>
                         </TableCell>
                       </motion.tr>

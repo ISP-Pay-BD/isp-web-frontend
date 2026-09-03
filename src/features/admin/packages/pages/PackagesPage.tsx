@@ -85,21 +85,28 @@ export function PackagesPage() {
   });
 
   const items = data?.items ?? [];
+  const popPackages = data?.popPackages ?? [];
 
   const stats = useMemo(() => {
     const home = items.filter((p) => p.type === 'home').length;
     const corp = items.filter((p) => p.type === 'corporate').length;
+    const pop = popPackages.length;
     const avg = items.length ? Math.round(items.reduce((a, p) => a + p.priceBdt, 0) / items.length) : 0;
-    return { home, corp, avg };
-  }, [items]);
+    return { home, corp, pop, avg };
+  }, [items, popPackages]);
+
+  const activeCatalog = useMemo(() => {
+    if (typeFilter === 'pop') return popPackages;
+    return items;
+  }, [typeFilter, items, popPackages]);
 
   const filtered = useMemo(() => {
-    return items.filter((p) => {
+    return activeCatalog.filter((p) => {
       const matchSearch = search === '' || p.name.toLowerCase().includes(search.toLowerCase());
-      const matchType = typeFilter === 'all' || p.type === typeFilter;
+      const matchType = typeFilter === 'all' || typeFilter === 'pop' || p.type === typeFilter;
       return matchSearch && matchType;
     });
-  }, [items, search, typeFilter]);
+  }, [activeCatalog, search, typeFilter]);
 
   const openCreate = () => {
     setEditPkg(null);
@@ -284,6 +291,15 @@ export function PackagesPage() {
                 >
                   Corporate ({stats.corp})
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={typeFilter === 'pop' ? 'default' : 'ghost'}
+                  onClick={() => setTypeFilter('pop')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  POP Reseller ({stats.pop})
+                </Button>
               </div>
 
               <div className="flex items-center p-1 rounded-xl bg-muted/40 border border-border/60">
@@ -416,7 +432,7 @@ export function PackagesPage() {
                   {/* Card Footer Actions */}
                   <div className="pt-5 mt-4 border-t border-border/50 flex items-center justify-between relative">
                     <span className="font-mono text-[11px] text-muted-foreground">{pkg.id}</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="flex items-center gap-1">
                       <Can menu="packages" action="update">
                         <Button
                           size="sm"
@@ -509,7 +525,7 @@ export function PackagesPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <div className="flex items-center justify-end gap-1">
                           <Can menu="packages" action="update">
                             <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(p)}>
                               <Edit className="h-3.5 w-3.5" />

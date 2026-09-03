@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Plus,
@@ -45,6 +46,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Customer } from '../types';
@@ -58,7 +66,6 @@ export function AllCustomersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [connFilter, setConnFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
 
   const rawList = data?.items ?? [];
 
@@ -368,7 +375,7 @@ export function AllCustomersPage() {
                             <button
                               type="button"
                               onClick={() => handleCopy(c.ipAddress!, 'IP Address')}
-                              className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity duration-150"
+                              className="hover:text-primary transition-colors"
                               title="Copy IP"
                             >
                               <Copy className="h-2.5 w-2.5" />
@@ -415,72 +422,63 @@ export function AllCustomersPage() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="relative inline-block">
-                          <button
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
                             type="button"
-                            onClick={() => setOpenActionId(openActionId === c.id ? null : c.id)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 hover:bg-muted/60 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 hover:bg-muted/60 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
                           >
                             <MoreHorizontal className="h-4 w-4" />
-                          </button>
-                          {openActionId === c.id && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setOpenActionId(null)} />
-                              <div className="absolute right-0 top-full mt-1 z-50 w-52 rounded-lg border border-border/80 bg-popover p-1 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-                                <div className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground">Subscriber Actions</div>
-                                <div className="h-px bg-border my-1" />
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
-                                  onClick={() => { setOpenActionId(null); router.push(`/admin/customers/${c.id}`); }}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52 p-1">
+                            <div className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground">Subscriber Actions</div>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={() => router.push(`/admin/customers/${c.id}`)}
+                            >
+                              <Eye className="h-3.5 w-3.5 text-primary" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={() => handleCopySubscriptionLink(c.id)}
+                            >
+                              <Link2 className="h-3.5 w-3.5 text-violet-500" /> Copy Subscription Link
+                            </DropdownMenuItem>
+                            <Can menu="customer" action="update">
+                              <DropdownMenuItem
+                                className="gap-2 cursor-pointer"
+                                onClick={() => router.push(`/admin/customers/${c.id}/edit`)}
+                              >
+                                <Edit className="h-3.5 w-3.5" /> Edit Profile
+                              </DropdownMenuItem>
+                            </Can>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={() => router.push(`/admin/customer-payments/new?customerId=${c.id}`)}
+                            >
+                              <Receipt className="h-3.5 w-3.5 text-emerald-500" /> Collect Payment
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="gap-2 cursor-pointer"
+                              onClick={() => toast.success(`SMS reminder sent to ${c.phone}`)}
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-amber-500" /> Send SMS Alert
+                            </DropdownMenuItem>
+                            <Can menu="customer" action="delete">
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  className="gap-2 cursor-pointer"
+                                  onClick={() => setDeleteId(c.id)}
                                 >
-                                  <Eye className="h-3.5 w-3.5 text-primary" /> View Details
-                                </button>
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
-                                  onClick={() => { setOpenActionId(null); handleCopySubscriptionLink(c.id); }}
-                                >
-                                  <Link2 className="h-3.5 w-3.5 text-violet-500" /> Copy Subscription Link
-                                </button>
-                                <Can menu="customer" action="update">
-                                  <button
-                                    type="button"
-                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
-                                    onClick={() => { setOpenActionId(null); router.push(`/admin/customers/${c.id}/edit`); }}
-                                  >
-                                    <Edit className="h-3.5 w-3.5" /> Edit Profile
-                                  </button>
-                                </Can>
-                                <div className="h-px bg-border my-1" />
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
-                                  onClick={() => { setOpenActionId(null); router.push(`/admin/customer-payments/new?customerId=${c.id}`); }}
-                                >
-                                  <Receipt className="h-3.5 w-3.5 text-emerald-500" /> Collect Payment
-                                </button>
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer text-left"
-                                  onClick={() => { setOpenActionId(null); toast.success(`SMS reminder sent to ${c.phone}`); }}
-                                >
-                                  <MessageSquare className="h-3.5 w-3.5 text-amber-500" /> Send SMS Alert
-                                </button>
-                                <div className="h-px bg-border my-1" />
-                                <Can menu="customer" action="delete">
-                                  <button
-                                    type="button"
-                                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer text-left"
-                                    onClick={() => { setOpenActionId(null); setDeleteId(c.id); }}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" /> Delete Account
-                                  </button>
-                                </Can>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                                  <Trash2 className="h-3.5 w-3.5" /> Delete Account
+                                </DropdownMenuItem>
+                              </>
+                            </Can>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );

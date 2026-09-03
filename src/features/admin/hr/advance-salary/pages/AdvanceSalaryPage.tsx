@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { useAdvanceSalary } from '../hooks/use-advance-salary';
-import { PageSkeleton, EmptyState, CurrencyDisplay, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { HandCoins, Plus, Check, X, Search, Clock, CheckCircle, DollarSign, XIcon, CheckCircle2 } from 'lucide-react';
+import { HandCoins, Plus, Check, X, Search, Clock, DollarSign, XIcon, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -131,13 +131,11 @@ export function AdvanceSalaryPage() {
             Review staff advance requests, disburse emergency salary advances, and set deduction schedules.
           </p>
         </div>
-        <Can menu="advance_salary" action="create">
-          <motion.div whileHover={{ y: -2 }}>
-            <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
-              <Plus className="h-4 w-4" /> Give Advance
-            </Button>
-          </motion.div>
-        </Can>
+        <motion.div whileHover={{ y: -2 }}>
+          <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
+            <Plus className="h-4 w-4" /> Give Advance
+          </Button>
+        </motion.div>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -233,18 +231,16 @@ export function AdvanceSalaryPage() {
                         <TableCell className="text-right">
                           {req.status === 'pending' ? (
                             <div className="flex items-center justify-end gap-1">
-                              <Can menu="advance_salary" action="update">
-                                <motion.div whileHover={{ y: -1 }}>
-                                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10" onClick={() => handleUpdateStatus(req.id, 'approved')}>
-                                    <Check className="h-3.5 w-3.5" /> Approve
-                                  </Button>
-                                </motion.div>
-                                <motion.div whileHover={{ y: -1 }}>
-                                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateStatus(req.id, 'rejected')}>
-                                    <X className="h-3.5 w-3.5" /> Reject
-                                  </Button>
-                                </motion.div>
-                              </Can>
+                              <motion.div whileHover={{ y: -1 }}>
+                                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10" onClick={() => handleUpdateStatus(req.id, 'approved')}>
+                                  <Check className="h-3.5 w-3.5" /> Approve
+                                </Button>
+                              </motion.div>
+                              <motion.div whileHover={{ y: -1 }}>
+                                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateStatus(req.id, 'rejected')}>
+                                  <X className="h-3.5 w-3.5" /> Reject
+                                </Button>
+                              </motion.div>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-xs font-mono">Processed</span>

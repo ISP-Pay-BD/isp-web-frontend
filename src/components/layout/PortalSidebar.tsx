@@ -25,7 +25,8 @@ import type { NavItem } from '@/config/navigation/index';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
+import { useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 interface PortalSidebarProps {
@@ -39,43 +40,68 @@ function NavIcon({ name }: { name?: string }) {
 }
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
+  // Auto-expand items that have active children, and allow manual toggle
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    const active = new Set<string>();
+    for (const item of items) {
+      if (item.children?.some(c => c.href === currentPath)) {
+        active.add(item.id);
+      }
+    }
+    return active;
+  });
+
+  const toggle = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   return (
     <>
       {items.map((item) => {
         const isParentActive = item.href === currentPath || (item.children?.some(c => c.href === currentPath) ?? false);
+        const isExpanded = expandedIds.has(item.id);
         return item.children?.length ? (
           <SidebarMenuItem key={item.id}>
             <SidebarMenuButton
               isActive={isParentActive}
+              onClick={() => toggle(item.id)}
               className={
                 isParentActive
-                  ? 'font-bold text-primary bg-primary/10 dark:bg-primary/15 dark:text-primary-foreground/95 rounded-lg'
-                  : 'hover:bg-sidebar-accent/70 transition-colors text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                  ? 'ipb-sidebar-button font-bold text-primary bg-primary/10 dark:bg-primary/15 dark:text-primary-foreground/95 rounded-lg border-l-2 border-primary shadow-xs'
+                  : 'ipb-sidebar-button hover:bg-sidebar-accent/80 hover:text-sidebar-foreground text-sidebar-foreground/80 hover:shadow-xs rounded-lg'
               }
             >
               <NavIcon name={item.icon} />
-              <span>{item.label}</span>
+              <span className="transition-transform duration-150 group-hover/menu-button:translate-x-0.5">{item.label}</span>
+              <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
             </SidebarMenuButton>
-            <SidebarMenuSub className="border-l border-sidebar-border/70 ml-3.5 pl-2 my-1 space-y-0.5">
-              {item.children.map((child: NavItem) => {
-                const isChildActive = child.href === currentPath;
-                return (
-                  <SidebarMenuSubItem key={child.id}>
-                    <SidebarMenuSubButton
-                      isActive={isChildActive}
-                      className={
-                        isChildActive
-                          ? 'font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
-                          : 'text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors'
-                      }
-                      render={<Link href={child.href ?? '#'} />}
-                    >
-                      {child.label}
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                );
-              })}
-            </SidebarMenuSub>
+            {isExpanded && (
+              <SidebarMenuSub className="border-l border-sidebar-border/70 ml-3.5 pl-2 my-1 space-y-0.5 animate-in fade-in-50 slide-in-from-top-1 duration-150">
+                {item.children.map((child: NavItem) => {
+                  const isChildActive = child.href === currentPath;
+                  return (
+                    <SidebarMenuSubItem key={child.id}>
+                      <SidebarMenuSubButton
+                        isActive={isChildActive}
+                        className={
+                          isChildActive
+                            ? 'ipb-sidebar-sub-button font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
+                            : 'ipb-sidebar-sub-button text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all rounded-md hover:translate-x-1'
+                        }
+                        render={<Link href={child.href ?? '#'} />}
+                      >
+                        <span className="transition-transform duration-150 group-hover/menu-sub-button:translate-x-0.5">{child.label}</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  );
+                })}
+              </SidebarMenuSub>
+            )}
           </SidebarMenuItem>
         ) : (
           <SidebarMenuItem key={item.id}>
@@ -83,13 +109,13 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               isActive={item.href === currentPath}
               className={
                 item.href === currentPath
-                  ? 'font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
-                  : 'hover:bg-sidebar-accent/70 transition-colors text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                  ? 'ipb-sidebar-button font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
+                  : 'ipb-sidebar-button hover:bg-sidebar-accent/80 hover:text-sidebar-foreground text-sidebar-foreground/80 hover:shadow-xs rounded-lg'
               }
               render={<Link href={item.href ?? '#'} />}
             >
               <NavIcon name={item.icon} />
-              <span>{item.label}</span>
+              <span className="transition-transform duration-150 group-hover/menu-button:translate-x-0.5">{item.label}</span>
               {item.badge ? (
                 <span className="bg-primary text-primary-foreground ml-auto rounded-full px-2 py-0.5 text-xs font-semibold shadow-2xs">
                   {item.badge}

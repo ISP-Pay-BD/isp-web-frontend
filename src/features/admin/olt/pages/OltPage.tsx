@@ -110,7 +110,7 @@ function OltNodeRow({
         <StatusBadge status={olt.status === 'active' ? 'active' : 'disabled'} />
       </TableCell>
       <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover/row:opacity-100 transition-all duration-200 translate-x-2 group-hover/row:translate-x-0">
+        <div className="flex items-center justify-end gap-0.5">
           <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-amber-500/10" title="Diagnostics" onClick={onDiagnostics}>
             <Zap className="h-3.5 w-3.5 text-amber-500" />
           </Button>

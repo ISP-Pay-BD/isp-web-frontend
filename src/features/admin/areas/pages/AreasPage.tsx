@@ -439,7 +439,7 @@ export function AreasPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="flex items-center justify-end gap-0.5">
                               <Can menu="area" action="update">
                                 <motion.div whileHover={hoverLift}>
                                   <Button
@@ -519,7 +519,7 @@ export function AreasPage() {
                                             <span className="ml-1 text-[10px] text-muted-foreground">(off)</span>
                                           )}
                                         </Badge>
-                                        <div className="flex items-center gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity duration-150">
+                                        <div className="flex items-center gap-0.5">
                                           <Can menu="area" action="update">
                                             <Button
                                               variant="ghost"

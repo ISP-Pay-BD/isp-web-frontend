@@ -52,6 +52,9 @@ export const customerPermissions: PermissionMap = {
   support_ticket: ['read', 'create', 'send_msg'],
   profile_update: ['read', 'update'],
   password_change: ['update'],
+  packages: ['read'],
+  referral: ['read', 'update'],
+  sms_message: ['read'],
 };
 
 export const employeePermissions: PermissionMap = {
@@ -318,5 +321,20 @@ export const customUserAccessList: CustomUserAccessRecord[] = [
       olt: ['read'],
     },
     updatedAt: '2026-08-15 09:40',
+  },
+  {
+    id: 'cua_004',
+    userId: 'user_010',
+    name: 'Rahim Uddin (Premium)',
+    email: 'rahim/customer@demo.isppaybd.com',
+    role: 'user',
+    status: 'active',
+    customRulesCount: 2,
+    permissions: {
+      ...customerPermissions,
+      support_ticket: ['read', 'create', 'update', 'send_msg'],
+      subscription: ['read', 'renew'],
+    },
+    updatedAt: '2026-09-02 16:30',
   },
 ];

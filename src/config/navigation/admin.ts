@@ -2,6 +2,7 @@ import type { NavItem } from './types';
 
 /** Tenant admin + reseller sidebar — mirrors `sidebar.php` */
 export const adminNavigation: NavItem[] = [
+  // ── Dashboard ──────────────────────────────────────────────
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -10,6 +11,8 @@ export const adminNavigation: NavItem[] = [
     roles: ['admin', 'resellerAdmin'],
     hideWhenExpired: true,
   },
+
+  // ── Operations ─────────────────────────────────────────────
   {
     id: 'areas',
     label: 'Service Areas',
@@ -41,6 +44,33 @@ export const adminNavigation: NavItem[] = [
     ],
   },
   {
+    id: 'reports',
+    label: 'Reports',
+    icon: 'BarChart3',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'report', action: 'read' },
+    section: 'Operations',
+    hideWhenExpired: true,
+    children: [
+      { id: 'reports-btrc', label: 'BTRC Report', href: '/admin/reports/btrc' },
+      { id: 'reports-otc', label: 'OTC Report', href: '/admin/reports/otc' },
+    ],
+  },
+  {
+    id: 'network',
+    label: 'Network',
+    icon: 'Share2',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Operations',
+    hideWhenExpired: true,
+    children: [
+      { id: 'network-diagram', label: 'Network Diagram', href: '/admin/network/diagram' },
+      { id: 'network-map', label: 'Network Map', href: '/admin/network/map' },
+    ],
+  },
+
+  // ── HR ─────────────────────────────────────────────────────
+  {
     id: 'hr',
     label: 'HR Management',
     icon: 'UserCog',
@@ -55,6 +85,8 @@ export const adminNavigation: NavItem[] = [
       { id: 'hr-advance', label: 'Advance Salary', href: '/admin/hr/advance-salary', permission: { menu: 'advance_salary', action: 'read' } },
     ],
   },
+
+  // ── Billing ────────────────────────────────────────────────
   {
     id: 'packages',
     label: 'Packages',
@@ -63,17 +95,68 @@ export const adminNavigation: NavItem[] = [
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'packages', action: 'read' },
     section: 'Billing',
-    expiredOnly: false,
+    hideWhenExpired: true,
   },
   {
-    id: 'pop-packages',
-    label: 'POPs Packages',
-    href: '/admin/pop-packages',
-    icon: 'Boxes',
+    id: 'accounting',
+    label: 'Accounting',
+    icon: 'Calculator',
     roles: ['admin', 'resellerAdmin'],
-    permission: { menu: 'packages', action: 'read' },
+    permission: { menu: 'accounting', action: 'read' },
     section: 'Billing',
     hideWhenExpired: true,
+    children: [
+      { id: 'acc-incomes', label: 'Incomes', href: '/admin/accounting/incomes' },
+      { id: 'acc-expenses', label: 'Expenses', href: '/admin/accounting/expenses' },
+      { id: 'acc-reports', label: 'Accounts Report', href: '/admin/accounting/reports' },
+      { id: 'acc-coa', label: 'Chart of Accounts', href: '/admin/accounting/chart-of-accounts' },
+      { id: 'acc-journal', label: 'Journal Entries', href: '/admin/accounting/journal-entries' },
+      { id: 'acc-balance', label: 'Balance Sheet', href: '/admin/accounting/balance-sheet' },
+    ],
+  },
+  {
+    id: 'pop',
+    label: 'POP',
+    icon: 'Building2',
+    roles: ['admin'],
+    permission: { menu: 'Resellers', action: 'read' },
+    section: 'Billing',
+    hideWhenExpired: true,
+    children: [
+      { id: 'pop-list', label: 'POP Resellers', href: '/admin/pop/resellers' },
+      { id: 'pop-packages-menu', label: 'Customer Packages', href: '/admin/pop-packages' },
+      { id: 'pop-payments', label: 'Customer Payments', href: '/admin/customer-payments' },
+      { id: 'pop-funding-menu', label: 'POP Funding', href: '/admin/pop/funding' },
+      { id: 'pop-tx-menu', label: 'POP Transactions', href: '/admin/pop/transactions' },
+    ],
+  },
+  {
+    id: 'bandwidth-buy',
+    label: 'Bandwidth Buy',
+    icon: 'ArrowDownToLine',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Billing',
+    hideWhenExpired: true,
+    children: [
+      { id: 'bw-buy-list', label: 'Buy List', href: '/admin/bandwidth/buy' },
+      { id: 'bw-buy-items', label: 'Items', href: '/admin/bandwidth/buy/items' },
+      { id: 'bw-buy-categories', label: 'Categories', href: '/admin/bandwidth/buy/categories' },
+      { id: 'bw-buy-providers', label: 'Providers', href: '/admin/bandwidth/buy/providers' },
+      { id: 'bw-buy-daily', label: 'Daily Bill', href: '/admin/bandwidth/daily-bill' },
+    ],
+  },
+  {
+    id: 'bandwidth-sell',
+    label: 'Bandwidth Sell',
+    icon: 'ArrowUpFromLine',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Billing',
+    hideWhenExpired: true,
+    children: [
+      { id: 'bw-sell-list', label: 'Sell List', href: '/admin/bandwidth/sell' },
+      { id: 'bw-sell-clients', label: 'Clients', href: '/admin/bandwidth/sell/clients' },
+      { id: 'bw-sell-invoices', label: 'Invoices', href: '/admin/bandwidth/sell/invoices' },
+    ],
   },
   {
     id: 'self-recharge',
@@ -93,115 +176,54 @@ export const adminNavigation: NavItem[] = [
     section: 'Billing',
     expiredOnly: true,
   },
-  {
-    id: 'accounting',
-    label: 'Accounting',
-    icon: 'Calculator',
-    roles: ['admin', 'resellerAdmin'],
-    permission: { menu: 'accounting', action: 'read' },
-    section: 'Billing',
-    hideWhenExpired: true,
-    children: [
-      { id: 'acc-incomes', label: 'Incomes', href: '/admin/accounting/incomes' },
-      { id: 'acc-expenses', label: 'Expenses', href: '/admin/accounting/expenses' },
-      { id: 'acc-reports', label: 'Accounts Report', href: '/admin/accounting/reports' },
-      { id: 'acc-otc', label: 'OTC Report', href: '/admin/reports/otc' },
-      { id: 'acc-coa', label: 'Chart of Accounts', href: '/admin/accounting/chart-of-accounts' },
-      { id: 'acc-journal', label: 'Journal Entries', href: '/admin/accounting/journal-entries' },
-      { id: 'acc-balance', label: 'Balance Sheet', href: '/admin/accounting/balance-sheet' },
-    ],
-  },
-  {
-    id: 'pop-transactions',
-    label: 'POP Transactions',
-    href: '/admin/pop/transactions',
-    icon: 'Receipt',
-    roles: ['resellerAdmin'],
-    section: 'Billing',
-    hideWhenExpired: true,
-  },
-  {
-    id: 'pop-funding',
-    label: 'POP Funding',
-    href: '/admin/pop/funding',
-    icon: 'Wallet',
-    roles: ['resellerAdmin'],
-    section: 'Billing',
-    hideWhenExpired: true,
-  },
-  {
-    id: 'pop',
-    label: 'POP',
-    icon: 'Building2',
-    roles: ['admin'],
-    permission: { menu: 'Resellers', action: 'read' },
-    section: 'Billing',
-    hideWhenExpired: true,
-    children: [
-      { id: 'pop-packages-menu', label: 'Customer Packages', href: '/admin/pop-packages' },
-      { id: 'pop-list', label: 'POP', href: '/admin/pop/resellers' },
-      { id: 'pop-payments', label: 'Customer Payments', href: '/admin/customer-payments' },
-      { id: 'pop-funding-menu', label: 'POP Funding', href: '/admin/pop/funding' },
-      { id: 'pop-tx-menu', label: 'POP Transactions', href: '/admin/pop/transactions' },
-    ],
-  },
-  {
-    id: 'bandwidth-buy',
-    label: 'Bandwidth Buy',
-    icon: 'ArrowDownToLine',
-    roles: ['admin', 'resellerAdmin'],
-    section: 'Inventory',
-    hideWhenExpired: true,
-    children: [
-      { id: 'bw-buy-list', label: 'Buy List', href: '/admin/bandwidth/buy' },
-      { id: 'bw-buy-daily', label: 'Daily Bill', href: '/admin/bandwidth/daily-bill' },
-    ],
-  },
-  {
-    id: 'bandwidth-sell',
-    label: 'Bandwidth Sell',
-    href: '/admin/bandwidth/sell',
-    icon: 'ArrowUpFromLine',
-    roles: ['admin', 'resellerAdmin'],
-    section: 'Inventory',
-    hideWhenExpired: true,
-  },
+
+  // ── Inventory ──────────────────────────────────────────────
   {
     id: 'inventory',
     label: 'Inventory',
-    href: '/admin/inventory',
     icon: 'Warehouse',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'inventory', action: 'read' },
+    section: 'Inventory',
     hideWhenExpired: true,
+    children: [
+      { id: 'inv-items', label: 'Items', href: '/admin/inventory/items' },
+      { id: 'inv-categories', label: 'Categories', href: '/admin/inventory/categories' },
+      { id: 'inv-stock', label: 'Stock', href: '/admin/inventory/stock' },
+      { id: 'inv-units', label: 'Units', href: '/admin/inventory/units' },
+      { id: 'inv-locations', label: 'Locations', href: '/admin/inventory/locations' },
+    ],
   },
   {
     id: 'purchase',
     label: 'Purchase',
-    href: '/admin/purchase',
     icon: 'ShoppingCart',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'purchase', action: 'read' },
+    section: 'Inventory',
     hideWhenExpired: true,
+    children: [
+      { id: 'purchase-bills', label: 'Bills', href: '/admin/purchase/bills' },
+      { id: 'purchase-requisitions', label: 'Requisitions', href: '/admin/purchase/requisitions' },
+      { id: 'purchase-vendors', label: 'Vendors', href: '/admin/purchase/vendors' },
+    ],
   },
-  {
-    id: 'reports',
-    label: 'Reports',
-    href: '/admin/reports',
-    icon: 'BarChart3',
-    roles: ['admin', 'resellerAdmin'],
-    permission: { menu: 'report', action: 'read' },
-    section: 'Operations',
-    hideWhenExpired: true,
-  },
+
+  // ── Network ────────────────────────────────────────────────
   {
     id: 'hotspot',
     label: 'Hotspot',
-    href: '/admin/hotspot',
     icon: 'Wifi',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'hotspot', action: 'read' },
+    section: 'Network',
     hideWhenExpired: true,
+    children: [
+      { id: 'hotspot-dashboard', label: 'Dashboard', href: '/admin/hotspot/dashboard' },
+      { id: 'hotspot-packages', label: 'Packages', href: '/admin/hotspot/packages' },
+      { id: 'hotspot-users', label: 'Users', href: '/admin/hotspot/users' },
+      { id: 'hotspot-reports', label: 'Reports', href: '/admin/hotspot/reports' },
+    ],
   },
   {
     id: 'olt',
@@ -210,6 +232,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Network',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'olt', action: 'read' },
+    section: 'Network',
     hideWhenExpired: true,
   },
   {
@@ -219,6 +242,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Router',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'router', action: 'read' },
+    section: 'Network',
     hideWhenExpired: true,
   },
   {
@@ -228,20 +252,11 @@ export const adminNavigation: NavItem[] = [
     icon: 'Globe2',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'ip_pool', action: 'read' },
+    section: 'Network',
     hideWhenExpired: true,
   },
-  {
-    id: 'network',
-    label: 'Network',
-    icon: 'Share2',
-    roles: ['admin', 'resellerAdmin'],
-    section: 'Operations',
-    hideWhenExpired: true,
-    children: [
-      { id: 'network-diagram', label: 'Network Diagram', href: '/admin/network/diagram' },
-      { id: 'network-map', label: 'Network Map', href: '/admin/network/map' },
-    ],
-  },
+
+  // ── Comms ──────────────────────────────────────────────────
   {
     id: 'sms',
     label: 'SMS',
@@ -289,6 +304,8 @@ export const adminNavigation: NavItem[] = [
       { id: 'wa-settings', label: 'Settings', href: '/admin/whatsapp/settings' },
     ],
   },
+
+  // ── Engagement ─────────────────────────────────────────────
   {
     id: 'rewards',
     label: 'Rewards',
@@ -296,6 +313,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Gift',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'reward', action: 'read' },
+    section: 'Engagement',
     hideWhenExpired: true,
   },
   {
@@ -305,6 +323,39 @@ export const adminNavigation: NavItem[] = [
     icon: 'LifeBuoy',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'support', action: 'read' },
+    section: 'Engagement',
+    hideWhenExpired: true,
+  },
+
+  // ── System ─────────────────────────────────────────────────
+  {
+    id: 'wallet',
+    label: 'Wallet',
+    href: '/admin/wallet',
+    icon: 'Wallet',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'wallet', action: 'read' },
+    section: 'System',
+    hideWhenExpired: true,
+  },
+  {
+    id: 'subscription',
+    label: 'Subscription',
+    href: '/admin/subscription',
+    icon: 'CalendarCheck',
+    roles: ['admin'],
+    permission: { menu: 'subscription', action: 'read' },
+    section: 'System',
+    hideWhenExpired: true,
+  },
+  {
+    id: 'payment',
+    label: 'Payment',
+    href: '/admin/payment',
+    icon: 'CreditCard',
+    roles: ['admin'],
+    permission: { menu: 'payment', action: 'read' },
+    section: 'System',
     hideWhenExpired: true,
   },
   {
@@ -315,33 +366,6 @@ export const adminNavigation: NavItem[] = [
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'recycle_bin', action: 'read' },
     section: 'System',
-    hideWhenExpired: true,
-  },
-  {
-    id: 'wallet',
-    label: 'Wallet',
-    href: '/admin/wallet',
-    icon: 'Wallet',
-    roles: ['admin', 'resellerAdmin'],
-    permission: { menu: 'wallet', action: 'read' },
-    hideWhenExpired: true,
-  },
-  {
-    id: 'subscription',
-    label: 'Subscription',
-    href: '/admin/subscription',
-    icon: 'CalendarCheck',
-    roles: ['admin'],
-    permission: { menu: 'subscription', action: 'read' },
-    hideWhenExpired: true,
-  },
-  {
-    id: 'payment',
-    label: 'Payment',
-    href: '/admin/payment',
-    icon: 'CreditCard',
-    roles: ['admin'],
-    permission: { menu: 'payment', action: 'read' },
     hideWhenExpired: true,
   },
   {
@@ -379,6 +403,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/profile',
     icon: 'User',
     roles: ['admin', 'resellerAdmin'],
+    section: 'System',
     hideWhenExpired: true,
   },
 ];

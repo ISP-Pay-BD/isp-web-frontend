@@ -210,7 +210,7 @@ export function IncomesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10"
+                            className="h-7 w-7 text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               setItemToDelete(item);
                               setDeleteConfirmOpen(true);

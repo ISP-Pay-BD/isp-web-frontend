@@ -258,7 +258,7 @@ export function FreeRequestsPage() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       {req.status === 'pending' ? (
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Button
                             size="sm"
                             className="h-7 text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white"

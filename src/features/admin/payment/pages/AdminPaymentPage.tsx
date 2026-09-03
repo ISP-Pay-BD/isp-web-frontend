@@ -287,7 +287,7 @@ export function AdminPaymentPage() {
                                   e.stopPropagation();
                                   handleCopyInvoice(row.invoiceNo);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity duration-150"
+                                className="hover:text-primary transition-colors"
                                 title="Copy invoice number"
                               >
                                 <Copy className="h-3 w-3" />
