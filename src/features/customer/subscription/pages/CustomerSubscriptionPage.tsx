@@ -38,7 +38,7 @@ export function CustomerSubscriptionPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="My Subscription" subtitle="Loading current package details...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="subscription" />
       </CustomerPageShell>
     );
   }

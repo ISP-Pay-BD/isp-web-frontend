@@ -34,7 +34,7 @@ export function CustomerNewsPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="News & Notices" subtitle="Loading announcements...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="news" />
       </CustomerPageShell>
     );
   }

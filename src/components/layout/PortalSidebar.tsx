@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -38,46 +38,74 @@ function NavIcon({ name }: { name?: string }) {
   return Icon ? <Icon className="h-4 w-4" /> : null;
 }
 
-function NavTree({ items }: { items: NavItem[] }) {
+function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
   return (
     <>
-      {items.map((item) =>
-        item.children?.length ? (
+      {items.map((item) => {
+        const isParentActive = item.href === currentPath || (item.children?.some(c => c.href === currentPath) ?? false);
+        return item.children?.length ? (
           <SidebarMenuItem key={item.id}>
-            <SidebarMenuButton>
+            <SidebarMenuButton
+              isActive={isParentActive}
+              className={
+                isParentActive
+                  ? 'font-bold text-primary bg-primary/10 dark:bg-primary/15 dark:text-primary-foreground/95 rounded-lg'
+                  : 'hover:bg-sidebar-accent/70 transition-colors text-sidebar-foreground/80 hover:text-sidebar-foreground'
+              }
+            >
               <NavIcon name={item.icon} />
               <span>{item.label}</span>
             </SidebarMenuButton>
-            <SidebarMenuSub>
-              {item.children.map((child: NavItem) => (
-                <SidebarMenuSubItem key={child.id}>
-                  <SidebarMenuSubButton render={<Link href={child.href ?? '#'} />}>
-                    {child.label}
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              ))}
+            <SidebarMenuSub className="border-l border-sidebar-border/70 ml-3.5 pl-2 my-1 space-y-0.5">
+              {item.children.map((child: NavItem) => {
+                const isChildActive = child.href === currentPath;
+                return (
+                  <SidebarMenuSubItem key={child.id}>
+                    <SidebarMenuSubButton
+                      isActive={isChildActive}
+                      className={
+                        isChildActive
+                          ? 'font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
+                          : 'text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors'
+                      }
+                      render={<Link href={child.href ?? '#'} />}
+                    >
+                      {child.label}
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                );
+              })}
             </SidebarMenuSub>
           </SidebarMenuItem>
         ) : (
           <SidebarMenuItem key={item.id}>
-            <SidebarMenuButton render={<Link href={item.href ?? '#'} />}>
+            <SidebarMenuButton
+              isActive={item.href === currentPath}
+              className={
+                item.href === currentPath
+                  ? 'font-bold text-primary bg-primary/15 dark:bg-primary/20 dark:text-white border-l-2 border-primary rounded-r-md shadow-2xs'
+                  : 'hover:bg-sidebar-accent/70 transition-colors text-sidebar-foreground/80 hover:text-sidebar-foreground'
+              }
+              render={<Link href={item.href ?? '#'} />}
+            >
               <NavIcon name={item.icon} />
               <span>{item.label}</span>
               {item.badge ? (
-                <span className="bg-primary text-primary-foreground ml-auto rounded-full px-2 py-0.5 text-xs">
+                <span className="bg-primary text-primary-foreground ml-auto rounded-full px-2 py-0.5 text-xs font-semibold shadow-2xs">
                   {item.badge}
                 </span>
               ) : null}
             </SidebarMenuButton>
           </SidebarMenuItem>
-        ),
-      )}
+        );
+      })}
     </>
   );
 }
 
 export function PortalSidebar({ portal }: PortalSidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const items = useFilteredNav();
   const [query, setQuery] = useState('');
   const user = useAuthStore((s) => s.user);
@@ -117,30 +145,40 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   }, [filtered]);
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <div className="flex items-center gap-3 border-b border-sidebar-border p-4">
-        <Image src={brandAssets.logo} alt="" width={32} height={32} />
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">{siteConfig.name}</div>
-          <div className="text-muted-foreground truncate text-xs capitalize">{portal} portal</div>
+    <Sidebar className="border-r border-sidebar-border bg-sidebar shadow-xs">
+      <div className="flex items-center gap-3 border-b border-sidebar-border p-3.5">
+        <div className="relative flex items-center justify-center p-1 rounded-xl bg-card border border-border/80 shadow-2xs dark:bg-sidebar-accent/50 dark:border-sidebar-border">
+          <Image src={brandAssets.logo} alt="ISP Pay BD" width={28} height={28} className="shrink-0" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-bold tracking-tight text-sidebar-foreground">{siteConfig.name}</div>
+          <div className="text-muted-foreground truncate text-[11px] font-medium capitalize flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            {portal} portal
+          </div>
         </div>
       </div>
       <div className="p-3">
-        <Input
-          placeholder="Search menu..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search menu"
-          className="h-8"
-        />
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search menu..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search menu"
+            className="h-8 pl-8 text-xs bg-background/50 focus:bg-background border-border/80 rounded-lg dark:bg-sidebar-accent/40 dark:focus:bg-sidebar-accent/70 dark:border-sidebar-border"
+          />
+        </div>
       </div>
       <SidebarContent>
         {sections.map(([section, sectionItems]) => (
           <SidebarGroup key={section}>
-            <SidebarGroupLabel>{section}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3">
+              {section}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <NavTree items={sectionItems} />
+                <NavTree items={sectionItems} currentPath={pathname} />
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -156,10 +194,10 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
           <div className="flex flex-col gap-2">
             <Link
               href={portal === 'customer' ? '/customer/profile' : '/admin/profile'}
-              className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-sidebar-accent transition-colors group"
+              className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-sidebar-accent/80 transition-colors group dark:hover:bg-sidebar-accent"
             >
-              <Avatar className="h-8 w-8 border border-primary/20">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+              <Avatar className="h-8 w-8 border border-primary/25 shadow-2xs">
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs dark:bg-primary/20 dark:text-primary-foreground">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -176,7 +214,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/10 text-destructive text-xs font-semibold py-2 transition-all hover:border-destructive/40 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/15 text-destructive text-xs font-semibold py-2 transition-all hover:border-destructive/40 active:scale-[0.98] dark:bg-destructive/10 dark:hover:bg-destructive/20 dark:border-destructive/30"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span>Log out</span>

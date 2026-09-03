@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import type { UserRole } from '@/types/auth';
@@ -12,16 +12,14 @@ interface AuthGuardProps {
   children: ReactNode;
 }
 
+const emptySubscribe = () => () => {};
+
 export function AuthGuard({ allowedRoles, children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setReady(true);
-  }, []);
+  const ready = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   useEffect(() => {
     if (!ready) return;

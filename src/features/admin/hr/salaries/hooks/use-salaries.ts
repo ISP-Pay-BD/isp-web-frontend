@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mockFetch } from '@/lib/mock-api/client';
 import type { SalaryPaymentItem, SalaryPaymentFormData } from '../types';
+import { mockDelay } from '@/lib/mock-api/delay';
 
 export function useSalaries() {
   const queryClient = useQueryClient();
@@ -19,7 +20,7 @@ export function useSalaries() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: SalaryPaymentFormData & { employeeName: string }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await mockDelay(30);
       return {
         id: `sal_${Date.now()}`,
         employeeId: payload.employeeId,

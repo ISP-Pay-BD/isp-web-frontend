@@ -32,7 +32,7 @@ export function CustomerPackagesPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="Internet Packages" subtitle="Loading available broadband plans...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="packages" />
       </CustomerPageShell>
     );
   }

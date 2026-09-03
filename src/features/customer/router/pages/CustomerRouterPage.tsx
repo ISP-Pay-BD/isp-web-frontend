@@ -25,8 +25,8 @@ export function CustomerRouterPage() {
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="Router Tools" subtitle="Communicating with customer gateway...">
-        <CustomerLoadingSkeleton />
+      <CustomerPageShell title="Router Tools" subtitle="Loading router telemetry...">
+        <CustomerLoadingSkeleton variant="router" />
       </CustomerPageShell>
     );
   }

@@ -58,8 +58,8 @@ export type PackageBilling = (typeof PACKAGE_BILLING)[keyof typeof PACKAGE_BILLI
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 25 as const;
 
-/** Mock API default delay (ms) */
-export const MOCK_DELAY_MS = 200;
+/** Mock API default delay (ms) - optimized for lightning-fast responsiveness with crisp micro-skeleton */
+export const MOCK_DELAY_MS = 30;
 
 /** LocalStorage keys */
 export const STORAGE_KEYS = {

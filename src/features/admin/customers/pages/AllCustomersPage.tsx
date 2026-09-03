@@ -15,17 +15,29 @@ import {
   Phone,
   Wifi,
   WifiOff,
+  Users,
+  AlertCircle,
+  Clock,
+  Wallet,
+  Download,
+  Copy,
+  Receipt,
+  MessageSquare,
+  ShieldAlert,
 } from 'lucide-react';
 import { useCustomers, useDeleteCustomer } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { StatCard } from '@/components/shared/StatCard';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
-import { DataTable } from '@/features/shared/data-table';
+import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -41,7 +53,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { Customer } from '../types';
 
 export function AllCustomersPage() {
@@ -54,6 +67,14 @@ export function AllCustomersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const rawList = data?.items ?? [];
+
+  // Metrics
+  const onlineCount = useMemo(() => rawList.filter((c) => c.online).length, [rawList]);
+  const expiredCount = useMemo(() => rawList.filter((c) => c.status === 'expired').length, [rawList]);
+  const totalDueBdt = useMemo(
+    () => rawList.filter((c) => c.balanceBdt > 0).reduce((acc, c) => acc + c.balanceBdt, 0),
+    [rawList]
+  );
 
   const filteredData = useMemo(() => {
     return rawList.filter((c) => {
@@ -70,166 +91,47 @@ export function AllCustomersPage() {
         (statusFilter === 'offline' && !c.online) ||
         c.status === statusFilter;
 
-      const matchesConn =
-        connFilter === 'all' || c.connectionType === connFilter;
+      const matchesConn = connFilter === 'all' || c.connectionType === connFilter;
 
       return matchesSearch && matchesStatus && matchesConn;
     });
   }, [rawList, search, statusFilter, connFilter]);
 
-  const columns: LegacyColumnDef<Customer, unknown>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Customer',
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-              {c.name.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <Link
-                href={`/admin/customers/${c.id}`}
-                className="font-medium hover:underline text-foreground"
-              >
-                {c.name}
-              </Link>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-mono text-[11px]">{c.username}</span>
-                <span>•</span>
-                <span className="flex items-center gap-0.5">
-                  <Phone className="h-3 w-3" /> {c.phone}
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'packageName',
-      header: 'Package & Area',
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div>
-            <div className="font-medium text-sm">{c.packageName}</div>
-            <div className="text-xs text-muted-foreground">{c.areaName}</div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'connectionType',
-      header: 'Connection',
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5">
-              {c.online ? (
-                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <Wifi className="h-3.5 w-3.5" /> Online
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <WifiOff className="h-3.5 w-3.5" /> Offline
-                </span>
-              )}
-              <span className="text-xs uppercase text-muted-foreground font-mono">
-                ({c.connectionType})
-              </span>
-            </div>
-            {c.ipAddress && (
-              <div className="font-mono text-[11px] text-muted-foreground">
-                {c.ipAddress}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: 'Account Status',
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
-    },
-    {
-      accessorKey: 'expiryDate',
-      header: 'Expiry Date',
-      cell: ({ row }) => {
-        const d = row.original.expiryDate;
-        const isExpired = row.original.status === 'expired';
-        return (
-          <span
-            className={`font-mono text-xs ${
-              isExpired
-                ? 'font-semibold text-destructive'
-                : 'text-muted-foreground'
-            }`}
-          >
-            {d}
-          </span>
-        );
-      },
-    },
-    {
-      accessorKey: 'balanceBdt',
-      header: 'Balance',
-      cell: ({ row }) => (
-        <CurrencyDisplay
-          amount={row.original.balanceBdt}
-          className={
-            row.original.balanceBdt > 0
-              ? 'text-amber-600 dark:text-amber-400 font-semibold'
-              : ''
-          }
-        />
-      ),
-    },
-    {
-      id: 'actions',
-      header: '',
-      cell: ({ row }) => {
-        const c = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
-              <MoreHorizontal className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem render={<Link href={`/admin/customers/${c.id}`} />}>
-                <Eye className="mr-2 h-4 w-4" /> View Details
-              </DropdownMenuItem>
-              <Can menu="customer" action="update">
-                <DropdownMenuItem render={<Link href={`/admin/customers/${c.id}/edit`} />}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit Customer
-                </DropdownMenuItem>
-              </Can>
-              <DropdownMenuSeparator />
-              <Can menu="customer" action="delete">
-                <DropdownMenuItem
-                  onClick={() => setDeleteId(c.id)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
-              </Can>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
-  ];
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  const handleExportCsv = () => {
+    const headers = ['Name', 'Username', 'Phone', 'Package', 'Area', 'Connection', 'Status', 'Expiry', 'Balance BDT'];
+    const rows = filteredData.map((c) => [
+      c.name,
+      c.username,
+      c.phone,
+      c.packageName,
+      c.areaName,
+      c.connectionType,
+      c.status,
+      c.expiryDate,
+      c.balanceBdt,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `isppaybd_customers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Customer directory exported to CSV');
+  };
+
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <EmptyState
         title="Failed to load customers"
-        description="Could not fetch customer directory."
+        description="Could not fetch subscriber directory from mock backend."
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -237,105 +139,345 @@ export function AllCustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Customers</h1>
-          <p className="text-muted-foreground text-sm">
-            Manage broadband subscribers, connection credentials, and billing cycles.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Can menu="customer" action="create">
-            <Link href="/admin/customers/import">
-              <Button variant="outline" size="sm">
-                <FileSpreadsheet className="mr-1.5 h-4 w-4" /> Import Excel
-              </Button>
-            </Link>
-            <Link href="/admin/customers/new">
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-1.5 h-4 w-4" /> Add Customer
-              </Button>
-            </Link>
-          </Can>
-        </div>
-      </div>
-
-      {/* Toolbar & Filters (mirroring list-toolbar.php) */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, username, phone, or IP..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="expired">Expired</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="online">Online</SelectItem>
-              <SelectItem value="offline">Offline</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={connFilter} onValueChange={(v) => v && setConnFilter(v)}>
-            <SelectTrigger className="w-[140px] h-9">
-              <SelectValue placeholder="Protocol" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="pppoe">PPPoE</SelectItem>
-              <SelectItem value="static">Static IP</SelectItem>
-              <SelectItem value="hotspot">Hotspot</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => {
-              setSearch('');
-              setStatusFilter('all');
-              setConnFilter('all');
-              refetch();
-            }}
-            title="Reset Filters"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* TanStack Table */}
-      <DataTable
-        columns={columns}
-        data={filteredData}
-        emptyTitle="No customers found"
-        emptyDescription="No subscribers match your search criteria. Try clearing filters or create a new customer."
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Top Header */}
+      <PageHeader
+        title="Customer Directory"
+        subtitle="Manage broadband subscribers, PPPoE credentials, bandwidth tiers, and payment statuses"
+        breadcrumb={[
+          { label: 'Admin', url: '/admin/dashboard' },
+          { label: 'Customers' },
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="text-xs border-border/80 hover:bg-accent"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export CSV
+            </Button>
+            <Can menu="customer" action="create">
+              <Link href="/admin/customers/import">
+                <Button variant="outline" size="sm" className="text-xs border-border/80 hover:bg-accent">
+                  <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Import Excel
+                </Button>
+              </Link>
+              <Link href="/admin/customers/new">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Customer
+                </Button>
+              </Link>
+            </Can>
+          </div>
+        }
       />
 
-      {/* Delete Confirmation */}
+      {/* KPI Overview Row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Subscribers"
+          value={rawList.length}
+          description="Registered tenant customer records"
+          trend={{ value: '+12 new this month', positive: true }}
+          icon={Users}
+        />
+        <StatCard
+          title="Online PPPoE Sessions"
+          value={
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <span>{onlineCount}</span>
+              <span className="text-xs font-normal text-muted-foreground">({Math.round((onlineCount / (rawList.length || 1)) * 100)}%)</span>
+            </div>
+          }
+          description="Active MikroTik authenticated sessions"
+          trend={{ value: 'Live Telemetry', positive: true }}
+          icon={Wifi}
+        />
+        <StatCard
+          title="Expired / Due"
+          value={
+            <div className="flex items-baseline gap-1 text-rose-600 dark:text-rose-400">
+              <span>{expiredCount}</span>
+              <span className="text-xs font-normal text-muted-foreground">accounts</span>
+            </div>
+          }
+          description="Require recharge or renewal"
+          trend={{ value: 'SMS reminders pending', positive: false }}
+          icon={AlertCircle}
+        />
+        <StatCard
+          title="Outstanding Due"
+          value={<CurrencyDisplay amount={totalDueBdt} className="font-mono text-amber-600 dark:text-amber-400 font-bold" />}
+          description="Total unpaid customer balances"
+          trend={{ value: 'Collectible receivables', positive: false }}
+          icon={Wallet}
+        />
+      </div>
+
+      {/* Toolbar & Filter Pills */}
+      <Card className="border-border/70 shadow-2xs bg-card">
+        <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by subscriber name, username, phone, or IP..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-9 text-xs bg-background/50 rounded-lg"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Pills */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
+              <Button
+                type="button"
+                size="sm"
+                variant={statusFilter === 'all' ? 'default' : 'ghost'}
+                onClick={() => setStatusFilter('all')}
+                className="text-xs h-7 px-2.5"
+              >
+                All ({rawList.length})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={statusFilter === 'online' ? 'default' : 'ghost'}
+                onClick={() => setStatusFilter('online')}
+                className="text-xs h-7 px-2.5"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
+                Online ({onlineCount})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={statusFilter === 'expired' ? 'default' : 'ghost'}
+                onClick={() => setStatusFilter('expired')}
+                className="text-xs h-7 px-2.5"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mr-1" />
+                Expired ({expiredCount})
+              </Button>
+            </div>
+
+            {/* Protocol Selector */}
+            <Select value={connFilter} onValueChange={(v) => v && setConnFilter(v)}>
+              <SelectTrigger className="w-[125px] h-9 text-xs">
+                <SelectValue placeholder="Protocol" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Protocols</SelectItem>
+                <SelectItem value="pppoe">PPPoE</SelectItem>
+                <SelectItem value="static">Static IP</SelectItem>
+                <SelectItem value="hotspot">Hotspot</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customers Data Table */}
+      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-4">Subscriber</th>
+                <th className="py-3.5 px-4">Package & POP Area</th>
+                <th className="py-3.5 px-4">Connection & IP</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4">Expiry Date</th>
+                <th className="py-3.5 px-4">Balance Due</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                    No matching subscribers found in current directory view.
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map((c) => {
+                  const isExpired = c.status === 'expired';
+                  return (
+                    <tr key={c.id} className="hover:bg-muted/30 transition-colors group">
+                      {/* Customer Info */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20">
+                              {c.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <span
+                              className={cn(
+                                'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background',
+                                c.online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                              )}
+                              title={c.online ? 'Online' : 'Offline'}
+                            />
+                          </div>
+
+                          <div>
+                            <Link
+                              href={`/admin/customers/${c.id}`}
+                              className="font-bold text-foreground hover:text-primary hover:underline transition-colors text-sm"
+                            >
+                              {c.name}
+                            </Link>
+                            <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono mt-0.5">
+                              <span>{c.username}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3 text-muted-foreground" /> {c.phone}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Package & Area */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-foreground">{c.packageName}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{c.areaName}</div>
+                      </td>
+
+                      {/* Connection & IP */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] font-mono uppercase px-1.5 py-0">
+                            {c.connectionType}
+                          </Badge>
+                          {c.online ? (
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <Wifi className="h-3 w-3" /> Online
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <WifiOff className="h-3 w-3" /> Offline
+                            </span>
+                          )}
+                        </div>
+                        {c.ipAddress && (
+                          <div className="font-mono text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                            <span>{c.ipAddress}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(c.ipAddress!, 'IP Address')}
+                              className="opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
+                              title="Copy IP"
+                            >
+                              <Copy className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
+                        <StatusBadge status={c.status} />
+                      </td>
+
+                      {/* Expiry */}
+                      <td className="py-3.5 px-4">
+                        <div
+                          className={cn(
+                            'font-mono text-xs font-semibold',
+                            isExpired ? 'text-destructive flex items-center gap-1' : 'text-foreground'
+                          )}
+                        >
+                          {isExpired && <AlertCircle className="h-3 w-3 text-destructive shrink-0" />}
+                          <span>{c.expiryDate}</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {isExpired ? 'Account Expired' : 'Active Cycle'}
+                        </div>
+                      </td>
+
+                      {/* Balance */}
+                      <td className="py-3.5 px-4">
+                        <div
+                          className={cn(
+                            'font-mono font-bold text-xs',
+                            c.balanceBdt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
+                          )}
+                        >
+                          <CurrencyDisplay amount={c.balanceBdt} />
+                        </div>
+                        {c.balanceBdt > 0 && (
+                          <span className="text-[10px] text-rose-500 font-semibold">Payment Due</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/80 hover:bg-muted/60 transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 text-xs p-1 shadow-xl">
+                            <DropdownMenuLabel className="text-[11px]">Subscriber Actions</DropdownMenuLabel>
+                            <Link href={`/admin/customers/${c.id}`}>
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Eye className="mr-2 h-3.5 w-3.5 text-primary" /> View Details
+                              </DropdownMenuItem>
+                            </Link>
+                            <Can menu="customer" action="update">
+                              <Link href={`/admin/customers/${c.id}/edit`}>
+                                <DropdownMenuItem className="cursor-pointer">
+                                  <Edit className="mr-2 h-3.5 w-3.5" /> Edit Profile
+                                </DropdownMenuItem>
+                              </Link>
+                            </Can>
+                            <Link href={`/admin/customer-payments/new?customerId=${c.id}`}>
+                              <DropdownMenuItem className="cursor-pointer">
+                                <Receipt className="mr-2 h-3.5 w-3.5 text-emerald-500" /> Collect Payment
+                              </DropdownMenuItem>
+                            </Link>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => toast.success(`SMS reminder sent to ${c.phone}`)}
+                            >
+                              <MessageSquare className="mr-2 h-3.5 w-3.5 text-amber-500" /> Send SMS Alert
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <Can menu="customer" action="delete">
+                              <DropdownMenuItem
+                                onClick={() => setDeleteId(c.id)}
+                                className="text-destructive focus:text-destructive cursor-pointer"
+                              >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Account
+                              </DropdownMenuItem>
+                            </Can>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete Customer"
-        description="Are you sure you want to delete this customer? All active sessions and billing history will be moved to the recycle bin."
-        confirmLabel="Delete Customer"
+        title="Delete Customer Account"
+        description="Are you sure you want to remove this subscriber? This will terminate their active MikroTik PPPoE secret and revoke billing access."
+        confirmLabel="Confirm Delete"
         destructive
-        onConfirm={() => {
+        onConfirm={async () => {
           if (deleteId) {
-            deleteMutation.mutate(deleteId);
+            await deleteMutation.mutateAsync(deleteId);
             setDeleteId(null);
           }
         }}

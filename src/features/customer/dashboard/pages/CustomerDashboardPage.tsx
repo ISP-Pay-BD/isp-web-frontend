@@ -30,7 +30,6 @@ import NumberFlow from '@number-flow/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { useCustomerDashboard } from '../hooks/use-customer-dashboard';
 import { formatBdtWithSymbol, formatDate } from '@/lib/format';

@@ -14,6 +14,7 @@ import {
   Sparkles,
   ArrowRightLeft,
   LifeBuoy,
+  Palette,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -23,6 +24,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { ThemeCustomizerModal } from './ThemeCustomizerModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +48,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [themeCustomizerOpen, setThemeCustomizerOpen] = useState(false);
   const showCommandPalette = portal === 'admin';
 
   useEffect(() => {
@@ -144,6 +147,18 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
             <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
           </Button>
 
+          {/* Theme Studio Customizer Trigger Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border transition-colors relative"
+            onClick={() => setThemeCustomizerOpen(true)}
+            aria-label="Theme Studio"
+            title="Theme Studio & Appearance"
+          >
+            <Palette className="h-4 w-4 text-primary" />
+          </Button>
+
           {/* Theme Toggle Button */}
           <Button
             variant="ghost"
@@ -210,6 +225,14 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                     </DropdownMenuItem>
                   </Link>
 
+                  <DropdownMenuItem
+                    onClick={() => setThemeCustomizerOpen(true)}
+                    className="cursor-pointer gap-2 py-2"
+                  >
+                    <Palette className="h-4 w-4 text-primary" />
+                    <span>Theme & Appearance</span>
+                  </DropdownMenuItem>
+
                   {portal === 'customer' && (
                     <Link href="/customer/subscription">
                       <DropdownMenuItem className="cursor-pointer gap-2 py-2">
@@ -264,6 +287,12 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
       {showCommandPalette ? (
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       ) : null}
+
+      {/* Theme Customizer Modal */}
+      <ThemeCustomizerModal
+        open={themeCustomizerOpen}
+        onOpenChange={setThemeCustomizerOpen}
+      />
     </>
   );
 }

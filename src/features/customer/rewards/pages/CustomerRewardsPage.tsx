@@ -33,7 +33,7 @@ export function CustomerRewardsPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="Referrals & Rewards" subtitle="Loading your reward wallet...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="rewards" />
       </CustomerPageShell>
     );
   }

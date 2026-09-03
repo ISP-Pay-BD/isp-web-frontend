@@ -60,7 +60,7 @@ export function CustomerPaymentsPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="My Payments" subtitle="Loading invoice and transaction history...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="payments" />
       </CustomerPageShell>
     );
   }

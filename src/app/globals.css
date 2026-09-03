@@ -103,37 +103,37 @@
 }
 
 .dark {
-  --background: oklch(0.12 0.04 300);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0.05 300);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0.05 300);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.12 0.032 292);
+  --foreground: oklch(0.985 0.005 292);
+  --card: oklch(0.158 0.038 292);
+  --card-foreground: oklch(0.985 0.005 292);
+  --popover: oklch(0.165 0.04 292);
+  --popover-foreground: oklch(0.985 0.005 292);
   --primary: oklch(0.627 0.214 41.116);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.22 0.08 300);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --secondary: oklch(0.20 0.042 292);
+  --secondary-foreground: oklch(0.985 0.005 292);
+  --muted: oklch(0.185 0.022 292);
+  --muted-foreground: oklch(0.72 0.015 292);
+  --accent: oklch(0.21 0.035 292);
+  --accent-foreground: oklch(0.985 0.005 292);
+  --destructive: oklch(0.68 0.19 22.2);
+  --border: oklch(0.25 0.025 292 / 70%);
+  --input: oklch(0.25 0.025 292 / 80%);
+  --ring: oklch(0.627 0.214 41.116 / 50%);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.22 0.08 300);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.145 0.042 292);
+  --sidebar-foreground: oklch(0.985 0.005 292);
   --sidebar-primary: oklch(0.627 0.214 41.116);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-accent: oklch(0.205 0.036 292);
+  --sidebar-accent-foreground: oklch(0.985 0.005 292);
+  --sidebar-border: oklch(0.24 0.028 292 / 60%);
+  --sidebar-ring: oklch(0.627 0.214 41.116 / 40%);
 }
 
 @layer base {
@@ -168,5 +168,11 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

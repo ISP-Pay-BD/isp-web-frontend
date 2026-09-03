@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mockFetch } from '@/lib/mock-api/client';
 import type { AttendanceItem } from '../types';
 
+import { mockDelay } from '@/lib/mock-api/delay';
+
 export function useAttendance() {
   const queryClient = useQueryClient();
 
@@ -19,7 +21,7 @@ export function useAttendance() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, checkIn, checkOut }: { id: string; status: AttendanceItem['status']; checkIn: string; checkOut?: string }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await mockDelay(30);
       return { id, status, checkIn, checkOut };
     },
     onSuccess: (updated) => {

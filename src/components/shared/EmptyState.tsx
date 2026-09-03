@@ -22,17 +22,21 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-10 text-center',
+        'relative flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/80 bg-card/50 p-12 text-center backdrop-blur-xs',
         className,
       )}
     >
-      {icon ? <div className="text-muted-foreground">{icon}</div> : null}
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold">{title}</h3>
-        {description ? <p className="text-muted-foreground max-w-md text-sm">{description}</p> : null}
+      {icon ? (
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-xs">
+          {icon}
+        </div>
+      ) : null}
+      <div className="space-y-1.5">
+        <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
+        {description ? <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">{description}</p> : null}
       </div>
       {actionLabel && onAction ? (
-        <Button onClick={onAction} className="bg-primary hover:bg-primary/90">
+        <Button onClick={onAction} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-semibold mt-1">
           {actionLabel}
         </Button>
       ) : null}

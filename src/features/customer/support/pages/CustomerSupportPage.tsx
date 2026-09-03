@@ -49,7 +49,7 @@ export function CustomerSupportPage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="Customer Support" subtitle="Loading support tickets...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="support" />
       </CustomerPageShell>
     );
   }

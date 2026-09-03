@@ -42,7 +42,7 @@ export function CustomerProfilePage() {
   if (isLoading) {
     return (
       <CustomerPageShell title="My Profile" subtitle="Loading customer account details...">
-        <CustomerLoadingSkeleton />
+        <CustomerLoadingSkeleton variant="profile" />
       </CustomerPageShell>
     );
   }
