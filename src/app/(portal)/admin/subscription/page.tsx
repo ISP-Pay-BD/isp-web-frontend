@@ -1,10 +1,11 @@
-import { PortalPlaceholder } from '@/features/auth/shared/PortalPlaceholder';
+import type { Metadata } from 'next';
+import { SelfRechargePage } from '@/features/admin/subscription';
 
-export default function AdminSubscriptionPage() {
-  return (
-    <PortalPlaceholder
-      title="Self Recharge"
-      description="Renew your admin subscription when expired — built in wt05-admin-ops."
-    />
-  );
+export const metadata: Metadata = {
+  title: 'Self Recharge',
+  description: 'Renew your admin subscription when expired',
+};
+
+export default function Page() {
+  return <SelfRechargePage />;
 }
