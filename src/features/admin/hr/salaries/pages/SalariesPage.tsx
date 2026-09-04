@@ -104,7 +104,7 @@ export function SalariesPage() {
       <PageContent className="space-y-6">
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => {
+        {stats.map((stat) => {
           const style = statStyles[stat.color];
           return (
             <div key={stat.label}>

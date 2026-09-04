@@ -185,7 +185,7 @@ export function EmployeesPage() {
 
       {/* Stats */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => {
+        {stats.map((stat) => {
           const style = statStyles[stat.color];
           return (
             <div key={stat.label}>

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Server, Network, CheckCircle2, XCircle, RefreshCw, ZoomIn, ZoomOut, Zap, Cpu, SignalHigh, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
@@ -435,12 +435,12 @@ export function NetworkDiagramPage() {
                       { label: 'MAC Address', value: selectedNode.mac, code: true },
                       { label: 'Service Zone', value: selectedNode.zone },
                     ].map((item) => (
-                      <div key={item.label} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20 transition-colors">
-                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                      <div key={item.label} className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5 hover:bg-muted/20 transition-colors">
+                        <span className="text-xs text-muted-foreground truncate">{item.label}</span>
                         {item.code ? (
-                          <code className="font-mono text-[11px] bg-muted/40 px-2 py-0.5 rounded-md border border-border/40">{item.value}</code>
+                          <code className="font-mono text-[11px] bg-muted/40 px-2 py-0.5 rounded-md border border-border/40 truncate min-w-0">{item.value}</code>
                         ) : (
-                          <span className={`text-xs ${item.bold ? 'font-bold text-foreground' : item.mono ? 'font-mono font-semibold' : 'font-medium text-foreground'}`}>
+                          <span className={`text-xs truncate min-w-0 ${item.bold ? 'font-bold text-foreground' : item.mono ? 'font-mono font-semibold' : 'font-medium text-foreground'}`}>
                             {item.value}
                           </span>
                         )}
@@ -463,13 +463,13 @@ export function NetworkDiagramPage() {
                       { label: 'PON Port', value: selectedNode.ponPort },
                       { label: 'Splitter', value: selectedNode.splitter },
                     ].map((item) => (
-                      <div key={item.label} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20 transition-colors">
-                        <span className="text-xs text-muted-foreground">{item.label}</span>
-                        <span className="text-xs font-mono font-semibold">{item.value}</span>
+                      <div key={item.label} className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5 hover:bg-muted/20 transition-colors">
+                        <span className="text-xs text-muted-foreground truncate">{item.label}</span>
+                        <span className="text-xs font-mono font-semibold truncate min-w-0">{item.value}</span>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between px-4 py-2.5">
-                      <span className="text-xs text-muted-foreground">Link State</span>
+                    <div className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5">
+                      <span className="text-xs text-muted-foreground truncate">Link State</span>
                       <Badge
                         variant={selectedNode.status === 'online' ? 'default' : 'destructive'}
                         className="text-[10px] font-bold gap-1.5 capitalize px-2.5 py-1 shadow-sm"
@@ -492,12 +492,12 @@ export function NetworkDiagramPage() {
                   <div className="p-4 space-y-5">
                     {/* Rx Power */}
                     <div className="space-y-2.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3 min-w-0">
                         <div>
                           <span className="text-xs font-semibold text-foreground">Rx Optical Power</span>
                           <span className="text-[10px] text-muted-foreground ml-1.5">(1490nm)</span>
                         </div>
-                        <span className={`font-mono font-black text-sm ${
+                        <span className={`font-mono font-black text-sm shrink-0 ${
                           selectedNode.rxPowerDbm > -25
                             ? 'text-emerald-500'
                             : selectedNode.rxPowerDbm > -27
@@ -533,12 +533,12 @@ export function NetworkDiagramPage() {
 
                     {/* Tx Power */}
                     <div className="space-y-2.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3 min-w-0">
                         <div>
                           <span className="text-xs font-semibold text-foreground">Tx Optical Power</span>
                           <span className="text-[10px] text-muted-foreground ml-1.5">(1310nm)</span>
                         </div>
-                        <span className="font-mono font-black text-sm text-blue-500">
+                        <span className="font-mono font-black text-sm text-blue-500 shrink-0">
                           {selectedNode.txPowerDbm} <span className="text-[10px] font-bold opacity-70">dBm</span>
                         </span>
                       </div>

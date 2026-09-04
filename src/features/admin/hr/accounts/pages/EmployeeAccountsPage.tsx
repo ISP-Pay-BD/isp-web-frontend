@@ -110,7 +110,7 @@ export function EmployeeAccountsPage() {
       <PageContent className="space-y-6">
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat, idx) => (
+        {stats.map((stat) => (
           <div key={stat.label}>
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
               <CardContent className="p-4 flex items-center gap-3.5">
