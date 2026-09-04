@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
@@ -158,7 +159,7 @@ export function EmployeesPage() {
     else await createEmployee(values);
   };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <div className="p-6">
@@ -179,7 +180,7 @@ export function EmployeesPage() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
       {/* Header */}
-      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -196,7 +197,8 @@ export function EmployeesPage() {
             <UserPlus className="h-4 w-4" /> New Employee
           </Button>
         </motion.div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -392,7 +394,8 @@ export function EmployeesPage() {
         </Card>
       </motion.div>
 
-      {/* Employee Create / Edit Modal */}
+      </PageContent>
+
       {modalOpen && (
         <EmployeeModal
           open={modalOpen}

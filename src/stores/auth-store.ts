@@ -11,32 +11,29 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  /** False until zustand persist rehydrates from localStorage */
+  hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   syncSessionCookie: () => void;
   role: () => UserRole | null;
 }
 
-import { customerPermissions } from '@/data/users/permissions.data';
-
-const DEFAULT_MOCK_USER: User = {
-  id: 'user_001',
-  name: 'Rahim Uddin',
-  email: 'customer@demo.isppaybd.com',
-  phone: '01710000001',
-  role: 'user',
-  status: 'active',
-  tenantId: 'tenant_demo',
-  organizationName: 'Demo ISP Network',
-  permissions: customerPermissions,
-};
-
+/**
+ * Start logged-out. Never seed a customer mock user here — that caused the
+ * admin sidebar to flash customer nav (Rahim Uddin) on every hard refresh
+ * before persist rehydration finished.
+ */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      user: DEFAULT_MOCK_USER,
-      token: 'mock-token-user-001',
-      isAuthenticated: true,
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      hasHydrated: false,
+
+      setHasHydrated: (value) => set({ hasHydrated: value }),
 
       login: async (email, password) => {
         const session = await mockFetch('auth.login', { email, password });
@@ -80,6 +77,15 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Auth rehydration failed', error);
+        }
+        // state has setHasHydrated — use it directly instead of referencing
+        // the module-level useAuthStore which isn't assigned yet at this point.
+        state?.setHasHydrated(true);
+        state?.syncSessionCookie();
+      },
     },
   ),
 );

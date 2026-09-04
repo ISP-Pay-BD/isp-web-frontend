@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
@@ -96,7 +97,7 @@ export function AdvanceSalaryPage() {
     catch { toast.error('Failed to update request'); }
   };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <div className="p-6">
@@ -119,7 +120,7 @@ export function AdvanceSalaryPage() {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -136,7 +137,8 @@ export function AdvanceSalaryPage() {
             <Plus className="h-4 w-4" /> Give Advance
           </Button>
         </motion.div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat, idx) => (
@@ -256,6 +258,7 @@ export function AdvanceSalaryPage() {
         </Card>
       </motion.div>
 
+      </PageContent>
       {modalOpen && (
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="max-w-md">

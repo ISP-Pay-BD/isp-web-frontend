@@ -39,7 +39,7 @@ export function SoftwareSettingsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="form" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState

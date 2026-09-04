@@ -34,7 +34,7 @@ const LINKS = [
 export function BandwidthBuyHubPage() {
   const { data, isLoading } = useBandwidthData();
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={4} />;
 
   const summary = data?.summary;
   const bills = data?.purchaseBills ?? [];
@@ -43,7 +43,7 @@ export function BandwidthBuyHubPage() {
   return (
     <motion.div
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >

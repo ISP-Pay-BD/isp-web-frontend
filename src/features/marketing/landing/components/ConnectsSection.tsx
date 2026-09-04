@@ -1,7 +1,6 @@
 'use client';
 
 import { Terminal, Webhook, Smartphone, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/features/marketing/shared';
 import type { ConnectItem } from '../types';
@@ -73,12 +72,12 @@ export function ConnectsSection({ connects }: ConnectsSectionProps) {
         </div>
 
         <div className="mt-12 text-center">
-          <Link href="/contact">
+          <a href="#contact">
             <Button variant="outline" className="border-white/20 bg-white/5 h-11 text-white hover:bg-white/10">
               Request API Documentation &amp; Sandbox Key
               <ArrowRight className="ml-2 h-4 w-4 text-landing-cta" />
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
     </section>

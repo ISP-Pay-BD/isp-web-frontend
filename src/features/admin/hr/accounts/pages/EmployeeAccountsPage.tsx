@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -67,7 +68,7 @@ export function EmployeeAccountsPage() {
   const totalOutstandingAdvances = useMemo(() => combinedData.reduce((sum, a) => sum + (a.advancesBdt || 0), 0), [combinedData]);
   const advanceCount = useMemo(() => combinedData.filter((a) => a.advancesBdt > 0).length, [combinedData]);
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <div className="p-6">
@@ -90,7 +91,7 @@ export function EmployeeAccountsPage() {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -114,7 +115,8 @@ export function EmployeeAccountsPage() {
             </Button>
           </motion.div>
         </div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat, idx) => (
@@ -224,6 +226,8 @@ export function EmployeeAccountsPage() {
           )}
         </Card>
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

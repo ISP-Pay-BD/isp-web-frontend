@@ -18,7 +18,7 @@ export function AdminPackagesPage() {
     queryFn: () => mockFetch('platform.admins.packages'),
   });
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (error || !data) {
     return (
       <EmptyState

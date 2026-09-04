@@ -107,7 +107,7 @@ export function ProfilePage() {
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >

@@ -1,24 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotUserItem } from '@/data/admin/network-ops.data';
 import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatMac } from '@/lib/format/network';
 import { Plus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
+const userSearchFilter = (
+  row: LegacyRow<HotspotUserItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const u = row.original;
+  return (
+    u.username.toLowerCase().includes(q) ||
+    u.macAddress.toLowerCase().includes(q) ||
+    u.ipAddress.includes(q) ||
+    u.pin.includes(q)
+  );
+};
+
 export function HotspotUsersPage() {
   const { data, isLoading } = useHotspotData();
-  const [search, setSearch] = useState('');
   const [users, setUsers] = useState<HotspotUserItem[]>([]);
 
   const initial = data?.users ?? [];
@@ -27,13 +41,6 @@ export function HotspotUsersPage() {
   }
 
   const list = users.length > 0 ? users : initial;
-  const filtered = list.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.macAddress.toLowerCase().includes(search.toLowerCase()) ||
-      u.ipAddress.includes(search) ||
-      u.pin.includes(search),
-  );
 
   const handleDisconnect = (id: string) => {
     setUsers((prev) =>
@@ -42,7 +49,87 @@ export function HotspotUsersPage() {
     toast.success('User session disconnected.');
   };
 
-  if (isLoading && list.length === 0) return <PageSkeleton rows={5} />;
+  const columns = useMemo<LegacyColumnDef<HotspotUserItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'username',
+        header: 'Username',
+        enableHiding: false,
+        cell: ({ row }) => <span className="font-medium">{row.original.username}</span>,
+      },
+      {
+        accessorKey: 'profileName',
+        header: 'Profile',
+      },
+      {
+        accessorKey: 'macAddress',
+        header: 'MAC',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{formatMac(row.original.macAddress)}</span>
+        ),
+      },
+      {
+        accessorKey: 'ipAddress',
+        header: 'IP',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.ipAddress}</span>
+        ),
+      },
+      {
+        accessorKey: 'pin',
+        header: 'PIN',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.pin}</span>
+        ),
+      },
+      {
+        id: 'traffic',
+        accessorFn: (row) => row.bytesInMb + row.bytesOutMb,
+        header: 'Traffic',
+        cell: ({ row }) => (
+          <span className="text-xs">
+            ↓{row.original.bytesInMb}MB / ↑{row.original.bytesOutMb}MB
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <StatusBadge
+            status={
+              row.original.status === 'active'
+                ? 'online'
+                : row.original.status === 'expired'
+                  ? 'offline'
+                  : 'pending'
+            }
+          />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) =>
+          row.original.status === 'active' ? (
+            <div className="text-right">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleDisconnect(row.original.id)}
+              >
+                Disconnect
+              </Button>
+            </div>
+          ) : null,
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && list.length === 0) return <PageSkeleton variant="table" rows={5} />;
 
   return (
     <div className="space-y-6">
@@ -68,65 +155,17 @@ export function HotspotUsersPage() {
         <StatCard title="Expired" value={String(list.filter((u) => u.status === 'expired').length)} />
       </div>
 
-      <Input
-        placeholder="Search username, MAC, IP, or PIN…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-md"
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="username"
+        searchPlaceholder="Search username, MAC, IP, or PIN…"
+        searchFilterFn={userSearchFilter}
+        facetFilters={[{ columnId: 'status', title: 'Status' }]}
+        emptyTitle="No hotspot users"
+        emptyDescription="Generate a voucher to get started."
       />
-
-      {filtered.length === 0 ? (
-        <EmptyState title="No hotspot users" description="Generate a voucher to get started." />
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Username</TableHead>
-                <TableHead>Profile</TableHead>
-                <TableHead>MAC</TableHead>
-                <TableHead>IP</TableHead>
-                <TableHead>PIN</TableHead>
-                <TableHead>Traffic</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.profileName}</TableCell>
-                  <TableCell className="font-mono text-xs">{formatMac(user.macAddress)}</TableCell>
-                  <TableCell className="font-mono text-xs">{user.ipAddress}</TableCell>
-                  <TableCell className="font-mono text-xs">{user.pin}</TableCell>
-                  <TableCell className="text-xs">
-                    ↓{user.bytesInMb}MB / ↑{user.bytesOutMb}MB
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge
-                      status={
-                        user.status === 'active'
-                          ? 'online'
-                          : user.status === 'expired'
-                            ? 'offline'
-                            : 'pending'
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {user.status === 'active' ? (
-                      <Button variant="ghost" size="sm" onClick={() => handleDisconnect(user.id)}>
-                        Disconnect
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
 
       <Button variant="link" className="px-0" render={<Link href="/admin/hotspot" />}>
         ← Back to hotspot hub

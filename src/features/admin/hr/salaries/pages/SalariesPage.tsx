@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
@@ -72,7 +73,7 @@ export function SalariesPage() {
     await recordPayment({ employeeId: values.employeeId, employeeName, month: values.month, amountBdt: values.amountBdt, paidVia: values.paidVia, notes: values.notes });
   };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <div className="p-6">
@@ -90,7 +91,7 @@ export function SalariesPage() {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -107,7 +108,8 @@ export function SalariesPage() {
             <PlusCircle className="h-4 w-4" /> New Salary Payment
           </Button>
         </motion.div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => {
@@ -230,6 +232,7 @@ export function SalariesPage() {
         </Card>
       </motion.div>
 
+      </PageContent>
       {modalOpen && <SalaryPaymentModal open={modalOpen} onOpenChange={setModalOpen} employees={employees} onSave={handleSavePayment} />}
     </motion.div>
   );

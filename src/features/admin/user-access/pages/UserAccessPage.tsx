@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -96,7 +97,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp}>
+      <PageHero>
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -111,7 +112,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
             </div>
           </div>
         </div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Role Stats */}
       <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-4">
@@ -242,6 +244,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
           </TabsContent>
         </Tabs>
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

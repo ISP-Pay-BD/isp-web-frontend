@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -31,7 +32,7 @@ export function ImportCustomersPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3">
+      <PageHero className="flex items-center gap-3">
         <Link href="/admin/customers">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
@@ -43,7 +44,8 @@ export function ImportCustomersPage() {
             Batch provision subscriber accounts from spreadsheet (.xlsx / .csv).
           </p>
         </div>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <Card>
         <CardHeader>
@@ -137,6 +139,8 @@ export function ImportCustomersPage() {
           </CardContent>
         </Card>
       )}
+    
+      </PageContent>
     </div>
   );
 }

@@ -20,7 +20,7 @@ export function WhatsAppInboxPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return (
       <EmptyState title="Failed to load inbox" description="Could not fetch WhatsApp conversations." actionLabel="Retry" onAction={() => refetch()} />

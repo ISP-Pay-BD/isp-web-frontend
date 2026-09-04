@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -8,15 +9,13 @@ import {
   HardDrive,
   DollarSign,
   ArrowDownToLine,
-  X,
 } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { DailyBillItem } from '@/data/admin/bandwidth.data';
 import { StatCard } from '@/components/shared/StatCard';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Card } from '@/components/ui/card';
+import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,17 +34,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { staggerContainer, fadeUp } from '@/lib/animations';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { toast } from 'sonner';
+
+const dailyBillSearchFilter = (
+  row: LegacyRow<DailyBillItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const b = row.original;
+  return (
+    b.popName.toLowerCase().includes(q) ||
+    b.vendor.toLowerCase().includes(q) ||
+    b.receivedBy.toLowerCase().includes(q) ||
+    b.date.includes(q)
+  );
+};
 
 export function BandwidthDailyBillPage() {
   const { data, isLoading } = useBandwidthData();
@@ -84,16 +91,97 @@ export function BandwidthDailyBillPage() {
     setModalOpen(false);
   };
 
-  if (isLoading && bills.length === 0) return <PageSkeleton rows={5} />;
+  const columns = useMemo<LegacyColumnDef<DailyBillItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: 'Date',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold">{row.original.date}</span>
+        ),
+      },
+      {
+        accessorKey: 'popName',
+        header: 'POP Distribution Node',
+        cell: ({ row }) => (
+          <span className="text-sm font-semibold">{row.original.popName}</span>
+        ),
+      },
+      {
+        accessorKey: 'vendor',
+        header: 'Carrier / Upstream',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.vendor}</span>
+        ),
+      },
+      {
+        accessorKey: 'usageGb',
+        header: 'Usage (GB)',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-primary">
+            {row.original.usageGb} GB
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'ratePerGb',
+        header: 'Rate / GB',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.ratePerGb} BDT</span>
+        ),
+      },
+      {
+        accessorKey: 'amountBdt',
+        header: 'Amount (BDT)',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-bold">
+            {formatBdtWithSymbol(row.original.amountBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'receivedBy',
+        header: 'Received By',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.receivedBy}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) =>
+          row.original.status === 'received' ? (
+            <Badge
+              variant="outline"
+              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium gap-1"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+              Received
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-medium gap-1"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+              Pending
+            </Badge>
+          ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={5} />;
 
   return (
     <motion.div
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      {/* Header */}
       <motion.div variants={fadeUp}>
         <PageHeader
           title="Bandwidth Daily Bills & Consumption Log"
@@ -111,7 +199,6 @@ export function BandwidthDailyBillPage() {
         />
       </motion.div>
 
-      {/* Stats */}
       <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Total Data Logged"
@@ -133,97 +220,23 @@ export function BandwidthDailyBillPage() {
         />
       </motion.div>
 
-      {/* Table */}
       <motion.div variants={fadeUp}>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="w-10">
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">#</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Date</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">POP Distribution Node</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Carrier / Upstream</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Usage (GB)</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Rate / GB</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Amount (BDT)</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Received By</span>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Status</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {list.map((b, idx) => (
-                  <motion.tr
-                    key={b.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04, duration: 0.3 }}
-                    className="group border-border/40 hover:bg-muted/30 transition-colors"
-                  >
-                    <TableCell className="py-3.5 font-mono text-xs text-muted-foreground">
-                      {idx + 1}
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="font-mono text-xs font-bold">{b.date}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="text-sm font-semibold group-hover:text-primary transition-colors">{b.popName}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="text-xs text-muted-foreground">{b.vendor}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="font-mono text-xs font-bold text-primary">{b.usageGb} GB</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="font-mono text-xs">{b.ratePerGb} BDT</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="font-mono text-sm font-bold">{formatBdtWithSymbol(b.amountBdt)}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="text-xs text-muted-foreground">{b.receivedBy}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5 text-right">
-                      {b.status === 'received' ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                          Received
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-medium gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
-                          Pending
-                        </Badge>
-                      )}
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Card>
+        <DataTable
+          columns={columns}
+          data={list}
+          getRowId={(row) => row.id}
+          searchKey="popName"
+          searchPlaceholder="Search POP, carrier, staff, or date..."
+          searchFilterFn={dailyBillSearchFilter}
+          facetFilters={[
+            { columnId: 'status', title: 'Status' },
+            { columnId: 'popName', title: 'POP' },
+          ]}
+          emptyTitle="No daily bills"
+          emptyDescription="Receive a daily consumption bill to start logging."
+        />
       </motion.div>
 
-      {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md p-6">
           <DialogHeader>

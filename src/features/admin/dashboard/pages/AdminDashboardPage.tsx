@@ -46,6 +46,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { fadeUp, staggerContainer } from '@/lib/animations';
+import { SpotlightCard } from '@/components/motion/SpotlightCard';
 import { useAdminDashboard } from '../hooks/use-admin-dashboard';
 
 const containerVariants = {
@@ -92,7 +93,7 @@ export function AdminDashboardPage() {
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
@@ -133,48 +134,45 @@ export function AdminDashboardPage() {
 
       {/* Triage — action first */}
       <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-3">
-        <Link
-          href="/admin/customers?status=expired"
-          className="group flex items-center justify-between rounded-xl bg-card px-4 py-3.5 transition-colors hover:bg-muted/50 no-underline"
-        >
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Payment due</p>
-            <p className="mt-1 font-mono text-xl font-semibold text-amber-600 dark:text-amber-400">
-              ৳<NumberFlow value={stats.customersExpaymentTotal ?? 54000} format={{ notation: 'compact' }} />
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                ({stats.customersExpaymentCount ?? 45})
-              </span>
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        <Link href="/admin/customers?status=expired" className="group block no-underline">
+          <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Payment due</p>
+              <p className="mt-1 font-mono text-xl font-semibold text-amber-600 dark:text-amber-400">
+                ৳<NumberFlow value={stats.customersExpaymentTotal ?? 54000} format={{ notation: 'compact' }} />
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  ({stats.customersExpaymentCount ?? 45})
+                </span>
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </SpotlightCard>
         </Link>
-        <Link
-          href="/admin/customers?status=expired"
-          className="group flex items-center justify-between rounded-xl bg-card px-4 py-3.5 transition-colors hover:bg-muted/50 no-underline"
-        >
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Expired</p>
-            <p className="mt-1 text-xl font-semibold text-rose-600 dark:text-rose-400">
-              <NumberFlow value={stats.expiredCustomers} />
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">subscribers</span>
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        <Link href="/admin/customers?status=expired" className="group block no-underline">
+          <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Expired</p>
+              <p className="mt-1 text-xl font-semibold text-rose-600 dark:text-rose-400">
+                <NumberFlow value={stats.expiredCustomers} />
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">subscribers</span>
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </SpotlightCard>
         </Link>
-        <Link
-          href="/admin/support"
-          className="group flex items-center justify-between rounded-xl bg-card px-4 py-3.5 transition-colors hover:bg-muted/50 no-underline"
-        >
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Open tickets</p>
-            <p className="mt-1 text-xl font-semibold text-foreground">
-              <NumberFlow value={stats.pendingTickets} />
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                {stats.ticketStats?.solvedRate ?? 94}% solved
-              </span>
-            </p>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        <Link href="/admin/support" className="group block no-underline">
+          <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Open tickets</p>
+              <p className="mt-1 text-xl font-semibold text-foreground">
+                <NumberFlow value={stats.pendingTickets} />
+                <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                  {stats.ticketStats?.solvedRate ?? 94}% solved
+                </span>
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </SpotlightCard>
         </Link>
       </motion.div>
 
@@ -230,7 +228,7 @@ export function AdminDashboardPage() {
           ctaText="View sessions"
         />
         <Link href="/admin/subscription" className="block h-full group no-underline">
-          <div className="flex h-full flex-col justify-between rounded-xl bg-card p-5 transition-colors hover:bg-muted/40">
+          <SpotlightCard className="flex h-full flex-col justify-between p-5">
             <div>
               <div className="flex items-start justify-between">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -249,10 +247,10 @@ export function AdminDashboardPage() {
               </div>
               <Progress value={stats.customerQuota?.percent ?? 49.6} className="h-1.5" />
               <div className="flex items-center gap-1 pt-1 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-                Manage capacity <ArrowRight className="h-3 w-3" />
+                Manage capacity <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
-          </div>
+          </SpotlightCard>
         </Link>
       </motion.div>
 
@@ -260,36 +258,47 @@ export function AdminDashboardPage() {
       <motion.div variants={itemVariants} className="space-y-4">
         {isGroupedMetrics ? (
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl bg-muted/20 p-3">
-            <Link href="/admin/customers/new" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">New Customers</span>
-              <div className="text-xl font-semibold mt-1 text-emerald-600 dark:text-emerald-400">{stats.newCustomers ?? 28}</div>
+            <Link href="/admin/customers/new" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">New Customers</span>
+                <div className="text-xl font-semibold mt-1 text-emerald-600 dark:text-emerald-400">{stats.newCustomers ?? 28}</div>
+              </SpotlightCard>
             </Link>
-            <Link href="/admin/customers?status=suspended" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">Inactive Customers</span>
-              <div className="text-xl font-semibold mt-1 text-rose-500">{stats.inactiveCustomers ?? 14}</div>
+            <Link href="/admin/customers?status=suspended" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">Inactive Customers</span>
+                <div className="text-xl font-semibold mt-1 text-rose-500">{stats.inactiveCustomers ?? 14}</div>
+              </SpotlightCard>
             </Link>
-            <Link href="/admin/packages" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">Active Packages</span>
-              <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalPackages ?? 12}</div>
+            <Link href="/admin/packages" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">Active Packages</span>
+                <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalPackages ?? 12}</div>
+              </SpotlightCard>
             </Link>
-            <Link href="/admin/areas" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">Service Areas</span>
-              <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalAreas ?? 8}</div>
+            <Link href="/admin/areas" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">Service Areas</span>
+                <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalAreas ?? 8}</div>
+              </SpotlightCard>
             </Link>
-            <Link href="/admin/hr/employees" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">Active Employees</span>
-              <div className="text-xl font-semibold mt-1 text-foreground">{stats.employeeActive ?? 18}</div>
+            <Link href="/admin/hr/employees" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">Active Employees</span>
+                <div className="text-xl font-semibold mt-1 text-foreground">{stats.employeeActive ?? 18}</div>
+              </SpotlightCard>
             </Link>
-            <Link href="/admin/routers" className="p-3 rounded-lg bg-card hover:bg-muted/50 transition-colors cursor-pointer group block no-underline">
-              <span className="text-[11px] text-muted-foreground font-medium">Active Routers</span>
-              <div className="text-xl font-semibold mt-1 text-foreground">{stats.routerActive ?? 6}</div>
+            <Link href="/admin/routers" className="block no-underline">
+              <SpotlightCard className="p-3 cursor-pointer">
+                <span className="text-[11px] text-muted-foreground font-medium">Active Routers</span>
+                <div className="text-xl font-semibold mt-1 text-foreground">{stats.routerActive ?? 6}</div>
+              </SpotlightCard>
             </Link>
           </div>
         ) : (
           <div className="grid gap-3 lg:grid-cols-4">
-            {/* Customer Metrics */}
-            <div className="p-4 rounded-xl bg-card space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <Card className="p-4 space-y-3 ring-0 shadow-none">
+              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5 text-primary" /> Customers
                 </span>
@@ -297,7 +306,7 @@ export function AdminDashboardPage() {
                   View <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
                 <Link href="/admin/customers/new" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
                   <span className="text-[10px] text-muted-foreground">New</span>
                   <div className="font-semibold text-emerald-600 dark:text-emerald-400">{stats.newCustomers ?? 28}</div>
@@ -315,11 +324,10 @@ export function AdminDashboardPage() {
                   <div className="font-semibold font-mono text-[11px] text-foreground">৳1.45M</div>
                 </Link>
               </div>
-            </div>
+            </Card>
 
-            {/* Package & Service */}
-            <div className="p-4 rounded-xl bg-card space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <Card className="p-4 space-y-3 ring-0 shadow-none">
+              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Box className="h-3.5 w-3.5 text-primary" /> Packages & Areas
                 </span>
@@ -327,7 +335,7 @@ export function AdminDashboardPage() {
                   View <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
                 <Link href="/admin/packages" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
                   <span className="text-[10px] text-muted-foreground">Active Packages</span>
                   <div className="font-semibold text-foreground">{stats.totalPackages ?? 12}</div>
@@ -343,11 +351,10 @@ export function AdminDashboardPage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </Card>
 
-            {/* Employee Metrics */}
-            <div className="p-4 rounded-xl bg-card space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <Card className="p-4 space-y-3 ring-0 shadow-none">
+              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <UserCheck className="h-3.5 w-3.5 text-primary" /> Employees
                 </span>
@@ -355,7 +362,7 @@ export function AdminDashboardPage() {
                   View <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
                 <Link href="/admin/hr/employees" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
                   <span className="text-[10px] text-muted-foreground">Active Staff</span>
                   <div className="font-semibold text-foreground">{stats.employeeActive ?? 18}</div>
@@ -369,11 +376,10 @@ export function AdminDashboardPage() {
                   <span className="font-semibold font-mono text-foreground">৳{(stats.employeePaymentReceived ?? 385000).toLocaleString()}</span>
                 </Link>
               </div>
-            </div>
+            </Card>
 
-            {/* Network & Routers */}
-            <div className="p-4 rounded-xl bg-card space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <Card className="p-4 space-y-3 ring-0 shadow-none">
+              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Server className="h-3.5 w-3.5 text-primary" /> Network & POPs
                 </span>
@@ -381,7 +387,7 @@ export function AdminDashboardPage() {
                   View <ChevronRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
                 <Link href="/admin/routers" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
                   <span className="text-[10px] text-muted-foreground">Active Routers</span>
                   <div className="font-semibold text-emerald-600 dark:text-emerald-400">{stats.routerActive ?? 6}</div>
@@ -395,7 +401,7 @@ export function AdminDashboardPage() {
                   <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">All NAS Online</span>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </motion.div>
@@ -420,7 +426,7 @@ export function AdminDashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {(stats.routers ?? []).map((router) => (
               <Link key={router.id} href="/admin/routers" className="block group no-underline">
-                <div className="p-4 rounded-xl bg-card transition-colors hover:bg-muted/40 h-full flex flex-col justify-between">
+                <SpotlightCard className="p-4 h-full flex flex-col justify-between cursor-pointer">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-semibold text-sm text-foreground truncate max-w-[170px]">{router.name}</div>
@@ -445,9 +451,9 @@ export function AdminDashboardPage() {
                   </div>
 
                   <div className="pt-2 mt-2 flex items-center gap-1 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-                    Manage sessions <ArrowRight className="h-3 w-3" />
+                    Manage sessions <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                   </div>
-                </div>
+                </SpotlightCard>
               </Link>
             ))}
           </div>

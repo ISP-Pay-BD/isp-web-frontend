@@ -16,10 +16,12 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Reveal } from '@/components/motion/Reveal';
+import { GlareSurface } from '@/components/motion/GlareSurface';
 import { contactFormSchema, type ContactFormData } from '../schemas/contact.schema';
 import { useTranslations } from '@/features/marketing/shared';
 
-export function ContactPage() {
+export function ContactSection() {
   const t = useTranslations();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -38,7 +40,6 @@ export function ContactPage() {
 
   const onSubmit = async (data: ContactFormData) => {
     setSubmitting(true);
-    // Simulate API dispatch
     await new Promise((r) => setTimeout(r, 600));
     setSubmitting(false);
     setSubmitted(true);
@@ -49,83 +50,88 @@ export function ContactPage() {
   };
 
   return (
-    <div className="py-16 md:py-24">
+    <section id="contact" className="border-t border-white/[0.07] py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        {/* Header */}
-        <div className="mx-auto max-w-3xl text-center">
+        <Reveal className="mx-auto max-w-3xl text-center">
           <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
             {t('marketing.pages.contact.badge')}
           </span>
-          <h1 className="font-landing-display mt-4 text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
+          <h2 className="font-landing-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
             {t('marketing.pages.contact.title')}
-          </h1>
-          <p className="mt-4 text-base md:text-lg text-white/70 leading-relaxed">
+          </h2>
+          <p className="mt-4 text-base text-white/70 leading-relaxed">
             {t('marketing.pages.contact.subtitle')}
           </p>
-        </div>
+        </Reveal>
 
         {/* Funnel Cards */}
-        <div className="mt-12 grid gap-6 sm:grid-cols-3">
-          <a
-            href="/register"
-            className="flex flex-col items-center rounded-2xl border border-landing-cta/40 bg-landing-panel/90 p-6 text-center transition-all hover:scale-105 shadow-xl shadow-orange-500/5"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-landing-cta/20 text-landing-cta border border-landing-cta/30 mb-4">
-              <Rocket className="h-6 w-6" />
-            </div>
-            <strong className="text-white text-base">{t('marketing.pages.contact.trialTitle')}</strong>
-            <span className="text-xs text-white/60 mt-1">{t('marketing.pages.contact.trialDesc')}</span>
-          </a>
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          <Reveal>
+            <a href="/register" className="block h-full">
+              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-landing-cta/40 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02]" intensity={0.08}>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-landing-cta/30 bg-landing-cta/20 text-landing-cta">
+                  <Rocket className="h-6 w-6" />
+                </div>
+                <strong className="text-base text-white">{t('marketing.pages.contact.trialTitle')}</strong>
+                <span className="mt-1 text-xs text-white/60">{t('marketing.pages.contact.trialDesc')}</span>
+              </GlareSurface>
+            </a>
+          </Reveal>
 
-          <a
-            href="https://wa.me/8801781808231?text=Hi%2C%20I%27d%20like%20to%20book%20an%20ISP%20Pay%20BD%20demo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center transition-all hover:scale-105 hover:border-emerald-500/40 hover:bg-emerald-500/5"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-4">
-              <MessageSquare className="h-6 w-6" />
-            </div>
-            <strong className="text-white text-base">Book WhatsApp Demo</strong>
-            <span className="text-xs text-white/60 mt-1">Direct chat — we reply within the hour</span>
-          </a>
+          <Reveal>
+            <a
+              href="https://wa.me/8801781808231?text=Hi%2C%20I%27d%20like%20to%20book%20an%20ISP%20Pay%20BD%20demo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block h-full"
+            >
+              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-white/10 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02] hover:border-emerald-500/40" intensity={0.08}>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                  <MessageSquare className="h-6 w-6" />
+                </div>
+                <strong className="text-base text-white">{t('marketing.pages.contact.whatsappTitle')}</strong>
+                <span className="mt-1 text-xs text-white/60">{t('marketing.pages.contact.whatsappDesc')}</span>
+              </GlareSurface>
+            </a>
+          </Reveal>
 
-          <a
-            href="#contact-form"
-            className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center transition-all hover:scale-105 hover:border-landing-accent/40 hover:bg-landing-accent/5"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-landing-panel text-landing-accent border border-white/10 mb-4">
-              <Building className="h-6 w-6" />
-            </div>
-            <strong className="text-white text-base">Running 10k+ Lines?</strong>
-            <span className="text-xs text-white/60 mt-1">Custom SLA, migration &amp; NOC support</span>
-          </a>
+          <Reveal>
+            <a href="#contact-form" className="block h-full">
+              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-white/10 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02] hover:border-landing-accent/40" intensity={0.08}>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-accent">
+                  <Building className="h-6 w-6" />
+                </div>
+                <strong className="text-base text-white">Running 10k+ Lines?</strong>
+                <span className="mt-1 text-xs text-white/60">Custom SLA, migration &amp; NOC support</span>
+              </GlareSurface>
+            </a>
+          </Reveal>
         </div>
 
-        {/* Form and Contact Info Grid */}
-        <div id="contact-form" className="mt-16 grid gap-10 lg:grid-cols-12 items-start">
-          {/* Left Info */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-landing-panel border border-white/10 text-landing-cta">
+        {/* Form + Contact Info Grid */}
+        <div id="contact-form" className="mt-16 grid items-start gap-10 lg:grid-cols-12">
+          {/* Left — Contact Info */}
+          <div className="space-y-4 lg:col-span-5">
+            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-cta">
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-landing-display text-sm font-bold text-white">Our Address</h3>
-                <p className="mt-1 text-xs text-white/70 leading-relaxed">
+                <p className="mt-1 text-xs leading-relaxed text-white/70">
                   841 Badda Link Road, Middle Badda<br />
                   Dhaka 1212, Bangladesh
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-landing-panel border border-white/10 text-landing-cta">
+            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-cta">
                 <Phone className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-landing-display text-sm font-bold text-white">Direct Phone Lines</h3>
-                <p className="mt-1 text-xs text-white/70 font-mono space-y-1">
+                <p className="mt-1 space-y-1 font-mono text-xs text-white/70">
                   <span>+880 1781-808231 (Support &amp; Sales)</span><br />
                   <span>+880 1628-856735 (Accounts)</span><br />
                   <span>+880 1610-585100 (Emergency NOC)</span>
@@ -133,21 +139,21 @@ export function ContactPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-landing-panel border border-white/10 text-landing-cta">
+            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-cta">
                 <Mail className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-landing-display text-sm font-bold text-white">Email Address</h3>
-                <p className="mt-1 text-xs text-white/70 font-mono">
+                <p className="mt-1 font-mono text-xs text-white/70">
                   info@isppaybd.com<br />
                   support@isppaybd.com
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-landing-panel border border-white/10 text-landing-cta">
+            <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-cta">
                 <Clock className="h-5 w-5" />
               </div>
               <div>
@@ -160,8 +166,8 @@ export function ContactPage() {
             </div>
           </div>
 
-          {/* Right Form */}
-          <div className="lg:col-span-7 rounded-2xl border border-white/15 bg-landing-panel/90 p-8 shadow-2xl backdrop-blur-xl">
+          {/* Right — Form */}
+          <div className="rounded-2xl border border-white/15 bg-landing-panel/90 p-8 shadow-2xl backdrop-blur-xl lg:col-span-7">
             <h2 className="font-landing-display text-2xl font-bold text-white">
               Tell us about your network
             </h2>
@@ -170,7 +176,7 @@ export function ContactPage() {
             </p>
 
             {submitted && (
-              <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300 text-xs flex items-center gap-2">
+              <div className="mt-6 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300">
                 <CheckCircle2 className="h-5 w-5 shrink-0" />
                 <span>Thank you! Your message has been routed to our Dhaka operations team.</span>
               </div>
@@ -178,7 +184,7 @@ export function ContactPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold text-white/80">
                   Full Name *
                 </label>
                 <input
@@ -193,13 +199,13 @@ export function ContactPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold text-white/80">
                     Phone Number (BD) *
                   </label>
                   <input
                     {...register('phone')}
                     placeholder="01XXXXXXXXX"
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none font-mono"
+                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 font-mono text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
                   />
                   {errors.phone && (
                     <p className="mt-1 text-xs text-red-400">{errors.phone.message}</p>
@@ -207,7 +213,7 @@ export function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                  <label className="mb-1.5 block text-xs font-semibold text-white/80">
                     Email Address *
                   </label>
                   <input
@@ -223,7 +229,7 @@ export function ContactPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold text-white/80">
                   Inquiry Type *
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -241,13 +247,13 @@ export function ContactPage() {
                         />
                         <span className="truncate">{type}</span>
                       </label>
-                    )
+                    ),
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold text-white/80">
                   Your Message *
                 </label>
                 <textarea
@@ -264,7 +270,7 @@ export function ContactPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-landing-cta hover:bg-landing-cta-hover text-white h-11 text-sm font-semibold"
+                className="h-11 w-full bg-landing-cta text-sm font-semibold text-white hover:bg-landing-cta-hover"
               >
                 {submitting ? 'Sending Message…' : 'Send Message'}
                 <Send className="ml-2 h-4 w-4" />
@@ -273,6 +279,6 @@ export function ContactPage() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,5 +1,8 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { PageContent } from '@/components/motion/PageHero';
 
 interface BreadcrumbItem {
   label: string;
@@ -24,7 +27,7 @@ export function EmployeePageShell({
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <PageHeader title={title} subtitle={subtitle} breadcrumbs={breadcrumbs} actions={actions} />
-      <div>{children}</div>
+      <PageContent>{children}</PageContent>
     </div>
   );
 }

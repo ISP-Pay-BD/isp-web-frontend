@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { motion } from 'framer-motion';
 import { useAccountingReports } from '../hooks/use-accounting-reports';
@@ -11,7 +12,7 @@ import { staggerContainer, fadeUp } from '@/lib/animations';
 export function AccountingReportsPage() {
   const { reports, isLoading, isError, refetch } = useAccountingReports();
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={6} />;
 
   if (isError) {
     return (
@@ -32,10 +33,11 @@ export function AccountingReportsPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp}>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">Accounting Reports</h1>
         <p className="text-muted-foreground text-sm">Profit &amp; loss, cash flow, and receivables aging for ISP operations.</p>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* KPI Cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -78,6 +80,8 @@ export function AccountingReportsPage() {
           </Card>
         )}
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

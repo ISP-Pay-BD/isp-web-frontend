@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -213,7 +214,7 @@ export function AreasPage() {
     );
   };
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) {
     return (
       <EmptyState title="Failed to load areas" description="Could not fetch service area tree." actionLabel="Retry" onAction={() => refetch()} />
@@ -235,7 +236,7 @@ export function AreasPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -254,7 +255,8 @@ export function AreasPage() {
             </Button>
           </motion.div>
         </Can>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Stats Summary */}
       <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -562,6 +564,7 @@ export function AreasPage() {
       </motion.div>
 
       {/* Create/Edit Dialog */}
+      </PageContent>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

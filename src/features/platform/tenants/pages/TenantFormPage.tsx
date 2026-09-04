@@ -91,7 +91,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
     onError: (err: Error) => toast.error(err.message || 'Failed to save tenant'),
   });
 
-  if (isEdit && isLoading) return <PageSkeleton rows={6} />;
+  if (isEdit && isLoading) return <PageSkeleton variant="form" rows={6} />;
   if (isEdit && (error || !data)) {
     return (
       <EmptyState
@@ -124,7 +124,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
 
       <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-border/60">
+          <Card className="border-border/60" interactive={false}>
             <CardHeader>
               <CardTitle className="text-base">Portal & Branding</CardTitle>
             </CardHeader>
@@ -197,7 +197,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60">
+          <Card className="border-border/60" interactive={false}>
             <CardHeader>
               <CardTitle className="text-base">Owner (Second Admin)</CardTitle>
             </CardHeader>

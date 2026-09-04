@@ -13,7 +13,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       icons={{
         success: (
-          <CircleCheckIcon className="size-4" />
+          <CircleCheckIcon className="size-4 animate-in zoom-in-50 duration-300" />
         ),
         info: (
           <InfoIcon className="size-4" />
@@ -38,7 +38,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast: "cn-toast data-[type=success]:animate-in data-[type=success]:fade-in-0 data-[type=success]:zoom-in-95",
         },
       }}
       {...props}

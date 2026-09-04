@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAuthHydrated } from '@/hooks/use-auth-hydrated';
 import { CommandPalette } from '@/features/shared/command-palette';
 import { toast } from 'sonner';
 
@@ -45,6 +46,7 @@ interface PortalHeaderProps {
 export function PortalHeader({ portal }: PortalHeaderProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const hydrated = useAuthHydrated();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -139,7 +141,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent relative border border-transparent hover:border-border transition-colors"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent relative border border-transparent hover:border-border transition-transform hover:scale-105 active:scale-95"
             onClick={() => toast.info('No unread network notifications')}
             aria-label="Notifications"
           >
@@ -151,7 +153,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border transition-colors relative"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border transition-transform hover:scale-105 active:scale-95 relative"
             onClick={() => setThemeCustomizerOpen(true)}
             aria-label="Theme Studio"
             title="Theme Studio & Appearance"
@@ -163,7 +165,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border transition-colors"
+            className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent hover:border-border transition-transform hover:scale-105 active:scale-95"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Toggle theme"
           >
@@ -172,7 +174,15 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           </Button>
 
           {/* User Account Dropdown Menu */}
-          {user ? (
+          {!hydrated ? (
+            <div className="ml-1 flex h-8 w-28 items-center gap-2 rounded-full border border-border/80 px-1.5">
+              <div className="h-7 w-7 animate-pulse rounded-full bg-muted" />
+              <div className="hidden flex-1 space-y-1 sm:block">
+                <div className="h-2.5 w-16 animate-pulse rounded bg-muted" />
+                <div className="h-2 w-12 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="flex items-center gap-2.5 rounded-full py-1 pl-1.5 pr-3 hover:bg-accent/70 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 group border border-border/80 hover:border-primary/40 shadow-xs bg-card/80 backdrop-blur-xs ml-1"

@@ -1,18 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthInvoiceItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { DataTable } from '@/features/shared/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { FileText, Printer, Download, Receipt, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { FileText, Printer } from 'lucide-react';
+
+const invoiceSearchFilter = (
+  row: LegacyRow<BandwidthInvoiceItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const inv = row.original;
+  return (
+    inv.invoiceNumber.toLowerCase().includes(q) ||
+    inv.clientName.toLowerCase().includes(q) ||
+    inv.contactPerson.toLowerCase().includes(q) ||
+    inv.billingMonth.toLowerCase().includes(q)
+  );
+};
 
 export function BandwidthInvoicesPage() {
   const { data, isLoading } = useBandwidthData();
@@ -24,7 +40,99 @@ export function BandwidthInvoicesPage() {
     window.print();
   };
 
-  if (isLoading && invoices.length === 0) return <PageSkeleton rows={4} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthInvoiceItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'invoiceNumber',
+        header: 'Invoice #',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5 text-primary" />
+            {row.original.invoiceNumber}
+          </span>
+        ),
+      },
+      {
+        id: 'client',
+        accessorKey: 'clientName',
+        header: 'Client Enterprise',
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-xs text-foreground">{row.original.clientName}</div>
+            <div className="text-[11px] text-muted-foreground">{row.original.contactPerson}</div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'billingMonth',
+        header: 'Month',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.billingMonth}</span>
+        ),
+      },
+      {
+        accessorKey: 'capacityMbps',
+        header: 'Capacity',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-primary">
+            {row.original.capacityMbps} Mbps
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'subTotalBdt',
+        header: 'Subtotal',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{formatBdtWithSymbol(row.original.subTotalBdt)}</span>
+        ),
+      },
+      {
+        accessorKey: 'vatAmountBdt',
+        header: '5% VAT',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {formatBdtWithSymbol(row.original.vatAmountBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'totalBdt',
+        header: 'Total Bill',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-bold text-foreground">
+            {formatBdtWithSymbol(row.original.totalBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setSelectedInvoice(row.original)}
+            >
+              View Invoice
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && invoices.length === 0) return <PageSkeleton variant="table" rows={4} />;
 
   return (
     <div className="space-y-6">
@@ -38,59 +146,17 @@ export function BandwidthInvoicesPage() {
         ]}
       />
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Invoice #</TableHead>
-              <TableHead>Client Enterprise</TableHead>
-              <TableHead>Month</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Subtotal</TableHead>
-              <TableHead>5% VAT</TableHead>
-              <TableHead>Total Bill</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoices.map((inv, idx) => (
-              <TableRow key={inv.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
-                <TableCell className="font-mono text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-primary" />
-                  {inv.invoiceNumber}
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium text-xs text-foreground">{inv.clientName}</div>
-                  <div className="text-[11px] text-muted-foreground">{inv.contactPerson}</div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{inv.billingMonth}</TableCell>
-                <TableCell className="font-mono text-xs font-bold text-primary">{inv.capacityMbps} Mbps</TableCell>
-                <TableCell className="font-mono text-xs">{formatBdtWithSymbol(inv.subTotalBdt)}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{formatBdtWithSymbol(inv.vatAmountBdt)}</TableCell>
-                <TableCell className="font-mono text-sm font-bold text-foreground">
-                  {formatBdtWithSymbol(inv.totalBdt)}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={inv.status} />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setSelectedInvoice(inv)}
-                  >
-                    View Invoice
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={invoices}
+        getRowId={(row) => row.id}
+        searchKey="invoiceNumber"
+        searchPlaceholder="Search invoice, client, month..."
+        searchFilterFn={invoiceSearchFilter}
+        facetFilters={[{ columnId: 'status', title: 'Status' }]}
+        emptyTitle="No invoices"
+        emptyDescription="Sales invoices will appear here once generated."
+      />
 
       {/* Invoice Modal Preview (Mirroring PHP reference invoice.php) */}
       <Dialog open={!!selectedInvoice} onOpenChange={(open) => !open && setSelectedInvoice(null)}>

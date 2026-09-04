@@ -6,8 +6,8 @@ import { AuthGuard } from '@/features/shared/permission';
 
 export default function EmployeePortalLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthGuard allowedRoles={['employee']}>
-      <AppShell portal="employee">{children}</AppShell>
-    </AuthGuard>
+    <AppShell portal="employee">
+      <AuthGuard allowedRoles={['employee']}>{children}</AuthGuard>
+    </AppShell>
   );
 }

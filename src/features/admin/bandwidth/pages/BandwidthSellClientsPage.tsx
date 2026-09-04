@@ -1,25 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthSellClientItem } from '@/data/admin/bandwidth.data';
 import { StatCard } from '@/components/shared/StatCard';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Users, ArrowUpFromLine, Mail, Phone, Trash2 } from 'lucide-react';
+import { Plus, Users, ArrowUpFromLine, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const clientSearchFilter = (
+  row: LegacyRow<BandwidthSellClientItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const c = row.original;
+  return (
+    c.clientName.toLowerCase().includes(q) ||
+    c.contactPerson.toLowerCase().includes(q) ||
+    c.email.toLowerCase().includes(q) ||
+    c.mobile.includes(q)
+  );
+};
 
 export function BandwidthSellClientsPage() {
   const { data, isLoading } = useBandwidthData();
   const [clients, setClients] = useState<BandwidthSellClientItem[]>([]);
-  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -34,11 +49,6 @@ export function BandwidthSellClientsPage() {
   }
 
   const list = clients.length > 0 ? clients : initial;
-  const filtered = list.filter((c) =>
-    c.clientName.toLowerCase().includes(search.toLowerCase()) ||
-    c.contactPerson.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +72,101 @@ export function BandwidthSellClientsPage() {
     setName('');
   };
 
-  if (isLoading && clients.length === 0) return <PageSkeleton rows={4} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthSellClientItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'clientName',
+        header: 'Customer / Enterprise',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-semibold text-xs text-foreground">{row.original.clientName}</span>
+        ),
+      },
+      {
+        accessorKey: 'contactPerson',
+        header: 'Contact Person',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.contactPerson}</span>
+        ),
+      },
+      {
+        accessorKey: 'email',
+        header: 'Email Address',
+        cell: ({ row }) => (
+          <span className="text-xs font-mono text-muted-foreground">{row.original.email}</span>
+        ),
+      },
+      {
+        accessorKey: 'mobile',
+        header: 'Mobile Phone',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-medium text-foreground">{row.original.mobile}</span>
+        ),
+      },
+      {
+        accessorKey: 'allocatedMbps',
+        header: 'Allocated',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-primary">
+            {row.original.allocatedMbps} Mbps
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'monthlyRateBdt',
+        header: 'Monthly Rate',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-semibold">
+            {formatBdtWithSymbol(row.original.monthlyRateBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'balanceDueBdt',
+        header: 'Balance Due',
+        cell: ({ row }) =>
+          row.original.balanceDueBdt > 0 ? (
+            <span className="font-mono text-sm text-red-500 font-bold">
+              {formatBdtWithSymbol(row.original.balanceDueBdt)}
+            </span>
+          ) : (
+            <span className="font-mono text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+              ৳0 (Clear)
+            </span>
+          ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <span className="text-xs capitalize">{row.original.status}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setClients((prev) => prev.filter((item) => item.id !== row.original.id));
+                toast.success('Client removed.');
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && clients.length === 0) return <PageSkeleton variant="table" rows={4} />;
 
   return (
     <div className="space-y-6">
@@ -101,55 +205,17 @@ export function BandwidthSellClientsPage() {
         />
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Customer / Enterprise</TableHead>
-              <TableHead>Contact Person</TableHead>
-              <TableHead>Email Address</TableHead>
-              <TableHead>Mobile Phone</TableHead>
-              <TableHead>Allocated</TableHead>
-              <TableHead>Monthly Rate</TableHead>
-              <TableHead>Balance Due</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((c, idx) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
-                <TableCell className="font-semibold text-xs text-foreground">{c.clientName}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{c.contactPerson}</TableCell>
-                <TableCell className="text-xs font-mono text-muted-foreground">{c.email}</TableCell>
-                <TableCell className="font-mono text-xs font-medium text-foreground">{c.mobile}</TableCell>
-                <TableCell className="font-mono text-xs font-bold text-primary">{c.allocatedMbps} Mbps</TableCell>
-                <TableCell className="font-mono text-sm font-semibold">{formatBdtWithSymbol(c.monthlyRateBdt)}</TableCell>
-                <TableCell className="font-mono text-sm">
-                  {c.balanceDueBdt > 0 ? (
-                    <span className="text-red-500 font-bold">{formatBdtWithSymbol(c.balanceDueBdt)}</span>
-                  ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">৳0 (Clear)</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setClients((prev) => prev.filter((item) => item.id !== c.id));
-                      toast.success('Client removed.');
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="clientName"
+        searchPlaceholder="Search client, contact, or email..."
+        searchFilterFn={clientSearchFilter}
+        facetFilters={[{ columnId: 'status', title: 'Status' }]}
+        emptyTitle="No sell clients"
+        emptyDescription="Register a wholesale or corporate client to get started."
+      />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">

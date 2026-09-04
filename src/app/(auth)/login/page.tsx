@@ -21,7 +21,7 @@ function LoginRouteInner() {
   }, [isAuthenticated, user, searchParams, router]);
 
   if (isAuthenticated && user) {
-    return <PageSkeleton rows={4} />;
+    return <PageSkeleton variant="form" rows={4} />;
   }
 
   return <LoginPage />;
@@ -29,7 +29,7 @@ function LoginRouteInner() {
 
 export default function LoginRoutePage() {
   return (
-    <Suspense fallback={<PageSkeleton rows={4} />}>
+    <Suspense fallback={<PageSkeleton variant="form" rows={4} />}>
       <LoginRouteInner />
     </Suspense>
   );

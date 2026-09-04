@@ -20,7 +20,7 @@ export function PluginsPage() {
     queryFn: () => mockFetch('platform.plugins'),
   });
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (error || !data) {
     return (
       <EmptyState

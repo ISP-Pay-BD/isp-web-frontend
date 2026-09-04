@@ -42,7 +42,7 @@ export function PlatformDashboardPage() {
   });
 
   if (isLoading) {
-    return <PageSkeleton rows={5} />;
+    return <PageSkeleton variant="dashboard" rows={5} />;
   }
 
   if (error || !data) {

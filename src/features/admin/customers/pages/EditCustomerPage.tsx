@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { use, useEffect } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -61,7 +62,7 @@ export function EditCustomerPage({ id }: { id: string }) {
     }
   }, [customer, reset]);
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="form" rows={6} />;
   if (isError || !customer) {
     return (
       <EmptyState
@@ -80,7 +81,7 @@ export function EditCustomerPage({ id }: { id: string }) {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3">
+      <PageHero className="flex items-center gap-3">
         <Link href={`/admin/customers/${id}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
@@ -92,7 +93,8 @@ export function EditCustomerPage({ id }: { id: string }) {
             {customer.username} • ID: {customer.id}
           </p>
         </div>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Card>
@@ -209,6 +211,8 @@ export function EditCustomerPage({ id }: { id: string }) {
           </Button>
         </div>
       </form>
+    
+      </PageContent>
     </div>
   );
 }

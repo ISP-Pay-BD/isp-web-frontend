@@ -1,7 +1,10 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageHero } from '@/components/motion/PageHero';
 
 export interface BreadcrumbItem {
   label: string;
@@ -24,7 +27,12 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}>
+    <PageHero
+      className={cn(
+        'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between',
+        className,
+      )}
+    >
       <div className="space-y-1">
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <nav className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
@@ -46,6 +54,6 @@ export function PageHeader({
         {subtitle ? <p className="text-muted-foreground text-sm">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2.5">{actions}</div> : null}
-    </div>
+    </PageHero>
   );
 }

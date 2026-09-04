@@ -8,13 +8,13 @@ import { useTranslations } from '../context/LocaleContext';
 
 const footerLinks = {
   product: [
-    { labelKey: 'marketing.nav.features', href: '/#features' },
-    { labelKey: 'marketing.nav.pricing', href: '/pricing' },
-    { labelKey: 'marketing.nav.plugins', href: '/plugins' },
+    { labelKey: 'marketing.nav.features', href: '/#auto-reconcile' },
+    { labelKey: 'marketing.nav.pricing', href: '/#pricing' },
+    { labelKey: 'marketing.nav.faq', href: '/#faq' },
     { labelKey: 'marketing.nav.startTrial', href: '/register' },
   ],
   company: [
-    { labelKey: 'marketing.nav.contact', href: '/contact' },
+    { labelKey: 'marketing.nav.contact', href: '/#contact' },
     { labelKey: 'marketing.nav.login', href: '/login' },
     { labelKey: 'marketing.footer.privacy', href: '/privacy' },
     { labelKey: 'marketing.footer.terms', href: '/terms' },

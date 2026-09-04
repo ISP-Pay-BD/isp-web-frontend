@@ -4,3 +4,4 @@
  */
 
 export { PricingPage } from './pages/PricingPage';
+export { default as ComparisonBlock } from './components/ComparisonBlock';

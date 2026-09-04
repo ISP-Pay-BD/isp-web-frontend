@@ -1,27 +1,159 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import {
   Smartphone,
   Laptop,
   Tv,
   ArrowLeft,
-  Search,
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState, CustomerEmptyState } from '@/features/customer/shared';
+import {
+  CustomerPageShell,
+  CustomerLoadingSkeleton,
+  CustomerErrorState,
+} from '@/features/customer/shared';
+import { DataTable } from '@/features/shared/data-table';
 import { useCustomerRouter } from '../hooks/use-customer-router';
 import { formatDate } from '@/lib/format';
 import { toast } from 'sonner';
+import type { RouterDevice } from '@/data/shared/types';
+
+type DeviceRow = RouterDevice & { accessStatus: 'Online' | 'Blocked' };
+
+const deviceSearchFilter = (
+  row: LegacyRow<DeviceRow>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const d = row.original;
+  return (
+    d.name.toLowerCase().includes(q) ||
+    d.ip.toLowerCase().includes(q) ||
+    d.mac.toLowerCase().includes(q)
+  );
+};
+
+function getDeviceIcon(name: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes('laptop') || lower.includes('pc') || lower.includes('dell')) {
+    return <Laptop className="h-4 w-4" />;
+  }
+  if (lower.includes('tv') || lower.includes('smart')) {
+    return <Tv className="h-4 w-4" />;
+  }
+  return <Smartphone className="h-4 w-4" />;
+}
 
 export function CustomerDevicesPage() {
   const { data, isLoading, isError, refetch } = useCustomerRouter();
-  const [search, setSearch] = useState('');
   const [blockedDevices, setBlockedDevices] = useState<string[]>([]);
+
+  const toggleBlock = (id: string, name: string) => {
+    if (blockedDevices.includes(id)) {
+      setBlockedDevices((prev) => prev.filter((d) => d !== id));
+      toast.success(`${name} unblocked. Access restored.`);
+    } else {
+      setBlockedDevices((prev) => [...prev, id]);
+      toast.error(`${name} blocked from accessing broadband.`);
+    }
+  };
+
+  const deviceRows: DeviceRow[] = useMemo(
+    () =>
+      (data?.connectedDevices ?? []).map((dev) => ({
+        ...dev,
+        accessStatus: blockedDevices.includes(dev.id) ? 'Blocked' : 'Online',
+      })),
+    [data?.connectedDevices, blockedDevices],
+  );
+
+  const columns = useMemo<LegacyColumnDef<DeviceRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Device Name',
+        size: 220,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+              {getDeviceIcon(row.original.name)}
+            </div>
+            <span className="font-bold text-foreground">{row.original.name}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'ip',
+        header: 'IP Address',
+        size: 140,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.ip}</span>
+        ),
+      },
+      {
+        accessorKey: 'mac',
+        header: 'Physical MAC',
+        size: 160,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{row.original.mac}</span>
+        ),
+      },
+      {
+        accessorKey: 'connectedAt',
+        header: 'Connected Since',
+        size: 140,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {formatDate(row.original.connectedAt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'accessStatus',
+        header: 'Status',
+        size: 100,
+        cell: ({ row }) => {
+          const isBlocked = row.original.accessStatus === 'Blocked';
+          return (
+            <Badge variant={isBlocked ? 'destructive' : 'default'} className="text-[11px]">
+              {row.original.accessStatus}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Access Control</span>,
+        size: 160,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const isBlocked = row.original.accessStatus === 'Blocked';
+          return (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant={isBlocked ? 'outline' : 'destructive'}
+                onClick={() => toggleBlock(row.original.id, row.original.name)}
+                className="h-8 text-xs font-semibold"
+              >
+                {isBlocked ? 'Restore Access' : 'Block Device'}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [blockedDevices],
+  );
 
   if (isLoading) {
     return (
@@ -38,36 +170,6 @@ export function CustomerDevicesPage() {
       </CustomerPageShell>
     );
   }
-
-  const { connectedDevices } = data;
-
-  const filtered = connectedDevices.filter(
-    (d) =>
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.ip.toLowerCase().includes(search.toLowerCase()) ||
-      d.mac.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  const toggleBlock = (id: string, name: string) => {
-    if (blockedDevices.includes(id)) {
-      setBlockedDevices((prev) => prev.filter((d) => d !== id));
-      toast.success(`${name} unblocked. Access restored.`);
-    } else {
-      setBlockedDevices((prev) => [...prev, id]);
-      toast.error(`${name} blocked from accessing broadband.`);
-    }
-  };
-
-  const getDeviceIcon = (name: string) => {
-    const lower = name.toLowerCase();
-    if (lower.includes('laptop') || lower.includes('pc') || lower.includes('dell')) {
-      return <Laptop className="h-4 w-4" />;
-    }
-    if (lower.includes('tv') || lower.includes('smart')) {
-      return <Tv className="h-4 w-4" />;
-    }
-    return <Smartphone className="h-4 w-4" />;
-  };
 
   return (
     <CustomerPageShell
@@ -93,86 +195,17 @@ export function CustomerDevicesPage() {
         </div>
       }
     >
-      <div className="space-y-6">
-        {/* Search */}
-        <div className="flex items-center gap-3 p-4 rounded-xl border bg-card max-w-md">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search device name, IP address, MAC..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border-0 p-0 focus-visible:ring-0 shadow-none text-xs"
-          />
-        </div>
-
-        {/* Devices Table / Cards */}
-        {filtered.length === 0 ? (
-          <CustomerEmptyState
-            icon={<Smartphone className="h-10 w-10 text-muted-foreground/60" />}
-            title="No devices found"
-            description="No active clients matching your search criteria."
-          />
-        ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b font-semibold">
-                  <tr>
-                    <th className="px-4 py-3">Device Name</th>
-                    <th className="px-4 py-3">IP Address</th>
-                    <th className="px-4 py-3">Physical MAC</th>
-                    <th className="px-4 py-3">Connected Since</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Access Control</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filtered.map((dev) => {
-                    const isBlocked = blockedDevices.includes(dev.id);
-                    return (
-                      <tr key={dev.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                              {getDeviceIcon(dev.name)}
-                            </div>
-                            <span className="font-bold text-foreground">{dev.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 font-mono text-xs">{dev.ip}</td>
-                        <td className="px-4 py-3.5 font-mono text-xs text-muted-foreground">
-                          {dev.mac}
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-muted-foreground">
-                          {formatDate(dev.connectedAt)}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <Badge
-                            variant={isBlocked ? 'destructive' : 'default'}
-                            className="text-[11px]"
-                          >
-                            {isBlocked ? 'Blocked' : 'Online'}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3.5 text-right">
-                          <Button
-                            size="sm"
-                            variant={isBlocked ? 'outline' : 'destructive'}
-                            onClick={() => toggleBlock(dev.id, dev.name)}
-                            className="h-8 text-xs font-semibold"
-                          >
-                            {isBlocked ? 'Restore Access' : 'Block Device'}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        data={deviceRows}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search device name, IP address, MAC..."
+        searchFilterFn={deviceSearchFilter}
+        facetFilters={[{ columnId: 'accessStatus', title: 'Status' }]}
+        emptyTitle="No devices found"
+        emptyDescription="No active clients matching your search criteria."
+      />
     </CustomerPageShell>
   );
 }

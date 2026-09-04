@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +22,11 @@ export function OtcReportPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp}>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">OTC Report</h1>
         <p className="text-muted-foreground text-sm">One-time charges, installation fees, and daily cash position summary.</p>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* KPI Cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -112,6 +114,8 @@ export function OtcReportPage() {
           </Table>
         </Card>
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

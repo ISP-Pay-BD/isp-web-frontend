@@ -145,6 +145,8 @@
   }
   html {
     font-family: var(--font-portal-sans);
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
   }
   .font-landing-display {
     font-family: var(--font-landing-display);
@@ -177,6 +179,31 @@
   }
 }
 
+/* Seamless vertical marquee — two identical halves, translate exactly -50% */
+@keyframes testimonials-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+.animate-testimonials-marquee {
+  animation-name: testimonials-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-testimonials-marquee {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -188,8 +215,37 @@
   }
 }
 
+@keyframes field-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
 .animate-fade-in-up {
   animation: fade-in-up 0.35s ease-out both;
+}
+
+.animate-field-shake {
+  animation: field-shake 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-field-shake {
+    animation: none;
+  }
 }
 
 /* ISP Sidebar Smooth Motion & Hover Effects */

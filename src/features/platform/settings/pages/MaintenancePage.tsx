@@ -27,7 +27,7 @@ export function MaintenancePage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isLoading) return <PageSkeleton rows={3} />;
+  if (isLoading) return <PageSkeleton variant="form" rows={3} />;
   if (error || !data) {
     return (
       <EmptyState

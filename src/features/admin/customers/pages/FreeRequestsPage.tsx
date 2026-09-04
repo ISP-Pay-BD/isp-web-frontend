@@ -77,7 +77,7 @@ export function FreeRequestsPage() {
     setRejectId(null);
   };
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (isError) {
     return (
       <EmptyState

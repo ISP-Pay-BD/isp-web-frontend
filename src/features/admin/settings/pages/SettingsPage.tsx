@@ -20,7 +20,7 @@ export function SettingsPage() {
   const { data, isLoading, isError, refetch } = useSoftwareSettings();
   const [general, setGeneral] = useState(data?.general);
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="form" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load settings" actionLabel="Retry" onAction={() => refetch()} />;
   }

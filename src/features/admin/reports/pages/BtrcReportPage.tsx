@@ -1,6 +1,6 @@
 'use client';
 
-'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { useBtrcReport } from '../hooks/use-btrc-report';
@@ -24,7 +24,7 @@ export function BtrcReportPage() {
     );
   }, [subscribers, search]);
 
-  if (isLoading) return <PageSkeleton rows={10} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={10} />;
 
   if (isError || !summary) {
     return (
@@ -39,7 +39,7 @@ export function BtrcReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <PageHero className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">BTRC Subscriber Report</h1>
           <p className="text-muted-foreground text-sm">Export-ready subscriber demographics for Bangladesh Telecommunication Regulatory Commission filing.</p>
@@ -47,7 +47,8 @@ export function BtrcReportPage() {
         <Button variant="outline" onClick={() => toast.success('CSV export will be available in Phase 8')}>
           Export CSV
         </Button>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Subscribers" value={summary.totalSubscribers} description="Active + inactive" icon={Users} />
@@ -99,6 +100,8 @@ export function BtrcReportPage() {
           </Table>
         </div>
       )}
+    
+      </PageContent>
     </div>
   );
 }

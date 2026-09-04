@@ -26,7 +26,7 @@ export function RedisLogsPage() {
     queryFn: () => mockFetch('platform.redis-logs', level === 'all' ? undefined : level),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState

@@ -46,7 +46,7 @@ export function SupportTicketsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState
@@ -102,7 +102,7 @@ export function SupportTicketsPage() {
                 <p className="text-sm">Select a ticket to view conversation</p>
               </div>
             ) : detailLoading ? (
-              <PageSkeleton rows={3} />
+              <PageSkeleton variant="table" rows={3} />
             ) : ticketDetail ? (
               <div className="space-y-4">
                 <div>

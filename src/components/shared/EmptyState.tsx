@@ -1,6 +1,10 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useMotionSafe } from '@/lib/animations';
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -19,8 +23,13 @@ export function EmptyState({
   onAction,
   className,
 }: EmptyStateProps) {
+  const { reduced } = useMotionSafe();
+
   return (
-    <div
+    <motion.div
+      initial={reduced ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
         'relative flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/80 bg-card/50 p-12 text-center backdrop-blur-xs',
         className,
@@ -33,13 +42,19 @@ export function EmptyState({
       ) : null}
       <div className="space-y-1.5">
         <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
-        {description ? <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">{description}</p> : null}
+        {description ? (
+          <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">{description}</p>
+        ) : null}
       </div>
       {actionLabel && onAction ? (
-        <Button onClick={onAction} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-semibold mt-1">
+        <Button
+          onClick={onAction}
+          size="sm"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-semibold mt-1 transition-transform active:scale-[0.98]"
+        >
           {actionLabel}
         </Button>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

@@ -14,7 +14,7 @@ describe('landing sections A (WT01)', () => {
     expect(landingSectionsAData.reconciliation).toHaveLength(3);
     expect(landingSectionsAData.pricing.plans.length).toBe(3);
     expect(landingSectionsAData.comparison.rows.length).toBeGreaterThanOrEqual(6);
-    expect(landingSectionsAData.testimonials.length).toBe(3);
+    expect(landingSectionsAData.testimonials.length).toBe(24);
     expect(landingSectionsAData.faq.length).toBeGreaterThanOrEqual(6);
     expect(landingSectionsAData.integrations.length).toBeGreaterThanOrEqual(8);
   });

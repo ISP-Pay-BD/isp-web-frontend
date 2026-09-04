@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { motion } from 'framer-motion';
 import {
@@ -90,7 +91,7 @@ function SectionBlock({
 export function BalanceSheetPage() {
   const { balanceSheet, isLoading, isError, refetch } = useBalanceSheet();
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={6} />;
 
   if (isError || !balanceSheet) {
     return (
@@ -111,7 +112,7 @@ export function BalanceSheetPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -123,7 +124,8 @@ export function BalanceSheetPage() {
             Assets, liabilities, and equity as of {balanceSheet.asOf}.
           </p>
         </div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Assets & Liabilities */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -177,6 +179,8 @@ export function BalanceSheetPage() {
           </CardContent>
         </Card>
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

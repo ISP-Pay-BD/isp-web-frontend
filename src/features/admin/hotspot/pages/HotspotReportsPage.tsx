@@ -1,34 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
+import type { HotspotReportItem } from '@/data/admin/network-ops.data';
 import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { BarChart3 } from 'lucide-react';
 
+const reportSearchFilter = (
+  row: LegacyRow<HotspotReportItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const r = row.original;
+  return (
+    r.username.toLowerCase().includes(q) ||
+    r.soldBy.toLowerCase().includes(q) ||
+    r.routerName.toLowerCase().includes(q)
+  );
+};
+
 export function HotspotReportsPage() {
   const { data, isLoading } = useHotspotData();
-  const [search, setSearch] = useState('');
-
-  if (isLoading) return <PageSkeleton rows={5} />;
 
   const reports = data?.reports ?? [];
-  const filtered = reports.filter(
-    (r) =>
-      r.username.toLowerCase().includes(search.toLowerCase()) ||
-      r.soldBy.toLowerCase().includes(search.toLowerCase()) ||
-      r.routerName.toLowerCase().includes(search.toLowerCase()),
-  );
-
   const totalRevenue = reports.reduce((s, r) => s + r.priceBdt, 0);
   const cashSales = reports.filter((r) => r.paymentMethod === 'Cash').length;
   const mobileSales = reports.filter((r) => r.paymentMethod !== 'Cash').length;
+
+  const columns = useMemo<LegacyColumnDef<HotspotReportItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: 'Date',
+        enableHiding: false,
+      },
+      {
+        accessorKey: 'username',
+        header: 'Username',
+        cell: ({ row }) => <span className="font-medium">{row.original.username}</span>,
+      },
+      {
+        accessorKey: 'profileName',
+        header: 'Profile',
+      },
+      {
+        accessorKey: 'priceBdt',
+        header: 'Amount',
+        cell: ({ row }) => formatBdtWithSymbol(row.original.priceBdt),
+      },
+      {
+        accessorKey: 'soldBy',
+        header: 'Sold by',
+      },
+      {
+        accessorKey: 'routerName',
+        header: 'Router',
+      },
+      {
+        accessorKey: 'paymentMethod',
+        header: 'Payment',
+        cell: ({ row }) => <Badge variant="outline">{row.original.paymentMethod}</Badge>,
+      },
+    ],
+    [],
+  );
+
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
 
   return (
     <div className="space-y-6">
@@ -48,43 +94,17 @@ export function HotspotReportsPage() {
         <StatCard title="Mobile wallet" value={String(mobileSales)} />
       </div>
 
-      <Input
-        placeholder="Filter by user, cashier, or router…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-md"
+      <DataTable
+        columns={columns}
+        data={reports}
+        getRowId={(row) => row.id}
+        searchKey="username"
+        searchPlaceholder="Filter by user, cashier, or router…"
+        searchFilterFn={reportSearchFilter}
+        facetFilters={[{ columnId: 'paymentMethod', title: 'Payment' }]}
+        emptyTitle="No sales records"
+        emptyDescription="Voucher sales will appear here."
       />
-
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Profile</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Sold by</TableHead>
-              <TableHead>Router</TableHead>
-              <TableHead>Payment</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell>{row.date}</TableCell>
-                <TableCell className="font-medium">{row.username}</TableCell>
-                <TableCell>{row.profileName}</TableCell>
-                <TableCell>{formatBdtWithSymbol(row.priceBdt)}</TableCell>
-                <TableCell>{row.soldBy}</TableCell>
-                <TableCell>{row.routerName}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{row.paymentMethod}</Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
 
       <Link href="/admin/hotspot" className="text-primary text-sm hover:underline">
         ← Back to hotspot hub

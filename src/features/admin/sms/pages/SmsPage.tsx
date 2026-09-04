@@ -119,7 +119,7 @@ export function SmsPage() {
     toast.info('Individual message previews reset to template defaults');
   };
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="form" />;
   if (isError) {
     return (
       <EmptyState

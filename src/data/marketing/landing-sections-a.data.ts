@@ -196,11 +196,12 @@ export const landingSectionsAData = {
       { capability: 'Auto disconnect/reconnect on billing', us: true, legacy: 'Semi-manual SSH scripting' },
     ],
   },
-  testimonials: landingTestimonialsExtended.slice(0, 3).map((t) => ({
+  testimonials: landingTestimonialsExtended.map((t) => ({
     name: t.name,
     role: t.role,
     quote: t.quote,
     rating: t.rating ?? 5,
+    image: t.image,
   })),
   faq: landingFaqExtended,
   integrations: [

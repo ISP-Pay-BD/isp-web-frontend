@@ -4,13 +4,17 @@ import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthGuard, ExpiredBanner } from '@/features/shared/permission';
 
+/**
+ * Shell mounts once; AuthGuard only gates the main content so the sidebar
+ * stays visible during auth checks and route changes.
+ */
 export default function AdminPortalLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthGuard allowedRoles={['admin', 'resellerAdmin']}>
-      <AppShell portal="admin">
+    <AppShell portal="admin">
+      <AuthGuard allowedRoles={['admin', 'resellerAdmin']}>
         <ExpiredBanner />
         {children}
-      </AppShell>
-    </AuthGuard>
+      </AuthGuard>
+    </AppShell>
   );
 }

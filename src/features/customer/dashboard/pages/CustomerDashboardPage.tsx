@@ -143,7 +143,7 @@ export function CustomerDashboardPage() {
     >
       <motion.div
         variants={containerVariants}
-        initial="hidden"
+        initial={false}
         animate="visible"
         className="space-y-6"
       >

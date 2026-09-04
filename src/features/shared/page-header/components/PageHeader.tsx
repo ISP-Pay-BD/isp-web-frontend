@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { PageHero } from '@/components/motion/PageHero';
 
 export interface BreadcrumbItem {
   label: string;
@@ -18,7 +19,7 @@ export interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, breadcrumb, actions }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <PageHero className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         {breadcrumb && breadcrumb.length > 0 && (
           <nav className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -45,6 +46,6 @@ export function PageHeader({ title, subtitle, breadcrumb, actions }: PageHeaderP
         {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
+    </PageHero>
   );
 }

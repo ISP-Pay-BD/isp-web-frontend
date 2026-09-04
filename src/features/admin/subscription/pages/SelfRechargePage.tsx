@@ -128,7 +128,7 @@ export function SelfRechargePage() {
     <motion.div
       className="space-y-6 max-w-7xl mx-auto pb-12"
       variants={stagger}
-      initial="hidden"
+      initial={false}
       animate="show"
     >
       {/* Top Header */}

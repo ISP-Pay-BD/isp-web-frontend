@@ -1,5 +1,5 @@
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 
 export default function AdminLoading() {
-  return <PageSkeleton rows={6} />;
+  return <PageSkeleton variant="table" rows={6} />;
 }

@@ -34,7 +34,7 @@ export function ContactsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState

@@ -1,13 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
-import { PlatformPageHeader } from '@/features/platform/shared';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
-import { StatCard } from '@/components/shared/StatCard';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { formatBdt } from '@/lib/format';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -22,9 +16,45 @@ import {
   Cell,
   Legend,
 } from 'recharts';
+import { mockFetch } from '@/lib/mock-api/client';
+import { PlatformPageHeader } from '@/features/platform/shared';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { StatCard } from '@/components/shared/StatCard';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
+import { DataTable } from '@/features/shared/data-table';
+import { formatBdt } from '@/lib/format';
 
 const COLORS = ['#f75803', '#2563eb', '#16a34a', '#9333ea'];
+
+type TierRow = { plan: string; tenants: number; mrrBdt: number };
+
+const tierColumns: LegacyColumnDef<TierRow, unknown>[] = [
+  {
+    accessorKey: 'plan',
+    header: 'Plan',
+    size: 160,
+    enableHiding: false,
+    cell: ({ row }) => <span className="font-medium">{row.original.plan}</span>,
+  },
+  {
+    accessorKey: 'tenants',
+    header: 'Tenants',
+    size: 120,
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.tenants}</span>
+    ),
+  },
+  {
+    accessorKey: 'mrrBdt',
+    header: 'MRR (BDT)',
+    size: 160,
+    cell: ({ row }) => (
+      <span className="font-semibold tabular-nums">৳{formatBdt(row.original.mrrBdt)}</span>
+    ),
+  },
+];
 
 export function RevenuePage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -32,7 +62,7 @@ export function RevenuePage() {
     queryFn: () => mockFetch('platform.revenue'),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState
@@ -102,9 +132,7 @@ export function RevenuePage() {
                   />
                   <Tooltip
                     content={
-                      <ChartTooltip
-                        formatter={(val: number) => `৳${formatBdt(val)}`}
-                      />
+                      <ChartTooltip formatter={(val: number) => `৳${formatBdt(val)}`} />
                     }
                   />
                   <Bar
@@ -156,9 +184,7 @@ export function RevenuePage() {
                   </Pie>
                   <Tooltip
                     content={
-                      <ChartTooltip
-                        formatter={(val: number) => `৳${formatBdt(val)}`}
-                      />
+                      <ChartTooltip formatter={(val: number) => `৳${formatBdt(val)}`} />
                     }
                   />
                   <Legend />
@@ -174,26 +200,16 @@ export function RevenuePage() {
           <CardTitle className="text-base">Revenue by Tier</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground border-b">
-                <tr>
-                  <th className="py-2 text-left">Plan</th>
-                  <th className="py-2 text-right">Tenants</th>
-                  <th className="py-2 text-right">MRR (BDT)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {data.tierBreakdown.map((t) => (
-                  <tr key={t.plan}>
-                    <td className="py-2 font-medium">{t.plan}</td>
-                    <td className="py-2 text-right">{t.tenants}</td>
-                    <td className="py-2 text-right font-semibold">৳{formatBdt(t.mrrBdt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={tierColumns}
+            data={data.tierBreakdown}
+            getRowId={(row) => row.plan}
+            searchKey="plan"
+            searchPlaceholder="Filter plan..."
+            emptyTitle="No tier data"
+            emptyDescription="Revenue tier breakdown is unavailable."
+            enableColumnVisibility={false}
+          />
         </CardContent>
       </Card>
     </div>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Reveal, RevealItem } from '@/components/motion/Reveal';
 import type { HowItWorksStep } from '../types';
 
 interface HowItWorksProps {
@@ -13,7 +14,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
   return (
     <section id="how-it-works" className="border-t border-white/[0.07] py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <Reveal className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
               Getting started
@@ -27,33 +28,33 @@ export function HowItWorks({ steps }: HowItWorksProps) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/register">
-              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-10 px-5 text-sm font-semibold text-white">
+              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-10 px-5 text-sm font-semibold text-white group transition-transform active:scale-[0.98]">
                 Start trial
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Link href="/contact">
+            <a href="#contact">
               <Button
                 variant="outline"
-                className="h-10 border-white/15 bg-transparent px-5 text-sm text-white/90 hover:bg-white/5"
+                className="h-10 border-white/15 bg-transparent px-5 text-sm text-white/90 hover:bg-white/5 transition-transform active:scale-[0.98]"
               >
                 Book migration
               </Button>
-            </Link>
+            </a>
           </div>
-        </div>
+        </Reveal>
 
-        <ol className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <Reveal stagger as="ol" className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((item) => (
-            <li key={item.step}>
+            <RevealItem key={item.step} as="li" className="group transition-transform duration-200 hover:-translate-y-1">
               <span className="font-mono text-xs text-white/35">0{item.step}</span>
-              <h3 className="font-landing-display mt-2 text-base font-semibold text-white">
+              <h3 className="font-landing-display mt-2 text-base font-semibold text-white group-hover:text-landing-cta transition-colors">
                 {item.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-white/50">{item.desc}</p>
-            </li>
+            </RevealItem>
           ))}
-        </ol>
+        </Reveal>
       </div>
     </section>
   );

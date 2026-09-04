@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthCategoryItem } from '@/data/admin/bandwidth.data';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +14,20 @@ import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { Plus, Tags, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const categorySearchFilter = (
+  row: LegacyRow<BandwidthCategoryItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const cat = row.original;
+  return (
+    cat.name.toLowerCase().includes(q) ||
+    cat.area.toLowerCase().includes(q)
+  );
+};
 
 export function BandwidthCategoriesPage() {
   const { data, isLoading } = useBandwidthData();
@@ -46,7 +61,67 @@ export function BandwidthCategoriesPage() {
     setName('');
   };
 
-  if (isLoading && categories.length === 0) return <PageSkeleton rows={4} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthCategoryItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Category Name',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-semibold text-foreground inline-flex items-center gap-2">
+            <Tags className="h-4 w-4 text-primary" />
+            {row.original.name}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'area',
+        header: 'Service Area',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.area}</span>
+        ),
+      },
+      {
+        accessorKey: 'priceBdt',
+        header: 'Base Rate / Mbps',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-semibold">
+            {formatBdtWithSymbol(row.original.priceBdt)} / Mbps
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'itemsCount',
+        header: 'Items Count',
+        cell: ({ row }) => (
+          <span className="text-xs font-mono">{row.original.itemsCount} catalog products</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setCategories((prev) => prev.filter((c) => c.id !== row.original.id));
+                toast.success('Category removed.');
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && categories.length === 0) return <PageSkeleton variant="table" rows={4} />;
 
   return (
     <div className="space-y-6">
@@ -66,48 +141,17 @@ export function BandwidthCategoriesPage() {
         }
       />
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Category Name</TableHead>
-              <TableHead>Service Area</TableHead>
-              <TableHead>Base Rate / Mbps</TableHead>
-              <TableHead>Items Count</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((cat, idx) => (
-              <TableRow key={cat.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
-                <TableCell className="font-semibold text-foreground flex items-center gap-2">
-                  <Tags className="h-4 w-4 text-primary" />
-                  {cat.name}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{cat.area}</TableCell>
-                <TableCell className="font-mono text-sm font-semibold">
-                  {formatBdtWithSymbol(cat.priceBdt)} / Mbps
-                </TableCell>
-                <TableCell className="text-xs font-mono">{cat.itemsCount} catalog products</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-                      toast.success('Category removed.');
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search categories by name or area..."
+        searchFilterFn={categorySearchFilter}
+        facetFilters={[{ columnId: 'area', title: 'Area' }]}
+        emptyTitle="No categories"
+        emptyDescription="Create a bandwidth category to group catalog items."
+      />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">

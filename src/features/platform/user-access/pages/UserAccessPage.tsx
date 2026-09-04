@@ -1,13 +1,78 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { UserLock, Shield } from 'lucide-react';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserLock, Shield } from 'lucide-react';
+import { DataTable } from '@/features/shared/data-table';
+import type { PlatformAdminUser } from '@/data/platform/contacts.data';
+
+const adminSearchFilter = (
+  row: LegacyRow<PlatformAdminUser>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const a = row.original;
+  return (
+    a.name.toLowerCase().includes(q) ||
+    a.email.toLowerCase().includes(q) ||
+    a.role.toLowerCase().includes(q)
+  );
+};
+
+const columns: LegacyColumnDef<PlatformAdminUser, unknown>[] = [
+  {
+    accessorKey: 'name',
+    header: 'User',
+    size: 240,
+    enableHiding: false,
+    cell: ({ row }) => (
+      <div>
+        <div className="font-medium">{row.original.name}</div>
+        <div className="text-xs text-muted-foreground">{row.original.email}</div>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'role',
+    header: 'Role',
+    size: 140,
+    cell: ({ row }) => (
+      <span className="capitalize">{row.original.role.replace('_', ' ')}</span>
+    ),
+  },
+  {
+    accessorKey: 'status',
+    header: 'Status',
+    size: 100,
+    cell: ({ row }) => (
+      <Badge
+        variant={row.original.status === 'active' ? 'default' : 'secondary'}
+        className="text-xs capitalize"
+      >
+        {row.original.status}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: 'lastLogin',
+    header: 'Last Login',
+    size: 160,
+    cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground">
+        {row.original.lastLogin.slice(0, 16).replace('T', ' ')}
+      </span>
+    ),
+  },
+];
 
 export function UserAccessPage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -15,7 +80,15 @@ export function UserAccessPage() {
     queryFn: () => mockFetch('platform.user-access'),
   });
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  const platformAdmins = useMemo(
+    () =>
+      (data?.admins ?? []).filter(
+        (a) => a.role === 'super_admin' || a.role === 'admin',
+      ),
+    [data?.admins],
+  );
+
+  if (isLoading) return <PageSkeleton variant="table" rows={4} />;
   if (error || !data) {
     return (
       <EmptyState
@@ -45,7 +118,9 @@ export function UserAccessPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{role.users}</div>
-              <div className="text-xs text-muted-foreground">{role.permissions} permissions granted</div>
+              <div className="text-xs text-muted-foreground">
+                {role.permissions} permissions granted
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -58,39 +133,20 @@ export function UserAccessPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground border-b">
-                <tr>
-                  <th className="py-2 text-left">User</th>
-                  <th className="py-2 text-left">Role</th>
-                  <th className="py-2 text-left">Status</th>
-                  <th className="py-2 text-left">Last Login</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {data.admins
-                  .filter((a) => a.role === 'super_admin' || a.role === 'admin')
-                  .map((a) => (
-                    <tr key={a.id}>
-                      <td className="py-2">
-                        <div className="font-medium">{a.name}</div>
-                        <div className="text-xs text-muted-foreground">{a.email}</div>
-                      </td>
-                      <td className="py-2 capitalize">{a.role.replace('_', ' ')}</td>
-                      <td className="py-2">
-                        <Badge variant={a.status === 'active' ? 'default' : 'secondary'} className="text-xs capitalize">
-                          {a.status}
-                        </Badge>
-                      </td>
-                      <td className="py-2 text-xs text-muted-foreground">
-                        {a.lastLogin.slice(0, 16).replace('T', ' ')}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={platformAdmins}
+            getRowId={(row) => row.id}
+            searchKey="name"
+            searchPlaceholder="Search user, email, role..."
+            searchFilterFn={adminSearchFilter}
+            facetFilters={[
+              { columnId: 'role', title: 'Role' },
+              { columnId: 'status', title: 'Status' },
+            ]}
+            emptyTitle="No platform administrators"
+            emptyDescription="No super-admin or admin users found."
+          />
         </CardContent>
       </Card>
     </div>

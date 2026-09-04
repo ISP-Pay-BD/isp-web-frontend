@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -67,7 +68,7 @@ export function IncomesPage() {
   };
 
   if (isLoading) {
-    return <PageSkeleton rows={8} />;
+    return <PageSkeleton variant="table" rows={8} />;
   }
 
   if (isError) {
@@ -91,7 +92,7 @@ export function IncomesPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp} className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <PageHero className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Revenue & Incomes</h1>
           <p className="text-muted-foreground text-sm">
@@ -106,7 +107,8 @@ export function IncomesPage() {
             </Button>
           </motion.div>
         </Can>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* KPI Cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -232,6 +234,7 @@ export function IncomesPage() {
       </motion.div>
 
       {/* New Income Modal */}
+      </PageContent>
       {modalOpen && (
         <IncomeModal
           open={modalOpen}

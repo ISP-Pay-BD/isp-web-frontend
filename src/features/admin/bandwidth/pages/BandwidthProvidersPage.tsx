@@ -1,20 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthProviderItem } from '@/data/admin/bandwidth.data';
 import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Handshake, Phone, Mail, MapPin, Building2, Trash2 } from 'lucide-react';
+import { Plus, Handshake, MapPin, Building2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const providerSearchFilter = (
+  row: LegacyRow<BandwidthProviderItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const p = row.original;
+  return (
+    p.name.toLowerCase().includes(q) ||
+    p.contactPerson.toLowerCase().includes(q) ||
+    p.phone.includes(q) ||
+    p.email.toLowerCase().includes(q) ||
+    p.address.toLowerCase().includes(q)
+  );
+};
 
 export function BandwidthProvidersPage() {
   const { data, isLoading } = useBandwidthData();
@@ -55,7 +73,100 @@ export function BandwidthProvidersPage() {
     setName('');
   };
 
-  if (isLoading && providers.length === 0) return <PageSkeleton rows={4} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthProviderItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Provider & Brand',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
+              {row.original.logoText}
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{row.original.name}</div>
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {row.original.address}
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'contactPerson',
+        header: 'Contact Person',
+        cell: ({ row }) => (
+          <span className="text-xs font-medium">{row.original.contactPerson}</span>
+        ),
+      },
+      {
+        accessorKey: 'phone',
+        header: 'Phone / Mobile',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-foreground">{row.original.phone}</span>
+        ),
+      },
+      {
+        accessorKey: 'email',
+        header: 'Email',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.email}</span>
+        ),
+      },
+      {
+        accessorKey: 'totalCapacityMbps',
+        header: 'Capacity',
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="font-mono text-xs">
+            {row.original.totalCapacityMbps} Mbps
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'monthlyBillBdt',
+        header: 'Monthly Rate',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-semibold">
+            {formatBdtWithSymbol(row.original.monthlyBillBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <Badge variant="outline" className="capitalize text-xs">
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setProviders((prev) => prev.filter((p) => p.id !== row.original.id));
+                toast.success('Provider removed.');
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && providers.length === 0) return <PageSkeleton variant="table" rows={4} />;
 
   return (
     <div className="space-y-6">
@@ -90,66 +201,17 @@ export function BandwidthProvidersPage() {
         />
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Provider & Brand</TableHead>
-              <TableHead>Contact Person</TableHead>
-              <TableHead>Phone / Mobile</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Monthly Rate</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {list.map((prov, idx) => (
-              <TableRow key={prov.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
-                      {prov.logoText}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-foreground">{prov.name}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {prov.address}
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs font-medium">{prov.contactPerson}</TableCell>
-                <TableCell className="font-mono text-xs text-foreground">{prov.phone}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{prov.email}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {prov.totalCapacityMbps} Mbps
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm font-semibold">
-                  {formatBdtWithSymbol(prov.monthlyBillBdt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setProviders((prev) => prev.filter((p) => p.id !== prov.id));
-                      toast.success('Provider removed.');
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search providers by name, contact, phone..."
+        searchFilterFn={providerSearchFilter}
+        facetFilters={[{ columnId: 'status', title: 'Status' }]}
+        emptyTitle="No providers"
+        emptyDescription="Onboard an upstream carrier to get started."
+      />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">

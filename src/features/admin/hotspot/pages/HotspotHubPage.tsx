@@ -86,7 +86,7 @@ const QUICK_LINKS = [
 export function HotspotHubPage() {
   const { data, isLoading } = useHotspotData();
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
 
   const profiles = data?.profiles ?? [];
   const users = data?.users ?? [];
@@ -99,7 +99,7 @@ export function HotspotHubPage() {
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
+      initial={false}
       animate="visible"
       className="space-y-6"
     >

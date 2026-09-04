@@ -1,6 +1,9 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { PageContent, PageHero } from '@/components/motion/PageHero';
 
 interface BreadcrumbItem {
   label: string;
@@ -24,8 +27,7 @@ export function CustomerPageShell({
 }: CustomerPageShellProps) {
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-16 md:pb-8">
-      {/* Page Header matching PHP /components/page-header.php with premium typography */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-5">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-5">
         <div className="space-y-1.5">
           {breadcrumbs.length > 0 && (
             <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
@@ -53,10 +55,9 @@ export function CustomerPageShell({
         </div>
 
         {actions && <div className="flex items-center gap-2.5 shrink-0 pt-1 sm:pt-0">{actions}</div>}
-      </div>
+      </PageHero>
 
-      {/* Main Content Area */}
-      <div>{children}</div>
+      <PageContent>{children}</PageContent>
     </div>
   );
 }

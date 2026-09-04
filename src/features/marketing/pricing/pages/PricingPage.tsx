@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Check, Sliders, ArrowRight, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { mockFetch } from '@/lib/mock-api/client';
+import { paygCalculator, pricingTiers } from '@/data/marketing/pricing.data';
 import { useTranslations } from '@/features/marketing/shared';
 
 interface Plan {
@@ -18,52 +18,23 @@ interface Plan {
   highlighted?: boolean;
 }
 
-interface Payg {
-  labelEn: string;
-  minCustomers: number;
-  maxCustomers: number;
-  step: number;
-  defaultCustomers: number;
-  pricePerCustomerBdt: number;
-  baseFeeBdt: number;
-}
+const STATIC_PLANS: Plan[] = pricingTiers.map((tier) => ({
+  id: tier.id,
+  name: tier.name,
+  priceBdt: tier.priceBdt,
+  period: tier.period,
+  customers: tier.customers ? `Up to ${tier.customers}` : 'Unlimited',
+  features: [...tier.features],
+  highlighted: tier.highlight,
+}));
 
 export function PricingPage() {
   const t = useTranslations();
-  const [loading, setLoading] = useState(true);
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
   const [isYearly, setIsYearly] = useState(false);
-  const [paygSubscribers, setPaygSubscribers] = useState(500);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [payg, setPayg] = useState<Payg>({
-    labelEn: 'Pay as you grow',
-    minCustomers: 50,
-    maxCustomers: 5000,
-    step: 50,
-    defaultCustomers: 500,
-    pricePerCustomerBdt: 12,
-    baseFeeBdt: 999,
-  });
-
-  useEffect(() => {
-    mockFetch('marketing.pricing')
-      .then((res) => {
-        if (res.plans) {
-          setPlans(
-            res.plans.map((p) => ({
-              ...p,
-              customers: typeof p.customers === 'number' ? `Up to ${p.customers}` : p.customers,
-            }))
-          );
-        }
-        if (res.payg) {
-          setPayg(res.payg);
-          setPaygSubscribers(res.payg.defaultCustomers);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const [paygSubscribers, setPaygSubscribers] = useState<number>(paygCalculator.defaultCustomers);
+  const plans = STATIC_PLANS;
+  const payg = paygCalculator;
 
   const paygTotal = payg.baseFeeBdt + Math.max(paygSubscribers, payg.minCustomers) * payg.pricePerCustomerBdt;
 
@@ -85,19 +56,6 @@ export function PricingPage() {
       a: 'Your network keeps running safely. You simply select a plan to continue automated billing.',
     },
   ];
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-24 space-y-8 animate-pulse">
-        <div className="h-40 rounded-3xl bg-white/5" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-96">
-          <div className="rounded-2xl bg-white/5" />
-          <div className="rounded-2xl bg-white/5" />
-          <div className="rounded-2xl bg-white/5" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="py-16 md:py-24">
@@ -335,7 +293,7 @@ export function PricingPage() {
             Custom dedicated database clusters, high-concurrency RouterOS multi-homing, and on-site training for your operations team.
           </p>
           <div className="mt-6 flex justify-center gap-4">
-            <Link href="/contact">
+            <Link href="/#contact">
               <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-7 text-white font-semibold">
                 Speak with Enterprise Sales
                 <ArrowRight className="ml-2 h-4 w-4" />

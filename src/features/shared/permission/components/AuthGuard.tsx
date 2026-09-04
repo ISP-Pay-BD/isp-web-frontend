@@ -1,28 +1,27 @@
 'use client';
 
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 import type { UserRole } from '@/types/auth';
 import { canAccessPath } from '@/lib/auth/route-access';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { useAuthHydrated } from '@/hooks/use-auth-hydrated';
 
 interface AuthGuardProps {
   allowedRoles: UserRole[];
   children: ReactNode;
 }
 
-const emptySubscribe = () => () => {};
-
 export function AuthGuard({ allowedRoles, children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const hydrated = useAuthHydrated();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const ready = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!hydrated) return;
 
     if (!isAuthenticated || !user) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
@@ -40,14 +39,14 @@ export function AuthGuard({ allowedRoles, children }: AuthGuardProps) {
         user.role === 'user' ? '/customer/subscription?expired=1' : '/admin/subscription?expired=1';
       router.replace(target);
     }
-  }, [ready, isAuthenticated, user, allowedRoles, pathname, router]);
+  }, [hydrated, isAuthenticated, user, allowedRoles, pathname, router]);
 
-  if (!ready || !isAuthenticated || !user) {
-    return <PageSkeleton rows={6} />;
+  if (!hydrated || !isAuthenticated || !user) {
+    return <PageSkeleton variant="dashboard" rows={6} />;
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <PageSkeleton rows={6} />;
+    return <PageSkeleton variant="dashboard" rows={6} />;
   }
 
   return <>{children}</>;

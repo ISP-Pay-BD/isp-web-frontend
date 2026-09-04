@@ -98,6 +98,7 @@ export interface TestimonialItem {
   role: string;
   quote: string;
   rating?: number;
+  image?: string;
 }
 
 export interface FaqItem {

@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -105,7 +106,7 @@ export function ExpiredCustomersPage() {
     },
   ];
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) {
     return (
       <EmptyState
@@ -118,7 +119,7 @@ export function ExpiredCustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-2">
             <AlertTriangle className="h-6 w-6 text-amber-500" /> Expired Customers
@@ -134,7 +135,8 @@ export function ExpiredCustomersPage() {
         >
           <Send className="mr-1.5 h-4 w-4" /> Send Bulk Reminders
         </Button>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -154,6 +156,8 @@ export function ExpiredCustomersPage() {
         emptyTitle="No expired customers"
         emptyDescription="Great news! All active subscriber accounts are currently up-to-date."
       />
+    
+      </PageContent>
     </div>
   );
 }

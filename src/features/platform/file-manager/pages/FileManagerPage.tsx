@@ -24,7 +24,7 @@ export function FileManagerPage() {
     queryFn: () => mockFetch('platform.file-manager', currentPath),
   });
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (error || !data) {
     return (
       <EmptyState

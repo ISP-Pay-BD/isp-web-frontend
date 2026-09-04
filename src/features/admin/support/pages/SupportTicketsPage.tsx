@@ -1,67 +1,141 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Can } from '@/components/shared/Can';
-import { Search, Eye, LifeBuoy } from 'lucide-react';
+import { DataTable } from '@/features/shared/data-table';
+import { Eye, LifeBuoy } from 'lucide-react';
 import { formatDate } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { useSupportTickets } from '../hooks/use-support';
 import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
+import type { SupportTicket } from '@/data/shared/types';
 
 const statusVariant = (status: string) => {
-  if (status === 'open') return 'default';
-  if (status === 'pending') return 'secondary';
-  return 'outline';
+  if (status === 'open') return 'default' as const;
+  if (status === 'pending') return 'secondary' as const;
+  return 'outline' as const;
 };
 
 const priorityVariant = (priority: string) => {
-  if (priority === 'high') return 'destructive';
-  if (priority === 'medium') return 'default';
-  return 'secondary';
+  if (priority === 'high') return 'destructive' as const;
+  if (priority === 'medium') return 'default' as const;
+  return 'secondary' as const;
+};
+
+const ticketSearchFilter = (
+  row: LegacyRow<SupportTicket>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const t = row.original;
+  return (
+    t.subject.toLowerCase().includes(q) ||
+    t.customerName.toLowerCase().includes(q) ||
+    t.id.toLowerCase().includes(q)
+  );
 };
 
 export function SupportTicketsPage() {
   const { data, isLoading, isError, refetch } = useSupportTickets();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const tickets = data?.tickets ?? [];
 
-  const filtered = useMemo(() => {
-    const tickets = data?.tickets ?? [];
-    return tickets.filter((t) => {
-      const matchSearch =
-        search === '' ||
-        t.subject.toLowerCase().includes(search.toLowerCase()) ||
-        t.customerName.toLowerCase().includes(search.toLowerCase()) ||
-        t.id.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [data?.tickets, search, statusFilter]);
+  const columns = useMemo<LegacyColumnDef<SupportTicket, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'id',
+        header: 'ID',
+        size: 100,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.id}</span>
+        ),
+      },
+      {
+        accessorKey: 'subject',
+        header: 'Subject',
+        size: 240,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-medium max-w-xs truncate block">{row.original.subject}</span>
+        ),
+      },
+      {
+        accessorKey: 'customerName',
+        header: 'Customer',
+        size: 160,
+      },
+      {
+        accessorKey: 'priority',
+        header: 'Priority',
+        size: 100,
+        cell: ({ row }) => (
+          <Badge variant={priorityVariant(row.original.priority)}>{row.original.priority}</Badge>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 100,
+        cell: ({ row }) => (
+          <Badge variant={statusVariant(row.original.status)}>{row.original.status}</Badge>
+        ),
+      },
+      {
+        accessorKey: 'updatedAt',
+        header: 'Updated',
+        size: 120,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{formatDate(row.original.updatedAt)}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Action</span>,
+        size: 90,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Can menu="support" action="read">
+              <Link
+                href={`/admin/support/${row.original.id}`}
+                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View
+              </Link>
+            </Can>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return (
-      <EmptyState title="Failed to load tickets" description="Could not fetch support tickets." actionLabel="Retry" onAction={() => refetch()} />
+      <EmptyState
+        title="Failed to load tickets"
+        description="Could not fetch support tickets."
+        actionLabel="Retry"
+        onAction={() => refetch()}
+      />
     );
   }
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-    >
+    <motion.div className="space-y-6" variants={staggerContainer} initial={false} animate="show">
       <motion.div variants={fadeUp}>
         <PageHeader
           title="Support Tickets"
@@ -78,7 +152,11 @@ export function SupportTicketsPage() {
           { label: 'Open', value: data.stats.open, color: 'text-primary' },
           { label: 'Pending', value: data.stats.pending, color: 'text-amber-600' },
           { label: 'Closed', value: data.stats.closed, color: 'text-muted-foreground' },
-          { label: 'Avg Response', value: `${data.stats.avgResponseHours}h`, color: 'text-emerald-600' },
+          {
+            label: 'Avg Response',
+            value: `${data.stats.avgResponseHours}h`,
+            color: 'text-emerald-600',
+          },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -88,79 +166,38 @@ export function SupportTicketsPage() {
             whileHover={hoverLift}
           >
             <Card>
-              <CardHeader className="pb-1"><CardTitle className="text-xs text-muted-foreground font-normal">{stat.label}</CardTitle></CardHeader>
-              <CardContent><p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p></CardContent>
+              <CardHeader className="pb-1">
+                <CardTitle className="text-xs text-muted-foreground font-normal">
+                  {stat.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              </CardContent>
             </Card>
           </motion.div>
         ))}
       </motion.div>
 
-      <motion.div variants={fadeUp}>
-        <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <LifeBuoy className="h-4 w-4 text-primary" />
-            All Tickets ({filtered.length})
-          </CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <div className="relative w-56">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search tickets..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
-            </div>
-            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-              <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {filtered.length === 0 ? (
-            <EmptyState title="No tickets found" description="Try adjusting your search or filters." />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-mono text-xs">{t.id}</TableCell>
-                    <TableCell className="font-medium max-w-xs truncate">{t.subject}</TableCell>
-                    <TableCell>{t.customerName}</TableCell>
-                    <TableCell><Badge variant={priorityVariant(t.priority)}>{t.priority}</Badge></TableCell>
-                    <TableCell><Badge variant={statusVariant(t.status)}>{t.status}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{formatDate(t.updatedAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <Can menu="support" action="read">
-                        <Link
-                          href={`/admin/support/${t.id}`}
-                          className={buttonVariants({ variant: 'ghost', size: 'sm' })}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Link>
-                      </Can>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <motion.div variants={fadeUp} className="space-y-3">
+        <div className="flex items-center gap-2 text-base font-medium">
+          <LifeBuoy className="h-4 w-4 text-primary" />
+          All Tickets
+        </div>
+        <DataTable
+          columns={columns}
+          data={tickets}
+          getRowId={(row) => row.id}
+          searchKey="subject"
+          searchPlaceholder="Search tickets..."
+          searchFilterFn={ticketSearchFilter}
+          facetFilters={[
+            { columnId: 'status', title: 'Status' },
+            { columnId: 'priority', title: 'Priority' },
+          ]}
+          emptyTitle="No tickets found"
+          emptyDescription="Try adjusting your search or filters."
+        />
       </motion.div>
     </motion.div>
   );

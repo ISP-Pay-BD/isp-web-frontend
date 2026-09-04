@@ -6,11 +6,11 @@ import { AuthGuard, ExpiredBanner } from '@/features/shared/permission';
 
 export default function CustomerPortalLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthGuard allowedRoles={['user']}>
-      <AppShell portal="customer">
+    <AppShell portal="customer">
+      <AuthGuard allowedRoles={['user']}>
         <ExpiredBanner />
         {children}
-      </AppShell>
-    </AuthGuard>
+      </AuthGuard>
+    </AppShell>
   );
 }

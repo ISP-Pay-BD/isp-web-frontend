@@ -52,7 +52,7 @@ export const dataStats = {
   totalOltDevices: 3,
   landingSections: 28,
   faqItems: 8,
-  testimonials: 6,
+  testimonials: 24,
   completenessScore: '92%',
   lastUpdated: '2026-09-02',
 };

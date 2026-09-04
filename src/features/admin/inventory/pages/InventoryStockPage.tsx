@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useInventory } from '../hooks/use-inventory';
 import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function InventoryStockPage() {
   const { stock, isLoading, isError, refetch } = useInventory();
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) return <EmptyState title="Failed to load stock" actionLabel="Retry" onAction={() => refetch()} />;
 
   const statusMap: Record<string, 'active' | 'pending' | 'expired'> = {
@@ -17,10 +18,11 @@ export function InventoryStockPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">Stock Levels</h1>
         <p className="text-muted-foreground text-sm">On-hand quantity and value by warehouse location.</p>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
       <div className="bg-card rounded-lg border">
         <Table>
           <TableHeader>
@@ -52,6 +54,8 @@ export function InventoryStockPage() {
           </TableBody>
         </Table>
       </div>
+    
+      </PageContent>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
@@ -57,8 +58,40 @@ export function CustomerDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useCustomer(id);
 
-  if (isLoading) return <PageSkeleton rows={7} />;
-  if (isError || !data?.customer) {
+  const customer = data?.customer;
+  const payments = data?.payments ?? [];
+  const pppoe = customer?.pppoeDetails;
+  const olt = customer?.oltDetails;
+  const conn = customer?.connectionDetails;
+
+  const daysLeft = useMemo(() => {
+    if (!customer?.expiryDate) return 0;
+    const exp = new Date(customer.expiryDate);
+    const now = new Date();
+    return Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  }, [customer?.expiryDate]);
+
+  const daysLeftColor =
+    daysLeft < 0 ? 'text-destructive' : daysLeft <= 5 ? 'text-amber-500' : 'text-emerald-500';
+
+  const bwToday = useMemo(() => {
+    if (!customer?.bandwidthUsage?.length) return { download: 0, upload: 0 };
+    const today = customer.bandwidthUsage[customer.bandwidthUsage.length - 1];
+    return { download: today?.downloadMb ?? 0, upload: today?.uploadMb ?? 0 };
+  }, [customer?.bandwidthUsage]);
+
+  const totalBw = useMemo(() => {
+    if (!customer?.bandwidthUsage?.length) return { download: 0, upload: 0 };
+    return customer.bandwidthUsage.reduce(
+      (acc, d) => ({ download: acc.download + d.downloadMb, upload: acc.upload + d.uploadMb }),
+      { download: 0, upload: 0 }
+    );
+  }, [customer?.bandwidthUsage]);
+
+  const formatBw = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`);
+
+  if (isLoading) return <PageSkeleton variant="detail" rows={7} />;
+  if (isError || !customer) {
     return (
       <EmptyState
         title="Customer not found"
@@ -68,37 +101,6 @@ export function CustomerDetailPage({ id }: { id: string }) {
       />
     );
   }
-
-  const { customer, payments } = data;
-  const pppoe = customer.pppoeDetails;
-  const olt = customer.oltDetails;
-  const conn = customer.connectionDetails;
-
-  const daysLeft = useMemo(() => {
-    const exp = new Date(customer.expiryDate);
-    const now = new Date();
-    const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
-  }, [customer.expiryDate]);
-
-  const daysLeftColor =
-    daysLeft < 0 ? 'text-destructive' : daysLeft <= 5 ? 'text-amber-500' : 'text-emerald-500';
-
-  const bwToday = useMemo(() => {
-    if (!customer.bandwidthUsage?.length) return { download: 0, upload: 0 };
-    const today = customer.bandwidthUsage[customer.bandwidthUsage.length - 1];
-    return { download: today?.downloadMb ?? 0, upload: today?.uploadMb ?? 0 };
-  }, [customer.bandwidthUsage]);
-
-  const totalBw = useMemo(() => {
-    if (!customer.bandwidthUsage?.length) return { download: 0, upload: 0 };
-    return customer.bandwidthUsage.reduce(
-      (acc, d) => ({ download: acc.download + d.downloadMb, upload: acc.upload + d.uploadMb }),
-      { download: 0, upload: 0 }
-    );
-  }, [customer.bandwidthUsage]);
-
-  const formatBw = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`);
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
@@ -112,7 +114,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
       </motion.div>
 
       {/* Hero Section */}
-      <motion.div variants={fadeUp}>
+      <PageHero>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <CardContent className="p-6">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -180,7 +182,8 @@ export function CustomerDetailPage({ id }: { id: string }) {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Fact Cards */}
       <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -607,6 +610,8 @@ export function CustomerDetailPage({ id }: { id: string }) {
           </CardContent>
         </Card>
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

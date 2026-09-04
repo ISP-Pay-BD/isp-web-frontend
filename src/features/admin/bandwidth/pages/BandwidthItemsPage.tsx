@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthCatalogItem } from '@/data/admin/bandwidth.data';
 import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,10 +18,24 @@ import { formatBdtWithSymbol } from '@/lib/format';
 import { Plus, ArrowDownToLine, Zap, Layers, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+const itemSearchFilter = (
+  row: LegacyRow<BandwidthCatalogItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const item = row.original;
+  return (
+    item.name.toLowerCase().includes(q) ||
+    item.categoryName.toLowerCase().includes(q) ||
+    (item.description?.toLowerCase().includes(q) ?? false)
+  );
+};
+
 export function BandwidthItemsPage() {
   const { data, isLoading } = useBandwidthData();
   const [items, setItems] = useState<BandwidthCatalogItem[]>([]);
-  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newCapacity, setNewCapacity] = useState(100);
@@ -36,10 +50,6 @@ export function BandwidthItemsPage() {
   }
 
   const list = items.length > 0 ? items : initialItems;
-  const filtered = list.filter((it) =>
-    it.name.toLowerCase().includes(search.toLowerCase()) ||
-    it.categoryName.toLowerCase().includes(search.toLowerCase())
-  );
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +75,80 @@ export function BandwidthItemsPage() {
     toast.success('Catalog item deleted.');
   };
 
-  if (isLoading && items.length === 0) return <PageSkeleton rows={5} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthCatalogItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Item Name & Spec',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div>
+            <div className="font-semibold text-foreground">{row.original.name}</div>
+            {row.original.description ? (
+              <div className="text-xs text-muted-foreground">{row.original.description}</div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'categoryName',
+        header: 'Category',
+        cell: ({ row }) => (
+          <span className="text-xs font-medium">{row.original.categoryName}</span>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: ({ row }) => (
+          <Badge variant="outline" className="capitalize text-[10px] font-mono">
+            {row.original.type}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'capacityMbps',
+        header: 'Capacity',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-primary">
+            {row.original.capacityMbps} Mbps
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'unitPriceBdt',
+        header: 'Unit Price (BDT)',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-semibold">
+            {formatBdtWithSymbol(row.original.unitPriceBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'vatPercent',
+        header: '% VAT',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{row.original.vatPercent}%</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="block text-right">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(row.original.id)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && items.length === 0) return <PageSkeleton variant="table" rows={5} />;
 
   return (
     <div className="space-y-6">
@@ -107,78 +190,20 @@ export function BandwidthItemsPage() {
         />
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <Input
-            placeholder="Search items by name or category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-md"
-          />
-          <span className="text-xs text-muted-foreground">Showing {filtered.length} items</span>
-        </div>
-
-        {filtered.length === 0 ? (
-          <EmptyState
-            title="No catalog items"
-            description="Add upstream bandwidth packages to start recording purchase bills."
-            actionLabel="Add Item"
-            onAction={() => setModalOpen(true)}
-          />
-        ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead>Item Name & Spec</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Capacity</TableHead>
-                  <TableHead>Unit Price (BDT)</TableHead>
-                  <TableHead>% VAT</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-muted-foreground text-xs font-mono">{index + 1}</TableCell>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{item.name}</div>
-                      {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs font-medium">{item.categoryName}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize text-[10px] font-mono">
-                        {item.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs font-bold text-primary">
-                      {item.capacityMbps} Mbps
-                    </TableCell>
-                    <TableCell className="font-mono text-sm font-semibold">
-                      {formatBdtWithSymbol(item.unitPriceBdt)}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{item.vatPercent}%</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search items by name or category..."
+        searchFilterFn={itemSearchFilter}
+        facetFilters={[
+          { columnId: 'categoryName', title: 'Category' },
+          { columnId: 'type', title: 'Type' },
+        ]}
+        emptyTitle="No catalog items"
+        emptyDescription="Add upstream bandwidth packages to start recording purchase bills."
+      />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">

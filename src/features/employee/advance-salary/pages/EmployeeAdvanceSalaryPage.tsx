@@ -147,6 +147,9 @@ export function EmployeeAdvanceSalaryPage() {
           <DataTable
             columns={columns}
             data={items}
+            searchKey="reason"
+            searchPlaceholder="Filter by reason..."
+            facetFilters={[{ columnId: 'status', title: 'Status' }]}
             emptyTitle="No advance requests"
             emptyDescription="Submit a request when you need salary advance."
           />

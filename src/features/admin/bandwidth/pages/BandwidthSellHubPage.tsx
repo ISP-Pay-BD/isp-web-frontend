@@ -28,7 +28,7 @@ const LINKS = [
 export function BandwidthSellHubPage() {
   const { data, isLoading } = useBandwidthData();
 
-  if (isLoading) return <PageSkeleton rows={4} />;
+  if (isLoading) return <PageSkeleton variant="dashboard" rows={4} />;
 
   const clients = data?.sellClients ?? [];
   const invoices = data?.invoices ?? [];
@@ -39,7 +39,7 @@ export function BandwidthSellHubPage() {
   return (
     <motion.div
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >

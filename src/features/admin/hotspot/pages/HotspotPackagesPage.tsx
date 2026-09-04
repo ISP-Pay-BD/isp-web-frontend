@@ -1,25 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotProfileItem } from '@/data/admin/network-ops.data';
 import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { Plus, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
+const profileSearchFilter = (
+  row: LegacyRow<HotspotProfileItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const p = row.original;
+  return p.name.toLowerCase().includes(q) || p.rateLimit.includes(q);
+};
+
 export function HotspotPackagesPage() {
   const { data, isLoading } = useHotspotData();
-  const [search, setSearch] = useState('');
   const [profiles, setProfiles] = useState<HotspotProfileItem[]>([]);
 
   const initial = data?.profiles ?? [];
@@ -28,10 +37,6 @@ export function HotspotPackagesPage() {
   }
 
   const list = profiles.length > 0 ? profiles : initial;
-  const filtered = list.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.rateLimit.includes(search),
-  );
 
   const handleToggle = (id: string) => {
     setProfiles((prev) =>
@@ -44,7 +49,70 @@ export function HotspotPackagesPage() {
     toast.success('Profile status updated.');
   };
 
-  if (isLoading && list.length === 0) return <PageSkeleton rows={5} />;
+  const columns = useMemo<LegacyColumnDef<HotspotProfileItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Profile',
+        enableHiding: false,
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        accessorKey: 'rateLimit',
+        header: 'Speed',
+        cell: ({ row }) => <Badge variant="outline">{row.original.rateLimit}</Badge>,
+      },
+      {
+        accessorKey: 'validityFormatted',
+        header: 'Validity',
+      },
+      {
+        id: 'pricing',
+        accessorFn: (row) => row.sellingPriceBdt,
+        header: 'Cost / Sell',
+        cell: ({ row }) => (
+          <span>
+            {formatBdtWithSymbol(row.original.priceBdt)} /{' '}
+            {formatBdtWithSymbol(row.original.sellingPriceBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'addressPool',
+        header: 'Pool',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.addressPool}</span>
+        ),
+      },
+      {
+        accessorKey: 'activeUsers',
+        header: 'Active',
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <StatusBadge status={row.original.status === 'active' ? 'online' : 'offline'} />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button variant="ghost" size="sm" onClick={() => handleToggle(row.original.id)}>
+              Toggle
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && list.length === 0) return <PageSkeleton variant="cards" rows={5} />;
 
   return (
     <div className="space-y-6">
@@ -70,57 +138,17 @@ export function HotspotPackagesPage() {
         <StatCard title="Active users" value={String(list.reduce((s, p) => s + p.activeUsers, 0))} />
       </div>
 
-      <Input
-        placeholder="Search profiles…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm"
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search profiles…"
+        searchFilterFn={profileSearchFilter}
+        facetFilters={[{ columnId: 'status', title: 'Status' }]}
+        emptyTitle="No profiles found"
+        emptyDescription="Try a different search term."
       />
-
-      {filtered.length === 0 ? (
-        <EmptyState title="No profiles found" description="Try a different search term." />
-      ) : (
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Profile</TableHead>
-                <TableHead>Speed</TableHead>
-                <TableHead>Validity</TableHead>
-                <TableHead>Cost / Sell</TableHead>
-                <TableHead>Pool</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((profile) => (
-                <TableRow key={profile.id}>
-                  <TableCell className="font-medium">{profile.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{profile.rateLimit}</Badge>
-                  </TableCell>
-                  <TableCell>{profile.validityFormatted}</TableCell>
-                  <TableCell>
-                    {formatBdtWithSymbol(profile.priceBdt)} / {formatBdtWithSymbol(profile.sellingPriceBdt)}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{profile.addressPool}</TableCell>
-                  <TableCell>{profile.activeUsers}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={profile.status === 'active' ? 'online' : 'offline'} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleToggle(profile.id)}>
-                      Toggle
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
 
       <Button variant="link" className="px-0" render={<Link href="/admin/hotspot" />}>
         ← Back to hotspot hub

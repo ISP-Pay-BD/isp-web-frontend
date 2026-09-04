@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useInventory } from '../hooks/use-inventory';
 import { PageSkeleton, EmptyState } from '@/components/shared';
@@ -6,15 +7,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 export function InventoryLocationsPage() {
   const { locations, isLoading, isError, refetch } = useInventory();
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) return <EmptyState title="Failed to load locations" actionLabel="Retry" onAction={() => refetch()} />;
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">Store Locations</h1>
         <p className="text-muted-foreground text-sm">Central NOC warehouse and POP sub-stores.</p>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
       <div className="bg-card rounded-lg border">
         <Table>
           <TableHeader>
@@ -39,6 +41,8 @@ export function InventoryLocationsPage() {
           </TableBody>
         </Table>
       </div>
+    
+      </PageContent>
     </div>
   );
 }

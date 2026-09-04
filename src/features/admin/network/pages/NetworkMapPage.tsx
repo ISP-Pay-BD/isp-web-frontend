@@ -41,14 +41,14 @@ export function NetworkMapPage() {
   const filtered = nodes.filter((n) => selectedLevel === 'all' || n.level === selectedLevel);
 
   if (isLoading) {
-    return <PageSkeleton rows={5} />;
+    return <PageSkeleton variant="dashboard" rows={5} />;
   }
 
   return (
     <motion.div
       className="space-y-6 max-w-7xl mx-auto pb-12"
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
     >
       {/* Header */}

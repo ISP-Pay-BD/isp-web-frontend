@@ -190,6 +190,9 @@ export function EmployeeSalariesPage() {
           <DataTable
             columns={columns}
             data={items}
+            searchKey="month"
+            searchPlaceholder="Filter by month..."
+            facetFilters={[{ columnId: 'status', title: 'Status' }]}
             emptyTitle="No salary records"
             emptyDescription="Your salary payments will appear here once processed."
           />

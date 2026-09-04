@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -66,7 +67,7 @@ export function ExpensesPage() {
     }
   };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
 
   if (isError) {
     return (
@@ -89,7 +90,7 @@ export function ExpensesPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp} className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <PageHero className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Expenses & Payables</h1>
           <p className="text-muted-foreground text-sm">
@@ -104,7 +105,8 @@ export function ExpensesPage() {
             </Button>
           </motion.div>
         </Can>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* KPI Cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -212,6 +214,7 @@ export function ExpensesPage() {
         )}
       </motion.div>
 
+      </PageContent>
       {modalOpen && <ExpenseModal open={modalOpen} onOpenChange={setModalOpen} onSave={handleSaveExpense} />}
 
       <ConfirmDialog

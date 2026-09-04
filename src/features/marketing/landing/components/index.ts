@@ -25,3 +25,4 @@ export { ProofBand } from './ProofBand';
 export { ConnectsSection } from './ConnectsSection';
 export { TryItSection } from './TryItSection';
 export { CTASection } from './CTASection';
+export { ContactSection } from './ContactSection';

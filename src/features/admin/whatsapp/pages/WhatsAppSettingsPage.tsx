@@ -19,7 +19,7 @@ export function WhatsAppSettingsPage() {
   const { data, isLoading, isError, refetch } = useWhatsApp();
   const [settings, setSettings] = useState(data?.settings);
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="form" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load settings" actionLabel="Retry" onAction={() => refetch()} />;
   }

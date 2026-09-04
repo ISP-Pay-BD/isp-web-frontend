@@ -1,26 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthPurchaseBillItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Receipt, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+
+const billSearchFilter = (
+  row: LegacyRow<BandwidthPurchaseBillItem>,
+  _columnId: string,
+  filterValue: unknown,
+) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const b = row.original;
+  return (
+    b.billNumber.toLowerCase().includes(q) ||
+    b.providerName.toLowerCase().includes(q) ||
+    b.month.toLowerCase().includes(q)
+  );
+};
 
 export function BandwidthBillsPage() {
   const { data, isLoading } = useBandwidthData();
   const [bills, setBills] = useState<BandwidthPurchaseBillItem[]>([]);
-  const [providerFilter, setProviderFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [billNo, setBillNo] = useState('');
   const [provider, setProvider] = useState('Summit Communications Ltd.');
@@ -33,9 +47,6 @@ export function BandwidthBillsPage() {
   }
 
   const list = bills.length > 0 ? bills : initial;
-  const filtered = list.filter((b) =>
-    providerFilter === 'all' || b.providerName.toLowerCase().includes(providerFilter.toLowerCase())
-  );
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +69,73 @@ export function BandwidthBillsPage() {
     setModalOpen(false);
   };
 
-  if (isLoading && bills.length === 0) return <PageSkeleton rows={4} />;
+  const columns = useMemo<LegacyColumnDef<BandwidthPurchaseBillItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'billNumber',
+        header: 'Bill Number',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-mono font-medium text-xs text-foreground inline-flex items-center gap-1.5">
+            <FileText className="h-3.5 w-3.5 text-primary" />
+            {row.original.billNumber}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'providerName',
+        header: 'Provider',
+        cell: ({ row }) => (
+          <span className="font-semibold text-xs">{row.original.providerName}</span>
+        ),
+      },
+      {
+        accessorKey: 'month',
+        header: 'Billing Month',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">{row.original.month}</span>
+        ),
+      },
+      {
+        accessorKey: 'capacityMbps',
+        header: 'Capacity',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs">{row.original.capacityMbps} Mbps</span>
+        ),
+      },
+      {
+        accessorKey: 'amountBdt',
+        header: 'Amount (BDT)',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm">{formatBdtWithSymbol(row.original.amountBdt)}</span>
+        ),
+      },
+      {
+        accessorKey: 'totalBdt',
+        header: 'Total + VAT',
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-bold text-foreground">
+            {formatBdtWithSymbol(row.original.totalBdt)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'dueDate',
+        header: 'Due Date',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{row.original.dueDate}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+    ],
+    [],
+  );
+
+  if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={4} />;
 
   return (
     <div className="space-y-6">
@@ -78,64 +155,20 @@ export function BandwidthBillsPage() {
         }
       />
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="w-64">
-          <Select value={providerFilter} onValueChange={(v) => v && setProviderFilter(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Providers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Providers</SelectItem>
-              <SelectItem value="summit">Summit Communications</SelectItem>
-              <SelectItem value="fiber">Fiber@Home</SelectItem>
-              <SelectItem value="link3">Link3</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <span className="text-xs text-muted-foreground font-mono">
-          Showing {filtered.length} bills
-        </span>
-      </div>
-
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Bill Number</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Billing Month</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Amount (BDT)</TableHead>
-              <TableHead>Total + VAT</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((b, idx) => (
-              <TableRow key={b.id}>
-                <TableCell className="font-mono text-xs text-muted-foreground">{idx + 1}</TableCell>
-                <TableCell className="font-mono font-medium text-xs text-foreground flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-primary" />
-                  {b.billNumber}
-                </TableCell>
-                <TableCell className="font-semibold text-xs">{b.providerName}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{b.month}</TableCell>
-                <TableCell className="font-mono text-xs">{b.capacityMbps} Mbps</TableCell>
-                <TableCell className="font-mono text-sm">{formatBdtWithSymbol(b.amountBdt)}</TableCell>
-                <TableCell className="font-mono text-sm font-bold text-foreground">
-                  {formatBdtWithSymbol(b.totalBdt)}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{b.dueDate}</TableCell>
-                <TableCell>
-                  <StatusBadge status={b.status} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="billNumber"
+        searchPlaceholder="Search bill number, provider, month..."
+        searchFilterFn={billSearchFilter}
+        facetFilters={[
+          { columnId: 'providerName', title: 'Provider' },
+          { columnId: 'status', title: 'Status' },
+        ]}
+        emptyTitle="No purchase bills"
+        emptyDescription="Enter a carrier billing statement to get started."
+      />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md">

@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { motion, type Variants } from 'framer-motion';
@@ -96,7 +97,7 @@ export function AttendancePage() {
     } catch { toast.error('Failed to update attendance'); }
   };
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
       <div className="p-6">
@@ -121,7 +122,7 @@ export function AttendancePage() {
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-      <motion.div variants={itemVariants}>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
             <CalendarCheck className="h-6 w-6" />
@@ -131,7 +132,8 @@ export function AttendancePage() {
         <p className="text-muted-foreground text-sm mt-1.5">
           Monitor field staff check-ins, office staff biometric logs, on-time arrivals, and leaves.
         </p>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {kpiStats.map((stat, idx) => (
@@ -285,6 +287,8 @@ export function AttendancePage() {
           </DialogContent>
         </Dialog>
       )}
+    
+      </PageContent>
     </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,11 +56,11 @@ export function NewCustomerPaymentPage() {
     router.push('/admin/customer-payments');
   };
 
-  if (customersLoading) return <PageSkeleton rows={4} />;
+  if (customersLoading) return <PageSkeleton variant="form" rows={4} />;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3">
+      <PageHero className="flex items-center gap-3">
         <Link href="/admin/customer-payments">
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
@@ -67,7 +68,8 @@ export function NewCustomerPaymentPage() {
           <h1 className="text-2xl font-bold tracking-tight">Record Payment</h1>
           <p className="text-muted-foreground text-sm">Log a customer collection — bKash, Nagad, cash, or bank.</p>
         </div>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
@@ -151,6 +153,8 @@ export function NewCustomerPaymentPage() {
           </CardContent>
         </Card>
       </form>
+    
+      </PageContent>
     </div>
   );
 }

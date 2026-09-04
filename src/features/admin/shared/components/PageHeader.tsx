@@ -1,5 +1,15 @@
+'use client';
+
 import type { ReactNode } from 'react';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { PageHero } from '@/components/motion/PageHero';
 
 interface BreadcrumbEntry {
   label: string;
@@ -16,7 +26,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, breadcrumb, actions, children }: PageHeaderProps) {
   return (
-    <div className="mb-6 space-y-2">
+    <PageHero className="mb-6 space-y-2">
       {breadcrumb && breadcrumb.length > 0 && (
         <Breadcrumb>
           <BreadcrumbList>
@@ -46,6 +56,6 @@ export function PageHeader({ title, subtitle, breadcrumb, actions, children }: P
         {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
       </div>
       {children}
-    </div>
+    </PageHero>
   );
 }

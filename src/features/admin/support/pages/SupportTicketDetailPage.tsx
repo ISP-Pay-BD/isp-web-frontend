@@ -31,7 +31,7 @@ export function SupportTicketDetailPage() {
   const displayTicket = ticket as SupportTicket | undefined;
   const thread = messages.length > 0 ? messages : displayTicket?.messages ?? [];
 
-  if (isLoading) return <PageSkeleton />;
+  if (isLoading) return <PageSkeleton variant="detail" />;
   if (isError || !displayTicket) {
     return (
       <EmptyState

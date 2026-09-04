@@ -33,9 +33,8 @@ export const marketingNavLinks = [
   { label: 'Product', href: '/#auto-reconcile' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
-  { label: 'Plugins', href: '/plugins' },
   { label: 'FAQ', href: '/#faq' },
-  { label: 'Contact', href: '/contact' },
+  { label: 'Contact', href: '/#contact' },
 ] as const;
 
 function filterExpiredNav(items: NavItem[], isExpired: boolean): NavItem[] {

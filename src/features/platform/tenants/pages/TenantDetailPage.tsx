@@ -21,7 +21,7 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
     queryFn: () => mockFetch('platform.tenants.get', tenantId),
   });
 
-  if (isLoading) return <PageSkeleton rows={5} />;
+  if (isLoading) return <PageSkeleton variant="detail" rows={5} />;
   if (error || !data) {
     return (
       <EmptyState

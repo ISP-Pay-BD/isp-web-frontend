@@ -230,11 +230,12 @@ export function useLandingData() {
               { capability: 'Auto disconnect/reconnect on billing', us: true, legacy: 'Semi-manual SSH scripting' },
             ],
           },
-          testimonials: res.testimonialsExtended.slice(0, 3).map((t) => ({
+          testimonials: res.testimonialsExtended.map((t) => ({
             name: t.name,
             role: t.role,
             quote: t.quote,
             rating: t.rating ?? 5,
+            image: t.image,
           })),
           faq: res.faqExtended,
           integrations: [

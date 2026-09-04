@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -47,7 +48,7 @@ export function ChartOfAccountsPage() {
     return { rootCount, totalBalance };
   }, [accounts]);
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
 
   if (isError) {
     return (
@@ -68,7 +69,7 @@ export function ChartOfAccountsPage() {
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
-      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -80,7 +81,8 @@ export function ChartOfAccountsPage() {
             General ledger hierarchy for ISP revenue, bandwidth costs, and assets.
           </p>
         </div>
-      </motion.div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       {/* Stats */}
       <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
@@ -203,6 +205,8 @@ export function ChartOfAccountsPage() {
           </Card>
         )}
       </motion.div>
+    
+      </PageContent>
     </motion.div>
   );
 }

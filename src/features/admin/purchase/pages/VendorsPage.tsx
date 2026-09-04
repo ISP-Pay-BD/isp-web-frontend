@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { usePurchase } from '../hooks/use-purchase';
@@ -21,17 +22,18 @@ export function VendorsPage() {
     [vendors, search],
   );
 
-  if (isLoading) return <PageSkeleton rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return <EmptyState title="Failed to load vendors" actionLabel="Retry" onAction={() => refetch()} />;
   }
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">Purchase Vendors</h1>
         <p className="text-muted-foreground text-sm">Bandwidth providers, equipment distributors, and supplier payables.</p>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
       <StatCard title="Active Vendors" value={vendors.filter((v) => v.status === 'active').length} icon={Building2} />
       <div className="relative max-w-md">
         <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
@@ -64,6 +66,8 @@ export function VendorsPage() {
           </TableBody>
         </Table>
       </div>
+    
+      </PageContent>
     </div>
   );
 }

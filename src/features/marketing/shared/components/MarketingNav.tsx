@@ -3,27 +3,48 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { marketingNavLinks } from '@/config/navigation/index';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
-import { LocaleToggle } from './LocaleToggle';
 import { useTranslations } from '../context/LocaleContext';
 
 const navI18nKeys: Record<string, string> = {
   '/#auto-reconcile': 'marketing.nav.features',
   '/#how-it-works': 'marketing.nav.howItWorks',
   '/#pricing': 'marketing.nav.pricing',
-  '/plugins': 'marketing.nav.plugins',
   '/#faq': 'marketing.nav.faq',
-  '/contact': 'marketing.nav.contact',
+  '/#contact': 'marketing.nav.contact',
 };
+
+function isHashLink(href: string): boolean {
+  return href.startsWith('/#') || href.startsWith('#');
+}
+
+function scrollToSection(href: string) {
+  const id = href.replace(/^\/?#/, '');
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
 
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
   const t = useTranslations();
+
+  const handleNavClick = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      if (isHashLink(href)) {
+        e.preventDefault();
+        scrollToSection(href);
+        setOpen(false);
+      }
+    },
+    [],
+  );
 
   return (
     <header className="lp-nav bg-landing-bg/80 supports-[backdrop-filter]:bg-landing-bg/70 sticky top-0 z-50 border-b border-white/10 backdrop-blur-md">
@@ -38,18 +59,21 @@ export function MarketingNav() {
 
         <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
           {marketingNavLinks.map((link) => (
-            <Link
+            <a
               key={link.href}
               href={link.href}
-              className="text-sm text-white/80 transition-colors hover:text-white"
+              onClick={(e) => handleNavClick(e, link.href)}
+              className="group relative text-sm text-white/80 transition-colors hover:text-white"
             >
-              {t(navI18nKeys[link.href] ?? link.label)}
-            </Link>
+              <span className="inline-block transition-transform duration-150 group-hover:translate-x-0.5">
+                {t(navI18nKeys[link.href] ?? link.label)}
+              </span>
+              <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-landing-cta transition-transform duration-200 group-hover:scale-x-100" />
+            </a>
           ))}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <LocaleToggle />
           <Link href="/login">
             <Button variant="ghost" className="text-white hover:bg-white/10 hover:text-white">
               {t('marketing.nav.login')}
@@ -63,7 +87,6 @@ export function MarketingNav() {
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <LocaleToggle />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
@@ -74,14 +97,14 @@ export function MarketingNav() {
             <SheetContent side="right" className="bg-landing-panel border-white/10 text-white">
               <nav className="mt-8 flex flex-col gap-4" aria-label="Mobile">
                 {marketingNavLinks.map((link) => (
-                  <Link
+                  <a
                     key={link.href}
                     href={link.href}
-                    onClick={() => setOpen(false)}
+                    onClick={(e) => handleNavClick(e, link.href)}
                     className="text-lg font-medium text-white/90"
                   >
                     {t(navI18nKeys[link.href] ?? link.label)}
-                  </Link>
+                  </a>
                 ))}
                 <Link href="/login" onClick={() => setOpen(false)} className="text-white/80">
                   {t('marketing.nav.login')}

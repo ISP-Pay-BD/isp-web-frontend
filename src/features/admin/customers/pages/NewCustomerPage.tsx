@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -76,7 +77,7 @@ export function NewCustomerPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
+      <PageHero className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/admin/customers">
             <Button variant="ghost" size="icon">
@@ -90,7 +91,8 @@ export function NewCustomerPage() {
             </p>
           </div>
         </div>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Personal Details */}
@@ -240,6 +242,8 @@ export function NewCustomerPage() {
           </Button>
         </div>
       </form>
+    
+      </PageContent>
     </div>
   );
 }

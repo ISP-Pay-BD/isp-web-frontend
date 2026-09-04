@@ -1,26 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useIpPools } from '../hooks/useIpPools';
 import type { IpPoolItem } from '@/data/admin/network-ops.data';
 import { IpPoolModal } from '../components/IpPoolModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { StatCard } from '@/components/shared/StatCard';
-import { EmptyState } from '@/components/shared/EmptyState';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Globe2, Layers, CheckCircle2, ShieldCheck, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
+const poolSearchFilter = (row: LegacyRow<IpPoolItem>, _columnId: string, filterValue: unknown) => {
+  const q = String(filterValue ?? '').toLowerCase().trim();
+  if (!q) return true;
+  const p = row.original;
+  return (
+    p.name.toLowerCase().includes(q) ||
+    p.startIp.includes(q) ||
+    p.endIp.includes(q) ||
+    (p.routerName?.toLowerCase().includes(q) ?? false)
+  );
+};
+
 export function IpPoolsPage() {
   const { data, isLoading } = useIpPools();
   const [pools, setPools] = useState<IpPoolItem[]>([]);
-  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -33,14 +43,6 @@ export function IpPoolsPage() {
   }
 
   const list = pools.length > 0 ? pools : initialPools;
-
-  const filtered = list.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.startIp.includes(search) ||
-    p.endIp.includes(search) ||
-    (p.routerName?.toLowerCase() ?? '').includes(search.toLowerCase())
-  );
-
   const totalPools = list.length;
   const totalIps = list.reduce((sum, p) => sum + p.total, 0);
   const totalUsedIps = list.reduce((sum, p) => sum + p.used, 0);
@@ -91,8 +93,102 @@ export function IpPoolsPage() {
     setPools((prev) => [newPool, ...prev]);
   };
 
+  const columns = useMemo<LegacyColumnDef<IpPoolItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Pool Name',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div>
+            <div className="font-semibold text-foreground">{row.original.name}</div>
+            {row.original.cidr ? (
+              <div className="text-xs text-muted-foreground font-mono">{row.original.cidr}</div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'routerName',
+        header: 'Router Gateway',
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-foreground">
+            {row.original.routerName ?? 'Default Gateway'}
+          </span>
+        ),
+      },
+      {
+        id: 'range',
+        accessorKey: 'startIp',
+        header: 'IP Range / CIDR',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="font-mono text-xs">
+            {row.original.startIp} <span className="text-muted-foreground">→</span>{' '}
+            {row.original.endIp}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'gateway',
+        header: 'Gateway',
+        cell: ({ row }) => <code className="font-mono text-xs">{row.original.gateway}</code>,
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        cell: ({ row }) => (
+          <Badge
+            variant={row.original.type === 'public' ? 'default' : 'secondary'}
+            className="capitalize text-xs"
+          >
+            {row.original.type}
+          </Badge>
+        ),
+      },
+      {
+        id: 'utilization',
+        accessorKey: 'used',
+        header: 'Utilization',
+        cell: ({ row }) => {
+          const usagePercent = Math.round((row.original.used / (row.original.total || 1)) * 100);
+          return (
+            <div className="min-w-[160px] space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">
+                  {row.original.used} / {row.original.total}
+                </span>
+                <span className="text-muted-foreground">{usagePercent}%</span>
+              </div>
+              <Progress value={usagePercent} className="h-1.5" />
+            </div>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Action</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Delete IP Pool"
+              onClick={() => setDeleteId(row.original.id)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
   if (isLoading && pools.length === 0) {
-    return <PageSkeleton rows={5} />;
+    return <PageSkeleton variant="table" rows={5} />;
   }
 
   return (
@@ -119,7 +215,6 @@ export function IpPoolsPage() {
         }
       />
 
-      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Subnets / Pools"
@@ -148,101 +243,23 @@ export function IpPoolsPage() {
         />
       </div>
 
-      {/* Search & Table */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <Input
-            placeholder="Search by pool name, IP range, router..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-md"
-          />
-          <span className="text-xs text-muted-foreground self-end sm:self-auto">
-            Showing {filtered.length} of {totalPools} pools
-          </span>
-        </div>
-
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={<Globe2 className="h-10 w-10" />}
-            title="No IP pools configured"
-            description="Add an IP pool to allocate static or dynamic addresses for PPPoE and Hotspot users."
-            actionLabel="Add IP Pool"
-            onAction={() => setModalOpen(true)}
-          />
-        ) : (
-          <div className="rounded-xl border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Pool Name</TableHead>
-                    <TableHead>Router Gateway</TableHead>
-                    <TableHead>IP Range / CIDR</TableHead>
-                    <TableHead>Gateway</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Utilization</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((pool, index) => {
-                    const usagePercent = Math.round((pool.used / (pool.total || 1)) * 100);
-                    return (
-                      <TableRow key={pool.id}>
-                        <TableCell className="text-muted-foreground text-xs font-mono">{index + 1}</TableCell>
-                        <TableCell>
-                          <div className="font-semibold text-foreground">{pool.name}</div>
-                          {pool.cidr && <div className="text-xs text-muted-foreground font-mono">{pool.cidr}</div>}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-medium text-foreground">{pool.routerName ?? 'Default Gateway'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-mono text-xs">
-                            {pool.startIp} <span className="text-muted-foreground">→</span> {pool.endIp}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <code className="font-mono text-xs">{pool.gateway}</code>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={pool.type === 'public' ? 'default' : 'secondary'}
-                            className="capitalize text-xs"
-                          >
-                            {pool.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="min-w-[160px]">
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-medium">{pool.used} / {pool.total}</span>
-                              <span className="text-muted-foreground">{usagePercent}%</span>
-                            </div>
-                            <Progress value={usagePercent} className="h-1.5" />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Delete IP Pool"
-                            onClick={() => setDeleteId(pool.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        data={list}
+        getRowId={(row) => row.id}
+        searchKey="name"
+        searchPlaceholder="Search by pool name, IP range, router..."
+        searchFilterFn={poolSearchFilter}
+        facetFilters={[{ columnId: 'type', title: 'Type' }]}
+        emptyTitle="No IP pools configured"
+        emptyDescription="Add an IP pool to allocate static or dynamic addresses for PPPoE and Hotspot users."
+        toolbarActions={
+          <Button size="sm" onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add IP Pool
+          </Button>
+        }
+      />
 
       <IpPoolModal
         open={modalOpen}

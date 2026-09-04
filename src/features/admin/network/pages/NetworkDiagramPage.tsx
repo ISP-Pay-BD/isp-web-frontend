@@ -77,14 +77,14 @@ export function NetworkDiagramPage() {
   };
 
   if (isLoading) {
-    return <PageSkeleton rows={6} />;
+    return <PageSkeleton variant="dashboard" rows={6} />;
   }
 
   return (
     <motion.div
       className="space-y-6 max-w-7xl mx-auto pb-12"
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
     >
       {/* Header */}

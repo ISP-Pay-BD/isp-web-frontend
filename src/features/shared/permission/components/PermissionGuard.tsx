@@ -25,10 +25,10 @@ export function PermissionGuard({ menu, action = 'read', children }: PermissionG
     }
   }, [isAuthenticated, user, menu, action, router]);
 
-  if (!user) return <PageSkeleton rows={4} />;
+  if (!user) return <PageSkeleton variant="table" rows={4} />;
 
   const allowed = can(user.permissions, menu, action, user.role);
-  if (!allowed) return <PageSkeleton rows={4} />;
+  if (!allowed) return <PageSkeleton variant="table" rows={4} />;
 
   return <>{children}</>;
 }

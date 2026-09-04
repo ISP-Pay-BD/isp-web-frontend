@@ -1,4 +1,5 @@
 'use client';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { Building2, Users, Phone } from 'lucide-react';
 import { usePopData } from '../../hooks/use-pop';
@@ -60,7 +61,7 @@ export function PopResellersPage() {
     },
   ];
 
-  if (isLoading) return <PageSkeleton rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) {
     return (
       <EmptyState title="Failed to load POP resellers" description="Could not fetch POP directory." actionLabel="Retry" onAction={() => refetch()} />
@@ -69,12 +70,13 @@ export function PopResellersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <PageHero>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">POP Resellers</h1>
         <p className="text-muted-foreground text-sm">
           Point-of-Presence resellers managing downstream customers in assigned areas.
         </p>
-      </div>
+      </PageHero>
+      <PageContent className="space-y-6">
 
       <div className="flex gap-2">
         <Badge variant="outline">{resellers.length} active POPs</Badge>
@@ -84,6 +86,8 @@ export function PopResellersPage() {
       </div>
 
       <DataTable columns={columns} data={resellers} emptyTitle="No POP resellers" emptyDescription="Add POP resellers to distribute packages in remote areas." />
+    
+      </PageContent>
     </div>
   );
 }

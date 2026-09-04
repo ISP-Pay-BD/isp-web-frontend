@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Puzzle,
@@ -12,38 +12,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { mockFetch } from '@/lib/mock-api/client';
+import { pluginsMarketplaceFull, pluginCategories } from '@/data/marketing/plugins.data';
 import { useTranslations } from '@/features/marketing/shared';
-
-interface Plugin {
-  id: string;
-  name: string;
-  category: string;
-  priceBdt: number;
-  period?: string;
-  installed: boolean;
-  rating?: number;
-  installs?: number;
-  desc?: string;
-}
 
 export function PluginsPage() {
   const t = useTranslations();
-  const [plugins, setPlugins] = useState<Plugin[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const plugins = pluginsMarketplaceFull;
+  const categories = pluginCategories;
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    mockFetch('marketing.plugins')
-      .then((res) => {
-        if (res.plugins) setPlugins(res.plugins);
-        if (res.categories) setCategories(res.categories);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   const filteredPlugins = plugins.filter((p) => {
     const matchesCategory =
@@ -54,19 +31,6 @@ export function PluginsPage() {
       (p.desc && p.desc.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-24 space-y-8 animate-pulse">
-        <div className="h-40 rounded-3xl bg-white/5" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-96">
-          <div className="rounded-2xl bg-white/5" />
-          <div className="rounded-2xl bg-white/5" />
-          <div className="rounded-2xl bg-white/5" />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="py-16 md:py-24">
@@ -200,7 +164,7 @@ export function PluginsPage() {
             Our Dhaka-based engineering team develops custom hardware drivers, billing bridges, and SMS aggregator webhooks upon request.
           </p>
           <div className="mt-6 flex justify-center">
-            <Link href="/contact">
+            <Link href="/#contact">
               <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-7 text-white font-semibold">
                 Request Custom Addon
                 <ArrowRight className="ml-2 h-4 w-4" />
