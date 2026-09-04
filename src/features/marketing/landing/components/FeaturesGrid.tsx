@@ -60,7 +60,7 @@ export function FeaturesGrid({ features }: FeaturesGridProps) {
             return (
               <div
                 key={feat.id}
-                className="group relative flex flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-landing-cta/40 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-orange-500/5"
+                className="glass-panel-luxury group relative flex flex-col rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-landing-cta/50 hover:shadow-[0_20px_40px_rgba(247,88,3,0.1)]"
               >
                 {feat.badge && (
                   <span

@@ -262,4 +262,35 @@
 .ipb-sidebar-button:active,
 .ipb-sidebar-sub-button:active {
   transform: translateX(1px) scale(0.99);
-}
+}
+
+/* $100k SaaS Luxury Utilities */
+.bg-grid-ambient {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 75% 55% at 50% 15%, #000 50%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 15%, #000 50%, transparent 100%);
+}
+
+.glass-panel-luxury {
+  background: rgba(24, 10, 48, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-glow {
+  background: rgba(24, 10, 48, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 12px 30px -10px rgba(247, 88, 3, 0.08);
+}
+
+.text-gradient-silver {
+  background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.68) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+

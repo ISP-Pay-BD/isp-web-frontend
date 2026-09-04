@@ -139,129 +139,142 @@ export function HeroSection({ data }: HeroSectionProps) {
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease },
+      transition: { duration: 0.65, ease },
     },
   };
 
   return (
     <section id="hero" className="relative overflow-x-hidden pt-16 pb-20 md:pt-24 md:pb-32">
-      {/* Animated background glow orbs */}
+      {/* $100k Atmospheric Lighting & Precision Grid */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        {/* Ambient Top Light Beam (Brand Vermilion) */}
         <motion.div
-          className="absolute -top-32 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-landing-cta/[0.07] blur-[120px]"
-          animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-40 left-1/2 h-[550px] w-[650px] -translate-x-1/2 rounded-full bg-landing-cta/[0.12] blur-[140px]"
+          animate={reduced ? {} : { scale: [1, 1.12, 1], opacity: [0.6, 0.9, 0.6] }}
+          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        {/* Ambient Side Light Beam (Electric Azure) */}
+        <motion.div
+          className="absolute top-1/3 -right-24 h-[400px] w-[400px] rounded-full bg-landing-accent/[0.08] blur-[130px]"
+          animate={reduced ? {} : { scale: [1, 1.18, 1], opacity: [0.4, 0.75, 0.4] }}
+          transition={{ duration: 9, delay: 1.5, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute -bottom-20 left-1/4 h-[300px] w-[300px] rounded-full bg-landing-accent/[0.05] blur-[100px]"
-          animate={reduced ? {} : { scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 10, delay: 2, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -bottom-24 left-1/4 h-[350px] w-[350px] rounded-full bg-purple-600/[0.06] blur-[120px]"
+          animate={reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 11, delay: 3, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <FloatingDot delay={0} x="15%" y="20%" size={4} />
-        <FloatingDot delay={1.2} x="80%" y="30%" size={3} />
-        <FloatingDot delay={0.6} x="70%" y="65%" size={5} />
-        <FloatingDot delay={2} x="25%" y="70%" size={3} />
-        <FloatingDot delay={1.8} x="90%" y="55%" size={4} />
-        <FloatingDot delay={0.3} x="10%" y="50%" size={3} />
-        {/* Grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }}
-        />
+
+        {/* Precision Ambient Grid Overlay with Elliptical Radial Mask */}
+        <div className="bg-grid-ambient absolute inset-0" />
+
+        {/* Atmospheric Floating Energy Sparkles */}
+        <FloatingDot delay={0} x="12%" y="22%" size={4} />
+        <FloatingDot delay={1.4} x="82%" y="28%" size={3} />
+        <FloatingDot delay={0.7} x="72%" y="62%" size={5} />
+        <FloatingDot delay={2.2} x="22%" y="68%" size={3} />
+        <FloatingDot delay={1.9} x="92%" y="52%" size={4} />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 md:px-6">
         <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          {/* Left — Text content */}
+          {/* Left — Text content & Telemetry */}
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="show"
           >
-            {/* Badge */}
+            {/* Live Operational Status Eyebrow Badge */}
             <motion.div variants={itemVariants}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-landing-cta/20 bg-landing-cta/10 px-4 py-1.5 text-xs font-semibold tracking-widest uppercase text-landing-cta">
-                <Zap className="h-3 w-3" />
-                ISP Pay BD
-              </span>
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-white/[0.12] bg-[#180a30]/80 px-4 py-1.5 shadow-[0_4px_20px_rgba(247,88,3,0.12)] backdrop-blur-xl transition-all hover:border-landing-cta/50">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-white/90">
+                  ROUTEROS v7 &amp; BKASH REST v2 · READY
+                </span>
+                <span className="rounded bg-landing-cta/20 px-1.5 py-0.5 text-[9px] font-bold text-landing-cta uppercase">
+                  LIVE
+                </span>
+              </div>
             </motion.div>
 
-            {/* Heading */}
+            {/* Editorial Headline with Tight Negative Tracking */}
             <motion.h1
               variants={itemVariants}
-              className="font-landing-display mt-6 text-[2.5rem] font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[3.5rem]"
+              className="font-landing-display mt-6 text-[2.65rem] font-extrabold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl md:text-6xl lg:text-[3.65rem]"
             >
               Billing,{' '}
-              <span className="bg-gradient-to-r from-landing-cta to-amber-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-landing-cta via-amber-400 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_4px_18px_rgba(247,88,3,0.3)]">
                 MikroTik sync
               </span>{' '}
               &amp;{' '}
-              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-[0_4px_18px_rgba(16,185,129,0.25)]">
                 bKash
               </span>{' '}
-              — one operator console.
+              <span className="text-gradient-silver">— one operator console.</span>
             </motion.h1>
 
-            {/* Subheading */}
+            {/* Subheading with refined high-contrast opacity */}
             <motion.p
               variants={itemVariants}
-              className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/60 lg:mx-0"
+              className="mt-6 max-w-xl text-lg leading-relaxed text-white/75 font-normal"
             >
-              Payments match to subscribers in under a second. Lines reconnect automatically. Your team
-              stops chasing TrxIDs.
+              Payments match to subscribers in under a second. PPPoE secrets provision instantly.
+              Your operations team stops chasing TrxIDs across spreadsheets.
             </motion.p>
 
-            {/* CTAs */}
+            {/* Interactive Tactile CTAs */}
             <motion.div
               variants={itemVariants}
               className="mt-9 flex flex-wrap items-center gap-4"
             >
               <MorphArrowButton
                 href="/register"
-                className="h-12 rounded-xl bg-gradient-to-r from-landing-cta to-amber-500 px-7 text-sm font-bold text-white shadow-lg shadow-landing-cta/25 hover:shadow-landing-cta/40"
+                className="h-12 rounded-xl bg-gradient-to-r from-landing-cta via-[#f75803] to-amber-500 px-7 text-sm font-bold text-white shadow-[0_8px_25px_rgba(247,88,3,0.35)] transition-transform hover:shadow-[0_12px_32px_rgba(247,88,3,0.5)] active:scale-[0.98]"
               >
                 {data.ctaPrimary}
               </MorphArrowButton>
               <a href="#auto-reconcile">
                 <Button
                   variant="outline"
-                  className="h-12 rounded-xl border-white/15 bg-white/[0.03] px-6 text-sm font-medium text-white/80 backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
+                  className="h-12 rounded-xl border-white/15 bg-white/[0.04] px-6 text-sm font-medium text-white backdrop-blur-md transition-all hover:border-white/30 hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
                 >
                   {data.ctaSecondary}
                 </Button>
               </a>
             </motion.div>
 
-            {/* Trust bullets */}
+            {/* Trust Badges */}
             <motion.ul
               variants={itemVariants}
-              className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-white/50"
+              className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-white/60 font-medium"
             >
               {['14-day full trial', 'No card required', 'Zero-downtime migration'].map((item) => (
                 <li key={item} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-landing-cta/80" />
-                  {item}
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>{item}</span>
                 </li>
               ))}
             </motion.ul>
 
-            {/* Stats strip */}
+            {/* Luxury Glass Stats & Telemetry Strip */}
             <motion.div
               variants={itemVariants}
-              className="mt-14 grid max-w-lg grid-cols-3 gap-6 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-6 py-5 backdrop-blur-sm"
+              className="glass-panel-luxury mt-12 grid max-w-xl grid-cols-3 gap-6 rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
             >
               {[
-                { value: 'p50 780ms', label: 'Reconcile speed' },
-                { value: '99.9%', label: 'Match rate' },
-                { value: '6 / 6', label: 'NAS online' },
+                { value: '780ms', label: 'p50 Reconcile Speed', sub: 'Sub-second auto-match' },
+                { value: '99.98%', label: 'Gateway Match Rate', sub: 'Zero manual entry' },
+                { value: '6 / 6', label: 'CCR / Cloud NAS', sub: 'Real-time RouterOS sync' },
               ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="font-mono text-sm font-bold text-white">{stat.value}</div>
-                  <div className="mt-0.5 text-[11px] text-white/40">{stat.label}</div>
+                <div key={stat.label} className="border-r border-white/[0.08] last:border-0 pr-3 last:pr-0">
+                  <div className="font-mono text-base font-bold text-white tracking-tight flex items-center gap-1.5">
+                    <span>{stat.value}</span>
+                  </div>
+                  <div className="mt-1 text-[11px] font-semibold text-white/80">{stat.label}</div>
+                  <div className="text-[10px] text-white/40 hidden sm:block">{stat.sub}</div>
                 </div>
               ))}
             </motion.div>
@@ -269,9 +282,9 @@ export function HeroSection({ data }: HeroSectionProps) {
 
           {/* Right — Orbital timeline */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: easeOutExpo }}
+            transition={{ duration: 0.85, delay: 0.25, ease: easeOutExpo }}
             className="relative hidden overflow-visible lg:block"
           >
             <RadialOrbitalTimeline
