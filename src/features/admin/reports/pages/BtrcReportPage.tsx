@@ -44,7 +44,7 @@ export function BtrcReportPage() {
           <h1 className="text-2xl font-bold tracking-tight">BTRC Subscriber Report</h1>
           <p className="text-muted-foreground text-sm">Export-ready subscriber demographics for Bangladesh Telecommunication Regulatory Commission filing.</p>
         </div>
-        <Button variant="outline" onClick={() => toast.success('CSV export will be available in Phase 8')}>
+        <Button variant="outline" onClick={() => toast.success('Export coming soon')}>
           Export CSV
         </Button>
       </PageHero>

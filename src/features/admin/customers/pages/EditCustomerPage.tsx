@@ -1,7 +1,7 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { use, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function EditCustomerPage({ id }: { id: string }) {
   const router = useRouter();
-  const { data, isLoading, isError, refetch } = useCustomer(id);
+  const { data, isLoading, isError } = useCustomer(id);
   const updateMutation = useUpdateCustomer(id);
 
   const customer = data?.customer;

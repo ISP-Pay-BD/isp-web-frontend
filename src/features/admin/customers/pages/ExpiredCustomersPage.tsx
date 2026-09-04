@@ -3,7 +3,7 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Search, AlertTriangle, Send, RefreshCw, Eye, Edit } from 'lucide-react';
+import { Search, AlertTriangle, Send } from 'lucide-react';
 import { useExpiredCustomers } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';

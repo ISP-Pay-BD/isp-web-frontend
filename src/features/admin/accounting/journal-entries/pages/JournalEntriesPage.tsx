@@ -7,8 +7,6 @@ import {
   FileText,
   CheckCircle2,
   Clock,
-  CreditCard,
-  TrendingUp,
 } from 'lucide-react';
 import { useJournalEntries } from '../hooks/use-journal-entries';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
@@ -24,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { staggerContainer, fadeUp } from '@/lib/animations';
-import { cn } from '@/lib/utils';
+
 
 export function JournalEntriesPage() {
   const { entries, isLoading, isError, refetch } = useJournalEntries();

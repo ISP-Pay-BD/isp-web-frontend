@@ -17,7 +17,6 @@ export const customers: Customer[] = Array.from({ length: 80 }, (_, i) => {
   const isSuspended = i % 17 === 0;
   const month = (i % 12) + 1;
   const pppoeDisabled = i % 7 === 0;
-  const daysLeft = isExpired ? -5 : 30 - (i % 28);
 
   const today = new Date();
   const bandwidthData = Array.from({ length: 7 }, (_, d) => {

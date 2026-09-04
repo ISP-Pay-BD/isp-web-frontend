@@ -19,7 +19,6 @@ import {
   Sliders,
   Eye,
   Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { themePresetsData, generateColorRamp, type ThemePreset } from '@/data/admin/theme-studio.data';

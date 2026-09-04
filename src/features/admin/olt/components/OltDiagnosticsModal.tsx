@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Wifi, WifiOff, AlertTriangle, Cpu, Search } from 'lucide-react';
+import { Wifi, WifiOff, AlertTriangle, Cpu, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { OnuPortItem } from '@/data/admin/network-ops.data';
@@ -36,13 +36,19 @@ export function OltDiagnosticsModal({
 
   useEffect(() => {
     if (!open) {
-      setContentVisible(false);
-      return;
+      const id = requestAnimationFrame(() => setContentVisible(false));
+      return () => cancelAnimationFrame(id);
     }
+    let cancelled = false;
     const raf = requestAnimationFrame(() => {
-      setTimeout(() => setContentVisible(true), 60);
+      setTimeout(() => {
+        if (!cancelled) setContentVisible(true);
+      }, 60);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [open]);
 
   const data = useMemo(() => oltDiagnostics[oltId] ?? oltDiagnostics['olt_1'], [oltId]);

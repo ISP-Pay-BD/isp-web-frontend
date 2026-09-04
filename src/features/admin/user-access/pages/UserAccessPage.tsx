@@ -3,21 +3,13 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Users, ChevronRight, Lock, Eye, EyeOff, Key } from 'lucide-react';
+import { Shield, Users, Lock, Key } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { mockFetch } from '@/lib/mock-api/client';
 import type { PermissionSectionDef, CustomUserAccessRecord } from '@/data/users';
 import type { PermissionMap } from '@/types/auth';
-import { StatCard } from '@/components/shared/StatCard';
 import { PermissionMatrixEditor } from '../components/PermissionMatrix';
 import { CustomAccessTable } from '../components/CustomAccessTable';
 import { staggerContainer, fadeUp } from '@/lib/animations';

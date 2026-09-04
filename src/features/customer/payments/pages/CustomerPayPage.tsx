@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  CreditCard,
   ShieldCheck,
   CheckCircle2,
   Lock,
@@ -46,10 +45,10 @@ export function CustomerPayPage() {
   } = useForm<PayInvoiceInput>({
     resolver: zodResolver(payInvoiceSchema),
     defaultValues: {
-      amount: 1200,
+      amount: 0,
       method: 'bkash',
-      accountNumber: '01711001001',
-      trxId: 'TRX' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+      accountNumber: '',
+      trxId: '',
     },
   });
 
@@ -203,8 +202,8 @@ export function CustomerPayPage() {
                 <Info className="h-4 w-4 shrink-0 mt-0.5 text-blue-600" />
                 <span>
                   For automated recharge: Dial *247# (bKash) or *167# (Nagad) &gt; Make Payment to Merchant{' '}
-                  <strong className="font-mono">01700-000000</strong> &gt; Enter your Customer ID{' '}
-                  <strong className="font-mono">user_001</strong> as reference.
+                  <strong className="font-mono">your merchant number</strong> &gt; Enter your Customer ID{' '}
+                  <strong className="font-mono">your customer ID</strong> as reference.
                 </span>
               </div>
             </CardContent>

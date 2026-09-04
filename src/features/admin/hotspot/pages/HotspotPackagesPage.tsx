@@ -125,7 +125,7 @@ export function HotspotPackagesPage() {
           { label: 'Packages' },
         ]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Create profile modal — mock phase')}>
+          <Button size="sm" onClick={() => toast.info('Profile management coming soon')}>
             <Plus className="mr-2 h-4 w-4" />
             Add profile
           </Button>

@@ -20,7 +20,6 @@ import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { staggerContainer, fadeUp } from '@/lib/animations';
 import { formatBdtWithSymbol } from '@/lib/format';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, Minus, ArrowRight } from 'lucide-react';
+import { Check, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   comparisonGroups,

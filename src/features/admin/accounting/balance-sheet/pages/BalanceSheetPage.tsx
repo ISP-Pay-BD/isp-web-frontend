@@ -13,7 +13,7 @@ import { useBalanceSheet } from '../hooks/use-balance-sheet';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { staggerContainer, fadeUp } from '@/lib/animations';
+import { staggerContainer } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 
 function SectionBlock({
@@ -64,7 +64,7 @@ function SectionBlock({
           {/* Items */}
           <div className="p-4">
             <ul className="space-y-1">
-              {items.map((item, idx) => (
+              {items.map((item) => (
                 <li
                   key={item.name}
                   className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-muted/30 transition-colors group"

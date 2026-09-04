@@ -1,12 +1,11 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  ArrowLeft,
   Edit,
   Zap,
   Phone,
@@ -16,22 +15,17 @@ import {
   Wifi,
   WifiOff,
   Receipt,
-  Server,
   Activity,
   CreditCard,
   User,
-  Globe,
   Shield,
   FileText,
   Radio,
   Link2,
-  Copy,
   RefreshCw,
-  ExternalLink,
   MoreVertical,
   ChevronDown,
   Signal,
-  Clock,
   Cpu,
   HardDrive,
   ArrowUpRight,
@@ -45,18 +39,18 @@ import { Can } from '@/components/shared/Can';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
+import { staggerContainer, fadeUp } from '@/lib/animations';
 
 export function CustomerDetailPage({ id }: { id: string }) {
   const router = useRouter();
-  const { data, isLoading, isError, refetch } = useCustomer(id);
+  const { data, isLoading, isError } = useCustomer(id);
 
   const customer = data?.customer;
   const payments = data?.payments ?? [];

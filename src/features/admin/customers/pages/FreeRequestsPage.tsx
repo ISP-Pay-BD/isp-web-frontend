@@ -2,19 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import {
-  UserCheck,
   CheckCircle2,
   XCircle,
   Clock,
   ThumbsUp,
   ThumbsDown,
   Search,
-  Users,
-  AlertTriangle,
   Mail,
   MapPin,
   Calendar,
-  User,
 } from 'lucide-react';
 import { useFreeRequests } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';

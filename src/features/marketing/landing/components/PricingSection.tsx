@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Check } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { Check, Wallet, Calendar } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { Reveal } from '@/components/motion/Reveal';
 import { GlareSurface } from '@/components/motion/GlareSurface';
-import { MagneticTabs, MagneticTabsPanel } from '@/components/motion/MagneticTabs';
 import { MorphArrowButton } from '@/components/motion/MorphArrowButton';
+import { cn } from '@/lib/utils';
 import type { PricingPlan, PaygCalculatorData } from '../types';
 
 interface PricingSectionProps {
@@ -34,51 +34,104 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
           </p>
         </Reveal>
 
+        {/* Model Toggle — Premium segmented control */}
         <Reveal className="mt-10">
-          <MagneticTabs
-            items={[
-              { value: 'fixed', label: 'Fixed Monthly' },
-              { value: 'payg', label: 'Pay-As-You-Go' },
-            ]}
-            value={model}
-            onChange={(v) => setModel(v as 'fixed' | 'payg')}
-            layoutId="pricing-model-tab"
-          />
+          <div className="inline-flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setModel('fixed')}
+              className={cn(
+                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-300',
+                model === 'fixed'
+                  ? 'text-white'
+                  : 'text-white/45 hover:text-white/70',
+              )}
+            >
+              {model === 'fixed' && (
+                <motion.span
+                  layoutId="pricing-model-bg"
+                  className="absolute inset-0 rounded-lg bg-landing-cta shadow-[0_0_20px_rgba(247,88,3,0.25)]"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <Calendar size={15} className="relative z-10" />
+              <span className="relative z-10">Fixed Monthly</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setModel('payg')}
+              className={cn(
+                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-300',
+                model === 'payg'
+                  ? 'text-white'
+                  : 'text-white/45 hover:text-white/70',
+              )}
+            >
+              {model === 'payg' && (
+                <motion.span
+                  layoutId="pricing-model-bg"
+                  className="absolute inset-0 rounded-lg bg-landing-cta shadow-[0_0_20px_rgba(247,88,3,0.25)]"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <Wallet size={15} className="relative z-10" />
+              <span className="relative z-10">Pay-As-You-Go</span>
+            </button>
+          </div>
         </Reveal>
 
         <AnimatePresence mode="wait">
           {model === 'fixed' ? (
-            <MagneticTabsPanel key="fixed" activeKey="fixed" className="mt-12">
-              <div className="flex items-center justify-start gap-3 text-sm">
-                <span className={!isYearly ? 'font-medium text-white' : 'text-white/50'}>Monthly</span>
+            <motion.div
+              key="fixed"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {/* Monthly/Yearly toggle */}
+              <div className="mt-10 flex items-center gap-3">
+                <span className={cn('text-sm', !isYearly ? 'font-medium text-white' : 'text-white/45')}>
+                  Monthly
+                </span>
                 <button
                   type="button"
                   onClick={() => setIsYearly(!isYearly)}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
-                    isYearly ? 'bg-landing-cta' : 'bg-white/20'
-                  }`}
+                  className={cn(
+                    'relative h-7 w-12 rounded-full transition-all duration-300',
+                    isYearly
+                      ? 'bg-gradient-to-r from-landing-cta to-amber-500 shadow-[0_0_16px_rgba(247,88,3,0.3)]'
+                      : 'bg-white/15',
+                  )}
                   aria-label="Toggle yearly discount"
                 >
-                  <span
-                    className={`mt-1 inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isYearly ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                  <motion.span
+                    className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-md"
+                    animate={{ left: isYearly ? '25px' : '3px' }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 </button>
-                <span className={isYearly ? 'font-medium text-white' : 'text-white/50'}>Yearly</span>
-                <span className="text-xs text-emerald-400/90">Save 20%</span>
+                <span className={cn('text-sm', isYearly ? 'font-medium text-white' : 'text-white/45')}>
+                  Yearly
+                </span>
+                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">
+                  Save 20%
+                </span>
               </div>
 
-              <div className="mt-10 grid gap-4 md:grid-cols-3">
+              <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {plans.map((plan) => {
                   const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
                   return (
                     <GlareSurface
                       key={plan.id}
                       intensity={0.1}
-                      className={`relative flex flex-col justify-between rounded-xl p-7 ${
-                        plan.highlighted ? 'bg-white/[0.06] ring-1 ring-landing-cta/50' : 'bg-white/[0.03]'
-                      }`}
+                      className={cn(
+                        'relative flex flex-col justify-between rounded-xl p-7',
+                        plan.highlighted
+                          ? 'bg-white/[0.06] ring-1 ring-landing-cta/50'
+                          : 'bg-white/[0.03]',
+                      )}
                     >
                       {plan.highlighted && (
                         <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider text-landing-cta">
@@ -107,11 +160,12 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                         <MorphArrowButton
                           href="/register"
                           magnetic={plan.highlighted}
-                          className={`w-full h-10 text-sm font-semibold ${
+                          className={cn(
+                            'h-10 w-full text-sm font-semibold',
                             plan.highlighted
                               ? 'bg-landing-cta hover:bg-landing-cta-hover text-white'
-                              : 'bg-white/10 hover:bg-white/15 text-white'
-                          }`}
+                              : 'bg-white/10 hover:bg-white/15 text-white',
+                          )}
                         >
                           Start Free Trial
                         </MorphArrowButton>
@@ -120,9 +174,16 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   );
                 })}
               </div>
-            </MagneticTabsPanel>
+            </motion.div>
           ) : (
-            <MagneticTabsPanel key="payg" activeKey="payg" className="mt-12 max-w-xl">
+            <motion.div
+              key="payg"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-12 max-w-xl"
+            >
               <div className="rounded-xl bg-white/[0.04] p-8">
                 <h3 className="font-landing-display text-xl font-semibold text-white">
                   Pay only for active subscribers
@@ -164,7 +225,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   </MorphArrowButton>
                 </div>
               </div>
-            </MagneticTabsPanel>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

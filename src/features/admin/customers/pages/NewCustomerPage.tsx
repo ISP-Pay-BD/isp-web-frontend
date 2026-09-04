@@ -5,7 +5,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, User, Shield, Network, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, User, Network, Calendar } from 'lucide-react';
 import { customerSchema, type CustomerFormValues } from '../schemas/customer.schema';
 import { useCreateCustomer } from '../hooks/use-customers';
 import { Button } from '@/components/ui/button';

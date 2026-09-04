@@ -3,11 +3,9 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  ArrowUpFromLine,
   ArrowRight,
   Users,
   FileText,
-  TrendingUp,
   CreditCard,
   CheckCircle2,
 } from 'lucide-react';
@@ -17,7 +15,6 @@ import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { staggerContainer, fadeUp } from '@/lib/animations';
 
 const LINKS = [

@@ -8,7 +8,6 @@ import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Wifi,
   Users,
@@ -18,9 +17,6 @@ import {
   ArrowRight,
   Zap,
   Activity,
-  TrendingUp,
-  Clock,
-  Signal,
 } from 'lucide-react';
 import { formatBdtWithSymbol } from '@/lib/format';
 
@@ -93,7 +89,7 @@ export function HotspotHubPage() {
   const reports = data?.reports ?? [];
   const activeUsers = users.filter((u) => u.status === 'active').length;
   const todaySales = reports
-    .filter((r) => r.date === '2026-09-02')
+    .filter((r) => r.date === new Date().toISOString().split('T')[0])
     .reduce((s, r) => s + r.priceBdt, 0);
 
   return (

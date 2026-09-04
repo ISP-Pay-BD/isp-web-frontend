@@ -12,7 +12,7 @@ import {
   TrendingDown,
   X,
 } from 'lucide-react';
-import { usePopData, type PopTransaction } from '../../hooks/use-pop';
+import { usePopData } from '../../hooks/use-pop';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';

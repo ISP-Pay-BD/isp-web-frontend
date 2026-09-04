@@ -90,8 +90,8 @@ export default function RadialOrbitalTimeline({
 
   useEffect(() => {
     if (reduced) {
-      setAutoRotate(false);
-      return;
+      const id = requestAnimationFrame(() => setAutoRotate(false));
+      return () => cancelAnimationFrame(id);
     }
     if (!autoRotate) return;
 
@@ -191,77 +191,69 @@ export default function RadialOrbitalTimeline({
               </div>
             </div>
 
-            {/* Hub overview card — macOS style */}
+            {/* Hub overview card — compact, positioned left */}
             {hubActive && (
-              <div className="absolute top-[5rem] left-1/2 z-50 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0a0114]/95 shadow-[0_25px_80px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
+              <div className="absolute right-[5rem] top-1/2 z-50 w-64 -translate-y-1/2 overflow-hidden rounded-2xl border border-white/[0.12] bg-[#0a0114]/95 shadow-[0_25px_80px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl">
                 {/* macOS header */}
-                <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
+                <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-1.5">
+                  <div className="flex gap-1">
+                    <div className="h-2 w-2 rounded-full bg-white/10" />
+                    <div className="h-2 w-2 rounded-full bg-white/10" />
+                    <div className="h-2 w-2 rounded-full bg-white/10" />
                   </div>
-                  <span className="ml-1 text-[10px] font-medium text-white/40">Platform Overview</span>
+                  <span className="ml-1 text-[9px] font-medium text-white/40">Platform Overview</span>
                 </div>
 
-                <div className="p-4">
-                  <div className="mb-3 flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-landing-cta/20 bg-landing-cta/10">
-                      <Zap size={14} className="text-landing-cta" />
+                <div className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-landing-cta/20 bg-landing-cta/10">
+                      <Zap size={12} className="text-landing-cta" />
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold text-white">{hubLabel}</div>
-                      <div className="text-[10px] text-white/40">ISP Billing & Operations</div>
+                      <div className="text-[10px] font-bold text-white">{hubLabel}</div>
+                      <div className="text-[9px] text-white/40">ISP Billing & Operations</div>
                     </div>
                   </div>
 
-                  <p className="text-[11px] leading-relaxed text-white/50 mb-3">
-                    Complete platform for ISP operators — billing, router sync, payments, customer management, and network monitoring.
-                  </p>
-
-                  {/* Feature grid */}
-                  <div className="grid grid-cols-2 gap-1.5">
+                  {/* Compact feature grid */}
+                  <div className="mt-2.5 grid grid-cols-2 gap-1">
                     {timelineData.map((item) => {
                       const ItemIcon = item.icon;
                       return (
                         <button
                           key={item.id}
                           type="button"
-                          className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2 text-left transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
+                          className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1.5 text-left transition-all hover:border-white/[0.12] hover:bg-white/[0.04]"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleItem(item.id);
                           }}
                         >
-                          <ItemIcon size={12} style={{ color: item.color }} className="shrink-0" />
-                          <div>
-                            <div className="text-[9px] font-bold text-white/80">{item.title}</div>
-                            <div className="text-[8px] text-white/35">{item.status === 'completed' ? 'Live' : item.status === 'in-progress' ? 'Active' : 'Soon'}</div>
+                          <ItemIcon size={10} style={{ color: item.color }} className="shrink-0" />
+                          <div className="min-w-0">
+                            <div className="truncate text-[8px] font-bold text-white/80">{item.title}</div>
+                            <div className="text-[7px] text-white/35">
+                              {item.status === 'completed' ? 'Live' : item.status === 'in-progress' ? 'Active' : 'Soon'}
+                            </div>
                           </div>
                         </button>
                       );
                     })}
                   </div>
 
-                  {/* Summary stats */}
-                  <div className="mt-3 flex items-center gap-3 border-t border-white/[0.06] pt-3">
-                    <div className="flex items-center gap-1.5">
+                  {/* Summary */}
+                  <div className="mt-2.5 flex items-center gap-2 border-t border-white/[0.06] pt-2">
+                    <div className="flex items-center gap-1">
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      <span className="text-[9px] text-white/40">
-                        {timelineData.filter((i) => i.status === 'completed').length} Live
-                      </span>
+                      <span className="text-[8px] text-white/40">{timelineData.filter((i) => i.status === 'completed').length} Live</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <div className="h-1.5 w-1.5 rounded-full bg-landing-cta" />
-                      <span className="text-[9px] text-white/40">
-                        {timelineData.filter((i) => i.status === 'in-progress').length} Active
-                      </span>
+                      <span className="text-[8px] text-white/40">{timelineData.filter((i) => i.status === 'in-progress').length} Active</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <div className="h-1.5 w-1.5 rounded-full bg-white/30" />
-                      <span className="text-[9px] text-white/40">
-                        {timelineData.filter((i) => i.status === 'pending').length} Coming
-                      </span>
+                      <span className="text-[8px] text-white/40">{timelineData.filter((i) => i.status === 'pending').length} Soon</span>
                     </div>
                   </div>
                 </div>

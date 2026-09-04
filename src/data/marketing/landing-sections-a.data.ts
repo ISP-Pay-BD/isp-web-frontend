@@ -216,4 +216,62 @@ export const landingSectionsAData = {
     { name: 'Cisco & Juniper Routers', category: 'Network', icon: 'Cpu' },
     { name: 'RADIUS AAA & vBNG', category: 'Auth', icon: 'ShieldCheck' },
   ],
+  pluginsList: [
+    { id: 'whatsapp', name: 'WhatsApp Business', category: 'Communications', priceBdt: 500, installed: true, rating: 4.8, installs: 85, desc: 'Expiry alerts, payment confirmations, and bulk campaign broadcasts via WhatsApp Business API.' },
+    { id: 'olt-huawei', name: 'Huawei OLT Manager', category: 'Fiber', priceBdt: 1200, installed: false, rating: 4.6, installs: 42, desc: 'GPON/EPON ONU provisioning, signal diagnostics, and MAC bind controls for Huawei OLT hardware.' },
+    { id: 'hr-payroll', name: 'HR & Payroll', category: 'Operations', priceBdt: 800, installed: true, rating: 4.5, installs: 63, desc: 'Staff attendance, salary disbursement, advance salary requests, and employee ledger tracking.' },
+    { id: 'merchant-webhook', name: 'Merchant Webhooks', category: 'Payment', priceBdt: 300, installed: false, rating: 4.7, installs: 91, desc: 'Real-time HTTP callbacks for payment, expiry, and subscriber events to your internal systems.' },
+  ],
+  mobileApp: {
+    title: 'ISP Pay BD Customer App',
+    features: ['Check balance & expiry date instantly', 'Pay via bKash or Nagad in-app', 'Open and track support tickets', 'Full Bangla + English interface'],
+    stores: { android: '#', ios: '#' },
+  },
+  resellerHierarchy: {
+    levels: ['Platform (SaaS)', 'Tenant ISP', 'POP Reseller', 'Sub-POP', 'Customer'],
+    description: 'Fund POPs, set packages, and scope permissions per level — commission splits automatically on every payment.',
+  },
+  rolesAccess: [
+    { role: 'Super Admin', access: 'All tenants, revenue, platform settings' },
+    { role: 'Tenant Admin', access: 'Full ISP operations for one tenant' },
+    { role: 'POP Reseller', access: 'Scoped customers, packages, funding' },
+    { role: 'Employee', access: 'Salary, attendance, assigned tasks' },
+    { role: 'Customer', access: 'Subscription, payments, support' },
+  ],
+  caseStudy: {
+    company: 'FastNet BD',
+    location: 'Dhaka & Gazipur',
+    customers: 4200,
+    quote: 'We cut reconciliation from 3 hours to 15 minutes per day. MikroTik sync just works.',
+    results: [
+      { metric: '3x faster', label: 'Payment processing' },
+      { metric: '40% less', label: 'Support tickets' },
+      { metric: '2.1M BDT', label: 'Monthly collections tracked' },
+    ],
+  },
+  partners: [
+    'FastNet BD', 'NetLink CTG', 'SkyConnect', 'CityNet Sylhet', 'LinkWave', 'FiberOne BD',
+    'SpeedNet Khulna', 'WaveISP', 'ConnectBD', 'NetZone', 'DhakaNet', 'GreenLink',
+  ],
+  trustBadges: [
+    { label: '120+ ISPs', sub: 'Across Bangladesh' },
+    { label: '85K+ users', sub: 'Managed daily' },
+    { label: '2M+ payments', sub: 'Reconciled' },
+    { label: '99.9% uptime', sub: 'Platform SLA' },
+  ],
+  connects: [
+    { name: 'API Access', desc: 'REST API for custom integrations' },
+    { name: 'Webhooks', desc: 'Payment and expiry event callbacks' },
+    { name: 'Mobile SDK', desc: 'Embed recharge widgets in your app' },
+  ],
+  permissionsMatrix: [
+    { module: 'Customers & Subscribers', read: true, create: true, update: true, delete: true },
+    { module: 'Billing & Payments', read: true, create: true, update: true, delete: false },
+    { module: 'MikroTik RouterOS API', read: true, create: true, update: true, delete: true },
+    { module: 'OLT & Fiber ONUs', read: true, create: true, update: true, delete: false },
+    { module: 'Accounting & Ledger', read: true, create: false, update: false, delete: false },
+    { module: 'Support Tickets', read: true, create: true, update: true, delete: false },
+    { module: 'HR & Payroll Staff', read: false, create: false, update: false, delete: false },
+    { module: 'Settings & Gateways', read: false, create: false, update: false, delete: false },
+  ],
 };

@@ -1,5 +1,5 @@
 import { mockDelay } from '../delay';
-import { customers, expiredCustomers, freeUserRequests, getCustomerById } from '@/data/admin/customers.data';
+import { customers, freeUserRequests, getCustomerById } from '@/data/admin/customers.data';
 import { customerPayments, getPaymentsByCustomerId } from '@/data/admin/customer-payments.data';
 import { packages, popPackages } from '@/data/admin/packages.data';
 import { areas } from '@/data/admin/areas.data';

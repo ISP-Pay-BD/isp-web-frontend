@@ -9,20 +9,32 @@ export function useAuthHydrated(): boolean {
   const [ready, setReady] = useState(hasHydrated);
 
   useEffect(() => {
-    setReady(useAuthStore.getState().hasHydrated);
+    if (hasHydrated) return;
 
+    let cancelled = false;
     const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
       useAuthStore.getState().setHasHydrated(true);
-      setReady(true);
+      if (!cancelled) {
+        requestAnimationFrame(() => {
+          if (!cancelled) setReady(true);
+        });
+      }
     });
 
     if (useAuthStore.persist.hasHydrated()) {
       useAuthStore.getState().setHasHydrated(true);
-      setReady(true);
+      if (!cancelled) {
+        requestAnimationFrame(() => {
+          if (!cancelled) setReady(true);
+        });
+      }
     }
 
-    return unsubFinish;
-  }, []);
+    return () => {
+      cancelled = true;
+      unsubFinish();
+    };
+  }, [hasHydrated]);
 
   return ready || hasHydrated;
 }

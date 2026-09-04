@@ -27,7 +27,7 @@ export function WhatsAppSettingsPage() {
   const cfg = settings ?? data.settings;
 
   const handleSave = () => {
-    toast.success('WhatsApp settings saved (mock)');
+    toast.success('WhatsApp settings saved');
   };
 
   return (

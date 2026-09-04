@@ -10,7 +10,6 @@ import {
   Laptop,
   Check,
   RotateCcw,
-  Sliders,
   ExternalLink,
   Sparkles,
 } from 'lucide-react';

@@ -90,7 +90,7 @@ export function VoiceSmsPage() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => toast.info('Playing sample audio (mock)')}
+            onClick={() => toast.info('Playing sample audio')}
           >
             <Play className="h-4 w-4" />
           </Button>

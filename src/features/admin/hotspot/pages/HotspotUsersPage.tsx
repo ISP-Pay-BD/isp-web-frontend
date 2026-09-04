@@ -142,7 +142,7 @@ export function HotspotUsersPage() {
           { label: 'Users' },
         ]}
         actions={
-          <Button size="sm" onClick={() => toast.info('Generate voucher — mock phase')}>
+          <Button size="sm" onClick={() => toast.info('Voucher generation coming soon')}>
             <Plus className="mr-2 h-4 w-4" />
             Generate voucher
           </Button>

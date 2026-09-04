@@ -29,20 +29,24 @@ function CountUp({
   useEffect(() => {
     if (!inView) return;
     if (reduced) {
-      setDisplay(value);
-      return;
+      const id = requestAnimationFrame(() => setDisplay(value));
+      return () => cancelAnimationFrame(id);
     }
     const start = performance.now();
     const duration = 900;
+    let cancelled = false;
     let frame = 0;
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
       const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(value * eased);
-      if (t < 1) frame = requestAnimationFrame(tick);
+      if (!cancelled) setDisplay(value * eased);
+      if (t < 1 && !cancelled) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
   }, [inView, value, reduced]);
 
   const formatted =

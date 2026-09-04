@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   Search,
   Plus,
@@ -23,8 +23,6 @@ import {
   Receipt,
   MessageSquare,
   Link2,
-  Bolt,
-  UserCheck,
 } from 'lucide-react';
 import { useCustomers, useDeleteCustomer } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -55,7 +53,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { Customer } from '../types';
+
 
 export function AllCustomersPage() {
   const router = useRouter();

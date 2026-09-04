@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlatformContact } from '@/data/platform/contacts.data';
@@ -104,19 +105,23 @@ export function ContactsPage() {
                     ) : null}
                     <div className="text-[11px] text-muted-foreground">{c.createdAt}</div>
                   </div>
-                  <select
+                  <Select
                     value={c.status}
-                    onChange={(e) =>
-                      statusMutation.mutate({ id: c.id, status: e.target.value as PlatformContact['status'] })
+                    onValueChange={(value) =>
+                      statusMutation.mutate({ id: c.id, status: value as PlatformContact['status'] })
                     }
-                    className="h-9 rounded-md border border-input bg-background px-3 text-sm capitalize shrink-0"
                   >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-9 w-[140px] capitalize shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>

@@ -8,7 +8,6 @@ import {
   Layers,
   DollarSign,
   ChevronRight,
-  ArrowUpRight,
   CreditCard,
   TrendingUp,
   TrendingDown,
@@ -17,7 +16,7 @@ import {
 import { useChartOfAccounts } from '../hooks/use-chart-of-accounts';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { StatCard } from '@/components/shared/StatCard';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,

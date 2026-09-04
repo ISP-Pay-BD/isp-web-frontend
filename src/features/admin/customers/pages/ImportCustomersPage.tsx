@@ -4,7 +4,7 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, UploadCloud, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, UploadCloud, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

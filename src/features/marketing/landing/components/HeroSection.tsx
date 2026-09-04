@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CheckCircle2, Zap, Wifi, CreditCard, Users, Headphones, Radio, BarChart3, Globe, Smartphone } from 'lucide-react';
+import { CheckCircle2, Wifi, CreditCard, Users, Headphones, Radio, BarChart3, Globe, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MorphArrowButton } from '@/components/motion/MorphArrowButton';
 import { easeOutExpo, useMotionSafe } from '@/lib/animations';
@@ -144,7 +144,7 @@ export function HeroSection({ data }: HeroSectionProps) {
   };
 
   return (
-    <section id="hero" className="relative overflow-x-hidden pt-16 pb-20 md:pt-24 md:pb-32">
+    <section id="hero" className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-32">
       {/* $100k Atmospheric Lighting & Precision Grid */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         {/* Ambient Top Light Beam (Brand Vermilion) */}

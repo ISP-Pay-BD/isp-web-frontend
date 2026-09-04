@@ -68,7 +68,7 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {records.map((record, idx) => (
+          {records.map((record) => (
             <motion.tr
               key={record.id}
               variants={fadeUp}

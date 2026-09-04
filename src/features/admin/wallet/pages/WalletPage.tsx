@@ -35,7 +35,7 @@ export function WalletPage() {
           </p>
         </div>
         <Button
-          onClick={() => toast.success('Top-up flow will connect to bKash/Nagad in Phase 8')}
+          onClick={() => toast.success('Top-up coming soon')}
           className="bg-primary hover:bg-primary/90"
         >
           <CreditCard className="mr-2 h-4 w-4" />

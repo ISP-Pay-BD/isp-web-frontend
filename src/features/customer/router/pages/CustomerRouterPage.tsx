@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { useCustomerRouter } from '../hooks/use-customer-router';
-import { formatDate } from '@/lib/format';
 import { toast } from 'sonner';
 
 export function CustomerRouterPage() {
@@ -94,7 +93,7 @@ export function CustomerRouterPage() {
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 font-mono">
-                  PPPoE User: {router.pppoeUsername} · Last Sync: {formatDate(router.lastReconnect)}
+                  PPPoE User: {router.pppoeUsername} · Last Sync: {router.lastReconnect}
                 </p>
               </div>
             </div>

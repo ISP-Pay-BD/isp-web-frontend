@@ -6,7 +6,6 @@ import { PageHeader } from '@/features/admin/shared';
 import { useNetworkDiagram } from '../hooks/useNetwork';
 import type { NetworkTopologyItem } from '@/data/admin/network-ops.data';
 import { StatCard } from '@/components/shared/StatCard';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

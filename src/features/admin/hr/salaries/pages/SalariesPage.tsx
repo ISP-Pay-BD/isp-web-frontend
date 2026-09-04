@@ -111,7 +111,7 @@ export function SalariesPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => {
           const style = statStyles[stat.color];
           return (

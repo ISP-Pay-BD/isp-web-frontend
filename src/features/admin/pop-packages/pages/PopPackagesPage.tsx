@@ -70,6 +70,7 @@ export function PopPackagesPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<PackageFormValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(packageSchema) as any,
     defaultValues: {
       name: '',

@@ -59,13 +59,19 @@ export function AdminPaymentPage() {
 
   useEffect(() => {
     if (!selectedInvoice) {
-      setReceiptVisible(false);
-      return;
+      const id = requestAnimationFrame(() => setReceiptVisible(false));
+      return () => cancelAnimationFrame(id);
     }
+    let cancelled = false;
     const raf = requestAnimationFrame(() => {
-      setTimeout(() => setReceiptVisible(true), 50);
+      setTimeout(() => {
+        if (!cancelled) setReceiptVisible(true);
+      }, 50);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [selectedInvoice]);
 
   const items = data?.items ?? [];

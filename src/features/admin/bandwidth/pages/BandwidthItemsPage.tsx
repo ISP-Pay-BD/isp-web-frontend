@@ -41,7 +41,7 @@ export function BandwidthItemsPage() {
   const [newCapacity, setNewCapacity] = useState(100);
   const [newPrice, setNewPrice] = useState(30000);
   const [newVat, setNewVat] = useState(5);
-  const [newType, setNewType] = useState<'upstream' | 'peering' | 'cache' | 'transit'>('upstream');
+  const [newType] = useState<'upstream' | 'peering' | 'cache' | 'transit'>('upstream');
   const [newCategory, setNewCategory] = useState('Dedicated Internet (DIA)');
 
   const initialItems = data?.catalogItems ?? [];

@@ -70,7 +70,7 @@ export function AdminDashboardPage() {
     if (!geoSearch.trim()) return stats.geoRevenue;
     const q = geoSearch.toLowerCase();
     return stats.geoRevenue.filter((g) => g.area.toLowerCase().includes(q));
-  }, [stats?.geoRevenue, geoSearch]);
+  }, [stats, geoSearch]);
 
   if (isLoading) {
     return <PageSkeleton variant="dashboard" />;
@@ -86,9 +86,6 @@ export function AdminDashboardPage() {
       />
     );
   }
-
-  const maxRevenue = Math.max(...stats.revenueByPackage.map((p) => p.amountBdt), 1);
-  const totalPackageRevenue = stats.revenueByPackage.reduce((acc, p) => acc + p.amountBdt, 0);
 
   return (
     <motion.div

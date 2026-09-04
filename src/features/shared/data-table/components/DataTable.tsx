@@ -236,8 +236,14 @@ export function DataTable<TData extends RowData>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  // Reset page index when filters or data change
+  const prevFiltersRef = useRef({ columnFilters, data });
   useEffect(() => {
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    const prev = prevFiltersRef.current;
+    if (prev.columnFilters !== columnFilters || prev.data !== data) {
+      setPagination((p) => ({ ...p, pageIndex: 0 }));
+      prevFiltersRef.current = { columnFilters, data };
+    }
   }, [columnFilters, data]);
 
   const selectedCount = table.getSelectedRowModel().rows.length;
@@ -574,7 +580,8 @@ function FacetFilter<TData extends RowData>({
     return Array.from(column.getFacetedUniqueValues().keys())
       .map(String)
       .sort();
-  }, [column, options]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options]);
 
   const counts = column?.getFacetedUniqueValues() ?? new Map();
 

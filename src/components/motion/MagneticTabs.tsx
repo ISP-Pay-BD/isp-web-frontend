@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { springSoft, useMotionSafe } from '@/lib/animations';
+import { useMotionSafe } from '@/lib/animations';
 
 export interface MagneticTabItem {
   value: string;

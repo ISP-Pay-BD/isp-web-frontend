@@ -32,9 +32,6 @@ import {
   createArea,
   updateArea,
   deleteArea,
-  addSubArea,
-  updateSubArea,
-  deleteSubArea,
   createPopFunding,
   rechargeAdminSubscription,
 } from './handlers/data.handler';

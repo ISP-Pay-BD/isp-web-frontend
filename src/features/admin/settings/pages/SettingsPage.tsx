@@ -28,7 +28,7 @@ export function SettingsPage() {
   const g = general ?? data.general;
 
   const handleSave = () => {
-    toast.success('Software settings saved (mock)');
+    toast.success('Settings saved');
   };
 
   return (
