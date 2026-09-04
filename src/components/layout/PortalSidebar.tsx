@@ -19,6 +19,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,8 @@ function NavIcon({ name }: { name?: string }) {
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
   const { reduced, springSoft: spring } = useMotionSafe();
+  const { state: sidebarState } = useSidebar();
+  const isCollapsed = sidebarState === 'collapsed';
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const active = new Set<string>();
     for (const item of items) {
@@ -79,6 +82,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
             <SidebarMenuButton
               isActive={isParentActive}
               onClick={() => toggle(item.id)}
+              tooltip={item.label}
               className={
                 isParentActive
                   ? 'ipb-sidebar-button relative font-bold text-primary rounded-lg'
@@ -99,16 +103,18 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               <span className="transition-transform duration-150 group-hover/menu-button:translate-x-0.5">
                 {item.label}
               </span>
-              <motion.span
-                className="ml-auto inline-flex"
-                animate={{ rotate: isExpanded ? 0 : -90 }}
-                transition={{ duration: reduced ? 0 : 0.2 }}
-              >
-                <ChevronDown className="h-3.5 w-3.5" />
-              </motion.span>
+              {!isCollapsed && (
+                <motion.span
+                  className="ml-auto inline-flex"
+                  animate={{ rotate: isExpanded ? 0 : -90 }}
+                  transition={{ duration: reduced ? 0 : 0.2 }}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </motion.span>
+              )}
             </SidebarMenuButton>
             <AnimatePresence initial={false}>
-              {isExpanded && (
+              {isExpanded && !isCollapsed && (
                 <motion.div
                   key="sub"
                   initial={reduced ? false : { height: 0, opacity: 0 }}
@@ -154,6 +160,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
           <SidebarMenuItem key={item.id}>
             <SidebarMenuButton
               isActive={isLeafActive}
+              tooltip={item.label}
               className={
                 isLeafActive
                   ? 'ipb-sidebar-button relative font-bold text-primary rounded-r-md'
@@ -196,6 +203,8 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   const [query, setQuery] = useState('');
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { state: sidebarState } = useSidebar();
+  const isCollapsed = sidebarState === 'collapsed';
 
   const handleLogout = () => {
     logout();
@@ -233,31 +242,39 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   const showNavSkeleton = !hydrated;
 
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar shadow-xs">
-      <div className="flex items-center gap-3 border-b border-sidebar-border p-3.5">
-        <div className="relative flex items-center justify-center p-1 rounded-xl bg-card border border-border/80 shadow-2xs dark:bg-sidebar-accent/50 dark:border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar shadow-xs">
+      {/* Header — Logo + Brand */}
+      <div className={`flex items-center gap-3 border-b border-sidebar-border ${isCollapsed ? 'justify-center p-3' : 'p-3.5'}`}>
+        <div className="relative flex items-center justify-center p-1 rounded-xl bg-card border border-border/80 shadow-2xs dark:bg-sidebar-accent/50 dark:border-sidebar-border shrink-0">
           <Image src={brandAssets.logo} alt="ISP Pay BD" width={28} height={28} className="shrink-0" />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-bold tracking-tight text-sidebar-foreground">{siteConfig.name}</div>
-          <div className="text-muted-foreground truncate text-[11px] font-medium capitalize flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-            {portal} portal
+        {!isCollapsed && (
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-xs font-bold tracking-tight text-sidebar-foreground">{siteConfig.name}</div>
+            <div className="text-muted-foreground truncate text-[11px] font-medium capitalize flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+              {portal} portal
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Search — hidden when collapsed */}
+      {!isCollapsed && (
+        <div className="p-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search menu..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search menu"
+              className="h-8 pl-8 text-xs bg-background/50 focus:bg-background border-border/80 rounded-lg dark:bg-sidebar-accent/40 dark:focus:bg-sidebar-accent/70 dark:border-sidebar-border"
+            />
           </div>
         </div>
-      </div>
-      <div className="p-3">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search menu..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search menu"
-            className="h-8 pl-8 text-xs bg-background/50 focus:bg-background border-border/80 rounded-lg dark:bg-sidebar-accent/40 dark:focus:bg-sidebar-accent/70 dark:border-sidebar-border"
-          />
-        </div>
-      </div>
+      )}
+
       <SidebarContent>
         {showNavSkeleton ? (
           <div className="space-y-3 px-3 py-2">
@@ -287,51 +304,57 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
       </SidebarContent>
 
       {/* Sidebar Footer with User Profile and Logout */}
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className={`border-t border-sidebar-border ${isCollapsed ? 'p-2' : 'p-3'}`}>
         {showNavSkeleton ? (
           <div className="flex items-center gap-2.5 p-2">
             <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-2.5 w-32" />
-            </div>
+            {!isCollapsed && (
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-2.5 w-32" />
+              </div>
+            )}
           </div>
         ) : user ? (
           <div className="flex flex-col gap-2">
             <Link
               href={portal === 'customer' ? '/customer/profile' : '/admin/profile'}
-              className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-sidebar-accent/80 transition-colors group dark:hover:bg-sidebar-accent"
+              className={`flex items-center gap-2.5 p-2 rounded-lg hover:bg-sidebar-accent/80 transition-colors group dark:hover:bg-sidebar-accent ${isCollapsed ? 'justify-center' : ''}`}
+              title={isCollapsed ? `${user.name} — Profile` : undefined}
             >
-              <Avatar className="h-8 w-8 border border-primary/25 shadow-2xs">
+              <Avatar className="h-8 w-8 border border-primary/25 shadow-2xs shrink-0">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs dark:bg-primary/20 dark:text-primary-foreground">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="min-w-0 flex-1 text-left">
-                <div className="truncate text-xs font-bold text-sidebar-foreground group-hover:text-primary transition-colors">
-                  {user.name}
+              {!isCollapsed && (
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="truncate text-xs font-bold text-sidebar-foreground group-hover:text-primary transition-colors">
+                    {user.name}
+                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {user.email}
+                  </div>
                 </div>
-                <div className="truncate text-[10px] text-muted-foreground">
-                  {user.email}
-                </div>
-              </div>
+              )}
             </Link>
 
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/15 text-destructive text-xs font-semibold py-2 transition-all hover:border-destructive/40 active:scale-[0.98] dark:bg-destructive/10 dark:hover:bg-destructive/20 dark:border-destructive/30"
+              className={`flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/15 text-destructive text-xs font-semibold py-2 transition-all hover:border-destructive/40 active:scale-[0.98] dark:bg-destructive/10 dark:hover:bg-destructive/20 dark:border-destructive/30 ${isCollapsed ? 'justify-center' : 'w-full'}`}
+              title={isCollapsed ? 'Log out' : undefined}
             >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Log out</span>
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
+              {!isCollapsed && <span>Log out</span>}
             </button>
           </div>
         ) : (
           <Link
             href="/login"
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold py-2 hover:bg-primary/90 transition-all shadow-xs"
+            className={`flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold py-2 hover:bg-primary/90 transition-all shadow-xs ${isCollapsed ? 'px-0' : 'w-full'}`}
           >
-            <span>Log In</span>
+            {!isCollapsed && <span>Log In</span>}
           </Link>
         )}
       </SidebarFooter>

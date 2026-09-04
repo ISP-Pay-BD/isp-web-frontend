@@ -2,7 +2,7 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
@@ -39,23 +39,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 300, damping: 24 },
-  },
-};
 
 const hoverLift = { y: -2, transition: { duration: 0.15 } };
 
@@ -178,7 +161,7 @@ export function EmployeesPage() {
   const roles = ['Support Agent', 'Field Technician', 'Network Engineer', 'Accountant', 'Sales Executive', 'Office Admin'];
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -201,11 +184,11 @@ export function EmployeesPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => {
           const style = statStyles[stat.color];
           return (
-            <motion.div key={stat.label} variants={itemVariants} custom={idx}>
+            <div key={stat.label}>
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
                 <CardContent className="p-4 flex items-center gap-3.5">
                   <div className={cn('p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200', style.iconBg, style.iconText, style.border)}>
@@ -217,13 +200,13 @@ export function EmployeesPage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
 
       {/* Toolbar + Table */}
-      <motion.div variants={itemVariants}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -392,7 +375,7 @@ export function EmployeesPage() {
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       </PageContent>
 
@@ -415,6 +398,6 @@ export function EmployeesPage() {
         destructive
         onConfirm={handleConfirmDelete}
       />
-    </motion.div>
+    </div>
   );
 }

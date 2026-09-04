@@ -376,161 +376,198 @@ export function NetworkDiagramPage() {
 
       {/* Node Detail Inspector Sheet */}
       <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-        <SheetContent className="sm:max-w-md overflow-y-auto">
+        <SheetContent className="sm:max-w-md overflow-hidden p-0">
           {selectedNode && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
-              className="space-y-5"
+              className="flex flex-col h-full min-h-0"
             >
-              {/* Header */}
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <SignalHigh className="h-5 w-5 text-primary" />
-                  </span>
-                  ONU Optical Diagnostic
-                </SheetTitle>
-                <SheetDescription>
-                  Real-time optical transceiver power level and fiber connection diagnostics
-                </SheetDescription>
-              </SheetHeader>
+              {/* Header with gradient background */}
+              <div className="relative px-6 pt-6 pb-4 border-b border-border/60 bg-gradient-to-br from-primary/5 via-background to-primary/3 shrink-0">
+                <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
+                <SheetHeader className="relative z-10 text-left">
+                  <SheetTitle className="flex items-center gap-2.5 text-base">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20 shadow-sm">
+                      <SignalHigh className="h-5 w-5 text-primary" />
+                    </span>
+                    <div>
+                      <div className="font-bold">ONU Optical Diagnostic</div>
+                      <div className="text-[11px] font-normal text-muted-foreground mt-0.5">
+                        Real-time transceiver power & fiber diagnostics
+                      </div>
+                    </div>
+                  </SheetTitle>
+                </SheetHeader>
 
-              {/* Connection Path */}
-              <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground bg-muted/20 rounded-lg px-3 py-2 border border-border/40">
-                <span className="truncate">{selectedNode.oltName}</span>
-                <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
-                <span className="truncate">{selectedNode.ponPort}</span>
-                <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
-                <span className="truncate">{selectedNode.splitter}</span>
-                <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-50" />
-                <span className="font-semibold text-primary truncate">{selectedNode.onuId}</span>
-              </div>
-
-              {/* Customer Info */}
-              <div className="space-y-3">
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Customer</div>
-                <div className="space-y-0">
-                  {[
-                    { label: 'Name', value: selectedNode.customerName, bold: true },
-                    { label: 'ONU ID', value: selectedNode.onuId, mono: true },
-                    { label: 'MAC Address', value: selectedNode.mac, code: true },
-                    { label: 'Service Zone', value: selectedNode.zone },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-                      <span className="text-xs text-muted-foreground">{item.label}</span>
-                      {item.code ? (
-                        <code className="font-mono text-xs bg-muted/30 px-1.5 py-0.5 rounded">{item.value}</code>
-                      ) : (
-                        <span className={`text-xs ${item.bold ? 'font-semibold text-foreground' : item.mono ? 'font-mono font-medium' : 'text-foreground'}`}>
-                          {item.value}
+                {/* Connection Path Breadcrumb */}
+                <div className="relative z-10 mt-4 flex items-center gap-1 text-[11px] font-mono bg-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 shadow-xs">
+                  {[selectedNode.oltName, selectedNode.ponPort, selectedNode.splitter, selectedNode.onuId].map(
+                    (part, i, arr) => (
+                      <span key={i} className="flex items-center gap-1 min-w-0">
+                        <span className={`truncate ${i === arr.length - 1 ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
+                          {part}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        {i < arr.length - 1 && (
+                          <ChevronRight className="h-3 w-3 flex-shrink-0 opacity-40" />
+                        )}
+                      </span>
+                    )
+                  )}
                 </div>
               </div>
 
-              {/* Network Info */}
-              <div className="space-y-3">
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Network</div>
-                <div className="space-y-0">
-                  {[
-                    { label: 'Headend OLT', value: selectedNode.oltName },
-                    { label: 'PON Port', value: selectedNode.ponPort },
-                    { label: 'Splitter', value: selectedNode.splitter },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-                      <span className="text-xs text-muted-foreground">{item.label}</span>
-                      <span className="text-xs font-mono font-medium">{item.value}</span>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 px-6 py-5 space-y-5">
+                {/* Customer Info Card */}
+                <div className="rounded-xl border border-border/60 bg-card shadow-xs overflow-hidden">
+                  <div className="px-4 py-2.5 bg-muted/20 border-b border-border/40 flex items-center gap-2">
+                    <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center">
+                      <svg className="h-3 w-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
-                  ))}
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-xs text-muted-foreground">Link State</span>
-                    <Badge
-                      variant={selectedNode.status === 'online' ? 'default' : 'destructive'}
-                      className="text-[10px] font-semibold gap-1 capitalize"
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${selectedNode.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                      {selectedNode.status}
-                    </Badge>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Customer</span>
+                  </div>
+                  <div className="divide-y divide-border/30">
+                    {[
+                      { label: 'Name', value: selectedNode.customerName, bold: true },
+                      { label: 'ONU ID', value: selectedNode.onuId, mono: true },
+                      { label: 'MAC Address', value: selectedNode.mac, code: true },
+                      { label: 'Service Zone', value: selectedNode.zone },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20 transition-colors">
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                        {item.code ? (
+                          <code className="font-mono text-[11px] bg-muted/40 px-2 py-0.5 rounded-md border border-border/40">{item.value}</code>
+                        ) : (
+                          <span className={`text-xs ${item.bold ? 'font-bold text-foreground' : item.mono ? 'font-mono font-semibold' : 'font-medium text-foreground'}`}>
+                            {item.value}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Optical Transceiver Levels */}
-              <div className="space-y-3">
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Optical Levels</div>
-                <div className="p-4 rounded-xl border border-border/60 bg-gradient-to-br from-muted/20 to-muted/10 space-y-4">
-                  {/* Rx Power - Visual Bar */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Rx Optical Power (1490nm)</span>
-                      <span className={`font-mono font-bold text-xs ${
-                        selectedNode.rxPowerDbm > -25
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : selectedNode.rxPowerDbm > -27
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-red-500'
-                      }`}>
-                        {selectedNode.rxPowerDbm} dBm
-                      </span>
+                {/* Network Info Card */}
+                <div className="rounded-xl border border-border/60 bg-card shadow-xs overflow-hidden">
+                  <div className="px-4 py-2.5 bg-muted/20 border-b border-border/40 flex items-center gap-2">
+                    <div className="h-5 w-5 rounded-md bg-blue-500/10 flex items-center justify-center">
+                      <Network className="h-3 w-3 text-blue-500" />
                     </div>
-                    {/* Signal Strength Bar */}
-                    <div className="relative h-2 rounded-full bg-muted/50 overflow-hidden">
-                      <motion.div
-                        className={`absolute inset-y-0 left-0 rounded-full ${
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Network</span>
+                  </div>
+                  <div className="divide-y divide-border/30">
+                    {[
+                      { label: 'Headend OLT', value: selectedNode.oltName },
+                      { label: 'PON Port', value: selectedNode.ponPort },
+                      { label: 'Splitter', value: selectedNode.splitter },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/20 transition-colors">
+                        <span className="text-xs text-muted-foreground">{item.label}</span>
+                        <span className="text-xs font-mono font-semibold">{item.value}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between px-4 py-2.5">
+                      <span className="text-xs text-muted-foreground">Link State</span>
+                      <Badge
+                        variant={selectedNode.status === 'online' ? 'default' : 'destructive'}
+                        className="text-[10px] font-bold gap-1.5 capitalize px-2.5 py-1 shadow-sm"
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${selectedNode.status === 'online' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-red-500 shadow-sm shadow-red-500/50'}`} />
+                        {selectedNode.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Optical Transceiver Levels Card */}
+                <div className="rounded-xl border border-border/60 bg-card shadow-xs overflow-hidden">
+                  <div className="px-4 py-2.5 bg-muted/20 border-b border-border/40 flex items-center gap-2">
+                    <div className="h-5 w-5 rounded-md bg-emerald-500/10 flex items-center justify-center">
+                      <Zap className="h-3 w-3 text-emerald-500" />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Optical Levels</span>
+                  </div>
+                  <div className="p-4 space-y-5">
+                    {/* Rx Power */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-semibold text-foreground">Rx Optical Power</span>
+                          <span className="text-[10px] text-muted-foreground ml-1.5">(1490nm)</span>
+                        </div>
+                        <span className={`font-mono font-black text-sm ${
                           selectedNode.rxPowerDbm > -25
-                            ? 'bg-emerald-500'
+                            ? 'text-emerald-500'
                             : selectedNode.rxPowerDbm > -27
-                              ? 'bg-amber-500'
-                              : 'bg-red-500'
-                        }`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.rxPowerDbm + 30) / 22) * 100))}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-                      />
+                              ? 'text-amber-500'
+                              : 'text-red-500'
+                        }`}>
+                          {selectedNode.rxPowerDbm} <span className="text-[10px] font-bold opacity-70">dBm</span>
+                        </span>
+                      </div>
+                      <div className="relative h-3 rounded-full bg-muted/40 overflow-hidden border border-border/30">
+                        <motion.div
+                          className={`absolute inset-y-0 left-0 rounded-full ${
+                            selectedNode.rxPowerDbm > -25
+                              ? 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+                              : selectedNode.rxPowerDbm > -27
+                                ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                                : 'bg-gradient-to-r from-red-600 to-red-400'
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.rxPowerDbm + 30) / 22) * 100))}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
+                        />
+                        {/* Threshold markers */}
+                        <div className="absolute inset-y-0 left-[9%] w-px bg-foreground/20" title="-28 dBm LOS" />
+                        <div className="absolute inset-y-0 left-[18%] w-px bg-foreground/20" title="-27 dBm Weak" />
+                        <div className="absolute inset-y-0 left-[27%] w-px bg-foreground/20" title="-25 dBm Good" />
+                      </div>
+                      <div className="flex justify-between text-[9px] text-muted-foreground/50 font-mono">
+                        <span>-30 dBm (LOS)</span>
+                        <span>-8 dBm (Max)</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-[9px] text-muted-foreground/60 font-mono">
-                      <span>-30 dBm (LOS)</span>
-                      <span>-8 dBm (Max)</span>
-                    </div>
-                  </div>
 
-                  {/* Tx Power - Visual Bar */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Tx Optical Power (1310nm)</span>
-                      <span className="font-mono font-bold text-xs text-foreground">
-                        {selectedNode.txPowerDbm} dBm
-                      </span>
+                    {/* Tx Power */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-semibold text-foreground">Tx Optical Power</span>
+                          <span className="text-[10px] text-muted-foreground ml-1.5">(1310nm)</span>
+                        </div>
+                        <span className="font-mono font-black text-sm text-blue-500">
+                          {selectedNode.txPowerDbm} <span className="text-[10px] font-bold opacity-70">dBm</span>
+                        </span>
+                      </div>
+                      <div className="relative h-3 rounded-full bg-muted/40 overflow-hidden border border-border/30">
+                        <motion.div
+                          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 to-blue-400"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.txPowerDbm + 5) / 10) * 100))}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.4 }}
+                        />
+                      </div>
                     </div>
-                    <div className="relative h-2 rounded-full bg-muted/50 overflow-hidden">
-                      <motion.div
-                        className="absolute inset-y-0 left-0 rounded-full bg-blue-500"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.txPowerDbm + 5) / 10) * 100))}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut', delay: 0.4 }}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Threshold Legend */}
-                  <div className="pt-2 border-t border-border/30">
-                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground/70">
-                      <span className="flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Good (&gt;-25)
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                        Weak (-25 to -27)
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                        LOS (&lt;-28)
-                      </span>
+                    {/* Threshold Legend */}
+                    <div className="pt-3 border-t border-border/30">
+                      <div className="flex items-center gap-4 text-[10px]">
+                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/30" />
+                          Good (&gt;-25)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                          <span className="h-2 w-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/30" />
+                          Weak (-25 to -27)
+                        </span>
+                        <span className="flex items-center gap-1.5 text-red-500">
+                          <span className="h-2 w-2 rounded-full bg-red-500 shadow-sm shadow-red-500/30" />
+                          LOS (&lt;-28)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>

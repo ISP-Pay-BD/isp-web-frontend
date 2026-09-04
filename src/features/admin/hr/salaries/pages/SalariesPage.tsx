@@ -2,7 +2,7 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useSalaries } from '../hooks/use-salaries';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { SalaryPaymentModal } from '../components/SalaryPaymentModal';
@@ -22,14 +22,6 @@ import {
 import { Banknote, PlusCircle, Search, CheckCircle2, DollarSign, Wallet, X, BanknoteIcon } from 'lucide-react';
 import type { SalaryPaymentFormValues } from '../schemas';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-};
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-};
 const hoverLift = { y: -2, transition: { duration: 0.15 } };
 
 const statStyles: Record<string, { iconBg: string; iconText: string; border: string; valueText: string }> = {
@@ -90,7 +82,7 @@ export function SalariesPage() {
   ];
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+    <div className="space-y-6">
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
@@ -111,11 +103,11 @@ export function SalariesPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, idx) => {
           const style = statStyles[stat.color];
           return (
-            <motion.div key={stat.label} variants={itemVariants} custom={idx}>
+            <div key={stat.label}>
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
                 <CardContent className="p-4 flex items-center gap-3.5">
                   <div className={`p-2.5 rounded-xl ${style.iconBg} ${style.iconText} border ${style.border} group-hover:scale-110 transition-transform duration-200`}>
@@ -127,12 +119,12 @@ export function SalariesPage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariants}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -230,10 +222,10 @@ export function SalariesPage() {
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       </PageContent>
       {modalOpen && <SalaryPaymentModal open={modalOpen} onOpenChange={setModalOpen} employees={employees} onSave={handleSavePayment} />}
-    </motion.div>
+    </div>
   );
 }

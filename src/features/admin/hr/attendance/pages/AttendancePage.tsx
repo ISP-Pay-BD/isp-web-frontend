@@ -2,7 +2,7 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAttendance } from '../hooks/use-attendance';
 import type { AttendanceItem } from '../types';
 import { PageSkeleton, EmptyState } from '@/components/shared';
@@ -31,15 +31,6 @@ import {
 import { CalendarCheck, UserCheck, Search, Edit3, X, Timer, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-};
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-};
 
 const avatarColors = [
   'bg-blue-500/15 text-blue-600 border-blue-500/25',
@@ -121,7 +112,7 @@ export function AttendancePage() {
   };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+    <div className="space-y-6">
       <PageHero>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
           <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -135,9 +126,9 @@ export function AttendancePage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <motion.div variants={itemVariants} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {kpiStats.map((stat, idx) => (
-          <motion.div key={stat.label} variants={itemVariants} custom={idx}>
+          <div key={stat.label}>
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
               <CardContent className="p-4 flex items-center gap-3.5">
                 <div className={`p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200 ${statColors[stat.color]}`}>
@@ -154,11 +145,11 @@ export function AttendancePage() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariants}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -250,7 +241,7 @@ export function AttendancePage() {
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       {editingRecord && (
         <Dialog open={!!editingRecord} onOpenChange={(open) => !open && setEditingRecord(null)}>
@@ -289,6 +280,6 @@ export function AttendancePage() {
       )}
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAdvanceSalary } from '../hooks/use-advance-salary';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -32,14 +32,7 @@ import { HandCoins, Plus, Check, X, Search, Clock, DollarSign, XIcon, CheckCircl
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-};
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-};
+
 
 const avatarColors = [
   'bg-blue-500/15 text-blue-600 border-blue-500/25',
@@ -119,7 +112,7 @@ export function AdvanceSalaryPage() {
   };
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+    <div className="space-y-6">
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
@@ -140,9 +133,9 @@ export function AdvanceSalaryPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <motion.div variants={itemVariants} className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((stat, idx) => (
-          <motion.div key={stat.label} variants={itemVariants} custom={idx}>
+          <div key={stat.label}>
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
               <CardContent className="p-4 flex items-center gap-3.5">
                 <div className={`p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200 ${statColors[stat.color]}`}>
@@ -154,11 +147,11 @@ export function AdvanceSalaryPage() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariants}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -256,7 +249,7 @@ export function AdvanceSalaryPage() {
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       </PageContent>
       {modalOpen && (
@@ -298,6 +291,6 @@ export function AdvanceSalaryPage() {
           </DialogContent>
         </Dialog>
       )}
-    </motion.div>
+    </div>
   );
 }
