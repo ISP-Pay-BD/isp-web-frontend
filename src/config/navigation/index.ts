@@ -30,7 +30,7 @@ export const employeeNavigation: NavItem[] = [
 ];
 
 export const marketingNavLinks = [
-  { label: 'Features', href: '/#features' },
+  { label: 'Product', href: '/#auto-reconcile' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'Plugins', href: '/plugins' },

@@ -15,90 +15,43 @@ export function FAQSection({ faq }: FAQSectionProps) {
     setOpenIndex(openIndex === i ? null : i);
   };
 
-  const mid = Math.ceil(faq.length / 2);
-  const leftCol = faq.slice(0, mid);
-  const rightCol = faq.slice(mid);
-
   return (
-    <section id="faq" className="py-20 md:py-28 bg-[#0c0118] border-t border-white/10">
-      <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
-            Frequently Asked Questions
-          </span>
-          <h2 className="font-landing-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+    <section id="faq" className="border-t border-white/[0.07] py-20 md:py-28">
+      <div className="mx-auto max-w-3xl px-4 md:px-6">
+        <div className="max-w-xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">FAQ</p>
+          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Answers before you ask sales
           </h2>
-          <p className="mt-4 text-base text-white/70">
-            How billing, MikroTik RouterOS sync, bKash/Nagad auto-reconciliation, and reseller payouts work.
+          <p className="mt-4 text-base text-white/55">
+            Billing, MikroTik sync, bKash/Nagad reconciliation, and reseller payouts.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2">
-          {/* Left Column */}
-          <div className="space-y-4">
-            {leftCol.map((item, idx) => {
-              const isOpen = openIndex === idx;
-              return (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] transition-colors hover:border-white/20"
+        <div className="mt-12 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+          {faq.map((item, idx) => {
+            const isOpen = openIndex === idx;
+            return (
+              <div key={item.q}>
+                <button
+                  type="button"
+                  onClick={() => toggle(idx)}
+                  className="flex w-full items-center justify-between gap-4 py-5 text-left text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-landing-cta/50"
+                  aria-expanded={isOpen}
                 >
-                  <button
-                    type="button"
-                    onClick={() => toggle(idx)}
-                    className="flex w-full items-center justify-between p-5 text-left text-base font-semibold text-white focus:outline-none"
-                    aria-expanded={isOpen}
-                  >
-                    <span>{item.q}</span>
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-white/60 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180 text-landing-cta' : ''
-                      }`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="border-t border-white/10 px-5 pb-5 pt-3 text-sm leading-relaxed text-white/70">
-                      {item.a}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-4">
-            {rightCol.map((item, idx) => {
-              const actualIdx = mid + idx;
-              const isOpen = openIndex === actualIdx;
-              return (
-                <div
-                  key={actualIdx}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] transition-colors hover:border-white/20"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggle(actualIdx)}
-                    className="flex w-full items-center justify-between p-5 text-left text-base font-semibold text-white focus:outline-none"
-                    aria-expanded={isOpen}
-                  >
-                    <span>{item.q}</span>
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-white/60 transition-transform duration-200 ${
-                        isOpen ? 'rotate-180 text-landing-cta' : ''
-                      }`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="border-t border-white/10 px-5 pb-5 pt-3 text-sm leading-relaxed text-white/70">
-                      {item.a}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  <span>{item.q}</span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-white/40 transition-transform duration-200 ${
+                      isOpen ? 'rotate-180 text-landing-cta' : ''
+                    }`}
+                  />
+                </button>
+                {isOpen && (
+                  <p className="pb-5 text-sm leading-relaxed text-white/55">{item.a}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

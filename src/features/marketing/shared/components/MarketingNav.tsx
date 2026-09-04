@@ -13,7 +13,7 @@ import { LocaleToggle } from './LocaleToggle';
 import { useTranslations } from '../context/LocaleContext';
 
 const navI18nKeys: Record<string, string> = {
-  '/#features': 'marketing.nav.features',
+  '/#auto-reconcile': 'marketing.nav.features',
   '/#how-it-works': 'marketing.nav.howItWorks',
   '/#pricing': 'marketing.nav.pricing',
   '/plugins': 'marketing.nav.plugins',
@@ -56,7 +56,7 @@ export function MarketingNav() {
             </Button>
           </Link>
           <Link href="/register">
-            <Button className="bg-landing-cta hover:bg-landing-cta-hover text-white shadow-lg shadow-orange-500/20">
+            <Button className="bg-landing-cta hover:bg-landing-cta-hover text-white">
               {t('marketing.nav.startTrial')}
             </Button>
           </Link>
