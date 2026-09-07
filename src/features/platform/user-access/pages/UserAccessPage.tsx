@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import { UserLock, Shield } from 'lucide-react';
+import { UserLock } from 'lucide-react';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -107,22 +107,13 @@ export function UserAccessPage() {
         subtitle="Platform-level roles and permission presets for super-admin staff"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         {data.roles.map((role) => (
-          <Card key={role.id} className="border-border/60">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                {role.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{role.users}</div>
-              <div className="text-xs text-muted-foreground">
-                {role.permissions} permissions granted
-              </div>
-            </CardContent>
-          </Card>
+          <p key={role.id}>
+            <span className="font-semibold tabular-nums">{role.users}</span>{' '}
+            <span className="text-muted-foreground">{role.name}</span>
+            <span className="text-muted-foreground"> · {role.permissions} perms</span>
+          </p>
         ))}
       </div>
 

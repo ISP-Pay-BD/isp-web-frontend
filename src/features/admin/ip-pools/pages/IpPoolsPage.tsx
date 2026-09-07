@@ -7,8 +7,8 @@ import { useIpPools } from '../hooks/useIpPools';
 import type { IpPoolItem } from '@/data/admin/network-ops.data';
 import { IpPoolModal } from '../components/IpPoolModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +29,7 @@ const poolSearchFilter = (row: LegacyRow<IpPoolItem>, _columnId: string, filterV
 };
 
 export function IpPoolsPage() {
-  const { data, isLoading } = useIpPools();
+  const { data, isLoading, isError, refetch } = useIpPools();
   const [pools, setPools] = useState<IpPoolItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -190,6 +190,18 @@ export function IpPoolsPage() {
   if (isLoading && pools.length === 0) {
     return <PageSkeleton variant="table" rows={5} />;
   }
+  if (isError && pools.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load IP pools"
+          description="Could not fetch address pools."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -215,32 +227,23 @@ export function IpPoolsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Subnets / Pools"
-          value={totalPools}
-          description="Assigned across routers"
-          icon={Layers}
-        />
-        <StatCard
-          title="Total Managed IPs"
-          value={totalIps}
-          description="Usable host addresses"
-          icon={Globe2}
-        />
-        <StatCard
-          title="Assigned / In-Use"
-          value={totalUsedIps}
-          description={`${Math.round((totalUsedIps / (totalIps || 1)) * 100)}% allocation rate`}
-          icon={CheckCircle2}
-          trend={{ value: `${totalIps - totalUsedIps} free`, positive: true }}
-        />
-        <StatCard
-          title="Public Real IPs"
-          value={publicIpsCount}
-          description="BTRC compliant white IPs"
-          icon={ShieldCheck}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{totalPools}</span>{' '}
+          <span className="text-muted-foreground">total subnets / pools</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{totalIps}</span>{' '}
+          <span className="text-muted-foreground">total managed ips</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{totalUsedIps}</span>{' '}
+          <span className="text-muted-foreground">assigned / in-use</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{publicIpsCount}</span>{' '}
+          <span className="text-muted-foreground">public real ips</span>
+        </p>
       </div>
 
       <DataTable

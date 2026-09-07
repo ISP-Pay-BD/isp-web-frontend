@@ -2,7 +2,6 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
@@ -11,7 +10,7 @@ import { EmployeeModal } from '../components/EmployeeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
@@ -27,45 +26,14 @@ import {
   Search,
   Edit2,
   Trash2,
-  ShieldCheck,
   Phone,
   MapPin,
-  DollarSign,
-  Briefcase,
   X,
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
-const hoverLift = { y: -2, transition: { duration: 0.15 } };
-
-const statStyles: Record<string, { iconBg: string; iconText: string; border: string; valueText: string }> = {
-  blue: { iconBg: 'bg-blue-500/10', iconText: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20', valueText: 'text-blue-600 dark:text-blue-400' },
-  emerald: { iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20', valueText: 'text-emerald-600 dark:text-emerald-400' },
-  amber: { iconBg: 'bg-amber-500/10', iconText: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20', valueText: 'text-amber-600 dark:text-amber-400' },
-  purple: { iconBg: 'bg-purple-500/10', iconText: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20', valueText: 'text-purple-600 dark:text-purple-400' },
-};
-
-const avatarColors = [
-  'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/25',
-  'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
-  'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/25',
-  'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/25',
-  'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25',
-  'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/25',
-];
-
-const roleColors: Record<string, string> = {
-  'Support Agent': 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  'Field Technician': 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  'Network Engineer': 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-  'Accountant': 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  'Sales Executive': 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-  'Office Admin': 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-};
 
 type SortField = 'name' | 'salary' | 'joinedAt';
 type SortDir = 'asc' | 'desc';
@@ -151,13 +119,6 @@ export function EmployeesPage() {
     );
   }
 
-  const stats = [
-    { label: 'Total Staff', value: employees.length, description: 'Registered employees', icon: Users, color: 'blue' },
-    { label: 'Active On-Duty', value: activeCount, description: 'Currently active', icon: ShieldCheck, color: 'emerald' },
-    { label: 'Monthly Payroll', value: <CurrencyDisplay amount={totalPayroll} className="font-bold" />, description: 'Active staff salaries', icon: DollarSign, color: 'amber' },
-    { label: 'Departments', value: departmentCount, description: 'Unique roles', icon: Briefcase, color: 'purple' },
-  ];
-
   const roles = ['Support Agent', 'Field Technician', 'Network Engineer', 'Accountant', 'Sales Executive', 'Office Admin'];
 
   return (
@@ -175,34 +136,33 @@ export function EmployeesPage() {
             Manage organization team members, field technicians, designations, and salary structures.
           </p>
         </div>
-        <motion.div whileHover={hoverLift}>
+        <div >
           <Button onClick={handleOpenCreate} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
             <UserPlus className="h-4 w-4" /> New Employee
           </Button>
-        </motion.div>
+        </div>
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const style = statStyles[stat.color];
-          return (
-            <div key={stat.label}>
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
-                <CardContent className="p-4 flex items-center gap-3.5">
-                  <div className={cn('p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200', style.iconBg, style.iconText, style.border)}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className={cn('text-2xl font-bold tracking-tight', style.valueText)}>{stat.value}</div>
-                    <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{employees.length}</span>{' '}
+          <span className="text-muted-foreground">staff</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{activeCount}</span>{' '}
+          <span className="text-muted-foreground">active</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalPayroll} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">monthly payroll</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{departmentCount}</span>{' '}
+          <span className="text-muted-foreground">roles</span>
+        </p>
       </div>
 
       {/* Toolbar + Table */}
@@ -286,25 +246,20 @@ export function EmployeesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredEmployees.map((emp, idx) => {
-                    const colorIdx = idx % avatarColors.length;
-                    const roleColor = roleColors[emp.role] || 'bg-muted text-muted-foreground border-border/50';
                     return (
-                      <motion.tr
+                      <tr
                         key={emp.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: idx * 0.02 }}
                         className="group border-border/40 hover:bg-muted/30 transition-colors"
                       >
                         <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className={cn('relative flex h-9 w-9 items-center justify-center rounded-xl font-bold text-xs border group-hover:scale-110 transition-transform duration-200', avatarColors[colorIdx])}>
+                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-xs border border-border/60 bg-muted/50 text-muted-foreground">
                               {emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div>
                               <div className="font-semibold text-sm group-hover:text-primary transition-colors">{emp.name}</div>
-                              <Badge variant="secondary" className={cn('text-[10px] font-medium mt-0.5 border', roleColor)}>
+                              <Badge variant="secondary" className="text-[10px] font-medium mt-0.5 border border-border/50 bg-muted/40 text-muted-foreground">
                                 {emp.role}
                               </Badge>
                             </div>
@@ -343,7 +298,7 @@ export function EmployeesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-0.5">
-                            <motion.div whileHover={hoverLift}>
+                            <div >
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -353,8 +308,8 @@ export function EmployeesPage() {
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
                               </Button>
-                            </motion.div>
-                            <motion.div whileHover={hoverLift}>
+                            </div>
+                            <div >
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -364,10 +319,10 @@ export function EmployeesPage() {
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
-                            </motion.div>
+                            </div>
                           </div>
                         </TableCell>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </TableBody>

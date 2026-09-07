@@ -7,6 +7,7 @@ import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthInvoiceItem } from '@/data/admin/bandwidth.data';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ const invoiceSearchFilter = (
 };
 
 export function BandwidthInvoicesPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [selectedInvoice, setSelectedInvoice] = useState<BandwidthInvoiceItem | null>(null);
 
   const invoices = data?.invoices ?? [];
@@ -133,6 +134,18 @@ export function BandwidthInvoicesPage() {
   );
 
   if (isLoading && invoices.length === 0) return <PageSkeleton variant="table" rows={4} />;
+  if (isError && invoices.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load invoices"
+          description="Could not fetch bandwidth sales invoices."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

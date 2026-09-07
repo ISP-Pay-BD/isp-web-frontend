@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
 import { useMotionSafe } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import type { TestimonialItem } from '../types';
@@ -10,36 +9,44 @@ interface TestimonialsProps {
   testimonials: TestimonialItem[];
 }
 
-function TestimonialCard({ item }: { item: TestimonialItem }) {
-  const avatar =
-    item.image ??
-    `https://i.pravatar.cc/150?u=${encodeURIComponent(item.name)}`;
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
 
+function TestimonialCard({ item }: { item: TestimonialItem }) {
   return (
-    <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_0_24px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-      <div className="flex items-center gap-1 text-amber-400">
-        {[...Array(item.rating ?? 5)].map((_, i) => (
-          <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
-        ))}
-      </div>
-      <p className="mt-4 min-h-[4.5rem] text-sm leading-relaxed text-white/85">
+    <div className="w-full max-w-xs border-b border-white/10 pb-6">
+      <p className="min-h-[4.5rem] text-sm leading-relaxed text-white/80">
         &ldquo;{item.quote}&rdquo;
       </p>
       <div className="mt-5 flex items-center gap-3">
-        <img
-          src={avatar}
-          alt={item.name}
-          width={40}
-          height={40}
-          loading="eager"
-          decoding="async"
-          className="h-10 w-10 shrink-0 rounded-full border border-white/15 object-cover bg-white/10"
-        />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt=""
+            width={36}
+            height={36}
+            loading="lazy"
+            decoding="async"
+            className="h-9 w-9 shrink-0 rounded-full border border-white/15 object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-[11px] font-semibold text-white/70"
+          >
+            {initials(item.name)}
+          </span>
+        )}
         <div className="min-w-0">
-          <h4 className="font-landing-display truncate text-sm font-bold text-white">
+          <h4 className="font-landing-display truncate text-sm font-semibold text-white">
             {item.name}
           </h4>
-          <p className="truncate text-xs text-white/55">{item.role}</p>
+          <p className="truncate text-xs text-white/50">{item.role}</p>
         </div>
       </div>
     </div>
@@ -113,14 +120,14 @@ export function Testimonials({ testimonials }: TestimonialsProps) {
           viewport={{ once: true }}
           className="mx-auto flex max-w-[540px] flex-col items-center justify-center text-center"
         >
-          <div className="rounded-lg border border-white/15 px-4 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-landing-cta">
-            Testimonials
-          </div>
-          <h2 className="font-landing-display mt-5 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+            Operators
+          </p>
+          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Trusted by ISP operators across Bangladesh
           </h2>
-          <p className="mt-5 text-base text-white/60">
-            Real reviews from local operators managing 300 to 10,000+ subscriber lines every day.
+          <p className="mt-4 text-base text-white/60">
+            Local operators managing 300 to 10,000+ subscriber lines every day.
           </p>
         </motion.div>
 

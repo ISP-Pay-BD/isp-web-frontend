@@ -6,13 +6,10 @@ import {
   CreditCard,
   Receipt,
   Printer,
-  Wallet,
   CheckCircle2,
-  Clock,
 } from 'lucide-react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -183,78 +180,21 @@ export function CustomerPaymentsPage() {
       }
     >
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Total Paid
-                </p>
-                <h3 className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
-                  {formatBdtWithSymbol(summary.totalPaidBdt)}
-                </h3>
-                <span className="text-xs text-muted-foreground mt-1 block">
-                  {summary.successfulCount} successful invoices
-                </span>
-              </div>
-              <div className="rounded-xl p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Pending Due
-                </p>
-                <h3 className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 mt-1">
-                  {formatBdtWithSymbol(summary.pendingDueBdt)}
-                </h3>
-                <span className="text-xs text-muted-foreground mt-1 block">
-                  {summary.pendingCount} pending payment
-                </span>
-              </div>
-              <div className="rounded-xl p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Clock className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Payment Gateways
-                </p>
-                <h3 className="text-2xl font-bold tracking-tight mt-1">bKash / Nagad</h3>
-                <span className="text-xs text-muted-foreground mt-1 block">
-                  Instant automated recharge
-                </span>
-              </div>
-              <div className="rounded-xl p-3 bg-primary/10 text-primary">
-                <Wallet className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Invoicing Method
-                </p>
-                <h3 className="text-2xl font-bold tracking-tight mt-1">Monthly Pre-paid</h3>
-                <span className="text-xs text-muted-foreground mt-1 block">
-                  Cycle renews on 1st of month
-                </span>
-              </div>
-              <div className="rounded-xl p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                <Receipt className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums">{formatBdtWithSymbol(summary.totalPaidBdt)}</span>{' '}
+            <span className="text-muted-foreground">paid · {summary.successfulCount} invoices</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums">{formatBdtWithSymbol(summary.pendingDueBdt)}</span>{' '}
+            <span className="text-muted-foreground">pending · {summary.pendingCount}</span>
+          </p>
+          <p className="text-muted-foreground">
+            Gateways <span className="font-medium text-foreground">bKash / Nagad</span>
+          </p>
+          <p className="text-muted-foreground">
+            Cycle <span className="font-medium text-foreground">monthly pre-paid</span>
+          </p>
         </div>
 
         <DataTable
@@ -283,7 +223,7 @@ export function CustomerPaymentsPage() {
             {selectedInvoice && (
               <div className="space-y-6 pt-2">
                 <div className="border-b pb-4 space-y-1 text-center">
-                  <h3 className="font-black text-lg text-primary tracking-tight">
+                  <h3 className="font-bold text-lg text-primary tracking-tight">
                     ISP Pay BD Network
                   </h3>
                   <p className="text-xs text-muted-foreground">

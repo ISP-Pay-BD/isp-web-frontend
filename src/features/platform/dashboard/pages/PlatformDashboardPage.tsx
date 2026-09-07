@@ -6,11 +6,8 @@ import { mockFetch } from '@/lib/mock-api/client';
 import {
   Globe,
   Users,
-  TrendingUp,
-  Ticket,
   Plus,
   ArrowUpRight,
-  ShieldCheck,
   FolderTree,
   Puzzle,
   Settings,
@@ -19,7 +16,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatBdt } from '@/lib/format';
@@ -72,36 +68,24 @@ export function PlatformDashboardPage() {
         }
       />
 
-      {/* KPI Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Tenant Portals"
-          value={data.totalTenants}
-          description={`${data.activeTenants} active · ${data.trialTenants} on trial`}
-          icon={Globe}
-          trend={{ value: '+14% MoM growth', positive: true }}
-        />
-        <StatCard
-          title="Monthly Recurring Revenue"
-          value={`৳${formatBdt(data.mrrBdt)}`}
-          description="Billed platform SaaS subscriptions"
-          icon={TrendingUp}
-          trend={{ value: `ARR: ৳${formatBdt(data.arrBdt)}`, positive: true }}
-        />
-        <StatCard
-          title="Active Tenants"
-          value={data.activeTenants}
-          description={`${data.suspendedTenants} suspended portals`}
-          icon={ShieldCheck}
-          trend={{ value: `${Math.round((data.activeTenants / Math.max(1, data.totalTenants)) * 100)}% operational`, positive: true }}
-        />
-        <StatCard
-          title="Open Platform Tickets"
-          value={data.openTickets}
-          description="Tenant inquiries awaiting support"
-          icon={Ticket}
-          trend={{ value: 'Response SLA: <2 hours', positive: true }}
-        />
+      {/* KPI summary */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{data.totalTenants}</span>{' '}
+          <span className="text-muted-foreground">tenants</span>
+          <span className="text-muted-foreground">
+            {' '}
+            · {data.activeTenants} active · {data.trialTenants} trial
+          </span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">৳{formatBdt(data.mrrBdt)}</span>{' '}
+          <span className="text-muted-foreground">MRR</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{data.openTickets}</span>{' '}
+          <span className="text-muted-foreground">open tickets</span>
+        </p>
       </div>
 
       {/* Charts & Operational Row */}

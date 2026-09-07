@@ -12,9 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Send, RotateCcw, MessageSquare, Users, CheckCircle2 } from 'lucide-react';
 import type { SmsLog } from '@/data/admin/comms.data';
-import { areas } from '@/data/admin/areas.data';
-import { customers } from '@/data/admin/customers.data';
-import { getPackageById } from '@/data/admin/packages.data';
+import type { Customer } from '@/data/shared/types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { useSmsData } from '../hooks/use-sms';
@@ -23,6 +21,11 @@ export function SmsPage() {
   const { data, isLoading, isError, refetch } = useSmsData();
   const smsTemplatesData = data?.templates ?? [];
   const serverLogs = data?.logs ?? [];
+  const areas = data?.areas ?? [];
+  const customers = data?.customers ?? [];
+  const packages = data?.packages ?? [];
+  const getPackageById = (id: string) => packages.find((p) => p.id === id);
+
   const [sentLogs, setSentLogs] = useState<SmsLog[]>([]);
   const logs = useMemo(() => [...sentLogs, ...serverLogs], [sentLogs, serverLogs]);
   const [selectedArea, setSelectedArea] = useState<string>('all');
@@ -34,7 +37,6 @@ export function SmsPage() {
   const [customPreviews, setCustomPreviews] = useState<Record<string, string>>({});
   const [isSending, setIsSending] = useState(false);
 
-  // Filter customers by selected area
   const availableCustomers = useMemo(() => {
     let list = customers;
     if (selectedArea !== 'all') {
@@ -47,7 +49,7 @@ export function SmsPage() {
       );
     }
     return list;
-  }, [selectedArea, customerSearch]);
+  }, [customers, selectedArea, customerSearch]);
 
   // Selected recipients for preview and delivery
   const targetRecipients = useMemo(() => {
@@ -57,7 +59,7 @@ export function SmsPage() {
         : customers.filter((c) => c.areaId === selectedArea);
     }
     return customers.filter((c) => selectedCustomerIds.includes(c.id));
-  }, [targetType, selectedArea, selectedCustomerIds]);
+  }, [customers, targetType, selectedArea, selectedCustomerIds]);
 
   // Handle template selection
   const handleTemplateChange = (tplId: string) => {
@@ -70,7 +72,7 @@ export function SmsPage() {
   };
 
   // Generate personalized text for a customer
-  const renderMessageForCustomer = (cust: (typeof customers)[0]) => {
+  const renderMessageForCustomer = (cust: Customer) => {
     if (customPreviews[cust.id]) return customPreviews[cust.id];
     let body = smsContent;
     body = body.replace(/{name}/g, cust.name);

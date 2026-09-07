@@ -84,50 +84,20 @@ export function CustomerSupportPage() {
       }
     >
       <div className="space-y-6">
-        {/* Support Stats Grid */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase">Active Issues</p>
-                <h3 className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 mt-1">
-                  {openCount} Open
-                </h3>
-                <span className="text-xs text-muted-foreground mt-0.5 block">Waiting for response</span>
-              </div>
-              <div className="rounded-xl p-3 bg-emerald-500/10 text-emerald-600">
-                <AlertCircle className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase">In Progress</p>
-                <h3 className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 mt-1">
-                  {pendingCount} Pending
-                </h3>
-                <span className="text-xs text-muted-foreground mt-0.5 block">Technician investigating</span>
-              </div>
-              <div className="rounded-xl p-3 bg-amber-500/10 text-amber-600">
-                <Clock className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium uppercase">Resolved History</p>
-                <h3 className="text-2xl font-bold tracking-tight mt-1">{closedCount} Closed</h3>
-                <span className="text-xs text-muted-foreground mt-0.5 block">Avg resolution: 2.4 hrs</span>
-              </div>
-              <div className="rounded-xl p-3 bg-primary/10 text-primary">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums">{openCount}</span>{' '}
+            <span className="text-muted-foreground">open</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums">{pendingCount}</span>{' '}
+            <span className="text-muted-foreground">pending</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums">{closedCount}</span>{' '}
+            <span className="text-muted-foreground">closed</span>
+          </p>
+          <p className="text-muted-foreground">Avg resolution ~2.4 hrs</p>
         </div>
 
         {/* Toolbar */}

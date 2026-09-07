@@ -20,7 +20,6 @@ import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
@@ -81,21 +80,23 @@ export function RevenuePage() {
         subtitle="SaaS subscription MRR, payment method breakdown, and tier analytics"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Monthly Recurring Revenue"
-          value={`৳${formatBdt(data.mrrBdt)}`}
-          icon={TrendingUp}
-          trend={{ value: `+${data.growthPercentage}% MoM`, positive: true }}
-        />
-        <StatCard title="Annual Run Rate" value={`৳${formatBdt(data.arrBdt)}`} icon={DollarSign} />
-        <StatCard title="Active Tenants" value={data.activeTenants} icon={Users} />
-        <StatCard
-          title="Avg Revenue / Tenant"
-          value={`৳${formatBdt(data.averageRevenuePerTenant)}`}
-          description="Per month"
-          icon={TrendingUp}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{`৳${formatBdt(data.mrrBdt)}`}</span>{' '}
+          <span className="text-muted-foreground">monthly recurring revenue</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`৳${formatBdt(data.arrBdt)}`}</span>{' '}
+          <span className="text-muted-foreground">annual run rate</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{data.activeTenants}</span>{' '}
+          <span className="text-muted-foreground">active tenants</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`৳${formatBdt(data.averageRevenuePerTenant)}`}</span>{' '}
+          <span className="text-muted-foreground">avg revenue / tenant</span>
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -2,7 +2,6 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useCallback, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { Shield, Users, Lock, Key } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,15 +9,16 @@ import { Badge } from '@/components/ui/badge';
 import { mockFetch } from '@/lib/mock-api/client';
 import type { PermissionSectionDef, CustomUserAccessRecord } from '@/data/users';
 import type { PermissionMap } from '@/types/auth';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { PermissionMatrixEditor } from '../components/PermissionMatrix';
 import { CustomAccessTable } from '../components/CustomAccessTable';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', icon: Shield },
-  { value: 'resellerAdmin', label: 'Reseller / POP', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: Users },
-  { value: 'employee', label: 'Employee', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: Key },
-  { value: 'user', label: 'Customer', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: Lock },
+  { value: 'admin', label: 'Admin', icon: Shield },
+  { value: 'resellerAdmin', label: 'Reseller / POP', icon: Users },
+  { value: 'employee', label: 'Employee', icon: Key },
+  { value: 'user', label: 'Customer', icon: Lock },
 ] as const;
 
 const ROLE_STATS: Record<string, { total: number; sections: string; level: string }> = {
@@ -38,6 +38,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
   const [permissions, setPermissions] = useState<PermissionMap>({});
   const [customAccess, setCustomAccess] = useState<CustomUserAccessRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   const loadRolePermissions = useCallback(async (selectedRole: string) => {
     const data = await mockFetch('auth.rolePermissions.get', selectedRole);
@@ -48,6 +50,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
     let active = true;
     (async () => {
       setLoading(true);
+      setIsError(false);
       try {
         const [sectionData, accessList] = await Promise.all([
           mockFetch('auth.permissionSections'),
@@ -57,6 +60,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
         setSections(sectionData);
         setCustomAccess(accessList);
         await loadRolePermissions(role);
+      } catch {
+        if (active) setIsError(true);
       } finally {
         if (active) setLoading(false);
       }
@@ -64,7 +69,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
     return () => {
       active = false;
     };
-  }, [loadRolePermissions, role]);
+  }, [loadRolePermissions, role, retryKey]);
 
   const handleRoleChange = async (value: string | null) => {
     if (!value) return;
@@ -77,15 +82,27 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
     setPermissions(next);
   };
 
-  const currentRole = ROLE_OPTIONS.find((r) => r.value === role);
   const stats = ROLE_STATS[role] ?? ROLE_STATS.admin;
   const enabledCount = Object.values(permissions).reduce((sum, acts) => sum + acts.length, 0);
 
+  if (loading && sections.length === 0) {
+    return <PageSkeleton variant="dashboard" rows={6} />;
+  }
+  if (isError && sections.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load user access"
+          description="Could not fetch permission sections and custom access."
+          actionLabel="Retry"
+          onAction={() => setRetryKey((k) => k + 1)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -107,42 +124,34 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* Role Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-4">
+      <div className="flex flex-wrap gap-2 border-y border-border/60 py-3">
         {ROLE_OPTIONS.map((opt) => {
           const isActive = role === opt.value;
           const RoleIcon = opt.icon;
+          const stats = ROLE_STATS[opt.value];
           return (
             <button
               key={opt.value}
+              type="button"
               onClick={() => handleRoleChange(opt.value)}
-              className={`text-left rounded-xl border p-4 transition-all duration-200 ${
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                 isActive
-                  ? `${opt.bg} ${opt.border} border-2 shadow-sm ring-1 ring-foreground/5`
-                  : 'border-border/60 bg-card hover:bg-muted/30 hover:border-border/80'
+                  ? 'border-primary/40 bg-primary/5 text-foreground'
+                  : 'border-border/60 bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <div className={`p-1.5 rounded-lg ${isActive ? `${opt.bg}` : 'bg-muted/50'}`}>
-                  <RoleIcon className={`h-4 w-4 ${isActive ? opt.color : 'text-muted-foreground'}`} />
-                </div>
-                <span className={`text-sm font-semibold ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {opt.label}
-                </span>
-              </div>
-              <div className="mt-2.5 flex items-baseline gap-1">
-                <span className={`text-2xl font-bold font-mono ${isActive ? opt.color : 'text-muted-foreground/60'}`}>
-                  {ROLE_STATS[opt.value]?.total ?? 0}
-                </span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">perms</span>
-              </div>
+              <RoleIcon className={`h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
+              <span className="font-medium">{opt.label}</span>
+              <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                {stats?.total ?? 0}
+              </span>
             </button>
           );
         })}
-      </motion.div>
+      </div>
 
       {/* Tabs */}
-      <motion.div variants={fadeUp}>
+      <div >
         <Tabs defaultValue="default">
           <TabsList className="bg-muted/40 p-1 rounded-xl">
             <TabsTrigger value="default" className="gap-1.5 rounded-lg px-4 font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
@@ -166,8 +175,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
-                      <span className={`p-1.5 rounded-lg ${currentRole?.bg} ${currentRole?.border} border`}>
-                        <Lock className={`h-4 w-4 ${currentRole?.color}`} />
+                      <span className="p-1.5 rounded-lg border border-border/60 bg-muted/40">
+                        <Lock className="h-4 w-4 text-primary" />
                       </span>
                       Role permissions
                     </CardTitle>
@@ -235,9 +244,9 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
             </Card>
           </TabsContent>
         </Tabs>
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import { supportTickets, adminSupportStats, getTicketById } from '@/data/custome
 import { customerSubscription, customerPackages, customerRewards, routerTools, connectedDevices } from '@/data/customer/subscription.data';
 import { newsItems, getNewsById } from '@/data/customer/news.data';
 import { customerProfile, customerNotifications } from '@/data/customer/profile.data';
+import { adminProfileData } from '@/data/admin/profile.data';
 import { tenants, platformRevenue } from '@/data/platform/tenants.data';
 import * as platformContacts from '@/data/platform/contacts.data';
 import * as employee from '@/data/employee/salaries.data';
@@ -21,6 +22,18 @@ import {
   type AdminSubscription,
 } from '@/data/admin/subscription.data';
 import { tenantBillingPayments, tenantBillingSummary } from '@/data/admin/tenant-billing.data';
+import {
+  smsTemplatesData,
+  smsEventsData,
+  smsLogsData,
+  whatsappConversationsData,
+  whatsappTemplatesData,
+  whatsappMessageLogsData,
+  whatsappOptInsData,
+  whatsappCampaignsData,
+  whatsappSettingsData,
+} from '@/data/admin/comms.data';
+import { themePresetsData } from '@/data/admin/theme-studio.data';
 
 // In-memory clones for interactive mock mutations
 let adminCustomers = [...customers];
@@ -305,6 +318,23 @@ export async function getAdminDomain(domain: string) {
           .filter((p) => p.status === 'pending')
           .reduce((s, p) => s + p.amountBdt, 0),
       },
+    },
+    profile: adminProfileData,
+    sms: {
+      templates: smsTemplatesData,
+      events: smsEventsData,
+      logs: smsLogsData,
+    },
+    whatsapp: {
+      conversations: whatsappConversationsData,
+      templates: whatsappTemplatesData,
+      logs: whatsappMessageLogsData,
+      optIns: whatsappOptInsData,
+      campaigns: whatsappCampaignsData,
+      settings: whatsappSettingsData,
+    },
+    themeStudio: {
+      presets: themePresetsData,
     },
   };
   return map[domain] ?? { items: [] };

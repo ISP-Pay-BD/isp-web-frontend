@@ -4,10 +4,10 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { useBtrcReport } from '../hooks/use-btrc-report';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, StatusBadge } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileBarChart, Users, Wifi, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -50,11 +50,27 @@ export function BtrcReportPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Subscribers" value={summary.totalSubscribers} description="Active + inactive" icon={Users} />
-        <StatCard title="Total Bandwidth" value={`${summary.totalBandwidthGbps} Gbps`} description="Provisioned capacity" icon={Wifi} />
-        <StatCard title="Monthly Revenue" value={<CurrencyDisplay amount={summary.totalRevenueBdt} />} description="Gross billing" icon={FileBarChart} />
-        <StatCard title="Home / Corporate" value={`${summary.homeSubscribers} / ${summary.corporateSubscribers}`} description="Client type split" icon={Users} />
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{summary.totalSubscribers}</span>{' '}
+          <span className="text-muted-foreground">subscribers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{summary.totalBandwidthGbps} Gbps</span>{' '}
+          <span className="text-muted-foreground">bandwidth</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={summary.totalRevenueBdt} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">monthly revenue</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            {summary.homeSubscribers} / {summary.corporateSubscribers}
+          </span>{' '}
+          <span className="text-muted-foreground">home / corporate</span>
+        </p>
       </div>
 
       <div className="relative max-w-md">

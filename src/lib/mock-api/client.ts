@@ -7,6 +7,7 @@ import {
   mockUpdateRolePermissions,
   mockGetPermissionSections,
   mockListCustomAccess,
+  mockListDemoCredentials,
   type ForgotPasswordPayload,
   type UpdatePermissionsPayload
 } from './handlers/auth.handler';
@@ -120,6 +121,7 @@ type HandlerMap = {
   'admin.pop.funding.create': (payload: Parameters<typeof createPopFunding>[0]) => ReturnType<typeof createPopFunding>;
   'admin.subscription.recharge': (payload: Parameters<typeof rechargeAdminSubscription>[0]) => ReturnType<typeof rechargeAdminSubscription>;
   'auth.customAccess.list': () => ReturnType<typeof mockListCustomAccess>;
+  'auth.demoCredentials': () => ReturnType<typeof mockListDemoCredentials>;
   'auth.forgotPassword': (payload: ForgotPasswordPayload) => ReturnType<typeof mockForgotPassword>;
   'auth.login': (payload: LoginPayload) => ReturnType<typeof mockLogin>;
   'auth.me': (userId: string) => ReturnType<typeof mockGetCurrentUser>;
@@ -207,6 +209,7 @@ const handlers: HandlerMap = {
   'admin.pop.funding.create': createPopFunding,
   'admin.subscription.recharge': rechargeAdminSubscription,
   'auth.customAccess.list': mockListCustomAccess,
+  'auth.demoCredentials': mockListDemoCredentials,
   'auth.forgotPassword': mockForgotPassword,
   'auth.login': mockLogin,
   'auth.me': mockGetCurrentUser,

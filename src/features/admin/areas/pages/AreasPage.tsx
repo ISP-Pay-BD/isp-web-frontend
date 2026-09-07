@@ -2,8 +2,7 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MapPin, Edit, Trash2, ChevronDown, ChevronRight, Globe, Layers, Search, Filter, X, ArrowUpDown, ChevronUp, Building2 } from 'lucide-react';
+import { Plus, MapPin, Edit, Trash2, ChevronDown, ChevronRight, Globe, Search, Filter, X, ArrowUpDown, ChevronUp, Building2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,7 +14,7 @@ import { Can } from '@/components/shared/Can';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -40,7 +39,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Area, SubArea } from '@/data/shared/types';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 
 const areaSchema = z.object({
   name: z.string().min(2, 'Area name required'),
@@ -60,13 +58,6 @@ type SubAreaFormValues = z.infer<typeof subAreaSchema>;
 type SortField = 'name' | 'subareas';
 type SortDir = 'asc' | 'desc';
 type StatusFilter = 'all' | 'active' | 'inactive';
-
-const statStyles: Record<string, { iconBg: string; iconText: string; border: string }> = {
-  primary: { iconBg: 'bg-primary/10', iconText: 'text-primary', border: 'border-primary/20' },
-  emerald: { iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
-  blue: { iconBg: 'bg-blue-500/10', iconText: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
-  amber: { iconBg: 'bg-amber-500/10', iconText: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
-};
 
 export function AreasPage() {
   const { data, isLoading, isError, refetch } = useAreas();
@@ -221,20 +212,10 @@ export function AreasPage() {
     );
   }
 
-  const stats = [
-    { label: 'Total Areas', value: items.length, icon: Globe, color: 'primary' },
-    { label: 'Active Areas', value: items.length, icon: Globe, color: 'emerald' },
-    { label: 'Total Sub-areas', value: items.reduce((sum, area) => sum + area.subareas.length, 0), icon: Layers, color: 'blue' },
-    { label: 'Avg. Sub-areas/Area', value: Math.round(items.reduce((sum, area) => sum + area.subareas.length, 0) / Math.max(1, items.length)), icon: MapPin, color: 'amber' },
-  ];
+  const totalSubAreas = items.reduce((sum, area) => sum + area.subareas.length, 0);
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="space-y-6 max-w-7xl mx-auto pb-12"
-    >
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -249,43 +230,23 @@ export function AreasPage() {
           </p>
         </div>
         <Can menu="area" action="create">
-          <motion.div whileHover={hoverLift}>
-            <Button size="sm" onClick={openCreate} className="shadow-sm font-semibold gap-1.5">
-              <Plus className="h-4 w-4" /> New Area
-            </Button>
-          </motion.div>
+          <Button size="sm" onClick={openCreate} className="shadow-sm font-semibold gap-1.5">
+            <Plus className="h-4 w-4" /> New Area
+          </Button>
         </Can>
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* Stats Summary */}
-      <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, idx) => {
-          const style = statStyles[stat.color];
-          return (
-            <motion.div
-              key={stat.label}
-              variants={fadeUp}
-              custom={idx}
-            >
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
-                <CardContent className="p-4 flex items-center gap-3.5">
-                  <div className={`p-2.5 rounded-xl ${style.iconBg} ${style.iconText} border ${style.border} group-hover:scale-110 transition-transform duration-200`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p><span className="font-semibold tabular-nums">{items.length}</span> <span className="text-muted-foreground">areas</span></p>
+        <p><span className="font-semibold tabular-nums">{totalSubAreas}</span> <span className="text-muted-foreground">sub-areas</span></p>
+        <p className="text-muted-foreground">
+          Avg <span className="font-medium text-foreground tabular-nums">{Math.round(totalSubAreas / Math.max(1, items.length))}</span> sub-areas / area
+        </p>
+      </div>
 
       {/* Toolbar + Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           {/* Toolbar */}
           <div className="p-4 border-b border-border/50">
@@ -375,16 +336,10 @@ export function AreasPage() {
                   {filteredAndSortedItems.map((area) => {
                     const isExpanded = expanded.has(area.id);
                     return (
-                       <AnimatePresence key={`wrap-${area.id}`} mode="popLayout">
-                        {/* Main Row */}
-                        <motion.tr
+                      <>
+                        <tr
                           key={`row-${area.id}`}
-                          layout
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.2 }}
-                          className={`group border-border/40 transition-all duration-200 ${
+                          className={`group border-border/40 transition-colors ${
                             isExpanded
                               ? 'bg-primary/[0.03] border-l-2 border-l-primary'
                               : 'hover:bg-muted/30 border-l-2 border-l-transparent'
@@ -396,26 +351,24 @@ export function AreasPage() {
                               onClick={() => toggleExpand(area.id)}
                               className="p-1.5 rounded-lg hover:bg-muted/50 transition-all duration-200 active:scale-95"
                             >
-                              <motion.div
-                                animate={{ rotate: isExpanded ? 90 : 0 }}
-                                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                              >
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </motion.div>
+                              <ChevronRight
+                                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-90' : ''
+                                }`}
+                              />
                             </button>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <motion.div
-                                className={`p-2 rounded-lg transition-all duration-200 ${
+                              <div
+                                className={`p-2 rounded-lg transition-colors ${
                                   isExpanded
-                                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                                    : 'bg-primary/10 text-primary border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary group-hover:shadow-sm group-hover:shadow-primary/20'
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-primary/10 text-primary border border-primary/20'
                                 }`}
-                                whileHover={{ scale: 1.05 }}
                               >
                                 <MapPin className="h-4 w-4" />
-                              </motion.div>
+                              </div>
                               <div>
                                 <div className={`font-semibold text-sm transition-colors ${isExpanded ? 'text-primary' : 'group-hover:text-primary'}`}>
                                   {area.name}
@@ -443,41 +396,33 @@ export function AreasPage() {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-0.5">
                               <Can menu="area" action="update">
-                                <motion.div whileHover={hoverLift}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                    onClick={() => openEdit(area)}
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                </motion.div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                  onClick={() => openEdit(area)}
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
                               </Can>
                               <Can menu="area" action="delete">
-                                <motion.div whileHover={hoverLift}>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                    onClick={() => setDeleteId(area.id)}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </motion.div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                  onClick={() => setDeleteId(area.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
                               </Can>
                             </div>
                           </TableCell>
-                        </motion.tr>
+                        </tr>
 
                         {/* Expanded Sub-areas Row */}
                         {isExpanded && (
-                          <motion.tr
+                          <tr
                             key={`sub-${area.id}`}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                             className="bg-muted/15 border-border/40"
                           >
                             <TableCell colSpan={6} className="p-0">
@@ -503,12 +448,9 @@ export function AreasPage() {
                                 </div>
                                 {area.subareas.length > 0 ? (
                                   <div className="flex flex-wrap gap-2">
-                                    {area.subareas.map((sub, idx) => (
-                                      <motion.div
+                                    {area.subareas.map((sub) => (
+                                      <div
                                         key={sub.id}
-                                        initial={{ opacity: 0, scale: 0.9, y: 5 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        transition={{ delay: idx * 0.04, type: 'spring', stiffness: 400, damping: 25 }}
                                         className="group/sub flex items-center gap-1"
                                       >
                                         <Badge
@@ -543,7 +485,7 @@ export function AreasPage() {
                                             </Button>
                                           </Can>
                                         </div>
-                                      </motion.div>
+                                      </div>
                                     ))}
                                   </div>
                                 ) : (
@@ -551,9 +493,9 @@ export function AreasPage() {
                                 )}
                               </div>
                             </TableCell>
-                          </motion.tr>
+                          </tr>
                         )}
-                      </AnimatePresence>
+                      </>
                     );
                   })}
                 </TableBody>
@@ -561,7 +503,7 @@ export function AreasPage() {
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
 
       {/* Create/Edit Dialog */}
       </PageContent>
@@ -670,6 +612,6 @@ export function AreasPage() {
           }
         }}
       />
-    </motion.div>
+    </div>
   );
 }

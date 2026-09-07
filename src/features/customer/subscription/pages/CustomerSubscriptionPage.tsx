@@ -147,7 +147,7 @@ export function CustomerSubscriptionPage() {
                           </div>
 
                           <div className="text-right">
-                            <div className="text-lg font-black text-primary">
+                            <div className="text-lg font-bold text-primary">
                               {formatBdtWithSymbol(pkg.priceBdt)}
                             </div>
                             <span className="text-[11px] text-muted-foreground">/ month</span>

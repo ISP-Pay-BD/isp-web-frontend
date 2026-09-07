@@ -4,7 +4,6 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   Edit,
   Zap,
@@ -36,6 +35,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { Can } from '@/components/shared/Can';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +46,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 export function CustomerDetailPage({ id }: { id: string }) {
   const router = useRouter();
@@ -97,15 +96,15 @@ export function CustomerDetailPage({ id }: { id: string }) {
   }
 
   return (
-    <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
+    <div className="space-y-6">
       {/* Breadcrumb */}
-      <motion.div variants={fadeUp} className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/admin/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
         <ChevronDown className="h-3 w-3 -rotate-90" />
         <Link href="/admin/customers" className="hover:text-foreground transition-colors">Customers</Link>
         <ChevronDown className="h-3 w-3 -rotate-90" />
         <span className="text-foreground font-medium">Customer Details</span>
-      </motion.div>
+      </div>
 
       {/* Hero Section */}
       <PageHero>
@@ -179,48 +178,37 @@ export function CustomerDetailPage({ id }: { id: string }) {
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* Fact Cards */}
-      <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground font-medium mb-1">Connection</div>
-            <div className={`text-lg font-bold ${customer.online ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
-              {customer.online ? 'Online' : 'Offline'}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5">PPPoE session</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground font-medium mb-1">Package</div>
-            <div className="text-lg font-bold">{customer.packageName}</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{customer.areaName}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground font-medium mb-1">Expires</div>
-            <div className={`text-lg font-bold ${daysLeftColor}`}>{daysLeft}d</div>
-            <div className="text-xs text-muted-foreground mt-0.5">{customer.expiryDate}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground font-medium mb-1">MAC Bind</div>
-            <div className={`text-lg font-bold ${customer.macAddress ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>
-              {customer.macAddress ? 'Bound' : 'Unbound'}
-            </div>
-            <div className="text-xs text-muted-foreground mt-0.5 font-mono truncate max-w-[150px]">{customer.macAddress || 'Not set'}</div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className={cn('font-semibold', customer.online ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive')}>
+            {customer.online ? 'Online' : 'Offline'}
+          </span>{' '}
+          <span className="text-muted-foreground">connection</span>
+        </p>
+        <p>
+          <span className="font-semibold">{customer.packageName}</span>{' '}
+          <span className="text-muted-foreground">{customer.areaName}</span>
+        </p>
+        <p>
+          <span className={cn('font-semibold tabular-nums', daysLeftColor)}>{daysLeft}d</span>{' '}
+          <span className="text-muted-foreground">left · {customer.expiryDate}</span>
+        </p>
+        <p>
+          <span className={cn('font-semibold', customer.macAddress ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+            {customer.macAddress ? 'MAC bound' : 'MAC unbound'}
+          </span>
+          {customer.macAddress ? (
+            <span className="text-muted-foreground font-mono text-xs ml-1">{customer.macAddress}</span>
+          ) : null}
+        </p>
+      </div>
 
       {/* Main Layout: Two Columns */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column: Account, Connection, Traffic */}
         <div className="lg:col-span-2 space-y-6">
           {/* Account Card */}
-          <motion.div variants={fadeUp}>
+          <div >
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -273,11 +261,11 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
 
           {/* Connection Details Card */}
           {conn && (
-            <motion.div variants={fadeUp}>
+            <div >
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -299,11 +287,11 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* Live Traffic Card */}
-          <motion.div variants={fadeUp}>
+          <div >
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -327,11 +315,11 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
 
           {/* Bandwidth Usage Card */}
           {customer.bandwidthUsage && customer.bandwidthUsage.length > 0 && (
-            <motion.div variants={fadeUp}>
+            <div >
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -370,14 +358,14 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
         </div>
 
         {/* Right Column: Session, Plan, PPPoE, OLT */}
         <div className="space-y-6">
           {/* Live Session Card */}
-          <motion.div variants={fadeUp}>
+          <div >
             <Card className={`border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden ${customer.online ? 'ring-emerald-500/20' : ''}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -433,10 +421,10 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
 
           {/* Active Plan Card */}
-          <motion.div variants={fadeUp}>
+          <div >
             <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -456,11 +444,11 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
 
           {/* MikroTik PPPoE Card */}
           {pppoe && (
-            <motion.div variants={fadeUp}>
+            <div >
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -519,12 +507,12 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* OLT / ONU Card */}
           {olt && (
-            <motion.div variants={fadeUp}>
+            <div >
               <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -557,13 +545,13 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>
 
       {/* Payments Tab */}
-      <motion.div variants={fadeUp}>
+      <div >
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
@@ -603,10 +591,10 @@ export function CustomerDetailPage({ id }: { id: string }) {
             )}
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }
 

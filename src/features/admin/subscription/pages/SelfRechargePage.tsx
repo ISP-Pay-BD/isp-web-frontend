@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   CreditCard,
   Zap,
@@ -62,28 +61,12 @@ const paymentMethods: PaymentMethodOption[] = [
   },
 ];
 
-const stagger = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08 },
-  },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const } },
-};
-
 function AnimatedProgressBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted/60">
-      <motion.div
-        className="h-full rounded-full"
-        style={{ backgroundColor: color }}
-        initial={{ width: 0 }}
-        animate={{ width: `${value}%` }}
-        transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.3 }}
+      <div
+        className="h-full rounded-full transition-[width] duration-300 ease-out"
+        style={{ backgroundColor: color, width: `${value}%` }}
       />
     </div>
   );
@@ -125,14 +108,11 @@ export function SelfRechargePage() {
   };
 
   return (
-    <motion.div
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
-      variants={stagger}
-      initial={false}
-      animate="show"
     >
       {/* Top Header */}
-      <motion.div variants={fadeUp}>
+      <div>
         <PageHeader
           title="Self Recharge & License Management"
           subtitle="Renew your ISP Pay BD SaaS license, upgrade capacity, and view payment invoices"
@@ -158,68 +138,59 @@ export function SelfRechargePage() {
             </div>
           }
         />
-      </motion.div>
+      </div>
 
       {/* Row 1: Hero Active License & Capacity Bento Grid */}
       <div className="grid gap-6 lg:grid-cols-12 items-stretch">
         {/* Left Hero Card: Active Plan Overview */}
-        <motion.div variants={fadeUp} className="lg:col-span-7">
-          <Card className="relative overflow-hidden border-0 shadow-lg flex flex-col justify-between h-full bg-gradient-to-br from-primary/[0.07] via-primary/[0.03] to-background dark:from-[#1a0b38] dark:via-[#15082e] dark:to-[#0c0118]">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-300" />
-            <div className="absolute -right-16 -bottom-16 h-56 w-56 rounded-full bg-primary/10 dark:bg-primary/15 blur-3xl pointer-events-none" />
-            <div className="absolute -left-8 -top-8 h-32 w-32 rounded-full bg-primary/5 dark:bg-primary/10 blur-2xl pointer-events-none" />
-
-            <CardContent className="p-6 relative z-10 space-y-6">
+        <div className="lg:col-span-7">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 flex flex-col justify-between h-full">
+            <CardContent className="p-6 space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
                       <Shield className="h-3.5 w-3.5" /> Active SaaS License
                     </span>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 dark:bg-white/15 dark:text-white dark:border-white/20 text-[10px] font-bold">
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-semibold">
                       {subscription.tenantName}
                     </Badge>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground dark:text-white mt-2">
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2">
                     {subscription.planName}
                   </h2>
                   <div className="flex items-baseline gap-1.5 mt-1">
-                    <span className="text-xl font-bold font-mono text-foreground dark:text-white">৳{subscription.priceBdt.toLocaleString()}</span>
-                    <span className="text-xs font-normal text-muted-foreground dark:text-white/60">/ month billing</span>
+                    <span className="text-xl font-bold font-mono">৳{subscription.priceBdt.toLocaleString()}</span>
+                    <span className="text-xs font-normal text-muted-foreground">/ month billing</span>
                   </div>
                 </div>
 
-                <motion.div
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/30 text-xs font-semibold shrink-0"
-                  animate={{ opacity: [1, 0.7, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                  Live Status
-                </motion.div>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-xs font-semibold shrink-0">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Live
+                </div>
               </div>
 
-              {/* License Metadata Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-border/50 dark:border-white/10 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-border/60 text-xs">
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted-foreground dark:text-white/60">License Key</span>
-                  <div className="font-mono font-bold truncate text-foreground dark:text-white">{subscription.licenseKey}</div>
+                  <span className="text-[11px] text-muted-foreground">License Key</span>
+                  <div className="font-mono font-semibold truncate">{subscription.licenseKey}</div>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted-foreground dark:text-white/60">Next Expiry</span>
-                  <div className="font-semibold text-foreground dark:text-white">{formatDate(subscription.expiryDate)}</div>
+                  <span className="text-[11px] text-muted-foreground">Next Expiry</span>
+                  <div className="font-medium">{formatDate(subscription.expiryDate)}</div>
                 </div>
                 <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[11px] text-muted-foreground dark:text-white/60">Billing Term</span>
-                  <div className="font-semibold text-foreground dark:text-white">Monthly Postpaid</div>
+                  <span className="text-[11px] text-muted-foreground">Billing Term</span>
+                  <div className="font-medium">Monthly Postpaid</div>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Right Card: Capacity & Quota Health */}
-        <motion.div variants={fadeUp} className="lg:col-span-5">
+        <div className="lg:col-span-5">
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 flex flex-col justify-between h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center justify-between">
@@ -276,11 +247,11 @@ export function SelfRechargePage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
 
       {/* Row 2: Select Plan & Renewal Tiers */}
-      <motion.div variants={fadeUp} className="space-y-4">
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -332,12 +303,8 @@ export function SelfRechargePage() {
             const planDisplayPrice = billingCycle === 'annual' ? Math.round(p.priceBdt * 12 * 0.85) : p.priceBdt;
 
             return (
-              <motion.div
+              <div
                 key={p.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.1 + index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 onClick={() => setSelectedPlanId(p.id)}
                 className={cn(
                   'rounded-2xl border p-5 flex flex-col justify-between cursor-pointer transition-colors duration-200 relative group',
@@ -363,19 +330,13 @@ export function SelfRechargePage() {
                   {/* Price */}
                   <div className="mt-4 pb-4 border-b border-border/50">
                     <div className="flex items-baseline gap-1">
-                      <AnimatePresence mode="wait">
-                        <motion.span
+                                              <span
                           key={`${p.id}-${billingCycle}`}
-                          initial={{ opacity: 0, y: -8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 8 }}
-                          transition={{ duration: 0.25 }}
-                          className="text-2xl sm:text-3xl font-black font-mono text-foreground"
+                          className="text-2xl sm:text-3xl font-bold font-mono text-foreground"
                         >
                           ৳{planDisplayPrice.toLocaleString()}
-                        </motion.span>
-                      </AnimatePresence>
-                      <span className="text-xs text-muted-foreground font-normal">
+                        </span>
+                                            <span className="text-xs text-muted-foreground font-normal">
                         /{billingCycle === 'annual' ? 'year' : 'month'}
                       </span>
                     </div>
@@ -384,16 +345,13 @@ export function SelfRechargePage() {
                   {/* Feature Bullets */}
                   <ul className="mt-4 space-y-2.5 text-xs">
                     {p.features.map((feat, i) => (
-                      <motion.li
+                      <li
                         key={feat}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: 0.2 + i * 0.05 }}
                         className="flex items-center gap-2"
                       >
                         <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                         <span className="text-foreground font-medium">{feat}</span>
-                      </motion.li>
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -413,14 +371,14 @@ export function SelfRechargePage() {
                     {isSelected ? 'Selected' : 'Choose Plan'}
                   </Button>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
-      </motion.div>
+      </div>
 
       {/* Row 3: Payment Gateway Selection */}
-      <motion.div variants={fadeUp} className="space-y-4 pt-2">
+      <div className="space-y-4 pt-2">
         <div>
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
@@ -435,13 +393,8 @@ export function SelfRechargePage() {
           {paymentMethods.map((m, index) => {
             const isSelected = paymentMethod === m.id;
             return (
-              <motion.div
+              <div
                 key={m.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.15 + index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-                whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                whileTap={{ scale: 0.98 }}
                 onClick={() => setPaymentMethod(m.id)}
                 className={cn(
                   'p-4 rounded-xl border cursor-pointer transition-colors duration-200 flex flex-col justify-between group',
@@ -453,14 +406,12 @@ export function SelfRechargePage() {
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-foreground flex items-center gap-2">
-                      <motion.span
+                      <span
                         className={cn(
                           'h-3 w-3 rounded-full ring-2 ring-offset-2 ring-offset-card transition-all',
                           isSelected ? 'ring-current' : 'ring-transparent'
                         )}
                         style={{ backgroundColor: m.color, color: m.color }}
-                        animate={isSelected ? { scale: [1, 1.2, 1] } : {}}
-                        transition={{ duration: 0.3 }}
                       />
                       {m.name}
                     </span>
@@ -475,29 +426,23 @@ export function SelfRechargePage() {
 
                 <div className="mt-4 flex items-center justify-between text-xs pt-2 border-t border-border/40">
                   <span className="text-muted-foreground text-[11px]">Zero merchant fee</span>
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.span
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, type: 'spring', stiffness: 400, damping: 20 }}
+                                      {isSelected && (
+                      <span
                         className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
                       >
                         <Check className="h-3 w-3 font-bold" />
-                      </motion.span>
+                      </span>
                     )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
+                                  </div>
+              </div>
             );
           })}
         </div>
-      </motion.div>
+      </div>
 
       {/* Row 4: Checkout Summary & Action Bar */}
-      <motion.div variants={fadeUp}>
-        <Card className="border-border/60 bg-gradient-to-r from-card via-card/95 to-primary/[0.04] shadow-sm ring-1 ring-foreground/5">
+      <div>
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
           <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="space-y-1.5">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -518,21 +463,15 @@ export function SelfRechargePage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="text-left sm:text-right">
                 <div className="text-[11px] text-muted-foreground">Total Payable</div>
-                <AnimatePresence mode="wait">
-                  <motion.div
+                                  <div
                     key={calculatedPrice}
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 6 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-2xl font-black font-mono text-foreground"
+                    className="text-2xl font-bold font-mono text-foreground"
                   >
                     ৳{calculatedPrice.toLocaleString()}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+                  </div>
+                              </div>
 
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <div>
                 <Button
                   size="lg"
                   onClick={handleRecharge}
@@ -542,11 +481,11 @@ export function SelfRechargePage() {
                   <Zap className="mr-2 h-4 w-4" />
                   {rechargeMutation.isPending ? 'Processing Recharge...' : 'Recharge & Extend Now'}
                 </Button>
-              </motion.div>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

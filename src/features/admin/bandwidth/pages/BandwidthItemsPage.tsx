@@ -5,8 +5,8 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthCatalogItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ const itemSearchFilter = (
 };
 
 export function BandwidthItemsPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [items, setItems] = useState<BandwidthCatalogItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -148,7 +148,19 @@ export function BandwidthItemsPage() {
     [],
   );
 
-  if (isLoading && items.length === 0) return <PageSkeleton variant="table" rows={5} />;
+    if (isLoading && items.length === 0) return <PageSkeleton variant="table" rows={5} />;
+  if (isError && items.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load catalog items"
+          description="Could not fetch bandwidth catalog items."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -168,26 +180,23 @@ export function BandwidthItemsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Catalog Items" value={list.length} icon={Layers} />
-        <StatCard
-          title="Total Purchased Capacity"
-          value={`${data?.summary?.totalPurchasedMbps ?? 2500} Mbps`}
-          description="Across all upstream carriers"
-          icon={ArrowDownToLine}
-        />
-        <StatCard
-          title="Network Utilization"
-          value={`${data?.summary?.utilizationPercent ?? 82}%`}
-          description="Peak traffic load"
-          icon={Zap}
-        />
-        <StatCard
-          title="Monthly Upstream Cost"
-          value={formatBdtWithSymbol(data?.summary?.monthlyCostBdt ?? 605000)}
-          description="Bandwidth buy expense"
-          icon={Layers}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{list.length}</span>{' '}
+          <span className="text-muted-foreground">total catalog items</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${data?.summary?.totalPurchasedMbps ?? 2500} Mbps`}</span>{' '}
+          <span className="text-muted-foreground">total purchased capacity</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${data?.summary?.utilizationPercent ?? 82}%`}</span>{' '}
+          <span className="text-muted-foreground">network utilization</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(data?.summary?.monthlyCostBdt ?? 605000)}</span>{' '}
+          <span className="text-muted-foreground">monthly upstream cost</span>
+        </p>
       </div>
 
       <DataTable

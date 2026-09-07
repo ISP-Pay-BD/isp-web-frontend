@@ -6,9 +6,9 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotUserItem } from '@/data/admin/network-ops.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { formatMac } from '@/lib/format/network';
@@ -32,7 +32,7 @@ const userSearchFilter = (
 };
 
 export function HotspotUsersPage() {
-  const { data, isLoading } = useHotspotData();
+  const { data, isLoading, isError, refetch } = useHotspotData();
   const [users, setUsers] = useState<HotspotUserItem[]>([]);
 
   const initial = data?.users ?? [];
@@ -130,6 +130,18 @@ export function HotspotUsersPage() {
   );
 
   if (isLoading && list.length === 0) return <PageSkeleton variant="table" rows={5} />;
+  if (isError && list.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load hotspot users"
+          description="Could not fetch voucher sessions."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -149,10 +161,19 @@ export function HotspotUsersPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total users" value={String(list.length)} icon={Users} />
-        <StatCard title="Active" value={String(list.filter((u) => u.status === 'active').length)} />
-        <StatCard title="Expired" value={String(list.filter((u) => u.status === 'expired').length)} />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.length)}</span>{' '}
+          <span className="text-muted-foreground">total users</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.filter((u) => u.status === 'active').length)}</span>{' '}
+          <span className="text-muted-foreground">active</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.filter((u) => u.status === 'expired').length)}</span>{' '}
+          <span className="text-muted-foreground">expired</span>
+        </p>
       </div>
 
       <DataTable

@@ -10,21 +10,16 @@ import { OltDiagnosticsModal } from '../components/OltDiagnosticsModal';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Plus,
-  Network,
-  Cpu,
-  CheckCircle2,
-  Radio,
   Edit,
   Trash2,
   Zap,
   RotateCw,
-  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -62,7 +57,7 @@ const oltSearchFilter = (row: LegacyRow<OltDeviceItem>, _columnId: string, filte
 };
 
 export function OltPage() {
-  const { data: initialOlts = [], isLoading } = useOltDevices();
+  const { data: initialOlts = [], isLoading, isError, refetch } = useOltDevices();
   const [olts, setOlts] = useState<OltDeviceItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedOlt, setSelectedOlt] = useState<OltDeviceItem | null>(null);
@@ -144,7 +139,7 @@ export function OltPage() {
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-black shrink-0',
+                  'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-bold shrink-0',
                   onlinePct >= 90
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                     : onlinePct >= 70
@@ -296,6 +291,19 @@ export function OltPage() {
     return <PageSkeleton variant="table" rows={5} />;
   }
 
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load OLT nodes"
+          description="Could not load GPON/EPON headend inventory."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -321,112 +329,23 @@ export function OltPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: 'Total OLT Nodes',
-            value: totalOlts,
-            desc: 'Provisioned in GPON network',
-            icon: Network,
-            color: 'primary',
-            gradient: 'from-primary/5',
-          },
-          {
-            label: 'Total Optical ONUs',
-            value: totalOnus,
-            desc: 'Subscribers connected to PON',
-            icon: Cpu,
-            color: 'blue-500',
-            gradient: 'from-blue-500/5',
-          },
-        ].map((card, i) => (
-          <Card
-            key={card.label}
-            className="relative overflow-hidden border-border/70 bg-card/90 shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200"
-            style={{ animationDelay: `${i * 80}ms` }}
-          >
-            <div
-              className={cn(
-                'absolute inset-0 bg-gradient-to-br via-transparent to-transparent pointer-events-none',
-                card.gradient,
-              )}
-            />
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  {card.label}
-                </span>
-                <div
-                  className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-lg border',
-                    `bg-${card.color}/10 text-${card.color} border-${card.color}/20`,
-                  )}
-                >
-                  <card.icon className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="text-2xl font-black tracking-tight text-foreground">{card.value}</div>
-              <p className="text-muted-foreground mt-1 text-[11px]">{card.desc}</p>
-            </CardContent>
-          </Card>
-        ))}
-
-        <Card
-          className="relative overflow-hidden border-border/70 bg-card/90 shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200"
-          style={{ animationDelay: '160ms' }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                Online ONUs
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">
-              {onlineOnus}
-            </div>
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex-1 h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-1000 ease-out"
-                  style={{ width: `${healthPct}%`, transitionDelay: '400ms' }}
-                />
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {healthPct}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="relative overflow-hidden border-border/70 bg-card/90 shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200"
-          style={{ animationDelay: '240ms' }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-transparent pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                Offline ONUs / LOS
-              </span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-500 border border-red-500/20">
-                <Radio className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-red-600 dark:text-red-400">
-              {offlineOnus}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <AlertTriangle className="h-3 w-3 text-amber-500 animate-pulse" />
-              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                {offlineOnus} alarms active
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{totalOlts}</span>{' '}
+          <span className="text-muted-foreground">OLT nodes</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{totalOnus}</span>{' '}
+          <span className="text-muted-foreground">ONUs</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{onlineOnus}</span>{' '}
+          <span className="text-muted-foreground">online ({healthPct}%)</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-destructive">{offlineOnus}</span>{' '}
+          <span className="text-muted-foreground">offline / LOS</span>
+        </p>
       </div>
 
       <DataTable

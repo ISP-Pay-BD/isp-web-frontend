@@ -21,11 +21,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 export function NewCustomerPaymentPage() {
   const router = useRouter();
   const createMutation = useCreateCustomerPayment();
-  const { data: customersData, isLoading: customersLoading } = useCustomers();
+  const {
+    data: customersData,
+    isLoading: customersLoading,
+    isError: customersError,
+    refetch: refetchCustomers,
+  } = useCustomers();
 
   const {
     register,
@@ -57,6 +63,19 @@ export function NewCustomerPaymentPage() {
   };
 
   if (customersLoading) return <PageSkeleton variant="form" rows={4} />;
+
+  if (customersError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load customers"
+          description="Could not load the customer list for payment entry."
+          actionLabel="Retry"
+          onAction={() => refetchCustomers()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">

@@ -37,14 +37,7 @@ export function LandingPage() {
   const data = landingSectionsAData;
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Global subtle atmospheric background lights */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute top-[1800px] -left-48 h-[600px] w-[600px] rounded-full bg-landing-cta/[0.04] blur-[150px]" />
-        <div className="absolute top-[3200px] -right-48 h-[600px] w-[600px] rounded-full bg-landing-accent/[0.04] blur-[150px]" />
-      </div>
-
-      <div className="relative z-10">
+    <div>
         {/* 1. Hero */}
         <HeroSection data={data.hero} />
         {/* 2. Stats */}
@@ -101,7 +94,6 @@ export function LandingPage() {
         <ContactSection />
         {/* 28. CTA */}
         <CTASection />
-      </div>
     </div>
   );
 }

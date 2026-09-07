@@ -1,13 +1,10 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { motion } from 'framer-motion';
 import { useAccountingReports } from '../hooks/use-accounting-reports';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart3, FileSpreadsheet, TrendingUp } from 'lucide-react';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 export function AccountingReportsPage() {
   const { reports, isLoading, isError, refetch } = useAccountingReports();
@@ -26,12 +23,7 @@ export function AccountingReportsPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="space-y-6 max-w-7xl mx-auto pb-12"
-    >
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <PageHero>
         <h1 className="text-2xl font-bold tracking-tight">Accounting Reports</h1>
@@ -39,20 +31,29 @@ export function AccountingReportsPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* KPI Cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard title="Available Reports" value={reports.length} description="Generated summaries" icon={FileSpreadsheet} />
-        <StatCard title="Latest Period" value={reports[0]?.period ?? '—'} description="Most recent run" icon={BarChart3} />
-        <StatCard
-          title="P&amp;L Net (Latest)"
-          value={reports[0] ? <CurrencyDisplay amount={reports[0].netBdt} /> : '—'}
-          description={reports[0]?.name ?? 'No data'}
-          icon={TrendingUp}
-        />
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{reports.length}</span>{' '}
+          <span className="text-muted-foreground">reports</span>
+        </p>
+        <p>
+          <span className="font-semibold">{reports[0]?.period ?? '—'}</span>{' '}
+          <span className="text-muted-foreground">latest period</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            {reports[0] ? (
+              <CurrencyDisplay amount={reports[0].netBdt} className="inline font-semibold" />
+            ) : (
+              '—'
+            )}
+          </span>{' '}
+          <span className="text-muted-foreground">P&amp;L net</span>
+        </p>
+      </div>
 
       {/* Reports Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         {reports.length === 0 ? (
           <EmptyState title="No reports generated" description="Run month-end close to populate reports." />
         ) : (
@@ -79,9 +80,9 @@ export function AccountingReportsPage() {
             </Table>
           </Card>
         )}
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

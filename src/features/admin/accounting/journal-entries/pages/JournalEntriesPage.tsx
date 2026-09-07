@@ -2,7 +2,6 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import {
   FileText,
   CheckCircle2,
@@ -10,7 +9,6 @@ import {
 } from 'lucide-react';
 import { useJournalEntries } from '../hooks/use-journal-entries';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
-import { StatCard } from '@/components/shared/StatCard';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 
 export function JournalEntriesPage() {
@@ -47,10 +44,7 @@ export function JournalEntriesPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -70,29 +64,23 @@ export function JournalEntriesPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Total Entries"
-          value={entries.length}
-          description="All vouchers"
-          icon={FileText}
-        />
-        <StatCard
-          title="Posted"
-          value={stats.posted}
-          description="Locked to ledger"
-          icon={CheckCircle2}
-        />
-        <StatCard
-          title="Draft"
-          value={stats.draft}
-          description="Pending review"
-          icon={Clock}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{entries.length}</span>{' '}
+          <span className="text-muted-foreground">total entries</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.posted}</span>{' '}
+          <span className="text-muted-foreground">posted</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.draft}</span>{' '}
+          <span className="text-muted-foreground">draft</span>
+        </p>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         {entries.length === 0 ? (
           <div className="py-16">
             <EmptyState
@@ -128,11 +116,8 @@ export function JournalEntriesPage() {
                 </TableHeader>
                 <TableBody>
                   {entries.map((entry, idx) => (
-                    <motion.tr
+                    <tr
                       key={entry.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.04, duration: 0.3 }}
                       className="group border-border/40 hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="py-3.5">
@@ -171,16 +156,16 @@ export function JournalEntriesPage() {
                           </Badge>
                         )}
                       </TableCell>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>
             </div>
           </Card>
         )}
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

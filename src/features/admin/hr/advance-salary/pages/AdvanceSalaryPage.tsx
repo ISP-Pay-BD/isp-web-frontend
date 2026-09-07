@@ -2,14 +2,13 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useAdvanceSalary } from '../hooks/use-advance-salary';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -28,19 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { HandCoins, Plus, Check, X, Search, Clock, DollarSign, XIcon, CheckCircle2 } from 'lucide-react';
+import { HandCoins, Plus, Check, X, Search, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
-
-
-const avatarColors = [
-  'bg-blue-500/15 text-blue-600 border-blue-500/25',
-  'bg-emerald-500/15 text-emerald-600 border-emerald-500/25',
-  'bg-amber-500/15 text-amber-600 border-amber-500/25',
-  'bg-purple-500/15 text-purple-600 border-purple-500/25',
-  'bg-rose-500/15 text-rose-600 border-rose-500/25',
-];
 
 const statusStyles: Record<string, { badge: string; dot: string }> = {
   approved: { badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500' },
@@ -99,18 +87,6 @@ export function AdvanceSalaryPage() {
     );
   }
 
-  const stats = [
-    { label: 'Total Approved Advance', value: <CurrencyDisplay amount={totalAdvanceApproved} className="font-bold" />, description: 'Awaiting salary deduction', icon: DollarSign, color: 'amber' },
-    { label: 'Pending Requests', value: pendingCount, description: 'Requires admin approval', icon: Clock, color: 'orange' },
-    { label: 'Resolved Records', value: resolvedCount, description: 'Approved or rejected', icon: CheckCircle2, color: 'emerald' },
-  ];
-
-  const statColors: Record<string, string> = {
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    orange: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  };
-
   return (
     <div className="space-y-6">
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -125,30 +101,29 @@ export function AdvanceSalaryPage() {
             Review staff advance requests, disburse emergency salary advances, and set deduction schedules.
           </p>
         </div>
-        <motion.div whileHover={{ y: -2 }}>
+        <div >
           <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
             <Plus className="h-4 w-4" /> Give Advance
           </Button>
-        </motion.div>
+        </div>
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((stat) => (
-          <div key={stat.label}>
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
-              <CardContent className="p-4 flex items-center gap-3.5">
-                <div className={`p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200 ${statColors[stat.color]}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalAdvanceApproved} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">approved advance</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{pendingCount}</span>{' '}
+          <span className="text-muted-foreground">pending</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{resolvedCount}</span>{' '}
+          <span className="text-muted-foreground">resolved</span>
+        </p>
       </div>
 
       <div>
@@ -199,14 +174,13 @@ export function AdvanceSalaryPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRequests.map((req, idx) => {
-                    const colorIdx = idx % avatarColors.length;
                     const stCfg = statusStyles[req.status] || statusStyles.pending;
                     return (
-                      <motion.tr key={req.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="group border-border/40 hover:bg-muted/30 transition-colors">
+                      <tr key={req.id} className="group border-border/40 hover:bg-muted/30 transition-colors">
                         <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className={cn('relative flex h-9 w-9 items-center justify-center rounded-xl font-bold text-[10px] border group-hover:scale-110 transition-transform duration-200', avatarColors[colorIdx])}>
+                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-[10px] border border-border/60 bg-muted/50 text-muted-foreground">
                               {req.employeeName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <span className="font-semibold text-sm group-hover:text-primary transition-colors">{req.employeeName}</span>
@@ -226,22 +200,22 @@ export function AdvanceSalaryPage() {
                         <TableCell className="text-right">
                           {req.status === 'pending' ? (
                             <div className="flex items-center justify-end gap-1">
-                              <motion.div whileHover={{ y: -1 }}>
+                              <div >
                                 <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10" onClick={() => handleUpdateStatus(req.id, 'approved')}>
                                   <Check className="h-3.5 w-3.5" /> Approve
                                 </Button>
-                              </motion.div>
-                              <motion.div whileHover={{ y: -1 }}>
+                              </div>
+                              <div >
                                 <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10" onClick={() => handleUpdateStatus(req.id, 'rejected')}>
                                   <X className="h-3.5 w-3.5" /> Reject
                                 </Button>
-                              </motion.div>
+                              </div>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-xs font-mono">Processed</span>
                           )}
                         </TableCell>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </TableBody>

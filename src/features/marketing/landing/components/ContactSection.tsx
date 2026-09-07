@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/motion/Reveal';
-import { GlareSurface } from '@/components/motion/GlareSurface';
 import { contactFormSchema, type ContactFormData } from '../schemas/contact.schema';
 import { useTranslations } from '@/features/marketing/shared';
 
@@ -52,61 +51,58 @@ export function ContactSection() {
   return (
     <section id="contact" className="border-t border-white/[0.07] py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <Reveal className="mx-auto max-w-3xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
+        <Reveal className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
             {t('marketing.pages.contact.badge')}
-          </span>
-          <h2 className="font-landing-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
+          </p>
+          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             {t('marketing.pages.contact.title')}
           </h2>
-          <p className="mt-4 text-base text-white/70 leading-relaxed">
+          <p className="mt-4 text-base leading-relaxed text-white/60">
             {t('marketing.pages.contact.subtitle')}
           </p>
         </Reveal>
 
-        {/* Funnel Cards */}
-        <div className="mt-12 grid gap-4 sm:grid-cols-3">
-          <Reveal>
-            <a href="/register" className="block h-full">
-              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-landing-cta/40 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02]" intensity={0.08}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-landing-cta/30 bg-landing-cta/20 text-landing-cta">
-                  <Rocket className="h-6 w-6" />
-                </div>
-                <strong className="text-base text-white">{t('marketing.pages.contact.trialTitle')}</strong>
-                <span className="mt-1 text-xs text-white/60">{t('marketing.pages.contact.trialDesc')}</span>
-              </GlareSurface>
+        <ul className="mt-10 divide-y divide-white/10 border-y border-white/10 sm:grid sm:grid-cols-3 sm:divide-y-0 sm:border-0 sm:gap-8">
+          <li className="py-4 sm:border-t sm:border-white/10 sm:py-5">
+            <a href="/register" className="group block">
+              <Rocket className="h-5 w-5 text-landing-cta" aria-hidden />
+              <strong className="mt-3 block text-sm text-white group-hover:text-landing-cta">
+                {t('marketing.pages.contact.trialTitle')}
+              </strong>
+              <span className="mt-1 block text-xs text-white/55">
+                {t('marketing.pages.contact.trialDesc')}
+              </span>
             </a>
-          </Reveal>
-
-          <Reveal>
+          </li>
+          <li className="py-4 sm:border-t sm:border-white/10 sm:py-5">
             <a
               href="https://wa.me/8801781808231?text=Hi%2C%20I%27d%20like%20to%20book%20an%20ISP%20Pay%20BD%20demo"
               target="_blank"
               rel="noopener noreferrer"
-              className="block h-full"
+              className="group block"
             >
-              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-white/10 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02] hover:border-emerald-500/40" intensity={0.08}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                  <MessageSquare className="h-6 w-6" />
-                </div>
-                <strong className="text-base text-white">{t('marketing.pages.contact.whatsappTitle')}</strong>
-                <span className="mt-1 text-xs text-white/60">{t('marketing.pages.contact.whatsappDesc')}</span>
-              </GlareSurface>
+              <MessageSquare className="h-5 w-5 text-landing-cta" aria-hidden />
+              <strong className="mt-3 block text-sm text-white group-hover:text-landing-cta">
+                {t('marketing.pages.contact.whatsappTitle')}
+              </strong>
+              <span className="mt-1 block text-xs text-white/55">
+                {t('marketing.pages.contact.whatsappDesc')}
+              </span>
             </a>
-          </Reveal>
-
-          <Reveal>
-            <a href="#contact-form" className="block h-full">
-              <GlareSurface className="flex h-full flex-col items-center rounded-xl border border-white/10 bg-[#12061f] p-6 text-center transition-all hover:scale-[1.02] hover:border-landing-accent/40" intensity={0.08}>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-landing-panel text-landing-accent">
-                  <Building className="h-6 w-6" />
-                </div>
-                <strong className="text-base text-white">Running 10k+ Lines?</strong>
-                <span className="mt-1 text-xs text-white/60">Custom SLA, migration &amp; NOC support</span>
-              </GlareSurface>
+          </li>
+          <li className="py-4 sm:border-t sm:border-white/10 sm:py-5">
+            <a href="#contact-form" className="group block">
+              <Building className="h-5 w-5 text-landing-cta" aria-hidden />
+              <strong className="mt-3 block text-sm text-white group-hover:text-landing-cta">
+                Running 10k+ lines?
+              </strong>
+              <span className="mt-1 block text-xs text-white/55">
+                Custom SLA, migration &amp; NOC support
+              </span>
             </a>
-          </Reveal>
-        </div>
+          </li>
+        </ul>
 
         {/* Form + Contact Info Grid */}
         <div id="contact-form" className="mt-16 grid items-start gap-10 lg:grid-cols-12">

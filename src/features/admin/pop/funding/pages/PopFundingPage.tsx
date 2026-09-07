@@ -2,7 +2,6 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,7 +16,6 @@ import { usePopData, useCreatePopFunding } from '../../hooks/use-pop';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 const fundingSchema = z.object({
   popId: z.string().min(1, 'Select a POP'),
@@ -81,10 +78,7 @@ export function PopFundingPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -104,30 +98,24 @@ export function PopFundingPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Total Resellers"
-          value={resellers.length}
-          description="Active POP accounts"
-          icon={Users}
-        />
-        <StatCard
-          title="Total Balance"
-          value={<CurrencyDisplay amount={stats.totalBalance} className="font-mono text-foreground font-bold" />}
-          description="Across all wallets"
-          icon={Wallet}
-        />
-        <StatCard
-          title="Total Customers"
-          value={stats.totalCustomers}
-          description="Downstream subscribers"
-          icon={Users}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{resellers.length}</span>{' '}
+          <span className="text-muted-foreground">total resellers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums"><CurrencyDisplay amount={stats.totalBalance} className="font-mono text-foreground font-bold" /></span>{' '}
+          <span className="text-muted-foreground">total balance</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.totalCustomers}</span>{' '}
+          <span className="text-muted-foreground">total customers</span>
+        </p>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Funding Form */}
-        <motion.div variants={fadeUp} className="lg:col-span-2">
+        <div className="lg:col-span-2">
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2.5">
@@ -174,17 +162,14 @@ export function PopFundingPage() {
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
         {/* Reseller Wallet Cards */}
-        <motion.div variants={fadeUp} className="lg:col-span-3">
+        <div className="lg:col-span-3">
           <div className="grid gap-3 sm:grid-cols-2">
             {resellers.map((r, idx) => (
-              <motion.div
+              <div
                 key={r.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + idx * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
               >
                 <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-300 group">
                   <CardContent className="p-4">
@@ -199,18 +184,18 @@ export function PopFundingPage() {
                         <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                       </div>
                     </div>
-                    <div className="mt-3 text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    <div className="mt-3 text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                       <CurrencyDisplay amount={r.balanceBdt} />
                     </div>
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

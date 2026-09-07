@@ -6,7 +6,6 @@ import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { StatCard } from '@/components/shared/StatCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Database, Server, Activity } from 'lucide-react';
@@ -45,11 +44,23 @@ export function RedisLogsPage() {
         subtitle="Cache telemetry, session stats, and platform event inspector"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Redis Memory" value={`${data.stats.redisMemoryMb} MB`} icon={Database} />
-        <StatCard title="Active Keys" value={data.stats.redisKeysTotal.toLocaleString()} icon={Server} />
-        <StatCard title="Uptime" value={`${data.stats.uptimeDays} days`} icon={Activity} />
-        <StatCard title="Active Sessions" value={data.stats.activeSessions} icon={Activity} />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{`${data.stats.redisMemoryMb} MB`}</span>{' '}
+          <span className="text-muted-foreground">redis memory</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{data.stats.redisKeysTotal.toLocaleString()}</span>{' '}
+          <span className="text-muted-foreground">active keys</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${data.stats.uptimeDays} days`}</span>{' '}
+          <span className="text-muted-foreground">uptime</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{data.stats.activeSessions}</span>{' '}
+          <span className="text-muted-foreground">active sessions</span>
+        </p>
       </div>
 
       <Card className="border-border/60">

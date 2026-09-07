@@ -48,3 +48,5 @@ export const adminProfileData = {
     { id: 'log_3', action: 'Password verified for backup export', time: '1 week ago', ip: '103.145.23.18' },
   ],
 };
+
+export type AdminProfileData = typeof adminProfileData;

@@ -31,13 +31,13 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 | Phase | Plan written? | Built? | Next action |
 |-------|---------------|--------|-------------|
 | **P0** Foundation | ✅ | ✅ | Done — see `P0-READY.md` |
-| **Phase 1** Marketing (28 sections) | ✅ | ❌ | Say **"start Phase 1"** |
-| **Phase 2** Auth + permissions UI | ✅ | ❌ | After Phase 1 |
-| **Phase 3** Customer portal | ✅ | ❌ | After Phase 2 |
-| **Phase 4** Reseller admin | ✅ | ❌ | After Phase 3 |
-| **Phase 5** Full tenant admin | ✅ | ❌ | After Phase 4 |
-| **Phase 6** Platform super-admin | ✅ | ❌ | After Phase 5 |
-| **Phase 7** Employee + polish | ✅ | ❌ | After Phase 6 |
+| **Phase 1** Marketing (28 sections) | ✅ | ✅ mock UI | Premium craft — `PONYTAIL-TRACKER.md` |
+| **Phase 2** Auth + permissions UI | ✅ | ✅ mock UI | Premium craft ongoing |
+| **Phase 3** Customer portal | ✅ | ✅ mock UI | Premium craft ongoing |
+| **Phase 4** Reseller admin | ✅ | ✅ mock UI (admin POP) | Premium craft ongoing |
+| **Phase 5** Full tenant admin | ✅ | ✅ mock UI | Premium craft ongoing |
+| **Phase 6** Platform super-admin | ✅ | ✅ mock UI | Premium craft ongoing |
+| **Phase 7** Employee + polish | ✅ | ✅ mock UI | Premium craft ongoing |
 | **Phase 8** API integration | ✅ spec only | ❌ out of scope | Future |
 
 ---
@@ -52,8 +52,8 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 | Full navigation | `MASTER-BUILD-PLAN.md` P0-D | ✅ |
 | Shared components (P0 set) | `09-COMPONENTS-AND-PATTERNS.md` | ✅ |
 | Marketing mock data | `06-MOCK-DATA-SPEC.md` | ✅ |
-| `next-intl` EN/BN | `11-I18N.md` | ⏳ Phase 1 parallel |
-| 403 / User Access UI | `05-PERMISSIONS-AND-ROLES.md` | ⏳ Phase 2 |
+| `next-intl` EN/BN | `11-I18N.md` | ⏳ parallel (not blocking mock UI) |
+| 403 / User Access UI | `05-PERMISSIONS-AND-ROLES.md` | ✅ mock UI present |
 
 ---
 
@@ -81,6 +81,6 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 
 ---
 
-## Trigger to start coding
+## Trigger / current focus
 
-**Plan is done. Code Phase 1 when user says:** `"start Phase 1"` or `"build landing"`.
+**Phases 1–7 mock UI exist.** Active work is **premium-ui craft** across all surfaces — track in `docs/PONYTAIL-TRACKER.md`. Do not claim phase “done” for inventory DoD until visual gates pass.

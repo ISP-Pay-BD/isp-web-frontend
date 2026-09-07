@@ -6,9 +6,9 @@ import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotUserItem } from '@/data/admin/network-ops.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { formatBdtWithSymbol } from '@/lib/format';
 import { formatMac } from '@/lib/format/network';
 
 export function HotspotDashboardPage() {
-  const { data, isLoading } = useHotspotData();
+  const { data, isLoading, isError, refetch } = useHotspotData();
 
   const users = data?.users ?? [];
   const reports = data?.reports ?? [];
@@ -67,6 +67,18 @@ export function HotspotDashboardPage() {
   );
 
   if (isLoading) return <PageSkeleton variant="dashboard" rows={6} />;
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load hotspot dashboard"
+          description="Could not fetch sessions and router health."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -85,14 +97,23 @@ export function HotspotDashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active sessions" value={String(activeSessions.length)} />
-        <StatCard title="Online routers" value={`${onlineRouters}/${routers.length}`} />
-        <StatCard title="Week revenue" value={formatBdtWithSymbol(weekRevenue)} />
-        <StatCard
-          title="Expired today"
-          value={String(users.filter((u) => u.status === 'expired').length)}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{String(activeSessions.length)}</span>{' '}
+          <span className="text-muted-foreground">active sessions</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${onlineRouters}/${routers.length}`}</span>{' '}
+          <span className="text-muted-foreground">online routers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(weekRevenue)}</span>{' '}
+          <span className="text-muted-foreground">week revenue</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(users.filter((u) => u.status === 'expired').length)}</span>{' '}
+          <span className="text-muted-foreground">expired today</span>
+        </p>
       </div>
 
       <Card>

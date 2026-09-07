@@ -213,7 +213,7 @@ export function CustomerPayPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border bg-card">
             <div>
               <span className="text-xs text-muted-foreground">Total Payable Amount</span>
-              <div className="text-2xl font-black text-primary">
+              <div className="text-2xl font-bold text-primary">
                 {formatBdtWithSymbol(amount || 0)}
               </div>
             </div>

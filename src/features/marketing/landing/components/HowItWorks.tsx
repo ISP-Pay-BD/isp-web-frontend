@@ -46,9 +46,9 @@ export function HowItWorks({ steps }: HowItWorksProps) {
 
         <Reveal stagger as="ol" className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((item) => (
-            <RevealItem key={item.step} as="li" className="group transition-transform duration-200 hover:-translate-y-1">
+            <RevealItem key={item.step} as="li">
               <span className="font-mono text-xs text-white/35">0{item.step}</span>
-              <h3 className="font-landing-display mt-2 text-base font-semibold text-white group-hover:text-landing-cta transition-colors">
+              <h3 className="font-landing-display mt-2 text-base font-semibold text-white">
                 {item.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-white/50">{item.desc}</p>

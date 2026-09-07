@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Check, Wallet, Calendar } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { Reveal } from '@/components/motion/Reveal';
-import { GlareSurface } from '@/components/motion/GlareSurface';
-import { MorphArrowButton } from '@/components/motion/MorphArrowButton';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { PricingPlan, PaygCalculatorData } from '../types';
 
@@ -40,40 +40,36 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
             <button
               type="button"
               onClick={() => setModel('fixed')}
-              className={cn(
-                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-300',
-                model === 'fixed'
-                  ? 'text-white'
-                  : 'text-white/45 hover:text-white/70',
-              )}
-            >
-              {model === 'fixed' && (
-                <motion.span
-                  layoutId="pricing-model-bg"
-                  className="absolute inset-0 rounded-lg bg-landing-cta shadow-[0_0_20px_rgba(247,88,3,0.25)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
+                    className={cn(
+                      'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
+                      model === 'fixed' ? 'text-white' : 'text-white/45 hover:text-white/70',
+                    )}
+                  >
+                    {model === 'fixed' && (
+                      <motion.span
+                        layoutId="pricing-model-bg"
+                        className="absolute inset-0 rounded-lg bg-landing-cta"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
               <Calendar size={15} className="relative z-10" />
               <span className="relative z-10">Fixed Monthly</span>
             </button>
             <button
               type="button"
               onClick={() => setModel('payg')}
-              className={cn(
-                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-300',
-                model === 'payg'
-                  ? 'text-white'
-                  : 'text-white/45 hover:text-white/70',
-              )}
-            >
-              {model === 'payg' && (
-                <motion.span
-                  layoutId="pricing-model-bg"
-                  className="absolute inset-0 rounded-lg bg-landing-cta shadow-[0_0_20px_rgba(247,88,3,0.25)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
+                    className={cn(
+                      'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
+                      model === 'payg' ? 'text-white' : 'text-white/45 hover:text-white/70',
+                    )}
+                  >
+                    {model === 'payg' && (
+                      <motion.span
+                        layoutId="pricing-model-bg"
+                        className="absolute inset-0 rounded-lg bg-landing-cta"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
               <Wallet size={15} className="relative z-10" />
               <span className="relative z-10">Pay-As-You-Go</span>
             </button>
@@ -98,15 +94,13 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   type="button"
                   onClick={() => setIsYearly(!isYearly)}
                   className={cn(
-                    'relative h-7 w-12 rounded-full transition-all duration-300',
-                    isYearly
-                      ? 'bg-gradient-to-r from-landing-cta to-amber-500 shadow-[0_0_16px_rgba(247,88,3,0.3)]'
-                      : 'bg-white/15',
+                    'relative h-7 w-12 rounded-full transition-colors',
+                    isYearly ? 'bg-landing-cta' : 'bg-white/15',
                   )}
                   aria-label="Toggle yearly discount"
                 >
                   <motion.span
-                    className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow-md"
+                    className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white"
                     animate={{ left: isYearly ? '25px' : '3px' }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
@@ -114,7 +108,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                 <span className={cn('text-sm', isYearly ? 'font-medium text-white' : 'text-white/45')}>
                   Yearly
                 </span>
-                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">
+                <span className="rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/60">
                   Save 20%
                 </span>
               </div>
@@ -123,14 +117,13 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                 {plans.map((plan) => {
                   const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
                   return (
-                    <GlareSurface
+                    <div
                       key={plan.id}
-                      intensity={0.1}
                       className={cn(
-                        'relative flex flex-col justify-between rounded-xl p-7',
+                        'relative flex flex-col justify-between rounded-xl border p-7',
                         plan.highlighted
-                          ? 'bg-white/[0.06] ring-1 ring-landing-cta/50'
-                          : 'bg-white/[0.03]',
+                          ? 'border-landing-cta/50 bg-white/[0.04]'
+                          : 'border-white/10 bg-white/[0.02]',
                       )}
                     >
                       {plan.highlighted && (
@@ -157,20 +150,19 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                         </ul>
                       </div>
                       <div className="mt-7">
-                        <MorphArrowButton
-                          href="/register"
-                          magnetic={plan.highlighted}
+                        <Button
+                          render={<Link href="/register" />}
                           className={cn(
                             'h-10 w-full text-sm font-semibold',
                             plan.highlighted
-                              ? 'bg-landing-cta hover:bg-landing-cta-hover text-white'
-                              : 'bg-white/10 hover:bg-white/15 text-white',
+                              ? 'bg-landing-cta text-white hover:bg-landing-cta-hover'
+                              : 'bg-white/10 text-white hover:bg-white/15',
                           )}
                         >
                           Start Free Trial
-                        </MorphArrowButton>
+                        </Button>
                       </div>
-                    </GlareSurface>
+                    </div>
                   );
                 })}
               </div>
@@ -184,7 +176,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
               className="mt-12 max-w-xl"
             >
-              <div className="rounded-xl bg-white/[0.04] p-8">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8">
                 <h3 className="font-landing-display text-xl font-semibold text-white">
                   Pay only for active subscribers
                 </h3>
@@ -217,12 +209,12 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   </p>
                 </div>
                 <div className="mt-6">
-                  <MorphArrowButton
-                    href="/register"
-                    className="bg-landing-cta hover:bg-landing-cta-hover h-10 px-6 text-sm font-semibold text-white"
+                  <Button
+                    render={<Link href="/register" />}
+                    className="h-10 bg-landing-cta px-6 text-sm font-semibold text-white hover:bg-landing-cta-hover"
                   >
                     Get started with PAYG
-                  </MorphArrowButton>
+                  </Button>
                 </div>
               </div>
             </motion.div>

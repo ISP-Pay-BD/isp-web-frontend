@@ -39,7 +39,7 @@ export function ShowcasePage() {
           <Card key={item.id} className="border-border/60 overflow-hidden group">
             <div className="relative aspect-video bg-muted flex items-center justify-center">
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <Play className="h-12 w-12 text-white/90 relative z-10 group-hover:scale-110 transition-transform" />
+              <Play className="h-12 w-12 text-white/90 relative z-10" />
               {item.featured ? (
                 <Badge className="absolute top-2 right-2 bg-primary text-xs">
                   <Sparkles className="h-3 w-3 mr-1" /> Featured

@@ -88,7 +88,7 @@ export function CustomerProfilePage() {
         <div className="rounded-2xl border bg-card p-6 md:p-8 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-2xl border border-primary/20">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-2xl border border-primary/20">
                 {profile.avatarInitials}
               </div>
               <div>
@@ -111,30 +111,22 @@ export function CustomerProfilePage() {
             </Badge>
           </div>
 
-          {/* Network & Identity Specs */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6 text-xs">
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">National ID / Smart NID</span>
-              <div className="font-mono font-bold text-sm text-foreground">{profile.nid}</div>
-              <span className="text-muted-foreground text-[11px]">BTRC Verified Document</span>
+          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border/60 mt-6 pt-4 text-xs">
+            <div>
+              <span className="text-muted-foreground font-medium">NID</span>
+              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{profile.nid}</div>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">PPPoE Username</span>
-              <div className="font-mono font-bold text-sm text-foreground">{profile.username}</div>
-              <span className="text-muted-foreground text-[11px]">Assigned Dial-up ID</span>
+            <div>
+              <span className="text-muted-foreground font-medium">PPPoE</span>
+              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{profile.username}</div>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Hardware MAC Address</span>
-              <div className="font-mono font-bold text-sm text-foreground">{profile.macAddress}</div>
-              <span className="text-muted-foreground text-[11px]">Bound to Port</span>
+            <div>
+              <span className="text-muted-foreground font-medium">MAC</span>
+              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{profile.macAddress}</div>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Connection Type</span>
-              <div className="font-bold text-sm text-foreground uppercase">{profile.connectionType}</div>
-              <span className="text-muted-foreground text-[11px]">Fiber to the Home (FTTH)</span>
+            <div>
+              <span className="text-muted-foreground font-medium">Connection</span>
+              <div className="font-semibold text-sm text-foreground uppercase mt-0.5">{profile.connectionType}</div>
             </div>
           </div>
         </div>

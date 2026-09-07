@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { formatBdtWithSymbol } from '@/lib/format';
 import type { RoiData } from '../types';
 
@@ -23,21 +22,21 @@ export function RoiSection({ roi }: RoiSectionProps) {
   const annualSavings = netMonthlySavings * 12;
 
   return (
-    <section id="roi" className="py-20 md:py-28 bg-[#0c0118] border-t border-white/10">
+    <section id="roi" className="border-t border-white/10 bg-[#0c0118] py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
-            ROI Calculator
-          </span>
-          <h2 className="font-landing-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+            ROI
+          </p>
+          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Calculate your monthly &amp; annual operational savings
           </h2>
-          <p className="mt-4 text-base text-white/70">
-            See how much your ISP saves in staff hours and platform costs by switching to automated reconciliation.
+          <p className="mt-4 text-base text-white/60">
+            Staff hours and platform cost if you move reconciliation off spreadsheets.
           </p>
         </div>
 
-        <div className="mt-12 mx-auto max-w-3xl rounded-2xl border border-white/15 bg-landing-panel/80 p-6 md:p-10 shadow-2xl backdrop-blur-xl">
+        <div className="mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-landing-panel/60 p-6 md:p-10">
           <div className="grid gap-8 md:grid-cols-2">
             {/* Controls */}
             <div className="space-y-6">
@@ -97,25 +96,21 @@ export function RoiSection({ roi }: RoiSectionProps) {
               </div>
             </div>
 
-            {/* Calculated Result Card */}
-            <div className="flex flex-col justify-between rounded-xl border border-landing-cta/40 bg-landing-cta/5 p-6 text-center">
+            <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-6">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-landing-cta inline-flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Estimated Total Savings
-                </span>
-                <div className="font-landing-display mt-4 text-4xl sm:text-5xl font-extrabold text-white">
+                <p className="text-xs font-medium text-white/45">Estimated total savings</p>
+                <div className="font-landing-display mt-3 text-4xl font-semibold tabular-nums text-white sm:text-5xl">
                   {formatBdtWithSymbol(annualSavings)}
-                  <span className="text-lg font-normal text-white/60"> / year</span>
+                  <span className="text-lg font-normal text-white/50"> / year</span>
                 </div>
-                <p className="mt-2 font-mono text-sm text-emerald-400">
-                  ≈ {formatBdtWithSymbol(netMonthlySavings)} saved every month
+                <p className="mt-2 font-mono text-sm text-white/60">
+                  ≈ {formatBdtWithSymbol(netMonthlySavings)} / month
                 </p>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-white/10 text-xs text-white/60 leading-relaxed">
-                Includes recovered operator labor time (eliminated manual SMS cross-checking) + lowered platform overhead.
-              </div>
+              <p className="mt-6 border-t border-white/10 pt-6 text-xs leading-relaxed text-white/50">
+                Recovered operator labor (less SMS cross-checking) plus lower platform overhead.
+              </p>
             </div>
           </div>
         </div>

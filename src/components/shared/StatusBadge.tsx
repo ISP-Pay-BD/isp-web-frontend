@@ -24,8 +24,8 @@ interface StatusBadgeProps {
 }
 
 const dotStyles: Record<string, string> = {
-  active: 'bg-emerald-500 animate-pulse',
-  online: 'bg-emerald-500 animate-pulse',
+  active: 'bg-emerald-500',
+  online: 'bg-emerald-500',
   paid: 'bg-emerald-500',
   completed: 'bg-emerald-500',
   approved: 'bg-emerald-500',

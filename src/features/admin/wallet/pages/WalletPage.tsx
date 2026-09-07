@@ -3,9 +3,9 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useWallet } from '../hooks/use-wallet';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, StatusBadge } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Wallet, CreditCard, Users, Calendar } from 'lucide-react';
+import { Wallet, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -44,26 +44,32 @@ export function WalletPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Current Balance"
-          value={<CurrencyDisplay amount={wallet.balanceBdt} />}
-          description={`~${wallet.runwayMonths} months runway`}
-          icon={Wallet}
-        />
-        <StatCard
-          title="Est. Monthly Charge"
-          value={<CurrencyDisplay amount={wallet.estimatedMonthlyChargeBdt} />}
-          description={`${wallet.totalSubscribersCount} active subs`}
-          icon={Users}
-        />
-        <StatCard title="Next Billing" value={wallet.nextBillingDate} description="Auto-deduct date" icon={Calendar} />
-        <StatCard
-          title="Status"
-          value={<StatusBadge status={wallet.subscriptionStatus === 'active' ? 'active' : 'pending'} label={wallet.subscriptionStatus} />}
-          description={wallet.isPayg ? 'Pay-As-You-Go' : 'Fixed plan'}
-          icon={CreditCard}
-        />
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={wallet.balanceBdt} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">balance · ~{wallet.runwayMonths} mo runway</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={wallet.estimatedMonthlyChargeBdt} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">est. monthly · {wallet.totalSubscribersCount} subs</span>
+        </p>
+        <p>
+          <span className="font-semibold">{wallet.nextBillingDate}</span>{' '}
+          <span className="text-muted-foreground">next billing</span>
+        </p>
+        <p className="flex items-center gap-2">
+          <StatusBadge
+            status={wallet.subscriptionStatus === 'active' ? 'active' : 'pending'}
+            label={wallet.subscriptionStatus}
+          />
+          <span className="text-muted-foreground text-sm">
+            {wallet.isPayg ? 'Pay-As-You-Go' : 'Fixed plan'}
+          </span>
+        </p>
       </div>
 
       <div className="bg-card rounded-lg border">

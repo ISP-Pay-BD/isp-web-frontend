@@ -6,9 +6,9 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotProfileItem } from '@/data/admin/network-ops.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,7 @@ const profileSearchFilter = (
 };
 
 export function HotspotPackagesPage() {
-  const { data, isLoading } = useHotspotData();
+  const { data, isLoading, isError, refetch } = useHotspotData();
   const [profiles, setProfiles] = useState<HotspotProfileItem[]>([]);
 
   const initial = data?.profiles ?? [];
@@ -113,6 +113,18 @@ export function HotspotPackagesPage() {
   );
 
   if (isLoading && list.length === 0) return <PageSkeleton variant="cards" rows={5} />;
+  if (isError && list.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load hotspot packages"
+          description="Could not fetch hotspot profiles."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -132,10 +144,19 @@ export function HotspotPackagesPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total profiles" value={String(list.length)} icon={Package} />
-        <StatCard title="Active profiles" value={String(list.filter((p) => p.status === 'active').length)} />
-        <StatCard title="Active users" value={String(list.reduce((s, p) => s + p.activeUsers, 0))} />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.length)}</span>{' '}
+          <span className="text-muted-foreground">total profiles</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.filter((p) => p.status === 'active').length)}</span>{' '}
+          <span className="text-muted-foreground">active profiles</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(list.reduce((s, p) => s + p.activeUsers, 0))}</span>{' '}
+          <span className="text-muted-foreground">active users</span>
+        </p>
       </div>
 
       <DataTable

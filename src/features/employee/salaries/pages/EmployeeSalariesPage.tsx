@@ -2,11 +2,9 @@
 
 import { useMemo } from 'react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
-import { Banknote } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
-import { StatCard } from '@/components/shared/StatCard';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DateDisplay } from '@/components/shared/DateDisplay';
@@ -113,23 +111,30 @@ export function EmployeeSalariesPage() {
       ]}
     >
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard
-            title="Total Received"
-            value={<CurrencyDisplay amount={totalPaid} />}
-            icon={Banknote}
-            description={`${items.length} payments on record`}
-          />
-          <StatCard
-            title="Last Payment"
-            value={lastPayment ? <CurrencyDisplay amount={lastPayment.amountBdt} /> : '—'}
-            description={lastPayment ? formatSalaryMonth(lastPayment.month) : 'No payments yet'}
-          />
-          <StatCard
-            title="Monthly Net"
-            value={lastPayment ? <CurrencyDisplay amount={lastPayment.amountBdt} /> : '—'}
-            description="Most recent net salary"
-          />
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums">
+              <CurrencyDisplay amount={totalPaid} />
+            </span>{' '}
+            <span className="text-muted-foreground">total received</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums">{items.length}</span>{' '}
+            <span className="text-muted-foreground">payments</span>
+          </p>
+          <p className="text-muted-foreground">
+            Last{' '}
+            {lastPayment ? (
+              <>
+                <span className="font-medium text-foreground">
+                  <CurrencyDisplay amount={lastPayment.amountBdt} />
+                </span>{' '}
+                · {formatSalaryMonth(lastPayment.month)}
+              </>
+            ) : (
+              '—'
+            )}
+          </p>
         </div>
 
         {chartData.length > 0 ? (

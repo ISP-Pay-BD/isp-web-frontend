@@ -76,24 +76,18 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="grid gap-12 lg:grid-cols-12 items-start">
           {/* Left Column: Form */}
-          <div className="lg:col-span-8 rounded-3xl border border-white/15 bg-landing-panel/90 p-6 md:p-10 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-6">
+          <div className="lg:col-span-8 rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10">
+            <div className="mb-6 border-b border-white/10 pb-6">
               <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
                   {isReferralFlow ? t('marketing.pages.register.referralBadge') : t('marketing.pages.register.badge')}
-                </span>
-                <h1 className="font-landing-display mt-2 text-2xl md:text-3xl font-extrabold text-white">
+                </p>
+                <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
                   {isReferralFlow ? t('marketing.pages.register.referralTitle') : t('marketing.pages.register.title')}
                 </h1>
-                <p className="mt-1 text-xs text-white/60">
+                <p className="mt-1 text-sm text-white/55">
                   {isReferralFlow ? t('marketing.pages.register.referralSubtitle') : t('marketing.pages.register.subtitle')}
                 </p>
-              </div>
-
-              <div className="hidden sm:block">
-                <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-mono font-semibold text-emerald-400 border border-emerald-500/30">
-                  Instant Setup
-                </span>
               </div>
             </div>
 

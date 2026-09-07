@@ -8,7 +8,6 @@ import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { StatCard } from '@/components/shared/StatCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/features/shared/data-table';
@@ -136,15 +135,19 @@ export function AdminsListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total Admins" value={data.total} icon={Users} />
-        <StatCard title="Active Accounts" value={activeCount} icon={ShieldCheck} />
-        <StatCard
-          title="Linked to Tenants"
-          value={linkedCount}
-          description="ISP owner accounts"
-          icon={ShieldCheck}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{data.total}</span>{' '}
+          <span className="text-muted-foreground">total admins</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{activeCount}</span>{' '}
+          <span className="text-muted-foreground">active accounts</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{linkedCount}</span>{' '}
+          <span className="text-muted-foreground">linked to tenants</span>
+        </p>
       </div>
 
       <DataTable

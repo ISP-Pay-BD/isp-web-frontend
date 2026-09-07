@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import {
   CheckCircle2,
   XCircle,
-  Clock,
   ThumbsUp,
   ThumbsDown,
   Search,
@@ -96,48 +95,24 @@ export function FreeRequestsPage() {
         ]}
       />
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-border/70 bg-card shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200" style={{ animationDelay: '0ms' }}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Pending Approval</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 transition-transform duration-200 hover:scale-110">
-                <Clock className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400">{pendingCount}</div>
-            <p className="text-muted-foreground mt-1 text-[11px]">Awaiting admin review</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200" style={{ animationDelay: '80ms' }}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Approved</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 transition-transform duration-200 hover:scale-110">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400">{approvedCount}</div>
-            <p className="text-muted-foreground mt-1 text-[11px]">Trials activated</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/70 bg-card shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200" style={{ animationDelay: '160ms' }}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Rejected</span>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 transition-transform duration-200 hover:scale-110">
-                <XCircle className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="text-2xl font-black tracking-tight text-red-600 dark:text-red-400">{rejectedCount}</div>
-            <p className="text-muted-foreground mt-1 text-[11px]">Declined requests</p>
-          </CardContent>
-        </Card>
+      {/* KPI strip */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{pendingCount}</span>{' '}
+          <span className="text-muted-foreground">pending</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{approvedCount}</span>{' '}
+          <span className="text-muted-foreground">approved</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-destructive">{rejectedCount}</span>{' '}
+          <span className="text-muted-foreground">rejected</span>
+        </p>
       </div>
 
       {/* Toolbar */}
-      <Card className="border-border/70 shadow-2xs bg-card animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both" style={{ animationDelay: '200ms' }}>
+      <Card className="border-border/70 shadow-2xs bg-card">
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -145,7 +120,7 @@ export function FreeRequestsPage() {
               placeholder="Search name, phone, area, or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9 text-xs transition-shadow duration-200 focus:shadow-[0_0_0_2px] focus:shadow-primary/20"
+              className="pl-9 h-9 text-xs"
             />
           </div>
 
@@ -176,7 +151,7 @@ export function FreeRequestsPage() {
       </Card>
 
       {/* Desktop Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both hidden sm:block" style={{ animationDelay: '280ms' }}>
+      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden hidden sm:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -203,13 +178,13 @@ export function FreeRequestsPage() {
                 filtered.map((req, i) => (
                   <tr
                     key={req.id}
-                    className="hover:bg-muted/30 transition-colors group animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+                    className="hover:bg-muted/30 transition-colors group"
                     style={{ animationDelay: `${320 + i * 40}ms` }}
                   >
                     <td className="py-3.5 px-4 text-muted-foreground font-mono text-xs">{i + 1}</td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 transition-transform duration-200 group-hover:scale-110 shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 transition-transform duration-200 shrink-0">
                           {req.name.slice(-1).toUpperCase()}
                         </div>
                         <div>
@@ -299,7 +274,7 @@ export function FreeRequestsPage() {
           filtered.map((req, i) => (
             <Card
               key={req.id}
-              className="border-border/70 bg-card shadow-2xs p-4 space-y-3 animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md transition-all duration-200"
+              className="border-border/70 bg-card shadow-2xs p-4 space-y-3 hover:shadow-md transition-all duration-200"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               <div className="flex items-start justify-between gap-2">

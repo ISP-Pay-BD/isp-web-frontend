@@ -2,11 +2,10 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useIncomes } from '../hooks/use-incomes';
 import type { IncomeItem } from '../types';
 import type { IncomeFormValues } from '../schemas';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
 import { IncomeModal } from '../components/IncomeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TrendingUp, Plus, Search, Trash2, Calendar, CreditCard, DollarSign } from 'lucide-react';
+import { TrendingUp, Plus, Search, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 
 export function IncomesPage() {
   const { incomes, isLoading, isError, refetch, createIncome, deleteIncome } = useIncomes();
@@ -85,12 +83,7 @@ export function IncomesPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-      className="space-y-6 max-w-7xl mx-auto pb-12"
-    >
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
       <PageHero className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -100,40 +93,36 @@ export function IncomesPage() {
           </p>
         </div>
         <Can menu="accounting" action="create">
-          <motion.div whileHover={hoverLift}>
+          <div>
             <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm font-semibold gap-1.5">
               <Plus className="h-4 w-4" />
               New Income Entry
             </Button>
-          </motion.div>
+          </div>
         </Can>
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* KPI Cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Total Incomes (Visible)"
-          value={<CurrencyDisplay amount={totalIncome} />}
-          description="Aggregated collection"
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Vouchers / Records"
-          value={filteredIncomes.length}
-          description="Entries matching criteria"
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Revenue Categories"
-          value={categories.length}
-          description="Distinct revenue sources"
-          icon={CreditCard}
-        />
-      </motion.div>
+      {/* KPI summary */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalIncome} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">total incomes</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{filteredIncomes.length}</span>{' '}
+          <span className="text-muted-foreground">vouchers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{categories.length}</span>{' '}
+          <span className="text-muted-foreground">categories</span>
+        </p>
+      </div>
 
       {/* Filter Bar */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -160,10 +149,10 @@ export function IncomesPage() {
             </Select>
           </div>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         {filteredIncomes.length === 0 ? (
           <EmptyState
             icon={<TrendingUp className="h-10 w-10" />}
@@ -208,7 +197,7 @@ export function IncomesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Can menu="accounting" action="delete">
-                        <motion.div whileHover={hoverLift} className="inline-block">
+                        <div className="inline-block">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -222,7 +211,7 @@ export function IncomesPage() {
                             <Trash2 className="h-3.5 w-3.5" />
                             <span className="sr-only">Delete</span>
                           </Button>
-                        </motion.div>
+                        </div>
                       </Can>
                     </TableCell>
                   </TableRow>
@@ -231,7 +220,7 @@ export function IncomesPage() {
             </Table>
           </Card>
         )}
-      </motion.div>
+      </div>
 
       {/* New Income Modal */}
       </PageContent>
@@ -253,6 +242,6 @@ export function IncomesPage() {
         destructive
         onConfirm={handleConfirmDelete}
       />
-    </motion.div>
+    </div>
   );
 }

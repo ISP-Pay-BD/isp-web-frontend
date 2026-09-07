@@ -109,38 +109,32 @@ export function CustomerRouterPage() {
             </Button>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6 text-xs">
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Assigned IP</span>
-              <div className="font-mono font-bold text-sm text-foreground">{ipAddress}</div>
-              <span className="text-muted-foreground text-[11px]">Static CGNAT Allocation</span>
+          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border/60 mt-6 pt-4 text-xs">
+            <div>
+              <span className="text-muted-foreground font-medium">IP</span>
+              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{ipAddress}</div>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Physical MAC Binding</span>
-              <div className="font-mono font-bold text-sm text-foreground">{macAddress}</div>
-              <span className="text-muted-foreground text-[11px]">Secured against line clone</span>
+            <div>
+              <span className="text-muted-foreground font-medium">MAC</span>
+              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{macAddress}</div>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Active WiFi SSID</span>
-              <div className="font-bold text-sm text-primary flex items-center gap-1.5">
+            <div>
+              <span className="text-muted-foreground font-medium">Wi‑Fi</span>
+              <div className="font-semibold text-sm text-primary mt-0.5 flex items-center gap-1.5">
                 <Wifi className="h-3.5 w-3.5" />
                 {router.wifiSsid}
               </div>
-              <Link href="/customer/router/wifi" className="text-primary hover:underline text-[11px] font-semibold">
+              <Link href="/customer/router/wifi" className="text-primary hover:underline text-[11px] font-medium">
                 Change password →
               </Link>
             </div>
-
-            <div className="rounded-xl border p-3.5 bg-muted/20 space-y-1">
-              <span className="text-muted-foreground font-medium">Client Devices</span>
-              <div className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                <Smartphone className="h-3.5 w-3.5 text-blue-500" />
-                {connectedDevices.length} Connected
+            <div>
+              <span className="text-muted-foreground font-medium">Devices</span>
+              <div className="font-semibold text-sm text-foreground mt-0.5">
+                {connectedDevices.length} connected
               </div>
-              <Link href="/customer/router/devices" className="text-blue-600 hover:underline text-[11px] font-semibold">
-                Inspect devices →
+              <Link href="/customer/router/devices" className="text-muted-foreground hover:text-foreground hover:underline text-[11px] font-medium">
+                Inspect →
               </Link>
             </div>
           </div>

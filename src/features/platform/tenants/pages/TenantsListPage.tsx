@@ -20,7 +20,6 @@ import { useRouter } from 'next/navigation';
 import { mockFetch } from '@/lib/mock-api/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -291,31 +290,23 @@ export function TenantsListPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Portals"
-          value={stats.total}
-          description="Provisioned ISP instances"
-          icon={Globe}
-        />
-        <StatCard
-          title="Active Portals"
-          value={stats.active}
-          description="Live and billing subscribers"
-          icon={CheckCircle2}
-        />
-        <StatCard
-          title="Suspended Portals"
-          value={stats.suspended}
-          description="Temporarily disabled"
-          icon={Ban}
-        />
-        <StatCard
-          title="Trial Portals"
-          value={stats.trial}
-          description="14-day evaluation tenants"
-          icon={Filter}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{stats.total}</span>{' '}
+          <span className="text-muted-foreground">total portals</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.active}</span>{' '}
+          <span className="text-muted-foreground">active portals</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.suspended}</span>{' '}
+          <span className="text-muted-foreground">suspended portals</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.trial}</span>{' '}
+          <span className="text-muted-foreground">trial portals</span>
+        </p>
       </div>
 
       <DataTable

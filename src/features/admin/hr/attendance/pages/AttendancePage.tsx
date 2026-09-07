@@ -2,14 +2,13 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useAttendance } from '../hooks/use-attendance';
 import type { AttendanceItem } from '../types';
 import { PageSkeleton, EmptyState } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,17 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CalendarCheck, UserCheck, Search, Edit3, X, Timer, UserX } from 'lucide-react';
+import { CalendarCheck, Search, Edit3, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
-const avatarColors = [
-  'bg-blue-500/15 text-blue-600 border-blue-500/25',
-  'bg-emerald-500/15 text-emerald-600 border-emerald-500/25',
-  'bg-amber-500/15 text-amber-600 border-amber-500/25',
-  'bg-purple-500/15 text-purple-600 border-purple-500/25',
-  'bg-rose-500/15 text-rose-600 border-rose-500/25',
-];
 
 const statusConfig: Record<string, { icon: string; badge: string; dot: string }> = {
   present: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500' },
@@ -97,20 +87,6 @@ export function AttendancePage() {
     );
   }
 
-  const kpiStats = [
-    { label: 'Total Logged', value: stats.total, description: 'Roster check records', icon: CalendarCheck, color: 'blue' },
-    { label: 'Present', value: stats.present, description: 'On-duty regular', trend: `${Math.round((stats.present / (stats.total || 1)) * 100)}% of roster`, icon: UserCheck, color: 'emerald' },
-    { label: 'Late Arrival', value: stats.late, description: 'Reported after 09:30', trend: `${stats.late} delayed`, icon: Timer, color: 'amber' },
-    { label: 'Absent / On-Leave', value: stats.absent, description: 'Unexcused or notified', icon: UserX, color: 'rose' },
-  ];
-
-  const statColors: Record<string, string> = {
-    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-    rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-  };
-
   return (
     <div className="space-y-6">
       <PageHero>
@@ -126,27 +102,23 @@ export function AttendancePage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {kpiStats.map((stat) => (
-          <div key={stat.label}>
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
-              <CardContent className="p-4 flex items-center gap-3.5">
-                <div className={`p-2.5 rounded-xl border group-hover:scale-110 transition-transform duration-200 ${statColors[stat.color]}`}>
-                  <stat.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
-                  <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                  {'trend' in stat && stat.trend && (
-                    <div className={cn('text-[10px] font-semibold mt-0.5', stat.color === 'amber' ? 'text-amber-500' : 'text-emerald-500')}>
-                      {stat.trend}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{stats.total}</span>{' '}
+          <span className="text-muted-foreground">logged</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.present}</span>{' '}
+          <span className="text-muted-foreground">present</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.late}</span>{' '}
+          <span className="text-muted-foreground">late</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.absent}</span>{' '}
+          <span className="text-muted-foreground">absent / leave</span>
+        </p>
       </div>
 
       <div>
@@ -204,14 +176,13 @@ export function AttendancePage() {
                 </TableHeader>
                 <TableBody>
                   {filteredRecords.map((r, idx) => {
-                    const colorIdx = idx % avatarColors.length;
                     const stCfg = statusConfig[r.status] || statusConfig.absent;
                     return (
-                      <motion.tr key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.02 }} className="group border-border/40 hover:bg-muted/30 transition-colors">
+                      <tr key={r.id} className="group border-border/40 hover:bg-muted/30 transition-colors">
                         <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className={cn('relative flex h-9 w-9 items-center justify-center rounded-xl font-bold text-[10px] border group-hover:scale-110 transition-transform duration-200', avatarColors[colorIdx])}>
+                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-[10px] border border-border/60 bg-muted/50 text-muted-foreground">
                               {r.employeeName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <span className="font-semibold text-sm group-hover:text-primary transition-colors">{r.employeeName}</span>
@@ -227,13 +198,13 @@ export function AttendancePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <motion.div whileHover={{ y: -1 }}>
+                          <div >
                             <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => handleOpenEdit(r)} title="Edit attendance">
                               <Edit3 className="h-3.5 w-3.5" />
                             </Button>
-                          </motion.div>
+                          </div>
                         </TableCell>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </TableBody>

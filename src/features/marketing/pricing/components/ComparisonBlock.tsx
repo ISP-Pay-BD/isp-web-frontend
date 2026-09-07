@@ -3,12 +3,23 @@
 import Link from 'next/link';
 import { Check, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  comparisonGroups,
-  comparisonPlans,
-  type FeatureValue,
-} from '@/data/marketing/pricing.data';
+import type { FeatureValue } from '@/data/marketing/pricing.data';
 import { cn } from '@/lib/utils';
+import { useMarketingPricing } from '../hooks/use-marketing-pricing';
+
+type ComparisonPlan = {
+  id: string;
+  name: string;
+  subtitle: string;
+  priceBdt: number | null;
+  period: string;
+  highlighted?: boolean;
+  cta: string;
+};
+type ComparisonGroup = {
+  title: string;
+  features: { label: string; values: FeatureValue[] }[];
+};
 
 /* ── Cell renderer ────────────────────────────────────────────────────── */
 
@@ -43,8 +54,8 @@ function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?
 
 /* ── Mobile Card Layout ───────────────────────────────────────────────── */
 
-function MobilePlanCard({ planIndex }: { planIndex: number }) {
-  const plan = comparisonPlans[planIndex];
+function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans: ComparisonPlan[]; groups: ComparisonGroup[] }) {
+  const plan = plans[planIndex];
 
   return (
     <div
@@ -80,7 +91,7 @@ function MobilePlanCard({ planIndex }: { planIndex: number }) {
 
       {/* Feature groups */}
       <div className="mt-6 space-y-5">
-        {comparisonGroups.map((group) => (
+        {groups.map((group) => (
           <div key={group.title}>
             <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-landing-cta">
               {group.title}
@@ -118,7 +129,7 @@ function MobilePlanCard({ planIndex }: { planIndex: number }) {
 
 /* ── Desktop Table Layout ─────────────────────────────────────────────── */
 
-function DesktopTable() {
+function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: ComparisonGroup[] }) {
   return (
     <>
       <div className="mt-14 overflow-x-auto">
@@ -130,7 +141,7 @@ function DesktopTable() {
                   Features
                 </span>
               </th>
-              {comparisonPlans.map((plan) => (
+              {plans.map((plan) => (
                 <th
                   key={plan.id}
                   className={cn(
@@ -174,8 +185,8 @@ function DesktopTable() {
             </tr>
           </thead>
           <tbody>
-            {comparisonGroups.map((group) => (
-              <ComparisonGroup key={group.title} group={group} />
+            {groups.map((group) => (
+              <ComparisonGroup key={group.title} group={group} plans={plans} />
             ))}
           </tbody>
         </table>
@@ -184,7 +195,7 @@ function DesktopTable() {
       {/* CTA row */}
       <div className="mt-10 grid min-w-[640px] grid-cols-4 gap-4">
         <div />
-        {comparisonPlans.map((plan) => (
+        {plans.map((plan) => (
           <div key={plan.id} className="flex justify-center px-4">
             <Link href="/register" className="w-full">
               <Button
@@ -208,10 +219,23 @@ function DesktopTable() {
 /* ── Main Component ───────────────────────────────────────────────────── */
 
 export default function ComparisonBlock() {
+  const { data, isLoading } = useMarketingPricing();
+  const plans = data?.comparisonPlans as ComparisonPlan[] | undefined;
+  const groups = data?.comparisonGroups as ComparisonGroup[] | undefined;
+
+  if (isLoading || !plans?.length || !groups?.length) {
+    return (
+      <section className="py-16 md:py-24">
+        <div className="mx-auto max-w-6xl px-4 text-center text-sm text-white/50">
+          Loading comparison…
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        {/* Header */}
         <div className="mx-auto max-w-3xl text-center">
           <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
             Feature Comparison
@@ -224,16 +248,14 @@ export default function ComparisonBlock() {
           </p>
         </div>
 
-        {/* Mobile: Stacked cards */}
         <div className="mt-14 grid gap-6 md:hidden">
           {[1, 0, 2].map((i) => (
-            <MobilePlanCard key={comparisonPlans[i].id} planIndex={i} />
+            <MobilePlanCard key={plans[i].id} planIndex={i} plans={plans} groups={groups} />
           ))}
         </div>
 
-        {/* Desktop: Table */}
         <div className="hidden md:block">
-          <DesktopTable />
+          <DesktopTable plans={plans} groups={groups} />
         </div>
       </div>
     </section>
@@ -242,7 +264,7 @@ export default function ComparisonBlock() {
 
 /* ── Group Sub-component (Desktop) ────────────────────────────────────── */
 
-function ComparisonGroup({ group }: { group: (typeof comparisonGroups)[number] }) {
+function ComparisonGroup({ group, plans }: { group: ComparisonGroup; plans: ComparisonPlan[] }) {
   return (
     <>
       <tr>
@@ -263,11 +285,11 @@ function ComparisonGroup({ group }: { group: (typeof comparisonGroups)[number] }
               key={i}
               className={cn(
                 'px-4 py-3 text-center',
-                comparisonPlans[i].highlighted && 'bg-landing-panel/60'
+                plans[i].highlighted && 'bg-landing-panel/60'
               )}
             >
               <div className="flex items-center justify-center">
-                <FeatureCell value={value} highlighted={comparisonPlans[i].highlighted} />
+                <FeatureCell value={value} highlighted={plans[i].highlighted} />
               </div>
             </td>
           ))}

@@ -7,6 +7,7 @@ import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthPurchaseBillItem } from '@/data/admin/bandwidth.data';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +34,7 @@ const billSearchFilter = (
 };
 
 export function BandwidthBillsPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [bills, setBills] = useState<BandwidthPurchaseBillItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [billNo, setBillNo] = useState('');
@@ -135,7 +136,19 @@ export function BandwidthBillsPage() {
     [],
   );
 
-  if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={4} />;
+    if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={4} />;
+  if (isError && bills.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load purchase bills"
+          description="Could not fetch bandwidth purchase bills."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -2,7 +2,6 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
   Search,
   ArrowDownCircle,
@@ -16,7 +15,6 @@ import { usePopData } from '../../hooks/use-pop';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -28,7 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 export function PopTransactionsPage() {
   const { data, isLoading, isError, refetch } = usePopData();
@@ -66,10 +63,7 @@ export function PopTransactionsPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -89,35 +83,27 @@ export function PopTransactionsPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Transactions"
-          value={transactions.length}
-          description="All ledger entries"
-          icon={ArrowLeftRight}
-        />
-        <StatCard
-          title="Credit Inflows"
-          value={stats.creditCount}
-          description={`${stats.totalCredit.toLocaleString()} BDT total`}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Debit Outflows"
-          value={stats.debitCount}
-          description={`${stats.totalDebit.toLocaleString()} BDT total`}
-          icon={TrendingDown}
-        />
-        <StatCard
-          title="Net Balance"
-          value={<CurrencyDisplay amount={stats.totalCredit - stats.totalDebit} className="font-mono text-foreground font-bold" />}
-          description="Credit minus debit"
-          icon={ArrowLeftRight}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{transactions.length}</span>{' '}
+          <span className="text-muted-foreground">total transactions</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.creditCount}</span>{' '}
+          <span className="text-muted-foreground">credit inflows</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.debitCount}</span>{' '}
+          <span className="text-muted-foreground">debit outflows</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums"><CurrencyDisplay amount={stats.totalCredit - stats.totalDebit} className="font-mono text-foreground font-bold" /></span>{' '}
+          <span className="text-muted-foreground">net balance</span>
+        </p>
+      </div>
 
       {/* Search */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <div className="p-4 flex items-center gap-3">
             <div className="relative flex-1 max-w-md">
@@ -142,10 +128,10 @@ export function PopTransactionsPage() {
             </Badge>
           </div>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-16">
@@ -178,11 +164,8 @@ export function PopTransactionsPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((tx, idx) => (
-                    <motion.tr
+                    <tr
                       key={`${tx.date}-${tx.popName}-${idx}`}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.04, duration: 0.3 }}
                       className="group border-border/40 hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="py-3.5">
@@ -214,16 +197,16 @@ export function PopTransactionsPage() {
                       <TableCell className="py-3.5">
                         <span className="text-sm text-muted-foreground">{tx.note}</span>
                       </TableCell>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

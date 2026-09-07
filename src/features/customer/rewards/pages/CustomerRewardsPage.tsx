@@ -6,7 +6,6 @@ import {
   Users,
   Copy,
   Check,
-  Sparkles,
   History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -78,41 +77,37 @@ export function CustomerRewardsPage() {
         {/* Top Wallet Hero Grid */}
         <div className="grid gap-6 md:grid-cols-12">
           {/* Points Wallet Card */}
-          <div className="md:col-span-6 rounded-2xl bg-gradient-to-br from-[#1a0b38] via-[#2d1259] to-[#0f0426] p-6 text-white shadow-xl border border-white/10 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <Gift className="h-36 w-36" />
-            </div>
-
+          <div className="md:col-span-6 rounded-xl border border-border/60 bg-card p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Reward Points Wallet
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Gift className="h-4 w-4 text-primary" /> Reward points
                 </span>
-                <Badge variant="outline" className="border-amber-400/30 text-amber-300 bg-amber-400/10">
-                  Tier: Gold Member
+                <Badge variant="outline" className="text-xs">
+                  Gold
                 </Badge>
               </div>
 
               <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tight text-white">
+                <span className="text-3xl font-bold tracking-tight tabular-nums">
                   {pointsBalance.toLocaleString()}
                 </span>
-                <span className="text-sm font-semibold text-white/70">Points</span>
+                <span className="text-sm font-medium text-muted-foreground">points</span>
               </div>
 
-              <p className="text-xs text-white/80 mt-1">
-                Equivalent cash value: <strong>{formatBdtWithSymbol(Math.floor(pointsBalance / 2))}</strong> off your monthly subscription.
+              <p className="text-xs text-muted-foreground mt-1">
+                Cash value ≈ <strong className="text-foreground">{formatBdtWithSymbol(Math.floor(pointsBalance / 2))}</strong> off your next bill.
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-white/60">1 Point = ৳0.50 Discount</span>
+            <div className="mt-6 pt-4 border-t border-border/60 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">1 point = ৳0.50</span>
               <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
                 <DialogTrigger
                   render={
                     <Button
                       disabled={pointsBalance < 100}
-                      className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs h-9"
+                      className="font-semibold text-xs h-9"
                     />
                   }
                 >
@@ -170,7 +165,7 @@ export function CustomerRewardsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2 p-2.5 rounded-xl border bg-muted/50">
-                <div className="font-mono font-black text-lg text-primary tracking-wider px-2 flex-1">
+                <div className="font-mono font-bold text-lg text-primary tracking-wider px-2 flex-1">
                   {referralCode}
                 </div>
                 <Button

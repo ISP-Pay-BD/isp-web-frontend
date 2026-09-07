@@ -5,8 +5,8 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthProviderItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ const providerSearchFilter = (
 };
 
 export function BandwidthProvidersPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [providers, setProviders] = useState<BandwidthProviderItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -166,7 +166,19 @@ export function BandwidthProvidersPage() {
     [],
   );
 
-  if (isLoading && providers.length === 0) return <PageSkeleton variant="table" rows={4} />;
+    if (isLoading && providers.length === 0) return <PageSkeleton variant="table" rows={4} />;
+  if (isError && providers.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load providers"
+          description="Could not fetch bandwidth providers."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -186,19 +198,23 @@ export function BandwidthProvidersPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Active Carriers" value={list.length} icon={Building2} />
-        <StatCard title="Total Upstream Trunks" value={list.reduce((sum, p) => sum + p.activeCircuits, 0)} icon={Handshake} />
-        <StatCard
-          title="Total Aggregated Pipe"
-          value={`${list.reduce((sum, p) => sum + p.totalCapacityMbps, 0)} Mbps`}
-          icon={Building2}
-        />
-        <StatCard
-          title="Total Carrier Billing"
-          value={formatBdtWithSymbol(list.reduce((sum, p) => sum + p.monthlyBillBdt, 0))}
-          icon={Building2}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{list.length}</span>{' '}
+          <span className="text-muted-foreground">active carriers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{list.reduce((sum, p) => sum + p.activeCircuits, 0)}</span>{' '}
+          <span className="text-muted-foreground">total upstream trunks</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${list.reduce((sum, p) => sum + p.totalCapacityMbps, 0)} Mbps`}</span>{' '}
+          <span className="text-muted-foreground">total aggregated pipe</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(list.reduce((sum, p) => sum + p.monthlyBillBdt, 0))}</span>{' '}
+          <span className="text-muted-foreground">total carrier billing</span>
+        </p>
       </div>
 
       <DataTable

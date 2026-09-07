@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { User, Mail, Shield, FileText, Clock, Eye } from 'lucide-react';
 import type { CustomUserAccessRecord } from '@/data/users';
 import {
@@ -13,7 +12,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 interface CustomAccessTableProps {
   records: CustomUserAccessRecord[];
@@ -41,10 +39,7 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="rounded-xl border border-border/60 overflow-hidden"
     >
       <Table>
@@ -69,9 +64,8 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <motion.tr
+            <tr
               key={record.id}
-              variants={fadeUp}
               className="group border-border/40 hover:bg-muted/30 transition-colors"
             >
               <TableCell className="py-3.5">
@@ -121,10 +115,10 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
                   View rules
                 </Button>
               </TableCell>
-            </motion.tr>
+            </tr>
           ))}
         </TableBody>
       </Table>
-    </motion.div>
+    </div>
   );
 }

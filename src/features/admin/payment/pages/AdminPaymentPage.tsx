@@ -8,12 +8,11 @@ import {
   Download,
   Receipt,
   CheckCircle2,
-  Hourglass,
   FileText,
   Copy,
   Printer,
-  ShieldCheck,
   Building,
+  ShieldCheck,
 } from 'lucide-react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { useTenantBilling } from '../hooks/use-tenant-billing';
@@ -21,11 +20,9 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -305,61 +302,33 @@ export function AdminPaymentPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Paid Volume"
-          value={
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
             <CurrencyDisplay
               amount={summary?.totalPaidBdt ?? 0}
-              className="font-mono text-foreground font-black"
+              className="inline font-semibold"
             />
-          }
-          description="All settled license subscription fees"
-          trend={{ value: `${completedCount} invoices paid`, positive: true }}
-          icon={CreditCard}
-        />
-        <StatCard
-          title="Pending Invoices"
-          value={
+          </span>{' '}
+          <span className="text-muted-foreground">paid · {completedCount} invoices</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
             <CurrencyDisplay
               amount={summary?.pendingBdt ?? 0}
-              className="font-mono text-amber-600 dark:text-amber-400 font-black"
+              className="inline font-semibold"
             />
-          }
-          description="Awaiting gateway clearance"
-          trend={{ value: `${pendingCount} awaiting approval`, positive: false }}
-          icon={Hourglass}
-        />
-        <Card className="p-4 rounded-xl border-border/70 bg-card shadow-2xs flex flex-col justify-between hover:shadow-md hover:border-border transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Active Plan
-            </span>
-            <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-              <Zap className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="text-xl font-bold text-foreground mt-2">Pro SaaS License</div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Up to 2,000 subscribers</span>
-          </div>
-        </Card>
-        <Card className="p-4 rounded-xl border-border/70 bg-card shadow-2xs flex flex-col justify-between hover:shadow-md hover:border-border transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Gateway Channels
-            </span>
-            <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-              <ShieldCheck className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="text-xl font-bold text-foreground mt-2">bKash & Cards</div>
-          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5 font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Zero merchant charge</span>
-          </div>
-        </Card>
+          </span>{' '}
+          <span className="text-muted-foreground">pending · {pendingCount} awaiting</span>
+        </p>
+        <p>
+          <span className="font-semibold">Pro SaaS</span>{' '}
+          <span className="text-muted-foreground">active plan · up to 2,000 subs</span>
+        </p>
+        <p>
+          <span className="font-semibold">bKash &amp; cards</span>{' '}
+          <span className="text-muted-foreground">gateway channels</span>
+        </p>
       </div>
 
       <DataTable
@@ -478,7 +447,7 @@ export function AdminPaymentPage() {
                     <tfoot>
                       <tr className="border-t-2 border-foreground/10 bg-muted/30">
                         <td className="py-2.5 px-3.5 font-bold text-foreground">Total Amount Paid</td>
-                        <td className="py-2.5 px-3.5 text-right font-mono font-black text-base text-primary">
+                        <td className="py-2.5 px-3.5 text-right font-mono font-bold text-base text-primary">
                           ৳{selectedInvoice.amountBdt.toLocaleString()}
                         </td>
                       </tr>

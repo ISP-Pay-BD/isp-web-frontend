@@ -5,8 +5,8 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthSellClientItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ const clientSearchFilter = (
 };
 
 export function BandwidthSellClientsPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [clients, setClients] = useState<BandwidthSellClientItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
@@ -166,7 +166,19 @@ export function BandwidthSellClientsPage() {
     [],
   );
 
-  if (isLoading && clients.length === 0) return <PageSkeleton variant="table" rows={4} />;
+    if (isLoading && clients.length === 0) return <PageSkeleton variant="table" rows={4} />;
+  if (isError && clients.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load sell clients"
+          description="Could not fetch wholesale clients."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -186,23 +198,23 @@ export function BandwidthSellClientsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Wholesale Clients" value={list.length} icon={Users} />
-        <StatCard
-          title="Total Sold Bandwidth"
-          value={`${list.reduce((sum, c) => sum + c.allocatedMbps, 0)} Mbps`}
-          icon={ArrowUpFromLine}
-        />
-        <StatCard
-          title="Monthly Recurring Sell"
-          value={formatBdtWithSymbol(list.reduce((sum, c) => sum + c.monthlyRateBdt, 0))}
-          icon={Users}
-        />
-        <StatCard
-          title="Total Outstanding Due"
-          value={formatBdtWithSymbol(list.reduce((sum, c) => sum + c.balanceDueBdt, 0))}
-          icon={Users}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{list.length}</span>{' '}
+          <span className="text-muted-foreground">wholesale clients</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{`${list.reduce((sum, c) => sum + c.allocatedMbps, 0)} Mbps`}</span>{' '}
+          <span className="text-muted-foreground">total sold bandwidth</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(list.reduce((sum, c) => sum + c.monthlyRateBdt, 0))}</span>{' '}
+          <span className="text-muted-foreground">monthly recurring sell</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(list.reduce((sum, c) => sum + c.balanceDueBdt, 0))}</span>{' '}
+          <span className="text-muted-foreground">total outstanding due</span>
+        </p>
       </div>
 
       <DataTable

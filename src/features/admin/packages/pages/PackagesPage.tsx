@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import {
   Plus,
   Edit,
@@ -12,9 +11,6 @@ import {
   Download,
   LayoutGrid,
   List,
-  Wifi,
-  Building2,
-  Zap,
   CheckCircle2,
 } from 'lucide-react';
 import { useForm, type Resolver } from 'react-hook-form';
@@ -30,7 +26,6 @@ import { packageSchema, type PackageFormValues } from '../schemas/package.schema
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
@@ -55,7 +50,6 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 import type { Package } from '@/data/shared/types';
 
 const packageSearchFilter = (
@@ -398,13 +392,10 @@ export function PackagesPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial={false}
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      <motion.div variants={fadeUp}>
+      <div >
         <PageHeader
           title="Internet Packages & Bandwidth Tiers"
           subtitle="Manage subscriber broadband profiles, queue rate limits, and retail prices"
@@ -434,41 +425,30 @@ export function PackagesPage() {
             </div>
           }
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Packages"
-          value={items.length}
-          description="Provisioned billing rate profiles"
-          icon={PackageIcon}
-        />
-        <StatCard
-          title="Home Broadband"
-          value={stats.home}
-          description="Residential FTTH & wireless plans"
-          icon={Wifi}
-        />
-        <StatCard
-          title="Corporate Dedicated"
-          value={stats.corp}
-          description="SLA duplex enterprise plans"
-          icon={Building2}
-        />
-        <StatCard
-          title="Average Plan Price"
-          value={
-            <CurrencyDisplay
-              amount={stats.avg}
-              className="font-mono text-foreground font-bold"
-            />
-          }
-          description="Monthly retail average"
-          icon={Zap}
-        />
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{items.length}</span>{' '}
+          <span className="text-muted-foreground">packages</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.home}</span>{' '}
+          <span className="text-muted-foreground">home</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.corp}</span>{' '}
+          <span className="text-muted-foreground">corporate</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={stats.avg} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">avg / mo</span>
+        </p>
+      </div>
 
-      <motion.div variants={fadeUp}>
+      <div >
         {viewMode === 'table' ? (
           <DataTable
             columns={columns}
@@ -525,20 +505,10 @@ export function PackagesPage() {
                 {gridFiltered.map((pkg, idx) => {
                   const isCorporate = pkg.type === 'corporate';
                   return (
-                    <motion.div
+                    <div
                       key={pkg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        delay: idx * 0.04,
-                        duration: 0.35,
-                        ease: [0.25, 0.46, 0.45, 0.94] as const,
-                      }}
-                      whileHover={hoverLift}
-                      className="rounded-2xl border border-border/60 bg-card p-5 flex flex-col justify-between hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group relative overflow-hidden"
+                      className="rounded-xl border border-border/60 bg-card p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-200 group relative"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
                       <div className="relative">
                         <div className="flex items-start justify-between gap-2">
                           <div>
@@ -547,13 +517,13 @@ export function PackagesPage() {
                               className={cn(
                                 'text-[10px] font-semibold uppercase',
                                 isCorporate
-                                  ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+                                  ? 'bg-muted text-muted-foreground border-border/50'
                                   : 'bg-primary/10 text-primary border-primary/20',
                               )}
                             >
                               {pkg.type}
                             </Badge>
-                            <h3 className="font-bold text-base text-foreground mt-2 group-hover:text-primary transition-colors duration-200">
+                            <h3 className="font-semibold text-base text-foreground mt-2 group-hover:text-primary transition-colors duration-200">
                               {pkg.name}
                             </h3>
                           </div>
@@ -573,14 +543,14 @@ export function PackagesPage() {
                         <div className="mt-4 p-3 rounded-xl bg-muted/20 border border-border/50 flex items-center justify-between group-hover:border-primary/20 transition-colors duration-300">
                           <div>
                             <div className="text-[11px] text-muted-foreground">Speed Throughput</div>
-                            <div className="text-xl font-black font-mono text-foreground flex items-baseline gap-1">
+                            <div className="text-xl font-bold font-mono text-foreground flex items-baseline gap-1">
                               <span>{pkg.speedMbps}</span>
                               <span className="text-xs font-normal text-muted-foreground">Mbps</span>
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-[11px] text-muted-foreground">Retail Rate</div>
-                            <div className="text-xl font-black font-mono text-primary">
+                            <div className="text-xl font-bold font-mono text-primary">
                               ৳{pkg.priceBdt.toLocaleString()}
                             </div>
                           </div>
@@ -627,14 +597,14 @@ export function PackagesPage() {
                           </Can>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
             )}
           </div>
         )}
-      </motion.div>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-2xl">
@@ -737,6 +707,6 @@ export function PackagesPage() {
           }
         }}
       />
-    </motion.div>
+    </div>
   );
 }

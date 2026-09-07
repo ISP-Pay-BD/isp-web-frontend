@@ -1,6 +1,7 @@
 import type { AuthSession, User } from '@/types/auth';
 import {
   demoUsers,
+  demoUserCredentials,
   PERMISSION_SECTIONS,
   customUserAccessList,
   fullAdminPermissions,
@@ -132,4 +133,9 @@ export async function mockGetPermissionSections(): Promise<PermissionSectionDef[
 export async function mockListCustomAccess(): Promise<CustomUserAccessRecord[]> {
   await mockDelay(100);
   return customAccessState;
+}
+
+export async function mockListDemoCredentials() {
+  await mockDelay(50);
+  return demoUserCredentials;
 }

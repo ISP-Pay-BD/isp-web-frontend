@@ -21,11 +21,17 @@ import {
   Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { themePresetsData, generateColorRamp, type ThemePreset } from '@/data/admin/theme-studio.data';
+import { generateColorRamp } from '@/lib/theme/generate-color-ramp';
+import type { ThemePreset } from '@/data/admin/theme-studio.data';
+import { useThemeStudio } from '../hooks/use-theme-studio';
 import { useTheme } from 'next-themes';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 export function ThemeStudioPage() {
   const { theme, setTheme } = useTheme();
+  const { data, isLoading, isError, refetch } = useThemeStudio();
+  const themePresetsData = data?.presets ?? [];
 
   // Selected preset or custom colors
   const [selectedPresetId, setSelectedPresetId] = useState<string>('isp_default');
@@ -56,7 +62,8 @@ export function ThemeStudioPage() {
 
   // Reset to default
   const handleReset = () => {
-    const defaultPreset = themePresetsData[0]!;
+    const defaultPreset = themePresetsData[0];
+    if (!defaultPreset) return;
     applyPreset(defaultPreset);
     setUiDensity('comfortable');
     setTableDensity('comfortable');
@@ -135,6 +142,18 @@ export function ThemeStudioPage() {
     };
     reader.readAsText(file);
   };
+
+  if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
+  if (isError) {
+    return (
+      <EmptyState
+        title="Failed to load theme presets"
+        description="Could not load Theme Studio configuration."
+        actionLabel="Retry"
+        onAction={() => refetch()}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
@@ -359,7 +378,7 @@ export function ThemeStudioPage() {
                 >
                   <div>
                     <div className="text-[10px] uppercase font-bold text-muted-foreground">Payment Received</div>
-                    <div className="text-lg font-black font-mono mt-0.5">৳30,820</div>
+                    <div className="text-lg font-bold font-mono mt-0.5">৳30,820</div>
                   </div>
                   <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]">
                     +8.4%

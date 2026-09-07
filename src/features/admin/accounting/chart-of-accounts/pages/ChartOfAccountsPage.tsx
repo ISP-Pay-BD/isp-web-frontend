@@ -2,11 +2,8 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
 import {
   BookOpen,
-  Layers,
-  DollarSign,
   ChevronRight,
   CreditCard,
   TrendingUp,
@@ -15,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useChartOfAccounts } from '../hooks/use-chart-of-accounts';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
-import { StatCard } from '@/components/shared/StatCard';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 
 const typeConfig: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; border: string }> = {
@@ -61,10 +56,7 @@ export function ChartOfAccountsPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -84,29 +76,25 @@ export function ChartOfAccountsPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="GL Accounts"
-          value={accounts.length}
-          description="Active ledger codes"
-          icon={BookOpen}
-        />
-        <StatCard
-          title="Root Categories"
-          value={stats.rootCount}
-          description="Top-level groups"
-          icon={Layers}
-        />
-        <StatCard
-          title="Root Balance Sum"
-          value={<CurrencyDisplay amount={stats.totalBalance} className="font-mono text-foreground font-bold" />}
-          description="Parent account totals"
-          icon={DollarSign}
-        />
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{accounts.length}</span>{' '}
+          <span className="text-muted-foreground">GL accounts</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.rootCount}</span>{' '}
+          <span className="text-muted-foreground">root categories</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={stats.totalBalance} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">root balance</span>
+        </p>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         {accounts.length === 0 ? (
           <div className="py-16">
             <EmptyState
@@ -139,11 +127,8 @@ export function ChartOfAccountsPage() {
                     const isChild = Boolean(acc.parentId);
                     const cfg = typeConfig[acc.type];
                     return (
-                      <motion.tr
+                      <tr
                         key={acc.id}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03, duration: 0.3 }}
                         className={cn(
                           'group border-border/40 hover:bg-muted/30 transition-colors',
                           isChild && 'bg-muted/10'
@@ -195,7 +180,7 @@ export function ChartOfAccountsPage() {
                             <CurrencyDisplay amount={acc.balanceBdt} />
                           </span>
                         </TableCell>
-                      </motion.tr>
+                      </tr>
                     );
                   })}
                 </TableBody>
@@ -203,9 +188,9 @@ export function ChartOfAccountsPage() {
             </div>
           </Card>
         )}
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

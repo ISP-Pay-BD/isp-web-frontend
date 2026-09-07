@@ -4,7 +4,6 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   Search,
@@ -20,7 +19,6 @@ import { packageSchema, type PackageFormValues } from '@/features/admin/packages
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,7 +47,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Can } from '@/components/shared/Can';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 import type { Package } from '@/data/shared/types';
 
 type TypeFilter = 'all' | 'home' | 'corporate';
@@ -134,10 +131,7 @@ export function PopPackagesPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -157,29 +151,23 @@ export function PopPackagesPage() {
       <PageContent className="space-y-6">
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Total POP Packages"
-          value={items.length}
-          description="Available reseller plans"
-          icon={PackageIcon}
-        />
-        <StatCard
-          title="Home Plans"
-          value={stats.home}
-          description="Residential broadband"
-          icon={Wifi}
-        />
-        <StatCard
-          title="Avg. Reseller Price"
-          value={<CurrencyDisplay amount={stats.avg} className="font-mono text-foreground font-bold" />}
-          description="Monthly retail average"
-          icon={Zap}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{items.length}</span>{' '}
+          <span className="text-muted-foreground">total pop packages</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{stats.home}</span>{' '}
+          <span className="text-muted-foreground">home plans</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums"><CurrencyDisplay amount={stats.avg} className="font-mono text-foreground font-bold" /></span>{' '}
+          <span className="text-muted-foreground">avg. reseller price</span>
+        </p>
+      </div>
 
       {/* Toolbar */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
@@ -221,10 +209,10 @@ export function PopPackagesPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-16">
@@ -263,11 +251,8 @@ export function PopPackagesPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((pkg, idx) => (
-                    <motion.tr
+                    <tr
                       key={pkg.id}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.03, duration: 0.3 }}
                       className="group border-border/40 hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="font-mono text-xs text-muted-foreground">
@@ -279,7 +264,7 @@ export function PopPackagesPage() {
                             pkg.type === 'corporate'
                               ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
                               : 'bg-primary/10 text-primary border border-primary/20'
-                          } group-hover:scale-110 transition-transform`}>
+                          }`}>
                             <Boxes className="h-3.5 w-3.5" />
                           </div>
                           <div>
@@ -338,14 +323,14 @@ export function PopPackagesPage() {
                           </Button>
                         </Can>
                       </TableCell>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>
             </div>
           )}
         </Card>
-      </motion.div>
+      </div>
     
       </PageContent>
 
@@ -435,6 +420,6 @@ export function PopPackagesPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </div>
   );
 }

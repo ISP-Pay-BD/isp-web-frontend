@@ -5,7 +5,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { LogOut, Search } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   Sidebar,
   SidebarContent,
@@ -33,7 +32,6 @@ import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
 import { useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { useMotionSafe } from '@/lib/animations';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PortalSidebarProps {
@@ -47,7 +45,6 @@ function NavIcon({ name }: { name?: string }) {
 }
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
-  const { reduced, springSoft: spring } = useMotionSafe();
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === 'collapsed';
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -89,72 +86,44 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                   : 'ipb-sidebar-button hover:bg-sidebar-accent/80 hover:text-sidebar-foreground text-sidebar-foreground/80 rounded-lg'
               }
             >
-              {isParentActive && !reduced && (
-                <motion.span
-                  layoutId="nav-active"
-                  className="absolute inset-0 -z-10 rounded-lg bg-primary/10 dark:bg-primary/15 border-l-2 border-primary"
-                  transition={spring}
-                />
-              )}
-              {isParentActive && reduced && (
-                <span className="absolute inset-0 -z-10 rounded-lg bg-primary/10 border-l-2 border-primary" />
+              {isParentActive && (
+                <span className="absolute inset-0 -z-10 rounded-lg border-l-2 border-primary bg-primary/10 dark:bg-primary/15" />
               )}
               <NavIcon name={item.icon} />
-              <span className="transition-transform duration-150 group-hover/menu-button:translate-x-0.5">
-                {item.label}
-              </span>
+              <span>{item.label}</span>
               {!isCollapsed && (
-                <motion.span
-                  className="ml-auto inline-flex"
-                  animate={{ rotate: isExpanded ? 0 : -90 }}
-                  transition={{ duration: reduced ? 0 : 0.2 }}
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </motion.span>
+                <ChevronDown
+                  className={`ml-auto h-3.5 w-3.5 transition-transform duration-200 ${
+                    isExpanded ? '' : '-rotate-90'
+                  }`}
+                />
               )}
             </SidebarMenuButton>
-            <AnimatePresence initial={false}>
-              {isExpanded && !isCollapsed && (
-                <motion.div
-                  key="sub"
-                  initial={reduced ? false : { height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={reduced ? undefined : { height: 0, opacity: 0 }}
-                  transition={{ duration: reduced ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
-                >
-                  <SidebarMenuSub className="border-l border-sidebar-border/70 ml-3.5 pl-2 my-1 space-y-0.5">
-                    {item.children.map((child: NavItem) => {
-                      const isChildActive = child.href === currentPath;
-                      return (
-                        <SidebarMenuSubItem key={child.id}>
-                          <SidebarMenuSubButton
-                            isActive={isChildActive}
-                            className={
-                              isChildActive
-                                ? 'ipb-sidebar-sub-button relative font-bold text-primary rounded-r-md'
-                                : 'ipb-sidebar-sub-button text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-all rounded-md hover:translate-x-1'
-                            }
-                            render={<Link href={child.href ?? '#'} />}
-                          >
-                            {isChildActive && !reduced && (
-                              <motion.span
-                                layoutId="nav-active-sub"
-                                className="absolute inset-0 -z-10 rounded-r-md bg-primary/15 dark:bg-primary/20 border-l-2 border-primary"
-                                transition={spring}
-                              />
-                            )}
-                            <span className="transition-transform duration-150 group-hover/menu-sub-button:translate-x-0.5">
-                              {child.label}
-                            </span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      );
-                    })}
-                  </SidebarMenuSub>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {isExpanded && !isCollapsed && (
+              <SidebarMenuSub className="my-1 ml-3.5 space-y-0.5 border-l border-sidebar-border/70 pl-2">
+                {item.children.map((child: NavItem) => {
+                  const isChildActive = child.href === currentPath;
+                  return (
+                    <SidebarMenuSubItem key={child.id}>
+                      <SidebarMenuSubButton
+                        isActive={isChildActive}
+                        className={
+                          isChildActive
+                            ? 'ipb-sidebar-sub-button relative rounded-r-md font-bold text-primary'
+                            : 'ipb-sidebar-sub-button rounded-md text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
+                        }
+                        render={<Link href={child.href ?? '#'} />}
+                      >
+                        {isChildActive && (
+                          <span className="absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary bg-primary/15 dark:bg-primary/20" />
+                        )}
+                        <span>{child.label}</span>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  );
+                })}
+              </SidebarMenuSub>
+            )}
           </SidebarMenuItem>
         ) : (
           <SidebarMenuItem key={item.id}>
@@ -163,27 +132,18 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               tooltip={item.label}
               className={
                 isLeafActive
-                  ? 'ipb-sidebar-button relative font-bold text-primary rounded-r-md'
-                  : 'ipb-sidebar-button hover:bg-sidebar-accent/80 hover:text-sidebar-foreground text-sidebar-foreground/80 rounded-lg'
+                  ? 'ipb-sidebar-button relative rounded-r-md font-bold text-primary'
+                  : 'ipb-sidebar-button rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground'
               }
               render={<Link href={item.href ?? '#'} />}
             >
-              {isLeafActive && !reduced && (
-                <motion.span
-                  layoutId="nav-active"
-                  className="absolute inset-0 -z-10 rounded-r-md bg-primary/15 dark:bg-primary/20 border-l-2 border-primary"
-                  transition={spring}
-                />
-              )}
-              {isLeafActive && reduced && (
-                <span className="absolute inset-0 -z-10 rounded-r-md bg-primary/15 border-l-2 border-primary" />
+              {isLeafActive && (
+                <span className="absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary bg-primary/15 dark:bg-primary/20" />
               )}
               <NavIcon name={item.icon} />
-              <span className="transition-transform duration-150 group-hover/menu-button:translate-x-0.5">
-                {item.label}
-              </span>
+              <span>{item.label}</span>
               {item.badge ? (
-                <span className="bg-primary text-primary-foreground ml-auto rounded-full px-2 py-0.5 text-xs font-semibold shadow-2xs">
+                <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground shadow-2xs">
                   {item.badge}
                 </span>
               ) : null}

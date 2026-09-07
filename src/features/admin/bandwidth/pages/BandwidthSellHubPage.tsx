@@ -1,31 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import {
-  ArrowRight,
-  Users,
-  FileText,
-  CreditCard,
-  CheckCircle2,
-} from 'lucide-react';
+import { ArrowRight, Users, FileText, Activity } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 
 const LINKS = [
-  { href: '/admin/bandwidth/sell/clients', label: 'Wholesale Clients', icon: Users, desc: 'POP and corporate bandwidth buyers', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-  { href: '/admin/bandwidth/sell/invoices', label: 'Sales Invoices', icon: FileText, desc: 'Generated invoices and payment status', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  {
+    href: '/admin/bandwidth/sell/clients',
+    label: 'Wholesale Clients',
+    icon: Users,
+    desc: 'POP and corporate bandwidth buyers',
+  },
+  {
+    href: '/admin/bandwidth/sell/invoices',
+    label: 'Sales Invoices',
+    icon: FileText,
+    desc: 'Generated invoices and payment status',
+  },
 ] as const;
 
 export function BandwidthSellHubPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
 
   if (isLoading) return <PageSkeleton variant="dashboard" rows={4} />;
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load bandwidth sell hub"
+          description="Could not fetch wholesale overview."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   const clients = data?.sellClients ?? [];
   const invoices = data?.invoices ?? [];
@@ -34,13 +47,10 @@ export function BandwidthSellHubPage() {
   const paidInvoices = invoices.filter((i) => i.status === 'paid').length;
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial={false}
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      <motion.div variants={fadeUp}>
+      <div>
         <PageHeader
           title="Bandwidth Sell"
           subtitle="Wholesale bandwidth sales to POPs and corporate clients"
@@ -54,70 +64,42 @@ export function BandwidthSellHubPage() {
             </Button>
           }
         />
-      </motion.div>
+      </div>
 
       {/* Stats */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Active Clients"
-          value={String(activeClients)}
-          description="Connected resellers"
-          icon={Users}
-        />
-        <StatCard
-          title="Open Invoices"
-          value={String(openInvoices)}
-          description="Awaiting payment"
-          icon={CreditCard}
-        />
-        <StatCard
-          title="Paid This Month"
-          value={String(paidInvoices)}
-          description="Completed payments"
-          icon={CheckCircle2}
-        />
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{activeClients}</span>{' '}
+          <span className="text-muted-foreground">active clients</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{openInvoices}</span>{' '}
+          <span className="text-muted-foreground">open invoices</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{paidInvoices}</span>{' '}
+          <span className="text-muted-foreground">paid this month</span>
+        </p>
+      </div>
 
       {/* Quick Links */}
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-2">
-        {LINKS.map((link, idx) => (
-          <motion.div
-            key={link.href}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + idx * 0.06, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-          >
-            <Link href={link.href} className="block">
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group h-full">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-xl border ${link.bg} ${link.color} ${link.border} group-hover:scale-110 transition-transform duration-200`}>
-                        <link.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">{link.label}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">{link.desc}</p>
-                      </div>
-                    </div>
-                    <div className="p-1.5 rounded-lg bg-muted/40 group-hover:bg-primary/10 transition-colors">
-                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      <ul className="divide-y divide-border border-y border-border">
+        {LINKS.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="flex items-center gap-4 py-4 no-underline transition-colors hover:bg-muted/40"
+            >
+              <link.icon className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">{link.label}</p>
+                <p className="text-xs text-muted-foreground">{link.desc}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden />
             </Link>
-          </motion.div>
+          </li>
         ))}
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function Activity({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-    </svg>
+      </ul>
+    </div>
   );
 }

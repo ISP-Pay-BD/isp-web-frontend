@@ -6,8 +6,8 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useHotspotData } from '../hooks/useHotspotData';
 import type { HotspotReportItem } from '@/data/admin/network-ops.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { formatBdtWithSymbol } from '@/lib/format';
@@ -29,7 +29,7 @@ const reportSearchFilter = (
 };
 
 export function HotspotReportsPage() {
-  const { data, isLoading } = useHotspotData();
+  const { data, isLoading, isError, refetch } = useHotspotData();
 
   const reports = data?.reports ?? [];
   const totalRevenue = reports.reduce((s, r) => s + r.priceBdt, 0);
@@ -75,6 +75,18 @@ export function HotspotReportsPage() {
   );
 
   if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load hotspot reports"
+          description="Could not fetch voucher sales data."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -88,10 +100,19 @@ export function HotspotReportsPage() {
         ]}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="Total sales" value={formatBdtWithSymbol(totalRevenue)} icon={BarChart3} />
-        <StatCard title="Cash transactions" value={String(cashSales)} />
-        <StatCard title="Mobile wallet" value={String(mobileSales)} />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(totalRevenue)}</span>{' '}
+          <span className="text-muted-foreground">total sales</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(cashSales)}</span>{' '}
+          <span className="text-muted-foreground">cash transactions</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{String(mobileSales)}</span>{' '}
+          <span className="text-muted-foreground">mobile wallet</span>
+        </p>
       </div>
 
       <DataTable

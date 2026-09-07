@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, type Variants, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/features/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,6 @@ import {
   Calendar,
   Clock,
   ShieldCheck,
-  CheckCircle2,
   Edit3,
   Smartphone,
   Laptop,
@@ -36,59 +34,8 @@ import {
   Fingerprint,
   Settings,
 } from 'lucide-react';
-import { adminProfileData } from '@/data/admin/profile.data';
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-};
-
-const tabContentVariants: Variants = {
-  enter: {
-    opacity: 0,
-    y: 12,
-    scale: 0.98,
-  },
-  center: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: 'spring' as const,
-      stiffness: 400,
-      damping: 30,
-      mass: 0.8,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    scale: 0.99,
-    transition: {
-      duration: 0.15,
-      ease: 'easeIn',
-    },
-  },
-};
+import { PageSkeleton } from '@/components/shared';
+import { useAdminProfile, type AdminProfile } from '../hooks/use-admin-profile';
 
 const tabs = [
   { id: 'overview', label: 'Profile Overview', icon: User },
@@ -100,9 +47,24 @@ const tabs = [
 type TabId = (typeof tabs)[number]['id'];
 
 export function ProfilePage() {
-  const [profile, setProfile] = useState(adminProfileData);
+  const { data: profileData, isLoading, isError, refetch } = useAdminProfile();
+
+  if (isLoading) return <PageSkeleton variant="form" />;
+  if (isError || !profileData) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground">Failed to load profile.</p>
+        <Button variant="outline" className="mt-3" onClick={() => refetch()}>Retry</Button>
+      </div>
+    );
+  }
+
+  return <ProfilePageInner key={profileData.userId} initial={profileData} />;
+}
+
+function ProfilePageInner({ initial }: { initial: AdminProfile }) {
+  const [profile, setProfile] = useState(initial);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const tabsRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<TabId, HTMLButtonElement>>(new Map());
 
@@ -113,18 +75,14 @@ export function ProfilePage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Active sessions state
-  const [sessions, setSessions] = useState(adminProfileData.activeSessions);
+  const [sessions, setSessions] = useState(initial.activeSessions);
 
   const updateIndicator = useCallback(() => {
     const activeEl = tabRefs.current.get(activeTab);
     const container = tabsRef.current;
     if (activeEl && container) {
-      const containerRect = container.getBoundingClientRect();
-      const tabRect = activeEl.getBoundingClientRect();
-      setIndicatorStyle({
-        left: tabRect.left - containerRect.left,
-        width: tabRect.width,
-      });
+      // Indicator width tracked via CSS underline on active tab
+      void (activeEl.getBoundingClientRect().width);
     }
   }, [activeTab]);
 
@@ -166,57 +124,46 @@ export function ProfilePage() {
   };
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial={false}
-      animate="visible"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      <motion.div variants={itemVariants}>
+      <div>
         <PageHeader
           title="My Profile"
           subtitle="Manage your administrator account details, security credentials, and active sessions"
           breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Profile' }]}
         />
-      </motion.div>
+      </div>
 
       {/* Hero Header Profile Card */}
-      <motion.div variants={itemVariants}>
-        <Card className="relative overflow-hidden border-border/70 bg-card shadow-2xs">
-          {/* Background Decoration */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 pointer-events-none" />
-          <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
-          <div className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
-          
-          <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+      <div>
+        <Card className="border-border/70 bg-card shadow-none">
+          <CardContent className="relative z-10 flex flex-col justify-between gap-6 p-6 sm:p-8 md:flex-row md:items-center">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
               {/* Avatar with Presence Ring */}
-              <div className="relative group">
-                <Avatar className="h-24 w-24 border-2 border-primary/30 shadow-lg ring-4 ring-background group-hover:ring-primary/20 transition-all duration-300">
-                  <AvatarFallback className="text-3xl font-black bg-gradient-to-br from-primary/25 to-primary/10 text-primary">
+              <div className="relative">
+                <Avatar className="h-20 w-20 border border-border">
+                  <AvatarFallback className="bg-primary/10 text-2xl font-semibold text-primary">
                     {profile.avatarInitials}
                   </AvatarFallback>
                 </Avatar>
                 <span
-                  className="absolute bottom-1 right-1 h-5 w-5 rounded-full bg-emerald-500 ring-3 ring-background shadow-[0_0_12px_rgba(34,197,94,0.6)]"
+                  className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-background"
                   title="Account is Active & Online"
                 />
-                <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Edit3 className="h-3 w-3 text-primary-foreground" />
-                </div>
               </div>
 
               {/* Identity & Badges */}
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                     {profile.name}
                   </h2>
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">
+                  <Badge variant="secondary" className="text-xs font-medium">
                     <Shield className="mr-1 h-3 w-3" /> {profile.role}
                   </Badge>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs">
-                    <CheckCircle2 className="mr-1 h-3 w-3" /> Active
+                  <Badge variant="outline" className="text-xs text-emerald-700 dark:text-emerald-400">
+                    Active
                   </Badge>
                 </div>
 
@@ -262,10 +209,10 @@ export function ProfilePage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Premium Animated Tabs */}
-      <motion.div variants={itemVariants}>
+      <div>
         <div className="space-y-6">
           {/* Tab Triggers with Sliding Indicator */}
           <div
@@ -273,19 +220,8 @@ export function ProfilePage() {
             className="relative flex items-center bg-card/80 backdrop-blur-sm border border-border/60 p-1.5 rounded-2xl shadow-sm"
           >
             {/* Sliding Background Indicator */}
-            <motion.div
+            <div
               className="absolute top-1.5 bottom-1.5 rounded-xl bg-gradient-to-r from-primary via-primary to-primary/90 shadow-lg shadow-primary/25"
-              initial={false}
-              animate={{
-                left: indicatorStyle.left,
-                width: indicatorStyle.width,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 350,
-                damping: 30,
-                mass: 0.8,
-              }}
             />
 
             {/* Tab Buttons */}
@@ -316,20 +252,14 @@ export function ProfilePage() {
           </div>
 
           {/* Animated Tab Content */}
-          <AnimatePresence mode="wait">
-            <motion.div
+                      <div
               key={activeTab}
-              variants={tabContentVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
             >
               {/* Tab 1: Profile Overview */}
               {activeTab === 'overview' && (
                 <div className="grid gap-6 md:grid-cols-2">
                   {/* Contact & Personal Data */}
                   <Card className="border-border/70 shadow-2xs overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-primary to-primary/50" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-bold flex items-center gap-2">
                         <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
@@ -381,7 +311,6 @@ export function ProfilePage() {
 
                   {/* Organization & Location Data */}
                   <Card className="border-border/70 shadow-2xs overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-emerald-500 to-emerald-500/50" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-bold flex items-center gap-2">
                         <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -432,7 +361,6 @@ export function ProfilePage() {
               {/* Tab 2: Edit Profile */}
               {activeTab === 'edit' && (
                 <Card className="border-border/70 shadow-2xs overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-primary to-primary/50" />
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
@@ -553,7 +481,6 @@ export function ProfilePage() {
               {/* Tab 3: Change Password */}
               {activeTab === 'password' && (
                 <Card className="max-w-2xl border-border/70 shadow-2xs overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-amber-500 to-amber-500/50" />
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
                       <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
@@ -642,7 +569,6 @@ export function ProfilePage() {
                 <div className="space-y-6">
                   {/* 2FA Card */}
                   <Card className="border-border/70 shadow-2xs overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-emerald-500 to-emerald-500/50" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-bold flex items-center gap-2">
                         <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -675,7 +601,6 @@ export function ProfilePage() {
 
                   {/* Active Sessions List */}
                   <Card className="border-border/70 shadow-2xs overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-500/50" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-bold flex items-center justify-between">
                         <span className="flex items-center gap-2">
@@ -742,10 +667,9 @@ export function ProfilePage() {
 
                   {/* Security Audit Trail */}
                   <Card className="border-border/70 shadow-2xs overflow-hidden">
-                    <div className="h-1 bg-gradient-to-r from-purple-500 to-purple-500/50" />
                     <CardHeader className="pb-3">
                       <CardTitle className="text-base font-bold flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                        <div className="p-2 rounded-lg bg-muted text-muted-foreground border border-border/60">
                           <Clock className="h-4 w-4" />
                         </div>
                         Security Audit Events
@@ -773,10 +697,9 @@ export function ProfilePage() {
                   </Card>
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
+            </div>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

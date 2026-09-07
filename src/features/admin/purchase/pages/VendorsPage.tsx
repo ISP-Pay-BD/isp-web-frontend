@@ -3,10 +3,10 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
 import { usePurchase } from '../hooks/use-purchase';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, StatusBadge } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building2, Search, Phone } from 'lucide-react';
+import { Search, Phone } from 'lucide-react';
 
 export function VendorsPage() {
   const { vendors, isLoading, isError, refetch } = usePurchase();
@@ -34,7 +34,16 @@ export function VendorsPage() {
         <p className="text-muted-foreground text-sm">Bandwidth providers, equipment distributors, and supplier payables.</p>
       </PageHero>
       <PageContent className="space-y-6">
-      <StatCard title="Active Vendors" value={vendors.filter((v) => v.status === 'active').length} icon={Building2} />
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{vendors.filter((v) => v.status === 'active').length}</span>{' '}
+          <span className="text-muted-foreground">active vendors</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{vendors.length}</span>{' '}
+          <span className="text-muted-foreground">total</span>
+        </p>
+      </div>
       <div className="relative max-w-md">
         <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
         <Input placeholder="Search vendor..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />

@@ -1,7 +1,6 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { motion } from 'framer-motion';
 import {
   Scale,
   Landmark,
@@ -13,7 +12,6 @@ import { useBalanceSheet } from '../hooks/use-balance-sheet';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { staggerContainer } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 
 function SectionBlock({
@@ -36,11 +34,8 @@ function SectionBlock({
   delay: number;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-    >
+    <div
+      >
       <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden h-full">
         <CardContent className="p-0">
           {/* Header */}
@@ -84,7 +79,7 @@ function SectionBlock({
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 
@@ -105,10 +100,7 @@ export function BalanceSheetPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -152,11 +144,8 @@ export function BalanceSheetPage() {
       </div>
 
       {/* Total Equity */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const }}
-      >
+      <div
+        >
         <Card className="border-emerald-500/20 bg-emerald-500/5 shadow-sm ring-1 ring-emerald-500/10 overflow-hidden">
           <CardContent className="p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -178,9 +167,9 @@ export function BalanceSheetPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     
       </PageContent>
-    </motion.div>
+    </div>
   );
 }

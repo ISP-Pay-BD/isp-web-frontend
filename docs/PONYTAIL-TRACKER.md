@@ -1,129 +1,86 @@
-# Ponytail Tracker — ISP Web Frontend
+# Ponytail / Premium-UI Tracker — ISP Web Frontend
 
-> Live checklist for YAGNI cleanup + UI/UX completion.  
-> Last updated: 2026-09-07  
-> Mode: **ponytail full** (delete first, then polish)
+> Goal-backed checklist. Last updated: 2026-09-07  
+> **Active goal:** Complete premium-ui across ALL surfaces (do not mark complete until audit proves every surface).
 
 ---
 
-## Verdict
+## Goal progress (premium-ui all)
 
-| Metric | Value |
-|--------|------:|
-| Simplicity score (pre) | 4.9 / 10 |
-| Routes | 123 |
-| P1+P2 this session | Done (partial portal Framer left on some pages) |
+| Surface family | Brief | Craft pass | Framer policy | Gate |
+|----------------|-------|------------|---------------|------|
+| Marketing landing | ✅ | ✅ | marketing ok | ✅ |
+| `/pricing` `/plugins` `/register` | ⬜ inherit | ✅ mockFetch | marketing ok | ✅ |
+| Auth | ✅ | ✅ demoCredentials mockFetch | none | ✅ |
+| Admin HR | ✅ | ✅ | CSS only | ✅ |
+| Admin lists / hubs | ⬜ | ✅ StatCard→strips; FreeRequests strip | CSS only | ✅ |
+| Admin profile / OTC / OLT / bandwidth | ✅ OLT/packages/bandwidth | ✅ | CSS only | ✅ |
+| Admin SMS / support | ✅ | ✅ domains wired | CSS only | ✅ |
+| Admin user-access | ⬜ | ✅ role chips | CSS only | ✅ |
+| Customer dashboard / payments / rewards | ✅ | ✅ | CSS only | ✅ |
+| Platform | ✅ family brief | ✅ | none | ✅ |
+| Employee | ✅ | salaries strip | none | ⬜ deeper |
 
 ---
 
 ## Pass status
 
-| Pass | Scope | Status |
-|------|-------|--------|
-| **P1** Dead code + unused deps | Delete stubs, dead hooks, unused packages | ✅ Done |
-| **P2** Portal motion + headers | Static headers/shell; one PageHeader API | ✅ Core done |
-| **P3** Data boundary | Runtime `@/data` → `mockFetch` only | ⬜ Queued |
-| **P4** UI/UX polish | Hero budget, accent discipline, states | ⬜ Queued |
-| **P5** Docs sync | PLAN-STATUS + inventory match code | ⬜ Queued |
+| Pass | Status |
+|------|--------|
+| P1 Dead code + unused deps | ✅ |
+| P2 Portal shell headers | ✅ |
+| P3 Data boundary `@/data` → mockFetch | 🔄 nearly done — LandingPage intentional static only (value import) |
+| P4 Premium craft | 🔄 wide strip/KPI cleanup; residual chrome on some customer/network/theme surfaces |
+| P5 Docs / inventory sync | ⬜ |
 
 ---
 
-## P1 — Dead code
+## Evidence this continuation
 
-| # | Item | Status |
-|---|------|--------|
-| 1.1 | Delete `use-landing-data.ts` | ✅ |
-| 1.2 | Delete `PageTransition.tsx` | ✅ |
-| 1.3 | Delete stub handlers (admin, payments, support, customers, dashboard) | ✅ |
-| 1.4 | Delete `src/mocks/` | ✅ |
-| 1.5 | Delete empty feature index stubs | ✅ |
-| 1.6 | Delete 83 generic feature `README.md` stubs | ✅ |
-| 1.7 | Remove deps: `cn`, `date-fns`, `embla-carousel-react`, `nuqs`, `vaul`, `next-intl` | ✅ |
-| 1.8 | Move `shadcn` → `devDependencies` | ✅ |
-| 1.9 | Replace `getRoleHomePath` with `ROLE_HOME` | ✅ |
+- mock-api domains: `sms`, `whatsapp`, `themeStudio` (+ existing `profile`)
+- P3 migrations: SMS compose targets, Theme Studio presets, OLT diagnostics, DemoUserPicker → `mockFetch`
+- FreeRequests KPI cards → summary strip; OLT diagnostics summary → strip
+- Softened font-black / animate-in / map scale on customers, network, theme-studio, OLT
+- DESIGN_BRIEF added: support, sms, bandwidth, platform (+ prior HR/customer/employee/packages/OLT/payments)
+- **0** portal `framer-motion` imports; **0** `<StatCard` in features
+- Verify: typecheck ✅ · lint 0 errors · test 17/17 · build ✅
 
----
+## Requirement audit (incomplete — goal stays open)
 
-## P2 — Portal motion + headers
+| Requirement | Evidence | Status |
+|-------------|----------|--------|
+| Premium-ui on ALL surfaces (marketing, auth, admin, customer, platform, employee) | Wide craft pass; residual chrome still on some screens | 🔄 incomplete |
+| Every screen: design read → refs → DESIGN_BRIEF → build → gate → remove one | **15** briefs vs **117** `*Page.tsx` files — many screens inherit family briefs only | 🔄 incomplete |
+| Portals CSS motion only (no Framer except legitimate AnimatePresence) | `rg` portal framer: **none**; marketing Framer remains (allowed) | ✅ |
+| Marketing intentional ISP dark craft | Landing sections polished; not fully screenshot-gated | 🔄 weak visual proof |
+| Full state sets (loading/empty/error/success) | Many pages have skeletons/empty/error; not audited page-by-page | 🔄 incomplete |
+| `pnpm lint && typecheck && test && build` | lint 0 errors · typecheck ✅ · test 17/17 · build ✅ | ✅ |
+| Update PONYTAIL-TRACKER | Updated this session | ✅ |
+| Audit proves every surface before complete | This table — gaps remain | ❌ not proven |
 
-| # | Item | Status |
-|---|------|--------|
-| 2.1 | `PageHero` / `PageContent` → plain divs | ✅ |
-| 2.2 | `PortalContentTemplate` → no Framer | ✅ |
-| 2.3 | `EmptyState` → no Framer | ✅ |
-| 2.4 | Canonical `PageHeader` (breadcrumb/breadcrumbs, url/href) | ✅ |
-| 2.5 | Thin re-exports admin/shared/platform | ✅ |
-| 2.6 | `StatCard` / `SpotlightCard` static surfaces | ✅ |
-| 2.7 | Admin dashboard + ChartTooltip Framer removed | ✅ |
-| 2.8 | Remaining admin page `motion.*` staggers | ⬜ Optional later |
-| 2.9 | Marketing Framer kept (`Reveal`, hero, pricing) | keep |
+**Do not UpdateGoal complete** until every row is ✅ with strong evidence.
 
 ---
 
-## P3 — Data boundary (queued)
+## Verify
 
-| # | Item | Status |
-|---|------|--------|
-| 3.1 | Route runtime `@/data` through handlers | ⬜ |
-| 3.2 | Architecture test: no runtime `@/data` in features | ⬜ |
-| 3.3 | Replace `admin.domain` god-key | ⬜ later |
-
----
-
-## P4 — UI/UX polish (queued — not one-shot)
-
-| # | Surface | Work | Status |
-|---|---------|------|--------|
-| 4.1 | Marketing hero | Brand + 1 headline + 1 CTA + 1 visual | ⬜ |
-| 4.2 | Admin dashboard | Denser ops layout (less KPI-template) | ⬜ |
-| 4.3 | Status colors | One accent + ≤4 semantic hues | ⬜ |
-| 4.4 | Radius | Prefer `lg` / `xl` / `full` | ⬜ |
-| 4.5 | Shared empty/error/skeleton | Dedupe portal clones when touching | ⬜ |
-
-> **ponytail:** Perfect UI/UX for 123 routes is multi-week. Say which surface next (e.g. “landing hero” or “admin customers”).
-
----
-
-## P5 — Docs sync (queued)
-
-| # | Item | Status |
-|---|------|--------|
-| 5.1 | Update `PLAN-STATUS.md` | ⬜ |
-| 5.2 | Mark built screens in inventory after DoD | ⬜ |
-| 5.3 | `/contact` route vs landing section | ⬜ |
-
----
-
-## Do not delete
-
-- Auth / permission guards / middleware
-- Zod + RHF validation
-- Loading / empty / error / success states
-- `mockFetch` typed client
-- TanStack Query / Table
-- Marketing Framer Motion
-- Self-hosted fonts
-
----
-
-## Verify gate
-
-```bash
-pnpm lint && pnpm typecheck && pnpm test && pnpm build
-```
-
-| Check | Result |
+| Check | Latest |
 |-------|--------|
-| typecheck | ✅ pass |
+| typecheck | ✅ |
 | test | ✅ 17/17 |
-| build | ✅ pass |
-| lint | warnings OK if 0 errors |
-
----
+| lint | ✅ 0 errors (114 warnings) |
+| build | ✅ |
+| StatCard in features | ✅ 0 |
+| portal Framer | ✅ none |
+| runtime `@/data` value imports | 🔄 LandingPage only (intentional) |
 
 ## Changelog
 
-| Date | Pass | Notes |
-|------|------|-------|
-| 2026-09-07 | Audit | Score 4.9; ~1,280 low-risk lines identified |
-| 2026-09-07 | P1+P2 | Dead code/deps removed; headers unified; portal shell static |
+| Date | Notes |
+|------|-------|
+| 2026-09-07 | Goal armed; landing + portal Framer zero |
+| 2026-09-07 | Batch StatCard→strips; ProductPreview; customer/profile craft |
+| 2026-09-07 | HR / customer / OLT / payments strips; P3 pricing/plugins/profile/OTC |
+| 2026-09-07 | ComparisonBlock; user-access chips; rewards de-purple |
+| 2026-09-07 | sms/whatsapp/themeStudio domains; SMS/Theme/OLT diag/DemoPicker mockFetch; FreeRequests strip; support/sms/bandwidth/platform briefs |
+| 2026-09-07 | Customer router/profile strips; packages de-gradient; platform user-access strip; audit table (goal incomplete) |

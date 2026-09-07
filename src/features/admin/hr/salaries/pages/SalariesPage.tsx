@@ -2,14 +2,13 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useSalaries } from '../hooks/use-salaries';
 import { PageSkeleton, EmptyState, CurrencyDisplay } from '@/components/shared';
 import { SalaryPaymentModal } from '../components/SalaryPaymentModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table,
@@ -19,17 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Banknote, PlusCircle, Search, CheckCircle2, DollarSign, Wallet, X, BanknoteIcon } from 'lucide-react';
+import { Banknote, PlusCircle, Search, X } from 'lucide-react';
 import type { SalaryPaymentFormValues } from '../schemas';
-
-const hoverLift = { y: -2, transition: { duration: 0.15 } };
-
-const statStyles: Record<string, { iconBg: string; iconText: string; border: string; valueText: string }> = {
-  amber: { iconBg: 'bg-amber-500/10', iconText: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20', valueText: 'text-amber-600 dark:text-amber-400' },
-  blue: { iconBg: 'bg-blue-500/10', iconText: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20', valueText: 'text-blue-600 dark:text-blue-400' },
-  emerald: { iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20', valueText: 'text-emerald-600 dark:text-emerald-400' },
-  purple: { iconBg: 'bg-purple-500/10', iconText: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20', valueText: 'text-purple-600 dark:text-purple-400' },
-};
 
 const methodColors: Record<string, string> = {
   'Bank Transfer': 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
@@ -74,13 +64,6 @@ export function SalariesPage() {
     );
   }
 
-  const stats = [
-    { label: 'Disbursed (Visible)', value: <CurrencyDisplay amount={totalDisbursed} className="font-bold" />, description: 'Sum of filtered payments', icon: DollarSign, color: 'amber' },
-    { label: 'Disbursed Count', value: filteredPayments.length, description: 'Total vouchers issued', icon: CheckCircle2, color: 'blue' },
-    { label: 'Avg. Salary', value: <CurrencyDisplay amount={avgSalary} className="font-bold" />, description: 'Per payout average', icon: BanknoteIcon, color: 'emerald' },
-    { label: 'Active Staff', value: employees.length, description: 'Payroll beneficiaries', icon: Wallet, color: 'purple' },
-  ];
-
   return (
     <div className="space-y-6">
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -95,33 +78,35 @@ export function SalariesPage() {
             Disburse and review monthly employee payroll, bank transfers, and payment vouchers.
           </p>
         </div>
-        <motion.div whileHover={hoverLift}>
+        <div >
           <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
             <PlusCircle className="h-4 w-4" /> New Salary Payment
           </Button>
-        </motion.div>
+        </div>
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const style = statStyles[stat.color];
-          return (
-            <div key={stat.label}>
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden group">
-                <CardContent className="p-4 flex items-center gap-3.5">
-                  <div className={`p-2.5 rounded-xl ${style.iconBg} ${style.iconText} border ${style.border} group-hover:scale-110 transition-transform duration-200`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className={`text-2xl font-bold tracking-tight ${style.valueText}`}>{stat.value}</div>
-                    <div className="text-xs text-muted-foreground font-medium">{stat.label}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalDisbursed} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">disbursed</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{filteredPayments.length}</span>{' '}
+          <span className="text-muted-foreground">vouchers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={avgSalary} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">avg payout</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{employees.length}</span>{' '}
+          <span className="text-muted-foreground">staff on payroll</span>
+        </p>
       </div>
 
       <div>
@@ -173,11 +158,8 @@ export function SalariesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredPayments.map((p, idx) => (
-                    <motion.tr
+                    <tr
                       key={p.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.02 }}
                       className="group border-border/40 hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
@@ -186,7 +168,7 @@ export function SalariesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 font-bold text-[10px] group-hover:scale-110 transition-transform">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 font-bold text-[10px]">
                             {p.employeeName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <span className="font-semibold text-sm group-hover:text-primary transition-colors">{p.employeeName}</span>
@@ -215,7 +197,7 @@ export function SalariesPage() {
                           </Badge>
                         )}
                       </TableCell>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </TableBody>
               </Table>

@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/features/admin/shared';
 import { useNetworkDiagram } from '../hooks/useNetwork';
 import type { NetworkTopologyItem } from '@/data/admin/network-ops.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Server, Network, CheckCircle2, XCircle, RefreshCw, ZoomIn, ZoomOut, Zap, Cpu, SignalHigh, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 
 export function NetworkDiagramPage() {
-  const { data, isLoading, refetch } = useNetworkDiagram();
+  const { data, isLoading, isError, refetch } = useNetworkDiagram();
   const [selectedOltId, setSelectedOltId] = useState<string>('all');
   const [selectedPonPort, setSelectedPonPort] = useState<string>('all');
   const [selectedNode, setSelectedNode] = useState<NetworkTopologyItem | null>(null);
@@ -78,16 +76,25 @@ export function NetworkDiagramPage() {
   if (isLoading) {
     return <PageSkeleton variant="dashboard" rows={6} />;
   }
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load network diagram"
+          description="Could not fetch OLT topology and optical telemetry."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
-    <motion.div
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
-      variants={staggerContainer}
-      initial={false}
-      animate="show"
     >
       {/* Header */}
-      <motion.div variants={fadeUp}>
+      <div>
         <PageHeader
           title="Network Diagram & Optical Topology"
           subtitle="Live OLT → PON Port → Splitter → ONU optical signal & telemetry"
@@ -97,7 +104,7 @@ export function NetworkDiagramPage() {
             { label: 'Diagram' },
           ]}
           actions={
-            <motion.div whileHover={hoverLift}>
+            <div>
               <Button
                 variant="outline"
                 size="sm"
@@ -108,43 +115,33 @@ export function NetworkDiagramPage() {
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh Telemetry
               </Button>
-            </motion.div>
+            </div>
           }
         />
-      </motion.div>
+      </div>
 
       {/* KPI Stats Band */}
-      <motion.div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" variants={fadeUp}>
-        <StatCard
-          title="Total OLTs"
-          value={totalOlts}
-          description="Provisioned core optical nodes"
-          icon={Server}
-        />
-        <StatCard
-          title="Total Filtered ONUs"
-          value={totalOnus}
-          description="Subscribers on current tree"
-          icon={Network}
-        />
-        <StatCard
-          title="Online ONUs"
-          value={onlineOnus}
-          description="Transmitting optical signal"
-          icon={CheckCircle2}
-          trend={{ value: 'Normal', positive: true }}
-        />
-        <StatCard
-          title="Offline ONUs / Alarm"
-          value={offlineOnus}
-          description="LOS (Loss of Signal) or power cut"
-          icon={XCircle}
-          trend={{ value: `${offlineOnus} alerts`, positive: false }}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{totalOlts}</span>{' '}
+          <span className="text-muted-foreground">total olts</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{totalOnus}</span>{' '}
+          <span className="text-muted-foreground">total filtered onus</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{onlineOnus}</span>{' '}
+          <span className="text-muted-foreground">online onus</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{offlineOnus}</span>{' '}
+          <span className="text-muted-foreground">offline onus / alarm</span>
+        </p>
+      </div>
 
       {/* Controls / Filter Toolbar */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <CardContent className="pt-5 pb-5 px-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -192,7 +189,7 @@ export function NetworkDiagramPage() {
               <span className="text-xs text-muted-foreground font-mono bg-muted/30 px-2 py-1 rounded-md">
                 {Math.round(zoomLevel * 100)}%
               </span>
-              <motion.div whileHover={hoverLift}>
+              <div>
                 <Button
                   variant="outline"
                   size="icon"
@@ -201,8 +198,8 @@ export function NetworkDiagramPage() {
                 >
                   <ZoomOut className="h-4 w-4" />
                 </Button>
-              </motion.div>
-              <motion.div whileHover={hoverLift}>
+              </div>
+              <div>
                 <Button
                   variant="outline"
                   size="icon"
@@ -211,8 +208,8 @@ export function NetworkDiagramPage() {
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
-              </motion.div>
-              <motion.div whileHover={hoverLift}>
+              </div>
+              <div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -221,14 +218,14 @@ export function NetworkDiagramPage() {
                 >
                   Reset
                 </Button>
-              </motion.div>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Visual Interactive SVG Topology Canvas */}
-      <motion.div variants={fadeUp}>
+      <div>
         <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-6 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
@@ -253,15 +250,10 @@ export function NetworkDiagramPage() {
               className="transition-transform duration-300 origin-top-left space-y-8"
               style={{ transform: `scale(${zoomLevel})` }}
             >
-              <AnimatePresence mode="wait">
-                {Array.from(groupedTree.entries()).length > 0 ? (
+                              {Array.from(groupedTree.entries()).length > 0 ? (
                   Array.from(groupedTree.entries()).map(([ponPort, splittersMap], portIdx) => (
-                    <motion.div
+                    <div
                       key={ponPort}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.35, delay: portIdx * 0.08 }}
                       className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm p-5 shadow-sm space-y-6 ring-1 ring-foreground/5"
                     >
                       {/* Port Header */}
@@ -282,11 +274,8 @@ export function NetworkDiagramPage() {
                       {/* Splitters Row */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {Array.from(splittersMap.entries()).map(([splitterName, onus], splitterIdx) => (
-                          <motion.div
+                          <div
                             key={splitterName}
-                            initial={{ opacity: 0, scale: 0.97 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, delay: portIdx * 0.08 + splitterIdx * 0.05 }}
                             className="rounded-xl border border-border/50 bg-background/80 p-4 space-y-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200"
                           >
                             <div className="flex items-center justify-between">
@@ -306,11 +295,8 @@ export function NetworkDiagramPage() {
                               {onus.map((onu, onuIdx) => {
                                 const isNormal = onu.status === 'online' && onu.rxPowerDbm > -27;
                                 return (
-                                  <motion.div
+                                  <div
                                     key={onu.onuId}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.25, delay: portIdx * 0.08 + splitterIdx * 0.05 + onuIdx * 0.03 }}
                                     onClick={() => setSelectedNode(onu)}
                                     className={`group/onu flex items-center justify-between p-2.5 rounded-lg border text-xs cursor-pointer transition-all duration-200 ${
                                       onu.status === 'online'
@@ -348,48 +334,41 @@ export function NetworkDiagramPage() {
                                         }`}
                                       />
                                     </div>
-                                  </motion.div>
+                                  </div>
                                 );
                               })}
                             </div>
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
-                    </motion.div>
+                    </div>
                   ))
                 ) : (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                  <div
                     className="text-center py-16 text-muted-foreground"
                   >
                     <Network className="h-10 w-10 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium">No topology data for current filter</p>
                     <p className="text-xs text-muted-foreground/70 mt-1">Try selecting a different OLT or PON port.</p>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
-            </div>
+                          </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Node Detail Inspector Sheet */}
       <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
         <SheetContent className="sm:max-w-md overflow-hidden p-0">
           {selectedNode && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+            <div
               className="flex flex-col h-full min-h-0"
             >
               {/* Header with gradient background */}
-              <div className="relative px-6 pt-6 pb-4 border-b border-border/60 bg-gradient-to-br from-primary/5 via-background to-primary/3 shrink-0">
-                <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
+              <div className="relative px-6 pt-6 pb-4 border-b border-border/60 bg-muted/20 shrink-0">
                 <SheetHeader className="relative z-10 text-left">
                   <SheetTitle className="flex items-center gap-2.5 text-base">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20 shadow-sm">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/15">
                       <SignalHigh className="h-5 w-5 text-primary" />
                     </span>
                     <div>
@@ -497,7 +476,7 @@ export function NetworkDiagramPage() {
                           <span className="text-xs font-semibold text-foreground">Rx Optical Power</span>
                           <span className="text-[10px] text-muted-foreground ml-1.5">(1490nm)</span>
                         </div>
-                        <span className={`font-mono font-black text-sm shrink-0 ${
+                        <span className={`font-mono font-bold text-sm shrink-0 ${
                           selectedNode.rxPowerDbm > -25
                             ? 'text-emerald-500'
                             : selectedNode.rxPowerDbm > -27
@@ -508,7 +487,7 @@ export function NetworkDiagramPage() {
                         </span>
                       </div>
                       <div className="relative h-3 rounded-full bg-muted/40 overflow-hidden border border-border/30">
-                        <motion.div
+                        <div
                           className={`absolute inset-y-0 left-0 rounded-full ${
                             selectedNode.rxPowerDbm > -25
                               ? 'bg-gradient-to-r from-emerald-600 to-emerald-400'
@@ -516,9 +495,6 @@ export function NetworkDiagramPage() {
                                 ? 'bg-gradient-to-r from-amber-600 to-amber-400'
                                 : 'bg-gradient-to-r from-red-600 to-red-400'
                           }`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.rxPowerDbm + 30) / 22) * 100))}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
                         />
                         {/* Threshold markers */}
                         <div className="absolute inset-y-0 left-[9%] w-px bg-foreground/20" title="-28 dBm LOS" />
@@ -538,16 +514,13 @@ export function NetworkDiagramPage() {
                           <span className="text-xs font-semibold text-foreground">Tx Optical Power</span>
                           <span className="text-[10px] text-muted-foreground ml-1.5">(1310nm)</span>
                         </div>
-                        <span className="font-mono font-black text-sm text-blue-500 shrink-0">
+                        <span className="font-mono font-bold text-sm text-blue-500 shrink-0">
                           {selectedNode.txPowerDbm} <span className="text-[10px] font-bold opacity-70">dBm</span>
                         </span>
                       </div>
                       <div className="relative h-3 rounded-full bg-muted/40 overflow-hidden border border-border/30">
-                        <motion.div
+                        <div
                           className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 to-blue-400"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.max(5, Math.min(100, ((selectedNode.txPowerDbm + 5) / 10) * 100))}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.4 }}
                         />
                       </div>
                     </div>
@@ -572,10 +545,10 @@ export function NetworkDiagramPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
         </SheetContent>
       </Sheet>
-    </motion.div>
+    </div>
   );
 }

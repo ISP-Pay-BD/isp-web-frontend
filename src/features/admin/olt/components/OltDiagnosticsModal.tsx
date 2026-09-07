@@ -10,12 +10,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Wifi, WifiOff, AlertTriangle, Cpu, Search } from 'lucide-react';
+import { Cpu, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { OnuPortItem } from '@/data/admin/network-ops.data';
-import { oltDiagnostics } from '@/data/admin/network-ops.data';
+import type { OnuPortItem, OltDiagnostics } from '@/data/admin/network-ops.data';
+import { useQuery } from '@tanstack/react-query';
+import { mockFetch } from '@/lib/mock-api/client';
 
 interface OltDiagnosticsModalProps {
   open: boolean;
@@ -34,6 +34,15 @@ export function OltDiagnosticsModal({
   const [search, setSearch] = useState('');
   const [contentVisible, setContentVisible] = useState(false);
 
+  const { data: diagnosticsMap, isLoading } = useQuery({
+    queryKey: ['admin', 'network', 'olt-diagnostics'],
+    queryFn: async () => {
+      const network = await mockFetch('admin.domain', 'network');
+      return (network as { oltDiagnostics?: Record<string, OltDiagnostics> }).oltDiagnostics ?? {};
+    },
+    enabled: open,
+  });
+
   useEffect(() => {
     if (!open) {
       const id = requestAnimationFrame(() => setContentVisible(false));
@@ -51,16 +60,21 @@ export function OltDiagnosticsModal({
     };
   }, [open]);
 
-  const data = useMemo(() => oltDiagnostics[oltId] ?? oltDiagnostics['olt_1'], [oltId]);
+  const data = useMemo(() => {
+    if (!diagnosticsMap) return null;
+    return diagnosticsMap[oltId] ?? diagnosticsMap['olt_1'] ?? null;
+  }, [diagnosticsMap, oltId]);
 
   const summary = useMemo(() => {
+    if (!data) return { online: 0, wireDown: 0, offline: 0 };
     const online = data.onus.filter((p: OnuPortItem) => p.status === 'online').length;
     const wireDown = data.onus.filter((p: OnuPortItem) => p.status === 'wire_down').length;
     const offline = data.onus.filter((p: OnuPortItem) => p.status === 'offline').length;
     return { online, wireDown, offline };
-  }, [data.onus]);
+  }, [data]);
 
   const portsByPon = useMemo(() => {
+    if (!data) return [] as [string, OnuPortItem[]][];
     const groups = new Map<string, OnuPortItem[]>();
     data.onus.forEach((p: OnuPortItem) => {
       const g = groups.get(p.ponPort) ?? [];
@@ -68,9 +82,10 @@ export function OltDiagnosticsModal({
       groups.set(p.ponPort, g);
     });
     return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [data.onus]);
+  }, [data]);
 
   const filteredOnus = useMemo(() => {
+    if (!data) return [] as OnuPortItem[];
     let list = data.onus;
     if (statusFilter !== 'all') {
       list = list.filter((onu: OnuPortItem) => onu.status === statusFilter);
@@ -86,7 +101,7 @@ export function OltDiagnosticsModal({
       );
     }
     return list;
-  }, [data.onus, statusFilter, search]);
+  }, [data, statusFilter, search]);
 
   const rxColor = (db: number | null) => {
     if (db === null) return 'text-muted-foreground';
@@ -99,16 +114,16 @@ export function OltDiagnosticsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl p-0 gap-0 overflow-hidden border-border/80 shadow-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <DialogHeader className="border-b px-6 py-4 animate-in fade-in slide-in-from-top-2 duration-300">
+        <DialogHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 transition-transform duration-200 hover:scale-110">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground border border-border/60">
                 <Cpu className="h-5 w-5" />
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold">{oltName} Diagnostics</DialogTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  PON telemetry snapshot — {data.onus.length} ONUs registered
+                  PON telemetry snapshot — {data?.onus.length ?? 0} ONUs registered
                 </p>
               </div>
             </div>
@@ -117,40 +132,28 @@ export function OltDiagnosticsModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
+          {isLoading || !data ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Loading diagnostics…</div>
+          ) : (
           <div
             className={cn(
-              'space-y-6 transition-all duration-500',
-              contentVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+              'space-y-6 transition-opacity duration-200',
+              contentVisible ? 'opacity-100' : 'opacity-0'
             )}
           >
-            {/* Summary cards */}
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { label: 'ONUs Online', value: summary.online, icon: Wifi, color: 'emerald', delay: '0ms' },
-                { label: 'Wire Down', value: summary.wireDown, icon: AlertTriangle, color: 'amber', delay: '80ms' },
-                { label: 'Offline / LOS', value: summary.offline, icon: WifiOff, color: 'red', delay: '160ms' },
-              ].map((s) => (
-                <Card
-                  key={s.label}
-                  className="border-border/70 bg-card/90 shadow-2xs animate-in fade-in slide-in-from-bottom-3 duration-400 fill-mode-both hover:shadow-md hover:border-border transition-all duration-200"
-                  style={{ animationDelay: s.delay }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{s.label}</span>
-                      <div className={cn(
-                        'flex h-8 w-8 items-center justify-center rounded-lg border transition-transform duration-200 hover:scale-110',
-                        `bg-${s.color}-500/10 text-${s.color}-500 border-${s.color}-500/20`,
-                      )}>
-                        <s.icon className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div className={cn('text-2xl font-black tracking-tight', `text-${s.color}-600 dark:text-${s.color}-400`)}>
-                      {s.value}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+              <p>
+                <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{summary.online}</span>{' '}
+                <span className="text-muted-foreground">online</span>
+              </p>
+              <p>
+                <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{summary.wireDown}</span>{' '}
+                <span className="text-muted-foreground">wire down</span>
+              </p>
+              <p>
+                <span className="font-semibold tabular-nums text-destructive">{summary.offline}</span>{' '}
+                <span className="text-muted-foreground">offline / LOS</span>
+              </p>
             </div>
 
             {/* PON Port grid */}
@@ -162,7 +165,7 @@ export function OltDiagnosticsModal({
                   return (
                     <div
                       key={port}
-                      className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-both"
+                      className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition-all duration-200"
                       style={{ animationDelay: `${240 + i * 60}ms` }}
                     >
                       <div className="flex items-center justify-between mb-2.5">
@@ -237,7 +240,7 @@ export function OltDiagnosticsModal({
                     {filteredOnus.map((onu: OnuPortItem, i: number) => (
                       <tr
                         key={onu.id}
-                        className="border-b last:border-b-0 hover:bg-muted/20 transition-colors duration-100 animate-in fade-in slide-in-from-bottom-1 duration-250 fill-mode-both"
+                        className="border-b last:border-b-0 hover:bg-muted/20 transition-colors duration-100"
                         style={{ animationDelay: `${400 + i * 30}ms` }}
                       >
                         <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{onu.onuIndex}</td>
@@ -298,6 +301,7 @@ export function OltDiagnosticsModal({
               </Button>
             </div>
           </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

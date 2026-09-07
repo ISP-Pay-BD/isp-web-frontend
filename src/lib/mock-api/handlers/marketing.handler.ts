@@ -1,6 +1,6 @@
 import { mockDelay } from '../delay';
 import { landingData, pricingPlans } from '@/data/marketing/landing.data';
-import { paygCalculator, pricingTiers, calculatePaygMonthly } from '@/data/marketing/pricing.data';
+import { paygCalculator, pricingTiers, calculatePaygMonthly, comparisonGroups, comparisonPlans } from '@/data/marketing/pricing.data';
 import { landingSections, landingFaqExtended, landingTestimonialsExtended } from '@/data/marketing/sections.data';
 import { landingSectionsAData } from '@/data/marketing/landing-sections-a.data';
 import { pluginsMarketplaceFull, pluginCategories } from '@/data/marketing/plugins.data';
@@ -25,6 +25,8 @@ export async function getPricingData() {
     tiers: pricingTiers,
     payg: paygCalculator,
     calculatePayg: calculatePaygMonthly,
+    comparisonGroups,
+    comparisonPlans,
   };
 }
 

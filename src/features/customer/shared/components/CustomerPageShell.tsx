@@ -48,7 +48,7 @@ export function CustomerPageShell({
               ))}
             </nav>
           )}
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             {title}
           </h1>
           {subtitle && <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">{subtitle}</p>}

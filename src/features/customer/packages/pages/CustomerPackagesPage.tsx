@@ -70,21 +70,15 @@ export function CustomerPackagesPage() {
       }
     >
       <div className="space-y-8">
-        {/* Highlight Promo Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-primary/15 via-primary/5 to-background border p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="rounded-xl bg-primary p-2.5 text-primary-foreground">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold">Uncapped BDIX & FTP Speeds on All Plans</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Enjoy up to 100 Mbps BDIX cache for YouTube, Netflix, Facebook, and local torrents regardless of base package.
-              </p>
-            </div>
+        <div className="rounded-xl border bg-card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold">Uncapped BDIX &amp; FTP on all plans</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+              Up to 100 Mbps BDIX cache for YouTube, Netflix, Facebook, and local torrents — regardless of base package.
+            </p>
           </div>
-          <Badge className="bg-primary/20 text-primary border-primary/30 shrink-0 font-bold">
-            Zero Installation Fee
+          <Badge variant="secondary" className="shrink-0 font-medium">
+            Zero installation fee
           </Badge>
         </div>
 
@@ -133,7 +127,7 @@ export function CustomerPackagesPage() {
                   </CardDescription>
 
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-black tracking-tight text-foreground">
+                    <span className="text-3xl font-bold tracking-tight text-foreground">
                       {formatBdtWithSymbol(pkg.priceBdt)}
                     </span>
                     <span className="text-xs text-muted-foreground">/ month</span>
@@ -143,7 +137,7 @@ export function CustomerPackagesPage() {
                 <CardContent className="space-y-4">
                   <div className="rounded-xl bg-muted/60 p-3 flex items-center justify-between">
                     <span className="text-xs font-medium text-muted-foreground">Internet Speed</span>
-                    <span className="text-base font-extrabold flex items-center gap-1 text-primary">
+                    <span className="text-base font-bold flex items-center gap-1 text-primary">
                       <Zap className="h-4 w-4" />
                       {pkg.speedMbps} Mbps
                     </span>

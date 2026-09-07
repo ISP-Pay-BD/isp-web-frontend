@@ -8,8 +8,8 @@ import type { RouterItem } from '@/data/admin/network-ops.data';
 import { RouterModal } from '../components/RouterModal';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Plus, Router, RefreshCw, Activity, CheckCircle2, Edit, Trash2, Zap } from 'lucide-react';
@@ -27,7 +27,7 @@ const routerSearchFilter = (row: LegacyRow<RouterItem>, _columnId: string, filte
 };
 
 export function RoutersPage() {
-  const { data: initialRouters = [], isLoading } = useRouters();
+  const { data: initialRouters = [], isLoading, isError, refetch } = useRouters();
   const [routers, setRouters] = useState<RouterItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedRouter, setSelectedRouter] = useState<RouterItem | null>(null);
@@ -230,6 +230,19 @@ export function RoutersPage() {
     return <PageSkeleton variant="table" rows={6} />;
   }
 
+  if (isError) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load routers"
+          description="Could not load MikroTik router inventory."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -260,32 +273,23 @@ export function RoutersPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Routers"
-          value={totalRouters}
-          description="Provisioned in network"
-          icon={Router}
-        />
-        <StatCard
-          title="Online Routers"
-          value={onlineRouters}
-          description={`${onlineRouters}/${totalRouters} responding`}
-          icon={CheckCircle2}
-          trend={{ value: 'Operational', positive: true }}
-        />
-        <StatCard
-          title="Active Sessions"
-          value={totalUsers}
-          description="Connected PPPoE / Hotspot"
-          icon={Activity}
-        />
-        <StatCard
-          title="Avg API Latency"
-          value="4.2 ms"
-          description="Local loop fiber interconnect"
-          icon={Zap}
-        />
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{totalRouters}</span>{' '}
+          <span className="text-muted-foreground">total routers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{onlineRouters}</span>{' '}
+          <span className="text-muted-foreground">online routers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{totalUsers}</span>{' '}
+          <span className="text-muted-foreground">active sessions</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{"4.2 ms"}</span>{' '}
+          <span className="text-muted-foreground">avg api latency</span>
+        </p>
       </div>
 
       <DataTable

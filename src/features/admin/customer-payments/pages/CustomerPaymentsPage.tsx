@@ -20,7 +20,6 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { Can } from '@/components/shared/Can';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { DataTable } from '@/features/shared/data-table';
@@ -301,57 +300,29 @@ export function CustomerPaymentsPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Collections"
-          value={
-            <CurrencyDisplay amount={totalCollected} className="font-mono text-foreground font-bold" />
-          }
-          description={`${items.length} total receipts recorded`}
-          trend={{ value: '100% verified ledger', positive: true }}
-          icon={Wallet}
-        />
-        <StatCard
-          title="MFS Gateway Share"
-          value={
-            <CurrencyDisplay
-              amount={mfsVolume}
-              className="font-mono text-emerald-600 dark:text-emerald-400 font-bold"
-            />
-          }
-          description="Direct bKash & Nagad payments"
-          trend={{ value: 'Instant settlement', positive: true }}
-          icon={Smartphone}
-        />
-        <StatCard
-          title="Pending Clearances"
-          value={
-            <div className="flex items-baseline gap-1 text-amber-600 dark:text-amber-400">
-              <span>{pendingCount}</span>
-              <span className="text-xs font-normal text-muted-foreground">invoices</span>
-            </div>
-          }
-          description="Manual bank or cheque transfers"
-          trend={{ value: 'Verification needed', positive: false }}
-          icon={Hourglass}
-        />
-        <Card className="p-4 rounded-xl border-border/70 bg-card shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Avg Bill / User
-            </span>
-            <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-              <Receipt className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="text-xl font-bold text-foreground mt-2 font-mono">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalCollected} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">collections · {items.length} receipts</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={mfsVolume} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">MFS gateway</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{pendingCount}</span>{' '}
+          <span className="text-muted-foreground">pending clearances</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">
             ৳{items.length ? Math.round(totalCollected / items.length).toLocaleString() : '0'}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Monthly package average</span>
-          </div>
-        </Card>
+          </span>{' '}
+          <span className="text-muted-foreground">avg / receipt</span>
+        </p>
       </div>
 
       <DataTable

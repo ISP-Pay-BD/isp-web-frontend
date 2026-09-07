@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import { motion } from 'framer-motion';
 import {
   Plus,
   Calendar,
@@ -13,8 +12,8 @@ import {
 import { PageHeader } from '@/features/admin/shared';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { DailyBillItem } from '@/data/admin/bandwidth.data';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { staggerContainer, fadeUp } from '@/lib/animations';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { toast } from 'sonner';
 
@@ -55,7 +53,7 @@ const dailyBillSearchFilter = (
 };
 
 export function BandwidthDailyBillPage() {
-  const { data, isLoading } = useBandwidthData();
+  const { data, isLoading, isError, refetch } = useBandwidthData();
   const [bills, setBills] = useState<DailyBillItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPop, setSelectedPop] = useState('Demo POP Uttara');
@@ -174,15 +172,24 @@ export function BandwidthDailyBillPage() {
   );
 
   if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={5} />;
+  if (isError && bills.length === 0) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          title="Failed to load daily bills"
+          description="Could not fetch daily bandwidth bills."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial={false}
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
-      <motion.div variants={fadeUp}>
+      <div>
         <PageHeader
           title="Bandwidth Daily Bills & Consumption Log"
           subtitle="Daily gigabyte consumption tracking per POP distribution node"
@@ -197,30 +204,24 @@ export function BandwidthDailyBillPage() {
             </Button>
           }
         />
-      </motion.div>
+      </div>
 
-      <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Total Data Logged"
-          value={`${totalVolumeGb.toLocaleString()} GB`}
-          description="Traffic throughput recorded"
-          icon={HardDrive}
-        />
-        <StatCard
-          title="Average Cost / GB"
-          value="2.50 BDT"
-          description="Wholesale transmission tariff"
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Total Daily Billings"
-          value={formatBdtWithSymbol(totalBillAmount)}
-          description="Total payable to upstream"
-          icon={Calendar}
-        />
-      </motion.div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">{`${totalVolumeGb.toLocaleString()} GB`}</span>{' '}
+          <span className="text-muted-foreground">total data logged</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{"2.50 BDT"}</span>{' '}
+          <span className="text-muted-foreground">average cost / gb</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{formatBdtWithSymbol(totalBillAmount)}</span>{' '}
+          <span className="text-muted-foreground">total daily billings</span>
+        </p>
+      </div>
 
-      <motion.div variants={fadeUp}>
+      <div>
         <DataTable
           columns={columns}
           data={list}
@@ -235,7 +236,7 @@ export function BandwidthDailyBillPage() {
           emptyTitle="No daily bills"
           emptyDescription="Receive a daily consumption bill to start logging."
         />
-      </motion.div>
+      </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-md p-6">
@@ -290,6 +291,6 @@ export function BandwidthDailyBillPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </div>
   );
 }

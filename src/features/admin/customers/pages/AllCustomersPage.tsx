@@ -15,9 +15,7 @@ import {
   Phone,
   Wifi,
   WifiOff,
-  Users,
   AlertCircle,
-  Wallet,
   Download,
   Copy,
   Receipt,
@@ -29,7 +27,6 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { StatCard } from '@/components/shared/StatCard';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
@@ -177,50 +174,28 @@ export function AllCustomersPage() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Subscribers"
-          value={rawList.length}
-          description="Registered tenant customer records"
-          trend={{ value: '+12 new this month', positive: true }}
-          icon={Users}
-        />
-        <StatCard
-          title="Online PPPoE Sessions"
-          value={
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-              <span>{onlineCount}</span>
-              <span className="text-xs font-normal text-muted-foreground">({Math.round((onlineCount / (rawList.length || 1)) * 100)}%)</span>
-            </div>
-          }
-          description="Active MikroTik authenticated sessions"
-          trend={{ value: 'Live Telemetry', positive: true }}
-          icon={Wifi}
-        />
-        <StatCard
-          title="Expired / Due"
-          value={
-            <div className="flex items-baseline gap-1 text-rose-600 dark:text-rose-400">
-              <span>{expiredCount}</span>
-              <span className="text-xs font-normal text-muted-foreground">accounts</span>
-            </div>
-          }
-          description="Require recharge or renewal"
-          trend={{ value: 'SMS reminders pending', positive: false }}
-          icon={AlertCircle}
-        />
-        <StatCard
-          title="Outstanding Due"
-          value={<CurrencyDisplay amount={totalDueBdt} className="font-mono text-amber-600 dark:text-amber-400 font-bold" />}
-          description="Total unpaid customer balances"
-          trend={{ value: 'Collectible receivables', positive: false }}
-          icon={Wallet}
-        />
+      {/* Summary — dense, not KPI tile template */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-border/60 bg-card px-4 py-3 text-xs text-muted-foreground">
+        <span>
+          <span className="font-medium text-foreground">{rawList.length}</span> subscribers
+        </span>
+        <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
+        <span>
+          <span className="font-medium text-foreground">{onlineCount}</span> online
+        </span>
+        <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
+        <span>
+          <span className="font-medium text-foreground">{expiredCount}</span> expired
+        </span>
+        <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
+        <span>
+          Due{' '}
+          <CurrencyDisplay amount={totalDueBdt} className="inline font-mono font-medium text-foreground" />
+        </span>
       </div>
 
       {/* Toolbar */}
-      <Card className="border-border/70 shadow-2xs bg-card animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both" style={{ animationDelay: '200ms' }}>
+      <Card className="border-border/70 shadow-2xs bg-card">
         <CardContent className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -281,7 +256,7 @@ export function AllCustomersPage() {
       </Card>
 
       {/* Customers Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-400 fill-mode-both" style={{ animationDelay: '280ms' }}>
+      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -308,14 +283,14 @@ export function AllCustomersPage() {
                   return (
                     <tr
                       key={c.id}
-                      className="hover:bg-muted/30 transition-colors group animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both"
+                      className="hover:bg-muted/30 transition-colors group"
                       style={{ animationDelay: `${320 + index * 30}ms` }}
                     >
                       {/* Subscriber */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2.5">
                           <div className="relative">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 transition-transform duration-200 group-hover:scale-110">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20">
                               {c.name.slice(0, 2).toUpperCase()}
                             </div>
                             <span

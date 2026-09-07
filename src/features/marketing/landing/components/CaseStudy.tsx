@@ -1,6 +1,6 @@
 'use client';
 
-import { Quote, MapPin, Users, TrendingUp } from 'lucide-react';
+import { MapPin, Users } from 'lucide-react';
 import { useTranslations } from '@/features/marketing/shared';
 import type { CaseStudyData } from '../types';
 
@@ -12,72 +12,53 @@ export function CaseStudy({ data }: CaseStudyProps) {
   const t = useTranslations();
 
   return (
-    <section id="case-study" className="py-20 md:py-28 bg-landing-panel/50 border-t border-white/10 relative">
+    <section id="case-study" className="relative border-t border-white/10 bg-landing-panel/50 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-landing-accent">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
             {t('marketing.sections.caseStudy.badge')}
-          </span>
-          <h2 className="font-landing-display mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          </p>
+          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             How {data.company} runs billing on autopilot
           </h2>
         </div>
 
-        <div className="mt-14 rounded-2xl border border-white/15 bg-white/[0.02] p-8 md:p-12 backdrop-blur-xl">
-          <div className="grid gap-8 lg:grid-cols-12 items-center">
-            {/* Left Narrative */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-landing-cta/20 border border-landing-cta/40 flex items-center justify-center font-bold text-landing-cta">
-                  FN
-                </div>
-                <div>
-                  <h3 className="font-landing-display text-xl font-bold text-white">
-                    {data.company}
-                  </h3>
-                  <div className="flex items-center gap-4 text-xs text-white/60">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-landing-cta" />
-                      {data.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3 text-landing-accent" />
-                      {data.customers.toLocaleString()} active subscribers
-                    </span>
-                  </div>
-                </div>
+        <div className="mt-12 grid gap-10 lg:grid-cols-12">
+          <div className="space-y-5 lg:col-span-7">
+            <div>
+              <h3 className="font-landing-display text-xl font-semibold text-white">{data.company}</h3>
+              <div className="mt-2 flex flex-wrap gap-4 text-xs text-white/50">
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-landing-cta" aria-hidden />
+                  {data.location}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-landing-cta" aria-hidden />
+                  {data.customers.toLocaleString()} active subscribers
+                </span>
               </div>
-
-              <blockquote className="text-lg md:text-xl italic text-white/90 leading-relaxed">
-                <Quote className="h-8 w-8 text-landing-cta/40 mb-2" />
-                &ldquo;{data.quote}&rdquo;
-              </blockquote>
-
-              <p className="text-sm text-white/65 leading-relaxed">
-                Before switching to ISP Pay BD, four office staff spent the first week of every month manually reading bKash transaction SMS and cross-referencing ledger notebooks. Today, lines reconnect automatically in 800ms.
-              </p>
             </div>
 
-            {/* Right Metrics Box */}
-            <div className="lg:col-span-5 grid grid-cols-1 gap-4">
-              {data.results.map((res, i) => (
-                <div
-                  key={i}
-                  className="rounded-xl border border-white/10 bg-landing-panel/90 p-5 shadow-lg flex items-center justify-between"
-                >
-                  <div>
-                    <div className="text-xs text-white/50 uppercase tracking-wider">{res.label}</div>
-                    <div className="font-landing-display text-2xl font-black text-white mt-1">
-                      {res.metric}
-                    </div>
-                  </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <TrendingUp className="h-5 w-5" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <blockquote className="border-l-2 border-landing-cta/50 pl-4 text-lg leading-relaxed text-white/85">
+              &ldquo;{data.quote}&rdquo;
+            </blockquote>
+
+            <p className="text-sm leading-relaxed text-white/55">
+              Before switching, four office staff spent the first week of every month reading bKash
+              SMS against ledger notebooks. Today, lines reconnect automatically in ~800ms.
+            </p>
           </div>
+
+          <dl className="divide-y divide-white/10 border-y border-white/10 lg:col-span-5">
+            {data.results.map((res) => (
+              <div key={res.label} className="flex items-baseline justify-between gap-4 py-4">
+                <dt className="text-xs text-white/45">{res.label}</dt>
+                <dd className="font-landing-display text-lg font-semibold tabular-nums text-white">
+                  {res.metric}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
     </section>

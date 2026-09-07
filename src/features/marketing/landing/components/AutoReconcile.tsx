@@ -26,16 +26,16 @@ export function AutoReconcile({ steps }: AutoReconcileProps) {
             <RevealItem
               key={step.step}
               as="div"
-              className={`group relative py-6 transition-transform duration-200 hover:-translate-y-1 md:px-6 md:py-0 ${
+              className={`relative py-6 md:px-6 md:py-0 ${
                 index > 0 ? 'border-t border-white/[0.07] md:border-t-0 md:border-l' : ''
               }`}
             >
               <span className="font-mono text-xs text-landing-cta">{step.step}</span>
-              <h3 className="font-landing-display mt-3 text-lg font-semibold text-white group-hover:text-landing-cta transition-colors">
+              <h3 className="font-landing-display mt-3 text-lg font-semibold text-white">
                 {step.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-white/55">{step.desc}</p>
-              <p className="mt-4 font-mono text-xs text-emerald-400/90">
+              <p className="mt-4 font-mono text-xs text-white/45">
                 {step.metricHighlight ?? step.metric}
               </p>
             </RevealItem>

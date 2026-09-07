@@ -2,11 +2,10 @@
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useExpenses } from '../hooks/use-expenses';
 import type { ExpenseItem } from '../types';
 import type { ExpenseFormValues } from '../schemas';
-import { PageSkeleton, EmptyState, StatCard, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
 import { ExpenseModal } from '../components/ExpenseModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { TrendingDown, Plus, Search, Trash2, Calendar, Building2, DollarSign } from 'lucide-react';
+import { TrendingDown, Plus, Search, Trash2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { staggerContainer, fadeUp, hoverLift } from '@/lib/animations';
 
 export function ExpensesPage() {
   const { expenses, isLoading, isError, refetch, createExpense, deleteExpense } = useExpenses();
@@ -83,10 +81,7 @@ export function ExpensesPage() {
   }
 
   return (
-    <motion.div
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
+    <div
       className="space-y-6 max-w-7xl mx-auto pb-12"
     >
       {/* Header */}
@@ -98,30 +93,36 @@ export function ExpensesPage() {
           </p>
         </div>
         <Can menu="accounting" action="create">
-          <motion.div whileHover={hoverLift}>
+          <div >
             <Button onClick={() => setModalOpen(true)} className="bg-primary hover:bg-primary/90 shadow-sm font-semibold gap-1.5">
               <Plus className="h-4 w-4" />
               New Expense Entry
             </Button>
-          </motion.div>
+          </div>
         </Can>
       </PageHero>
       <PageContent className="space-y-6">
 
       {/* KPI Cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Total Expenses (Visible)"
-          value={<CurrencyDisplay amount={totalExpenses} />}
-          description="Aggregated outflow"
-          icon={DollarSign}
-        />
-        <StatCard title="Vouchers / Records" value={filteredExpenses.length} description="Entries matching criteria" icon={TrendingDown} />
-        <StatCard title="Expense Categories" value={categories.length} description="Distinct cost centers" icon={Building2} />
-      </motion.div>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums">
+            <CurrencyDisplay amount={totalExpenses} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">total expenses</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{filteredExpenses.length}</span>{' '}
+          <span className="text-muted-foreground">vouchers</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{categories.length}</span>{' '}
+          <span className="text-muted-foreground">categories</span>
+        </p>
+      </div>
 
       {/* Filter Bar */}
-      <motion.div variants={fadeUp}>
+      <div >
         <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
@@ -148,10 +149,10 @@ export function ExpensesPage() {
             </Select>
           </div>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Table */}
-      <motion.div variants={fadeUp}>
+      <div >
         {filteredExpenses.length === 0 ? (
           <EmptyState
             icon={<TrendingDown className="h-10 w-10" />}
@@ -190,7 +191,7 @@ export function ExpensesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Can menu="accounting" action="delete">
-                        <motion.div whileHover={hoverLift} className="inline-block">
+                        <div className="inline-block">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -203,7 +204,7 @@ export function ExpensesPage() {
                             <Trash2 className="h-3.5 w-3.5" />
                             <span className="sr-only">Delete</span>
                           </Button>
-                        </motion.div>
+                        </div>
                       </Can>
                     </TableCell>
                   </TableRow>
@@ -212,7 +213,7 @@ export function ExpensesPage() {
             </Table>
           </Card>
         )}
-      </motion.div>
+      </div>
 
       </PageContent>
       {modalOpen && <ExpenseModal open={modalOpen} onOpenChange={setModalOpen} onSave={handleSaveExpense} />}
@@ -226,6 +227,6 @@ export function ExpensesPage() {
         destructive
         onConfirm={handleConfirmDelete}
       />
-    </motion.div>
+    </div>
   );
 }
