@@ -30,10 +30,21 @@ export const customerNavigation: NavItem[] = [
   {
     id: 'customer-payments',
     label: 'My Payment',
-    href: '/customer/payments',
     icon: 'Banknote',
     roles: ['user'],
     section: 'Billing',
+    children: [
+      { id: 'customer-payments-list', label: 'Payment history', href: '/customer/payments' },
+      { id: 'customer-auto-pay', label: 'Auto-pay', href: '/customer/payments/auto-pay' },
+    ],
+  },
+  {
+    id: 'customer-help',
+    label: 'Help',
+    href: '/customer/help',
+    icon: 'CircleHelp',
+    roles: ['user'],
+    hideWhenExpired: true,
   },
   {
     id: 'customer-support',

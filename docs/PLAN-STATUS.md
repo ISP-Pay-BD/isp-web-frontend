@@ -61,7 +61,8 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 
 | Item | When |
 |------|------|
-| H-audit stretch screens (AI chat, movie servers, gateway UIs…) | Future modules — see inventory §H |
+| H-audit stretch screens (AI chat, movie servers, gateway UIs…) | ✅ mock UI in sidebar — inventory §H all `[x]` |
+| **ISP Feature Catalog** (`docs/14-ISP-FEATURE-CATALOG.md`) | ✅ mock UI — inventory §I all `[x]` · data `isp-ops.data.ts` |
 | Playwright E2E | Phase 7+ polish |
 | OpenAPI / Phase 8 | When API work starts |
 | Screenshot visual gate per screen | Continuous craft |
@@ -83,6 +84,7 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 
 ## Trigger / current focus
 
-**Phases 1–7 mock UI + inventory sync: COMPLETE** (dummy data only).  
-Active remaining: **Phase 8 API** (when you say go) and optional §H stretch screens.  
+**Phases 1–7 mock UI + inventory sync: COMPLETE** (dummy data only).
+§H stretch + §I ISP Feature Catalog (75 items): COMPLETE in mock UI.
+Active remaining: **Phase 8 API** (when you say go).
 Premium craft tracker: `docs/PONYTAIL-TRACKER.md`.

@@ -21,3 +21,31 @@ export const customerNotifications = [
   { id: 'n_2', title: 'Maintenance notice', body: 'Scheduled maintenance Sept 5, 2–4 AM.', read: true, at: '2026-09-01T09:00:00' },
   { id: 'n_3', title: 'New package available', body: 'Home 100 Mbps now available.', read: true, at: '2026-08-28T11:00:00' },
 ];
+
+export const customerAutoPay = {
+  enabled: true,
+  method: 'bkash' as const,
+  maskedAccount: '•••• 8812',
+  retryCount: 2,
+  nextChargeAt: '2026-10-01',
+  lastChargeAt: '2026-09-01',
+  lastStatus: 'success' as const,
+};
+
+export const customerInvoicePreview = {
+  id: 'pay_101',
+  invoiceNo: 'INV-2026-0901',
+  packageName: 'Home 40 Mbps',
+  period: 'Sep 2026',
+  subtotalBdt: 1200,
+  taxBdt: 180,
+  totalBdt: 1380,
+  status: 'paid' as const,
+  paidAt: '2026-09-01',
+};
+
+export const helpArticles = [
+  { id: 'h1', title: 'How to pay with bKash', category: 'Billing', minutes: 2 },
+  { id: 'h2', title: 'Reset Wi-Fi password', category: 'Router', minutes: 3 },
+  { id: 'h3', title: 'Why is my speed slow?', category: 'Network', minutes: 4 },
+];

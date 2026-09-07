@@ -11,10 +11,17 @@ import * as networkOps from '@/data/admin/network-ops.data';
 import { supportTickets, adminSupportStats, getTicketById } from '@/data/customer/support.data';
 import { customerSubscription, customerPackages, customerRewards, routerTools, connectedDevices } from '@/data/customer/subscription.data';
 import { newsItems, getNewsById } from '@/data/customer/news.data';
-import { customerProfile, customerNotifications } from '@/data/customer/profile.data';
+import {
+  customerProfile,
+  customerNotifications,
+  customerAutoPay,
+  customerInvoicePreview,
+  helpArticles,
+} from '@/data/customer/profile.data';
 import { adminProfileData } from '@/data/admin/profile.data';
 import { tenants, platformRevenue } from '@/data/platform/tenants.data';
 import * as platformContacts from '@/data/platform/contacts.data';
+import { platformCatalogData } from '@/data/platform/catalog.data';
 import * as employee from '@/data/employee/salaries.data';
 import { getHierarchyByScope } from '@/data/shared/hierarchy.data';
 import type { HierarchyScope } from '@/data/shared/hierarchy.types';
@@ -36,6 +43,33 @@ import {
   whatsappSettingsData,
 } from '@/data/admin/comms.data';
 import { themePresetsData } from '@/data/admin/theme-studio.data';
+import * as inventory from '@/data/admin/inventory.data';
+import * as purchase from '@/data/admin/purchase.data';
+import {
+  rewardConfigData,
+  referralTransactionsData,
+  topReferrersData,
+} from '@/data/admin/rewards.data';
+import {
+  voiceGatewaysData,
+  voiceMessagesData,
+  voiceBroadcastsData,
+} from '@/data/admin/voice-sms.data';
+import { recycleBinItemsData } from '@/data/admin/recycle-bin.data';
+import { tenantWallet } from '@/data/admin/wallet.data';
+import { softwareSettingsData } from '@/data/admin/settings.data';
+import { btrcSummary, btrcSubscribers } from '@/data/admin/reports.data';
+import {
+  auditLogsData,
+  adminNewsData,
+  aiChatSeedMessages,
+  corporateQueuesData,
+  sidebarPinsData,
+  customerAuditEvents,
+  paymentGatewayDetails,
+} from '@/data/admin/extras.data';
+import { productShowcase } from '@/data/platform/contacts.data';
+import * as ispOps from '@/data/admin/isp-ops.data';
 
 // In-memory clones for interactive mock mutations
 let adminCustomers = [...customers];
@@ -338,6 +372,34 @@ export async function getAdminDomain(domain: string) {
     themeStudio: {
       presets: themePresetsData,
     },
+    inventory,
+    purchase,
+    rewards: {
+      config: rewardConfigData,
+      transactions: referralTransactionsData,
+      topReferrers: topReferrersData,
+    },
+    voiceSms: {
+      gateways: voiceGatewaysData,
+      messages: voiceMessagesData,
+      broadcasts: voiceBroadcastsData,
+    },
+    recycleBin: { items: recycleBinItemsData },
+    wallet: { tenantWallet },
+    settings: softwareSettingsData,
+    reports: { btrcSummary, btrcSubscribers },
+    auditLogs: { items: auditLogsData },
+    news: { items: adminNewsData },
+    aiChat: { messages: aiChatSeedMessages },
+    movieServers: {
+      items: softwareSettingsData.servers.filter((s) => s.type === 'movie'),
+    },
+    productShowcase: { items: productShowcase },
+    paymentGateways: { items: paymentGatewayDetails },
+    corporateQueues: { items: corporateQueuesData },
+    sidebarPins: { items: sidebarPinsData },
+    customerAudit: { items: customerAuditEvents },
+    ispOps: ispOps.ispOpsData,
   };
   return map[domain] ?? { items: [] };
 }
@@ -354,6 +416,9 @@ export async function getCustomerDomain(domain: string) {
     news: newsItems,
     profile: customerProfile,
     notifications: customerNotifications,
+    autoPay: customerAutoPay,
+    invoicePreview: customerInvoicePreview,
+    help: { articles: helpArticles },
   };
   return map[domain] ?? {};
 }
@@ -366,6 +431,10 @@ export async function getPlatformDomain(domain: string) {
     support: platformContacts.platformSupportTickets,
     files: platformContacts.platformFileManager,
     showcase: platformContacts.productShowcase,
+    metering: { items: platformCatalogData.metering },
+    sla: { items: platformCatalogData.sla },
+    tenantHealth: platformCatalogData.tenantHealth,
+    billingModes: { items: platformCatalogData.billingModes },
   };
   return map[domain] ?? {};
 }

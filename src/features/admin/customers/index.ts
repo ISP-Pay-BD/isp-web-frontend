@@ -5,3 +5,5 @@ export { NewCustomerPage } from './pages/NewCustomerPage';
 export { EditCustomerPage } from './pages/EditCustomerPage';
 export { CustomerDetailPage } from './pages/CustomerDetailPage';
 export { ImportCustomersPage } from './pages/ImportCustomersPage';
+export { MacBindPage } from './pages/MacBindPage';
+export { CustomerAuditPage } from './pages/CustomerAuditPage';

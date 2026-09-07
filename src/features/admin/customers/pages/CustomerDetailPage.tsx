@@ -37,6 +37,7 @@ import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { Can } from '@/components/shared/Can';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -160,13 +161,22 @@ export function CustomerDetailPage({ id }: { id: string }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      className="gap-2 cursor-pointer"
+                      onClick={() => router.push(`/admin/customers/${customer.id}/mac-bind`)}
+                    >
+                      <Shield className="h-3.5 w-3.5" /> MAC Bind / Unbind
+                    </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2 cursor-pointer">
                       <Link2 className="h-3.5 w-3.5" /> Copy Subscription Link
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2 cursor-pointer">
                       <RefreshCw className="h-3.5 w-3.5" /> Refresh Session
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                    <DropdownMenuItem
+                      className="gap-2 cursor-pointer"
+                      onClick={() => router.push(`/admin/customers/${customer.id}/audit`)}
+                    >
                       <FileText className="h-3.5 w-3.5" /> Audit Logs
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -372,9 +382,24 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   <CardTitle className="text-base flex items-center gap-2">
                     <Signal className="h-4 w-4 text-primary" /> Live Session
                   </CardTitle>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:bg-primary/10">
-                    <RefreshCw className="h-3 w-3" /> Kick
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
+                      onClick={() => toast.success('Session kicked via CoA (mock)')}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Kick
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 hover:bg-emerald-500/10"
+                      onClick={() => toast.success('Reconnect / resume sent (mock)')}
+                    >
+                      Reconnect
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">

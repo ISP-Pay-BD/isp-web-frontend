@@ -1,6 +1,2 @@
-/**
- * @module features/marketing/plugins
- * Public exports only — import from '@/features/marketing/plugins'
- */
-
 export { PluginsPage } from './pages/PluginsPage';
+export { PluginDetailPage } from './pages/PluginDetailPage';

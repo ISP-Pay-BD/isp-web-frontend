@@ -60,10 +60,12 @@ function HierarchyGraphInner({
   const isDark = resolvedTheme === 'dark';
   const colorMode: ColorMode = isDark ? 'dark' : 'light';
   const [expandedIds, setExpandedIds] = useState(() => defaultExpandedIds(root));
+  const [syncedRoot, setSyncedRoot] = useState(root);
 
-  useEffect(() => {
+  if (root !== syncedRoot) {
+    setSyncedRoot(root);
     setExpandedIds(defaultExpandedIds(root));
-  }, [root]);
+  }
 
   useEffect(() => {
     const t = window.setTimeout(() => {

@@ -4,6 +4,7 @@ import { paygCalculator, pricingTiers, calculatePaygMonthly, comparisonGroups, c
 import { landingSections, landingFaqExtended, landingTestimonialsExtended } from '@/data/marketing/sections.data';
 import { landingSectionsAData } from '@/data/marketing/landing-sections-a.data';
 import { pluginsMarketplaceFull, pluginCategories } from '@/data/marketing/plugins.data';
+import { publicStatus } from '@/data/admin/isp-ops.data';
 
 export async function getLandingData() {
   await mockDelay();
@@ -41,4 +42,9 @@ export async function getPluginsData() {
 export async function getContactData() {
   await mockDelay();
   return landingData.contact;
+}
+
+export async function getPublicStatusData() {
+  await mockDelay();
+  return publicStatus;
 }

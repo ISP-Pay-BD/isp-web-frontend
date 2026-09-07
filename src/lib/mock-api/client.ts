@@ -11,7 +11,7 @@ import {
   type ForgotPasswordPayload,
   type UpdatePermissionsPayload
 } from './handlers/auth.handler';
-import { getLandingData, getPricingData, getPluginsData, getContactData } from './handlers/marketing.handler';
+import { getLandingData, getPricingData, getPluginsData, getContactData, getPublicStatusData } from './handlers/marketing.handler';
 import {
   listCustomers,
   getCustomer,
@@ -165,6 +165,7 @@ type HandlerMap = {
   'marketing.landing': () => ReturnType<typeof getLandingData>;
   'marketing.plugins': () => ReturnType<typeof getPluginsData>;
   'marketing.pricing': () => ReturnType<typeof getPricingData>;
+  'marketing.status': () => ReturnType<typeof getPublicStatusData>;
   'news.item': (id: string) => ReturnType<typeof getNewsItem>;
   'platform.admins.list': () => ReturnType<typeof listAdmins>;
   'platform.admins.packages': () => ReturnType<typeof listAdminPackages>;
@@ -257,6 +258,7 @@ const handlers: HandlerMap = {
   'marketing.landing': getLandingData,
   'marketing.plugins': getPluginsData,
   'marketing.pricing': getPricingData,
+  'marketing.status': getPublicStatusData,
   'news.item': getNewsItem,
   'platform.admins.list': listAdmins,
   'platform.admins.packages': listAdminPackages,

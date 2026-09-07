@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/features/shared/data-table';
 import type { PlatformAdminUser } from '@/data/platform/contacts.data';
+import { toast } from 'sonner';
 
 const adminSearchFilter = (
   row: LegacyRow<PlatformAdminUser>,
@@ -96,6 +97,20 @@ const columns: LegacyColumnDef<PlatformAdminUser, unknown>[] = [
       <span className="text-xs text-muted-foreground">
         {row.original.lastLogin.slice(0, 16).replace('T', ' ')}
       </span>
+    ),
+  },
+  {
+    id: 'actions',
+    header: '',
+    size: 120,
+    cell: ({ row }) => (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => toast.success(`Login-as ${row.original.name} (mock)`)}
+      >
+        Login as
+      </Button>
     ),
   },
 ];

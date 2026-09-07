@@ -327,19 +327,96 @@ These features exist in `isppaybd_isp` but were not in the original inventory. A
 
 | # | Route (planned) | Title | Permission | Status |
 |---|-----------------|-------|------------|--------|
-| H1 | `/admin/ai-chat` | AI Chat Assistant | `ai_chat` | [ ] |
-| H2 | `/admin/audit-logs` | System audit logs | `audit_logs` | [ ] |
-| H3 | `/admin/movie-servers` | Movie servers | `movie_servers` | [ ] |
-| H4 | `/admin/news/manage` | News admin CRUD | `news` | [ ] |
+| H1 | `/admin/ai-chat` | AI Chat Assistant | `ai_chat` | [x] |
+| H2 | `/admin/audit-logs` | System audit logs | `audit_logs` | [x] |
+| H3 | `/admin/movie-servers` | Movie servers | `movie_servers` | [x] |
+| H4 | `/admin/news` | News admin CRUD | `news` | [x] |
 | H5 | `/platform/redis-logs` | Redis & logs inspector | `super_admin` | [x] |
-| H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [ ] |
+| H6 | `/admin/product-showcase` | Product showcase | `product_showcase` | [x] |
 | H7 | `/platform/maintenance` | Maintenance mode toggle | `super_admin` | [x] |
 | H8 | `/admin/reports/otc` | OTC report | `accounting` | [x] |
 | H9 | `/admin/bandwidth/daily-bill` | Daily bill (bandwidth sell) | `bandwidth` | [x] |
-| H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [ ] |
-| H11 | `/admin/customers/:id/audit` | Customer audit logs | `customers` | [ ] |
-| H12 | `/admin/corporate/queues` | Corporate sync queues | `customers` | [ ] |
-| H13 | `/admin/payment-gateways/*` | Payment gateway UIs (bKash, Nagad…) | `payment_gateway` | [ ] |
-| H14 | `/admin/sidebar-pins` | Sidebar pinned items | `settings` | [ ] |
+| H10 | `/admin/customers/:id/mac-bind` | MAC bind/unbind | `customers` | [x] |
+| H11 | `/admin/customers/:id/audit` | Customer audit logs | `customers` | [x] |
+| H12 | `/admin/corporate/queues` | Corporate sync queues | `customers` | [x] |
+| H13 | `/admin/payment-gateways/*` | Payment gateway UIs (bKash, Nagad…) | `payment_gateway` | [x] |
+| H14 | `/admin/sidebar-pins` | Sidebar pinned items | `settings` | [x] |
 
-**Updated total:** ~118 base routes + ~14 audit additions ≈ **~132 screens**
+**Updated total:** ~118 base routes + 14 audit additions ≈ **~132 screens** (mock UI complete)
+
+---
+
+## I. ISP Feature Catalog screens (`docs/14-ISP-FEATURE-CATALOG.md`)
+
+Industry / BD competitor gaps implemented as mock UI (data: `src/data/admin/isp-ops.data.ts`, domain `ispOps`).
+
+| # | Route | Title | Status |
+|---|-------|-------|--------|
+| I1 | `/admin/routers/[id]` | Router health | [x] |
+| I2 | `/admin/routers/[id]/users` | Live PPPoE users | [x] |
+| I3 | `/admin/radius` | RADIUS / CoA / PoD | [x] |
+| I4 | `/admin/invoices` · `/admin/invoices/[id]` | Invoices + PDF | [x] |
+| I5 | `/admin/customer-payments/[id]/pos` | Thermal POS receipt | [x] |
+| I6 | `/admin/payments/reconcile` | Payment reconcile | [x] |
+| I7 | `/captive` | Captive paywall | [x] |
+| I8 | `/admin/customers/inactive` | Inactive customers | [x] |
+| I9 | `/admin/reports/btrc` | BTRC Excel/PDF export (deepen) | [x] |
+| I10 | `/admin/compliance/ip-logs` | BTRC IP/NAT logs | [x] |
+| I11 | `/admin/billing/policies` | Grace + FUP policy | [x] |
+| I12 | `/admin/billing/tax` | VAT / tax | [x] |
+| I13 | `/admin/collections/reminders` | Due reminders | [x] |
+| I14 | `/admin/collections/cashbook` | Collector cash book | [x] |
+| I15 | `/admin/olt/[id]/onus` | ONU optical / provision | [x] |
+| I16 | `/admin/olt/vendors` | Multi-vendor OLT | [x] |
+| I17 | `/admin/network/pon` | PON / splitter map | [x] |
+| I18 | `/admin/inventory/assign` | CPE assign | [x] |
+| I19 | `/admin/inventory/transfers` | Stock transfer | [x] |
+| I20 | `/admin/ipam` | IPAM IPv4/IPv6 | [x] |
+| I21 | `/admin/network/cgnat` | CGNAT map | [x] |
+| I22 | `/admin/hotspot/vouchers` | Hotspot vouchers | [x] |
+| I23 | `/admin/hotspot/walled-garden` | Walled garden | [x] |
+| I24 | `/admin/reports/usage` | Bandwidth usage | [x] |
+| I25 | `/admin/network/outages` | Outage board | [x] |
+| I26 | `/status` | Public status | [x] |
+| I27 | `/admin/billing/dunning` | Dunning schedule | [x] |
+| I28 | `/admin/billing/proration` | Proration wizard | [x] |
+| I29 | `/admin/payments/credits` | Credit notes | [x] |
+| I30 | `/admin/billing/deposits` | Deposits / OTC | [x] |
+| I31 | `/admin/pop/commissions` | POP commissions | [x] |
+| I32 | `/admin/pop/package-profit` | Package profit by POP | [x] |
+| I33 | `/admin/pop/resellers` | Impersonate POP (toast) | [x] |
+| I34 | `/employee/attendance` | GPS attendance | [x] |
+| I35 | `/admin/jobs` · `/employee/jobs` | Work orders | [x] |
+| I36 | `/admin/reports/collections-map` | Collections map | [x] |
+| I37 | `/admin/leads` | Leads pipeline | [x] |
+| I38 | `/admin/customers/[id]/kyc` | KYC vault | [x] |
+| I39 | `/admin/customers/groups` | Parent–child groups | [x] |
+| I40 | `/customer/payments/[id]/invoice` | Customer invoice PDF | [x] |
+| I41 | `/customer/payments/auto-pay` | Auto-pay | [x] |
+| I42 | `/admin/notifications/usage-alerts` | Usage alerts | [x] |
+| I43 | `/help` · `/customer/help` | Knowledge base | [x] |
+| I44 | `/admin/announcements` | Announcement banners | [x] |
+| I45 | `/admin/rewards/analytics` | Referral analytics | [x] |
+| I46 | `/admin/addons` | OTT / IPTV addons | [x] |
+| I47 | `/admin/services` · `/admin/services/mobile` | Multi-service + mobile | [x] |
+| I48 | `/plugins/[slug]` | Plugin detail | [x] |
+| I49 | `/reset-password` | Reset password | [x] |
+| I50 | `/platform/admins` | Login-as tenant (toast) | [x] |
+| I51 | `/platform/admins/[id]/billing` | Tenant billing mode | [x] |
+| I52 | `/platform/metering` | Usage metering | [x] |
+| I53 | `/platform/tenants/[id]/health` | Tenant health | [x] |
+| I54 | `/admin/developers` | API keys / webhooks | [x] |
+| I55 | `/admin/branding` | White-label branding | [x] |
+| I56 | `/platform/sla` | Tenant SLA | [x] |
+| I57 | `/admin/acs` | TR-069 / ACS | [x] |
+| I58 | `/admin/network/netflow` | NetFlow | [x] |
+| I59 | `/admin/noc` | NOC hooks | [x] |
+| I60 | `/admin/vpn` | VPN tunnels | [x] |
+| I61 | `/admin/network/ipoe` | IPoE dual-stack | [x] |
+| I62 | `/admin/fraud` | Fraud score | [x] |
+| I63 | `/admin/contracts` | Contract e-sign | [x] |
+| I64 | `/admin/dealers` | Dealer 6-tier | [x] |
+| I65 | `/admin/bandwidth/sla` | Bandwidth SLA | [x] |
+| I66 | `/admin/backup` | Backup / restore | [x] |
+
+**Catalog mock UI:** complete · Next real work: **Phase 8 API**

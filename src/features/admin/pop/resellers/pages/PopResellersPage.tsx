@@ -1,7 +1,7 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { Building2, Users, Phone } from 'lucide-react';
+import { Building2, Users, Phone, LogIn } from 'lucide-react';
 import { usePopData } from '../../hooks/use-pop';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -9,6 +9,8 @@ import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import type { PopReseller } from '../../hooks/use-pop';
 
@@ -58,6 +60,21 @@ export function PopResellersPage() {
       accessorKey: 'status',
       header: 'Status',
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1"
+          onClick={() => toast.success(`Logged in as POP ${row.original.name} (mock)`)}
+        >
+          <LogIn className="h-3.5 w-3.5" />
+          Login as POP
+        </Button>
+      ),
     },
   ];
 

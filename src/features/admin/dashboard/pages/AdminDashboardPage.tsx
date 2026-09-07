@@ -35,7 +35,6 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
-import { StatCard } from '@/components/shared/StatCard';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -167,43 +166,70 @@ export function AdminDashboardPage() {
 
       {/* Primary KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Active Customers"
-          value={
-            <div className="flex items-baseline gap-1">
-              <NumberFlow value={stats.activeCustomers} />
-              <span className="text-xs font-normal text-muted-foreground">/ {stats.totalCustomers}</span>
+        <Link href="/admin/customers" className="block h-full group no-underline">
+          <SpotlightCard className="flex h-full flex-col justify-between p-5">
+            <div>
+              <div className="flex items-start justify-between">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Active Customers
+                </p>
+                <Users className="h-4 w-4 text-muted-foreground/70" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1 text-2xl font-semibold text-foreground">
+                <NumberFlow value={stats.activeCustomers} />
+                <span className="text-xs font-normal text-muted-foreground">/ {stats.totalCustomers}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Live service</p>
+              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">+4.2% this month</p>
             </div>
-          }
-          description="Live service"
-          trend={{ value: '+4.2% this month', positive: true }}
-          icon={Users}
-          href="/admin/customers"
-          ctaText="View customers"
-        />
-        <StatCard
-          title="Payment Received"
-          value={
-            <div className="flex items-baseline gap-1 font-mono">
-              <span>৳</span>
-              <NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
+            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
+              View customers <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
             </div>
-          }
-          description="Successful collections"
-          trend={{ value: 'Target 94% on track', positive: true }}
-          icon={Wallet}
-          href="/admin/customer-payments"
-          ctaText="View payments"
-        />
-        <StatCard
-          title="Online Sessions"
-          value={<NumberFlow value={stats.onlineUsers} />}
-          description="Active PPPoE now"
-          trend={{ value: `${stats.routerActive ?? 6} NAS online`, positive: true }}
-          icon={Wifi}
-          href="/admin/routers"
-          ctaText="View sessions"
-        />
+          </SpotlightCard>
+        </Link>
+        <Link href="/admin/customer-payments" className="block h-full group no-underline">
+          <SpotlightCard className="flex h-full flex-col justify-between p-5">
+            <div>
+              <div className="flex items-start justify-between">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Payment Received
+                </p>
+                <Wallet className="h-4 w-4 text-muted-foreground/70" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1 font-mono text-2xl font-semibold text-foreground">
+                <span>৳</span>
+                <NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Successful collections</p>
+              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">Target 94% on track</p>
+            </div>
+            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
+              View payments <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+            </div>
+          </SpotlightCard>
+        </Link>
+        <Link href="/admin/routers" className="block h-full group no-underline">
+          <SpotlightCard className="flex h-full flex-col justify-between p-5">
+            <div>
+              <div className="flex items-start justify-between">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Online Sessions
+                </p>
+                <Wifi className="h-4 w-4 text-muted-foreground/70" />
+              </div>
+              <div className="mt-3 text-2xl font-semibold text-foreground">
+                <NumberFlow value={stats.onlineUsers} />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Active PPPoE now</p>
+              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {stats.routerActive ?? 6} NAS online
+              </p>
+            </div>
+            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
+              View sessions <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+            </div>
+          </SpotlightCard>
+        </Link>
         <Link href="/admin/subscription" className="block h-full group no-underline">
           <SpotlightCard className="flex h-full flex-col justify-between p-5">
             <div>

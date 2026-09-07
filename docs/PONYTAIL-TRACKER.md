@@ -19,8 +19,9 @@
 | Admin user-access | ✅ family | ✅ | CSS only | ✅ |
 | Admin network | ✅ | ✅ muted canvas (no decorative gradient) | CSS only | ✅ |
 | Customer dashboard / payments / rewards | ✅ | ✅ | CSS only | ✅ |
-| Platform | ✅ | ✅ | none | ✅ |
-| Employee | ✅ | ✅ solid chart bars | none | ✅ |
+| Platform | ✅ | ✅ metering/SLA/health/billing mockFetch | none | ✅ |
+| Employee | ✅ | ✅ GPS attendance + field jobs mockFetch | none | ✅ |
+| Admin isp-ops catalog (§I) | ✅ family brief | ✅ strips + states | CSS only | ✅ |
 
 ---
 
@@ -33,6 +34,7 @@
 | P3 Data boundary `@/data` → mockFetch | ✅ LandingPage static value import intentional |
 | P4 Premium craft | ✅ closed for mock phase |
 | P5 Docs / inventory sync | ✅ A–G + H8/H9 marked; §H stretch left open |
+| P6 Catalog stub → DoD pass | ✅ 2026-09-07 — thin stubs → mockFetch + isp-ops strips |
 
 ---
 
@@ -45,6 +47,7 @@
 - Contact form: removed heavy shadow stack (“remove one”)
 - Inventory: **~120 [x]**, **10 [ ]** (§H stretch only)
 - **0** portal `framer-motion`; **0** `<StatCard` in features
+- **2026-09-07 verify:** inventory screen rows all `[x]`; catalog all `[x]`; lint 0 errors; typecheck/test/build green; static mock only (Phase 8 deferred)
 
 ## Requirement audit
 
@@ -54,10 +57,13 @@
 | Portals CSS motion only | no portal Framer | ✅ |
 | Marketing ISP dark craft | Landing + contact + pricing/plugins | ✅ |
 | Full state sets | Skeletons/empty/error across portals | ✅ mock phase |
-| `pnpm lint && typecheck && test && build` | Run on close-out | ✅ (verify this session) |
-| Inventory sync | A–G done; H stretch deferred | ✅ |
-| Phase 8 API | Out of scope | ⏳ |
-| §H stretch (AI chat, gateways…) | Not built | ⏳ optional |
+| `pnpm lint && typecheck && test && build` | Run on close-out | ✅ 2026-09-07 (0 lint errors; 17 tests; build OK) |
+| Inventory sync | A–G done; H stretch deferred | ✅ A–I all screen rows `[x]` |
+| Phase 8 API | Out of scope | ⏳ intentionally deferred |
+| §H stretch (AI chat, gateways…) | Not built | ✅ mock UI present |
+| StatCard in features | 0 | ✅ |
+| Portal Framer | 0 | ✅ |
+| Forbidden UI kits | 0 in package.json | ✅ |
 
 ---
 
@@ -76,6 +82,7 @@
 
 | Date | Notes |
 |------|-------|
+| 2026-09-07 | **Catalog complete:** platform metering/SLA/health/billing, employee GPS/jobs, customer auto-pay/invoice, POS/status via mock-api; isp-ops count strips; branding preview; HierarchyGraph lint fix |
 | 2026-09-07 | Goal armed; landing + portal Framer zero |
 | 2026-09-07 | Batch StatCard→strips; ProductPreview; customer/profile craft |
 | 2026-09-07 | HR / customer / OLT / payments strips; P3 pricing/plugins/profile/OTC |

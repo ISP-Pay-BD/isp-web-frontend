@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { useRouters } from '../hooks/useRouters';
@@ -11,8 +12,9 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
-import { Button } from '@/components/ui/button';
-import { Plus, Router, RefreshCw, Activity, CheckCircle2, Edit, Trash2, Zap } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Plus, Router, RefreshCw, Activity, CheckCircle2, Edit, Trash2, Zap, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const routerSearchFilter = (row: LegacyRow<RouterItem>, _columnId: string, filterValue: unknown) => {
@@ -121,7 +123,12 @@ export function RoutersPage() {
         enableHiding: false,
         cell: ({ row }) => (
           <div>
-            <div className="font-semibold text-foreground">{row.original.name}</div>
+            <Link
+              href={`/admin/routers/${row.original.id}`}
+              className="font-semibold text-foreground hover:text-primary hover:underline"
+            >
+              {row.original.name}
+            </Link>
             <div className="text-xs text-muted-foreground">{row.original.area} POP</div>
           </div>
         ),
@@ -191,6 +198,13 @@ export function RoutersPage() {
           const router = row.original;
           return (
             <div className="flex items-center justify-end gap-1">
+              <Link
+                href={`/admin/routers/${router.id}/users`}
+                className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}
+                title="Live PPPoE users"
+              >
+                <Users className="h-4 w-4 text-primary" />
+              </Link>
               <Button
                 variant="ghost"
                 size="icon"

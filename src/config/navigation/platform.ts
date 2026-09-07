@@ -33,6 +33,20 @@ export const platformNavigation: NavItem[] = [
     roles: ['super_admin'],
   },
   {
+    id: 'platform-metering',
+    label: 'Metering',
+    href: '/platform/metering',
+    icon: 'Activity',
+    roles: ['super_admin'],
+  },
+  {
+    id: 'platform-sla',
+    label: 'Tenant SLA',
+    href: '/platform/sla',
+    icon: 'Gauge',
+    roles: ['super_admin'],
+  },
+  {
     id: 'platform-revenue',
     label: 'Revenue',
     href: '/platform/revenue',

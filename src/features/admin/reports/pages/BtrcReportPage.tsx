@@ -44,9 +44,14 @@ export function BtrcReportPage() {
           <h1 className="text-2xl font-bold tracking-tight">BTRC Subscriber Report</h1>
           <p className="text-muted-foreground text-sm">Export-ready subscriber demographics for Bangladesh Telecommunication Regulatory Commission filing.</p>
         </div>
-        <Button variant="outline" onClick={() => toast.success('Export coming soon')}>
-          Export CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => toast.success('BTRC Excel export ready (mock)')}>
+            Export Excel
+          </Button>
+          <Button variant="outline" onClick={() => toast.success('BTRC PDF export ready (mock)')}>
+            Export PDF
+          </Button>
+        </div>
       </PageHero>
       <PageContent className="space-y-6">
 
