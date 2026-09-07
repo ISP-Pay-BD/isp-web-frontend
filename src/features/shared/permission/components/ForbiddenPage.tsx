@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { ShieldOff, ArrowLeft, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuthStore, getRoleHomePath } from '@/stores/auth-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { ROLE_HOME } from '@/lib/auth/route-access';
 
 export function ForbiddenPage() {
   const user = useAuthStore((s) => s.user);
-  const home = user ? getRoleHomePath(user.role) : '/login';
+  const home = user ? (ROLE_HOME[user.role] ?? '/login') : '/login';
 
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center px-6 text-center">

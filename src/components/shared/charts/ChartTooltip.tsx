@@ -1,7 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
-
 interface ChartTooltipProps {
   active?: boolean;
   payload?: Array<{
@@ -25,10 +23,7 @@ export function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 5 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
+    <div
       className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl p-3 min-w-[160px]"
     >
       {label && (
@@ -54,7 +49,7 @@ export function ChartTooltip({
           </div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -68,10 +63,7 @@ export function ChartTooltipWithBadge({
   if (!active || !payload?.length) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 5 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.15 }}
+    <div
       className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl p-3 min-w-[180px]"
     >
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/50">
@@ -105,6 +97,6 @@ export function ChartTooltipWithBadge({
           </div>
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

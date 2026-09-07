@@ -1,11 +1,8 @@
-'use client';
-
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SpotlightCard } from '@/components/motion/SpotlightCard';
 
 interface StatCardProps {
   title: string;
@@ -31,9 +28,13 @@ export function StatCard({
   ctaText,
 }: StatCardProps) {
   const cardContent = (
-    <SpotlightCard
+    <div
       onClick={onClick}
-      className={cn('h-full', (href || onClick) && 'cursor-pointer', className)}
+      className={cn(
+        'group h-full rounded-xl border border-border/60 bg-card transition-colors hover:border-border',
+        (href || onClick) && 'cursor-pointer',
+        className,
+      )}
     >
       <div className="flex h-full flex-col justify-between p-5">
         <div>
@@ -42,16 +43,11 @@ export function StatCard({
               {title}
             </p>
             {Icon ? (
-              <Icon
-                className="h-4 w-4 shrink-0 text-muted-foreground/70 transition-transform duration-200 group-hover:translate-x-0.5"
-                aria-hidden
-              />
+              <Icon className="h-4 w-4 shrink-0 text-muted-foreground/70" aria-hidden />
             ) : null}
           </div>
           <div className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</div>
-          {description ? (
-            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-          ) : null}
+          {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
           {trend ? (
             <p
               className={cn(
@@ -67,22 +63,22 @@ export function StatCard({
         </div>
 
         {(href || ctaText) && (
-          <div className="mt-4 flex items-center gap-1 text-[11px] font-medium text-primary opacity-80 transition-all group-hover:opacity-100">
+          <div className="mt-4 flex items-center gap-1 text-[11px] font-medium text-primary opacity-80 transition-opacity group-hover:opacity-100">
             <span>{ctaText || 'View details'}</span>
-            <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-1" />
+            <ArrowRight className="h-3 w-3" />
           </div>
         )}
       </div>
-    </SpotlightCard>
+    </div>
   );
 
   if (href) {
     return (
-      <Link href={href} className="group block h-full no-underline">
+      <Link href={href} className="block h-full no-underline">
         {cardContent}
       </Link>
     );
   }
 
-  return <div className="group h-full">{cardContent}</div>;
+  return cardContent;
 }

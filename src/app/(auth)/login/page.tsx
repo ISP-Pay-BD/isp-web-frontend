@@ -3,7 +3,8 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LoginPage } from '@/features/auth/login';
-import { useAuthStore, getRoleHomePath } from '@/stores/auth-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { ROLE_HOME } from '@/lib/auth/route-access';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 
 function LoginRouteInner() {
@@ -15,7 +16,7 @@ function LoginRouteInner() {
   useEffect(() => {
     if (isAuthenticated && user) {
       const redirect = searchParams.get('redirect');
-      const home = getRoleHomePath(user.role);
+      const home = ROLE_HOME[user.role] ?? '/login';
       router.replace(redirect && redirect.startsWith('/') ? redirect : home);
     }
   }, [isAuthenticated, user, searchParams, router]);

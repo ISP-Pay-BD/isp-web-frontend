@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuthStore, getRoleHomePath } from '@/stores/auth-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { ROLE_HOME } from '@/lib/auth/route-access';
 import { MockApiError } from '@/lib/mock-api/errors';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
@@ -42,7 +43,7 @@ export function LoginForm() {
       const user = await login(values.email, values.password);
       toast.success(`Welcome back, ${user.name}`);
       const redirect = searchParams.get('redirect');
-      const home = getRoleHomePath(user.role);
+      const home = ROLE_HOME[user.role] ?? '/login';
       router.replace(redirect && redirect.startsWith('/') ? redirect : home);
     } catch (err) {
       const message =

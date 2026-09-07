@@ -5,7 +5,6 @@ import { persist } from 'zustand/middleware';
 import type { User, UserRole } from '@/types/auth';
 import { mockFetch } from '@/lib/mock-api/client';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session-cookie';
-import { ROLE_HOME } from '@/lib/auth/route-access';
 
 interface AuthState {
   user: User | null;
@@ -89,8 +88,3 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
-
-/** @deprecated Use ROLE_HOME from @/lib/auth/route-access */
-export function getRoleHomePath(role: UserRole): string {
-  return ROLE_HOME[role] ?? '/login';
-}

@@ -20,7 +20,6 @@ import {
   ChevronRight,
   HardDrive,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import NumberFlow from '@number-flow/react';
 import {
   AreaChart,
@@ -45,20 +44,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { fadeUp, staggerContainer } from '@/lib/animations';
 import { SpotlightCard } from '@/components/motion/SpotlightCard';
 import { useAdminDashboard } from '../hooks/use-admin-dashboard';
 
-const containerVariants = {
-  ...staggerContainer,
-  visible: staggerContainer.show,
-  show: staggerContainer.show,
-};
-
-const itemVariants = {
-  ...fadeUp,
-  visible: fadeUp.show,
-};
 
 export function AdminDashboardPage() {
   const { data: stats, isLoading, isError, refetch } = useAdminDashboard();
@@ -88,14 +76,9 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial={false}
-      animate="visible"
-      className="space-y-6 max-w-7xl mx-auto pb-12"
-    >
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Header */}
-      <motion.div variants={itemVariants}>
+      <div>
         <PageHeader
           title="Operations"
           subtitle="Collections, sessions, and billing alerts that need action today."
@@ -127,10 +110,10 @@ export function AdminDashboardPage() {
             </div>
           }
         />
-      </motion.div>
+      </div>
 
       {/* Triage — action first */}
-      <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Link href="/admin/customers?status=expired" className="group block no-underline">
           <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
             <div>
@@ -171,22 +154,19 @@ export function AdminDashboardPage() {
             <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
           </SpotlightCard>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Ops snapshot */}
-      <motion.div
-        variants={itemVariants}
-        className="rounded-xl bg-muted/30 px-4 py-3 text-xs text-muted-foreground"
-      >
+      <div className="rounded-xl bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">৳{stats.monthlyCollectionBdt.toLocaleString()}</span>
         {' '}collected ·{' '}
         <span className="font-medium text-foreground">{stats.customersPaymentReceivedCount ?? 840}</span> payments ·{' '}
         <span className="font-medium text-foreground">{stats.routerActive ?? 6}</span> routers online ·{' '}
         <span className="font-medium text-foreground">{stats.allResellers ?? 12}</span> POP resellers
-      </motion.div>
+      </div>
 
       {/* Primary KPIs */}
-      <motion.div variants={itemVariants} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Active Customers"
           value={
@@ -249,10 +229,10 @@ export function AdminDashboardPage() {
             </div>
           </SpotlightCard>
         </Link>
-      </motion.div>
+      </div>
 
       {/* Metric sections */}
-      <motion.div variants={itemVariants} className="space-y-4">
+      <div className="space-y-4">
         {isGroupedMetrics ? (
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl bg-muted/20 p-3">
             <Link href="/admin/customers/new" className="block no-underline">
@@ -401,10 +381,10 @@ export function AdminDashboardPage() {
             </Card>
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Router / POP Live Sessions (Real-time cards mirroring sAdmin.php) */}
-      <motion.div variants={itemVariants}>
+      <div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -455,10 +435,10 @@ export function AdminDashboardPage() {
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Analytics Charts Grid: Customer Payment Report (Combo Bar+Line) + Weekly Collections (Bar) */}
-      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-6 lg:grid-cols-12">
         {/* Customer Payment Report — Combo Chart (Bar + Line) */}
         <Card className="lg:col-span-8 bg-card shadow-none border-0 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -669,10 +649,10 @@ export function AdminDashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Payment Method Mix, Ticket Support Health, Bandwidth Usage */}
-      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Payment Method Mix */}
         <Card className="bg-card shadow-none border-0">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -823,10 +803,10 @@ export function AdminDashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
 
       {/* Geo Revenue by Territory & Real-time Audit Log */}
-      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-7">
+      <div className="grid gap-6 lg:grid-cols-7">
         {/* Geo Revenue */}
         <Card className="lg:col-span-4 bg-card shadow-none border-0">
           <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
@@ -907,7 +887,7 @@ export function AdminDashboardPage() {
             ))}
           </CardContent>
         </Card>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

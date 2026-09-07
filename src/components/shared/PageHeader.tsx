@@ -1,59 +1,73 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PageHero } from '@/components/motion/PageHero';
 
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+  /** @deprecated use href */
+  url?: string;
 }
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  breadcrumb?: BreadcrumbItem[];
+  /** Alias for breadcrumb */
   breadcrumbs?: BreadcrumbItem[];
   actions?: ReactNode;
+  children?: ReactNode;
   className?: string;
+}
+
+function crumbHref(item: BreadcrumbItem): string | undefined {
+  return item.href ?? item.url;
 }
 
 export function PageHeader({
   title,
   subtitle,
+  breadcrumb,
   breadcrumbs,
   actions,
+  children,
   className,
 }: PageHeaderProps) {
+  const crumbs = breadcrumb ?? breadcrumbs ?? [];
+
   return (
-    <PageHero
-      className={cn(
-        'flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between',
-        className,
-      )}
-    >
-      <div className="space-y-1">
-        {breadcrumbs && breadcrumbs.length > 0 ? (
-          <nav className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
-            {breadcrumbs.map((bc, idx) => (
-              <span key={idx} className="flex items-center gap-1.5">
+    <div className={cn('mb-6 space-y-2', className)}>
+      {crumbs.length > 0 ? (
+        <nav className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          {crumbs.map((item, idx) => {
+            const href = crumbHref(item);
+            const isLast = idx === crumbs.length - 1;
+            return (
+              <span key={`${item.label}-${idx}`} className="flex items-center gap-1.5">
                 {idx > 0 ? <ChevronRight className="h-3 w-3 opacity-60" /> : null}
-                {bc.href ? (
-                  <Link href={bc.href} className="hover:text-foreground transition-colors">
-                    {bc.label}
+                {href && !isLast ? (
+                  <Link href={href} className="hover:text-foreground transition-colors">
+                    {item.label}
                   </Link>
                 ) : (
-                  <span className="text-foreground font-medium">{bc.label}</span>
+                  <span className={isLast ? 'text-foreground font-medium' : undefined}>
+                    {item.label}
+                  </span>
                 )}
               </span>
-            ))}
-          </nav>
-        ) : null}
-        <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
-        {subtitle ? <p className="text-muted-foreground text-sm">{subtitle}</p> : null}
+            );
+          })}
+        </nav>
+      ) : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+          {subtitle ? <p className="text-muted-foreground mt-0.5 text-sm">{subtitle}</p> : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2.5">{actions}</div> : null}
-    </PageHero>
+      {children}
+    </div>
   );
 }
