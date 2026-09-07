@@ -2,7 +2,7 @@
 
 > **Single index:** Is the `.md` plan complete? What phase is next?
 
-Last synced: **Sep 2026**
+Last synced: **2026-09-07**
 
 ---
 
@@ -31,14 +31,14 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 | Phase | Plan written? | Built? | Next action |
 |-------|---------------|--------|-------------|
 | **P0** Foundation | ✅ | ✅ | Done — see `P0-READY.md` |
-| **Phase 1** Marketing (28 sections) | ✅ | ✅ mock UI | Premium craft — `PONYTAIL-TRACKER.md` |
-| **Phase 2** Auth + permissions UI | ✅ | ✅ mock UI | Premium craft ongoing |
-| **Phase 3** Customer portal | ✅ | ✅ mock UI | Premium craft ongoing |
-| **Phase 4** Reseller admin | ✅ | ✅ mock UI (admin POP) | Premium craft ongoing |
-| **Phase 5** Full tenant admin | ✅ | ✅ mock UI | Premium craft ongoing |
-| **Phase 6** Platform super-admin | ✅ | ✅ mock UI | Premium craft ongoing |
-| **Phase 7** Employee + polish | ✅ | ✅ mock UI | Premium craft ongoing |
-| **Phase 8** API integration | ✅ spec only | ❌ out of scope | Future |
+| **Phase 1** Marketing (28 sections) | ✅ | ✅ mock UI | Done — includes `/contact` |
+| **Phase 2** Auth + permissions UI | ✅ | ✅ mock UI | Done |
+| **Phase 3** Customer portal | ✅ | ✅ mock UI | Done |
+| **Phase 4** Reseller admin | ✅ | ✅ mock UI | Done |
+| **Phase 5** Full tenant admin | ✅ | ✅ mock UI | Done |
+| **Phase 6** Platform super-admin | ✅ | ✅ mock UI | Done |
+| **Phase 7** Employee + polish | ✅ | ✅ mock UI | Done |
+| **Phase 8** API integration | ✅ spec only | ❌ out of scope | **Next when ready** |
 
 ---
 
@@ -52,19 +52,19 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 | Full navigation | `MASTER-BUILD-PLAN.md` P0-D | ✅ |
 | Shared components (P0 set) | `09-COMPONENTS-AND-PATTERNS.md` | ✅ |
 | Marketing mock data | `06-MOCK-DATA-SPEC.md` | ✅ |
-| `next-intl` EN/BN | `11-I18N.md` | ⏳ parallel (not blocking mock UI) |
+| `next-intl` EN/BN | `11-I18N.md` | ⏳ optional polish (custom i18n present) |
 | 403 / User Access UI | `05-PERMISSIONS-AND-ROLES.md` | ✅ mock UI present |
 
 ---
 
-## Optional plan items (not blocking Phase 1)
+## Optional / deferred (not blocking mock UI complete)
 
 | Item | When |
 |------|------|
-| OG image spec | Phase 1 |
-| PHP-only features in inventory | Phases 3–7 (listed in `PRE-PHASE-AUDIT.md`) |
-| Playwright E2E plan | Phase 7 |
-| OpenAPI / Phase 8 detail | When API work starts |
+| H-audit stretch screens (AI chat, movie servers, gateway UIs…) | Future modules — see inventory §H |
+| Playwright E2E | Phase 7+ polish |
+| OpenAPI / Phase 8 | When API work starts |
+| Screenshot visual gate per screen | Continuous craft |
 
 ---
 
@@ -83,4 +83,6 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 
 ## Trigger / current focus
 
-**Phases 1–7 mock UI exist.** Active work is **premium-ui craft** across all surfaces — track in `docs/PONYTAIL-TRACKER.md`. Do not claim phase “done” for inventory DoD until visual gates pass.
+**Phases 1–7 mock UI + inventory sync: COMPLETE** (dummy data only).  
+Active remaining: **Phase 8 API** (when you say go) and optional §H stretch screens.  
+Premium craft tracker: `docs/PONYTAIL-TRACKER.md`.

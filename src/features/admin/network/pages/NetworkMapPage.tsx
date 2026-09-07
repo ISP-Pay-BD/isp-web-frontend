@@ -123,7 +123,7 @@ export function NetworkMapPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 relative min-h-[560px] bg-gradient-to-br from-slate-950/5 via-background to-slate-950/5 dark:from-slate-950/40 dark:via-background dark:to-slate-950/40 overflow-hidden flex flex-col md:flex-row">
+          <CardContent className="relative flex min-h-[560px] flex-col overflow-hidden bg-muted/20 p-0 md:flex-row">
             {/* Visual SVG Map Canvas */}
             <div className="flex-1 relative p-6 flex items-center justify-center min-h-[480px]">
               {/* Map Controls */}

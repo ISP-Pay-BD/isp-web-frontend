@@ -14,7 +14,7 @@ const footerLinks = {
     { labelKey: 'marketing.nav.startTrial', href: '/register' },
   ],
   company: [
-    { labelKey: 'marketing.nav.contact', href: '/#contact' },
+    { labelKey: 'marketing.nav.contact', href: '/contact' },
     { labelKey: 'marketing.nav.login', href: '/login' },
     { labelKey: 'marketing.footer.privacy', href: '/privacy' },
     { labelKey: 'marketing.footer.terms', href: '/terms' },

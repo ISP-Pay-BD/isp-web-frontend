@@ -16,7 +16,7 @@ const navI18nKeys: Record<string, string> = {
   '/#how-it-works': 'marketing.nav.howItWorks',
   '/#pricing': 'marketing.nav.pricing',
   '/#faq': 'marketing.nav.faq',
-  '/#contact': 'marketing.nav.contact',
+  '/contact': 'marketing.nav.contact',
 };
 
 function isHashLink(href: string): boolean {

@@ -34,7 +34,7 @@ export const marketingNavLinks = [
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'FAQ', href: '/#faq' },
-  { label: 'Contact', href: '/#contact' },
+  { label: 'Contact', href: '/contact' },
 ] as const;
 
 function filterExpiredNav(items: NavItem[], isExpired: boolean): NavItem[] {

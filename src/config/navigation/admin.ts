@@ -11,6 +11,15 @@ export const adminNavigation: NavItem[] = [
     roles: ['admin', 'resellerAdmin'],
     hideWhenExpired: true,
   },
+  {
+    id: 'hierarchy',
+    label: 'Hierarchy',
+    href: '/admin/hierarchy',
+    icon: 'Network',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Operations',
+    hideWhenExpired: true,
+  },
 
   // ── Operations ─────────────────────────────────────────────
   {

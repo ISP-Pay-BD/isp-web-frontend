@@ -16,6 +16,8 @@ import { adminProfileData } from '@/data/admin/profile.data';
 import { tenants, platformRevenue } from '@/data/platform/tenants.data';
 import * as platformContacts from '@/data/platform/contacts.data';
 import * as employee from '@/data/employee/salaries.data';
+import { getHierarchyByScope } from '@/data/shared/hierarchy.data';
+import type { HierarchyScope } from '@/data/shared/hierarchy.types';
 import {
   adminSubscription,
   adminSubscriptionPlans,
@@ -371,6 +373,11 @@ export async function getPlatformDomain(domain: string) {
 export async function getEmployeeDomain() {
   await mockDelay();
   return employee;
+}
+
+export async function getHierarchyTree(scope: HierarchyScope, resellerId?: string) {
+  await mockDelay();
+  return getHierarchyByScope(scope, resellerId);
 }
 
 export async function getSupportTicket(id: string) {

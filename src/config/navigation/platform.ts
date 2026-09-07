@@ -18,6 +18,14 @@ export const platformNavigation: NavItem[] = [
     section: 'System',
   },
   {
+    id: 'platform-hierarchy',
+    label: 'Hierarchy',
+    href: '/platform/hierarchy',
+    icon: 'Network',
+    roles: ['super_admin'],
+    section: 'System',
+  },
+  {
     id: 'platform-admins',
     label: 'Admins',
     href: '/platform/admins',

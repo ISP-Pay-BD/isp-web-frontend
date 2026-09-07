@@ -16,10 +16,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
-              Getting started
-            </p>
-            <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
               Live this week — history intact.
             </h2>
             <p className="mt-4 text-base leading-relaxed text-white/60">
@@ -28,15 +25,15 @@ export function HowItWorks({ steps }: HowItWorksProps) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/register">
-              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-10 px-5 text-sm font-semibold text-white group transition-transform active:scale-[0.98]">
+              <Button className="h-11 rounded-lg bg-landing-cta px-5 text-sm font-semibold text-white hover:bg-landing-cta-hover">
                 Start trial
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <a href="#contact">
               <Button
-                variant="outline"
-                className="h-10 border-white/15 bg-transparent px-5 text-sm text-white/90 hover:bg-white/5 transition-transform active:scale-[0.98]"
+                variant="ghost"
+                className="h-11 rounded-lg px-4 text-sm text-white/70 hover:bg-white/[0.06] hover:text-white"
               >
                 Book migration
               </Button>

@@ -1,14 +1,14 @@
-# Design brief: Marketing landing hero
+# Design brief: Marketing landing (premium redesign)
 
-1. Product and job: ISP owners evaluating ISP Pay BD; the job is "understand we run billing + MikroTik + bKash in one console, then start trial"
-2. Design read: marketing hero for Bangladesh ISP operators, language calm and exact, leaning ISP landing tokens + PHP hero parity
-3. References: PHP `isppaybd_isp/app/Views/landing/partials/hero.php` (badge, title, accent line, CTAs, trust); Stripe homepage hero (first-viewport budget); Linear marketing (type hierarchy, one accent)
-4. Existing system to honor: `#0c0118` / `#f75803` / `#2E8BFF`, Plus Jakarta display + Inter body, MarketingNav, landing tokens in globals.css
-5. Type: Plus Jakarta Sans display + Inter body, ratio ~1.333, body 16–18px
-6. Color: dominant `#0c0118`, neutral white/opacity ramp, accent `#f75803` only; semantic emerald for trust checks only
-7. Shape: controls 12px, containers 12–16px, pills full; separation by space/tint, one soft panel border
-8. Spacing and density: 8px grid, balanced; first viewport must breathe
-9. Motion: one hero text fade-up (200–350ms easeOutExpo); no ambient orbs, dots, or ping; reduced motion = static
-10. Signature: brand-level title "ISP Pay BD" is not required in H1 if product name is in nav; console product panel is the visual signature
-11. Platform conventions: web anchor `#auto-reconcile` for secondary CTA; keyboard-focusable CTAs
-12. Deliberately not doing: rainbow orbital timeline, floating dots, hero KPI strip, multi-gradient headline, MorphArrow magnetic CTA, purple glow beams; breaking "no fake product UI" once with a restrained console panel because PHP parity and ProductPreview already use this pattern
+1. Product and job: Bangladesh ISP owners deciding whether to trial; job is "trust this is a real ops platform, then start trial"
+2. Design read: marketing landing for ISP operators, language operational and calm, leaning ISP dark tokens + Stripe/Linear restraint (not 21st.dev glow kits)
+3. References: (1) this app ProductPreview console language; (2) PHP hero.php copy structure without orbit/orbs; (3) Stripe homepage first-viewport budget; (4) Linear marketing type hierarchy; (5) stated assumption if Mobbin unavailable — editorial dark SaaS with brand-led type, full-bleed product plane
+4. Existing system to honor: `#0c0118` / `#f75803` / `#2E8BFF`, Plus Jakarta + Inter, MarketingNav/Footer, landing CSS vars
+5. Type: Plus Jakarta display (tight tracking) + Inter body 16–18px; scale ~1.333; brand name display-weight in hero
+6. Color: dominant `#0c0118`, neutral white/opacity, one accent `#f75803`; azure `#2E8BFF` only for rare link/eyebrow; emerald only for live/online status
+7. Shape: 8–12px controls; product plane flush/full-bleed (no floating hero cards); borders 1px white/10 max
+8. Spacing and density: 8px grid; first viewport: brand + 1 headline + 1 sentence + CTAs + product plane only
+9. Motion: one hero fade-up 300ms ease-out; section Reveals elsewhere; reduced motion = static
+10. Signature: full-bleed operator console plane (live reconcile line) under brand type — not orbit diagrams or glow orbs
+11. Platform conventions: web anchors, keyboard CTAs, sticky nav unchanged
+12. Deliberately not doing: pill badges, trust-check clusters in hero, KPI tiles in hero, purple/orange radial orbs, icon-in-rounded-box feature cards, staggered ambient particles, competing orange H1 accent line

@@ -245,7 +245,7 @@ export function NetworkDiagramPage() {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="p-6 overflow-x-auto min-h-[480px] bg-gradient-to-br from-slate-950/5 via-background to-slate-950/5 dark:from-slate-950/40 dark:via-background dark:to-slate-950/40">
+          <CardContent className="min-h-[480px] overflow-x-auto bg-muted/20 p-6">
             <div
               className="transition-transform duration-300 origin-top-left space-y-8"
               style={{ transform: `scale(${zoomLevel})` }}
@@ -490,10 +490,10 @@ export function NetworkDiagramPage() {
                         <div
                           className={`absolute inset-y-0 left-0 rounded-full ${
                             selectedNode.rxPowerDbm > -25
-                              ? 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+                              ? 'bg-emerald-500'
                               : selectedNode.rxPowerDbm > -27
-                                ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                                : 'bg-gradient-to-r from-red-600 to-red-400'
+                                ? 'bg-amber-500'
+                                : 'bg-red-500'
                           }`}
                         />
                         {/* Threshold markers */}
@@ -519,9 +519,7 @@ export function NetworkDiagramPage() {
                         </span>
                       </div>
                       <div className="relative h-3 rounded-full bg-muted/40 overflow-hidden border border-border/30">
-                        <div
-                          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 to-blue-400"
-                        />
+                        <div className="absolute inset-y-0 left-0 rounded-full bg-sky-500" />
                       </div>
                     </div>
 

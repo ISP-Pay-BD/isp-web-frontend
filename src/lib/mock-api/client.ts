@@ -23,6 +23,7 @@ import {
   getEmployeeDomain,
   getSupportTicket,
   getNewsItem,
+  getHierarchyTree,
   createCustomer,
   updateCustomer,
   deleteCustomer,
@@ -156,6 +157,10 @@ type HandlerMap = {
   'employee.profile.update': (payload: ProfileUpdatePayload) => ReturnType<typeof updateEmployeeProfile>;
   'employee.salaries.list': () => ReturnType<typeof getEmployeeSalaries>;
   'health.ping': () => Promise<{ ok: true; mode: 'mock' }>;
+  'hierarchy.tree': (
+    scope: Parameters<typeof getHierarchyTree>[0],
+    resellerId?: string,
+  ) => ReturnType<typeof getHierarchyTree>;
   'marketing.contact': () => ReturnType<typeof getContactData>;
   'marketing.landing': () => ReturnType<typeof getLandingData>;
   'marketing.plugins': () => ReturnType<typeof getPluginsData>;
@@ -247,6 +252,7 @@ const handlers: HandlerMap = {
     await mockDelay(50);
     return { ok: true as const, mode: 'mock' as const };
   },
+  'hierarchy.tree': getHierarchyTree,
   'marketing.contact': getContactData,
   'marketing.landing': getLandingData,
   'marketing.plugins': getPluginsData,

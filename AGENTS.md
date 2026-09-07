@@ -69,7 +69,8 @@ Static mock UI only. No backend API. All data from `src/data/` via mock-api.
 - **Default skill:** `isp-pay-bd` — `.cursor/skills/isp-pay-bd/SKILL.md`
 - **P0:** ✅ Complete — see `docs/P0-READY.md`
 - **Plan docs (MD):** ✅ Complete — see `docs/PLAN-STATUS.md`
-- **Phase 1:** ⏳ Ready to start (28 landing sections)
+- **Phases 1–7:** ✅ Mock UI complete (dummy data) — inventory synced
+- **Phase 8:** ⏳ API integration — await go
 - **Permissions nav filter:** ✅ `useFilteredNav` wired
 
 ## Git

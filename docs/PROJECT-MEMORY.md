@@ -9,7 +9,7 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 
 ## Current phase
 
-**P0 ✅ COMPLETE — plan docs ✅ COMPLETE — ready to start Phase 1 (28 landing sections).**
+**P0–Phase 7 mock UI ✅ COMPLETE — Phase 8 (real API) next when you say go.**
 
 | Item | State |
 |------|-------|
@@ -20,7 +20,8 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 | Full navigation | ✅ Done |
 | Shared components | ✅ Done |
 | **Default AI skill** | ✅ `.cursor/skills/isp-pay-bd/` |
-| Phase 1 landing (28 sections) | ⏳ **Next — awaiting your go** |
+| Phases 1–7 mock UI (dummy data) | ✅ Done — inventory synced |
+| Phase 8 API integration | ⏳ Out of scope until requested |
 
 ---
 
@@ -110,6 +111,6 @@ All password: `demo1234` — see `src/data/users/users.data.ts`
 
 ## Next action
 
-**✅ P0 complete.** Say **"start Phase 1"** to build all 28 landing sections.
+**✅ Phases 1–7 mock UI complete** (dummy data only). Say **"start Phase 8"** when ready for real API, or pick an optional §H stretch screen.
 
-See `docs/P0-READY.md` for verification checklist.
+See `docs/PLAN-STATUS.md` + `docs/PONYTAIL-TRACKER.md`.

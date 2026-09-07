@@ -19,8 +19,7 @@ export function FAQSection({ faq }: FAQSectionProps) {
     <section id="faq" className="border-t border-white/[0.07] py-20 md:py-28">
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         <Reveal className="max-w-xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">FAQ</p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Answers before you ask sales
           </h2>
           <p className="mt-4 text-base text-white/55">

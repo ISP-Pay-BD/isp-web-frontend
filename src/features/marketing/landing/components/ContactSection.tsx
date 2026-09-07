@@ -163,7 +163,7 @@ export function ContactSection() {
           </div>
 
           {/* Right — Form */}
-          <div className="rounded-2xl border border-white/15 bg-landing-panel/90 p-8 shadow-2xl backdrop-blur-xl lg:col-span-7">
+          <div className="rounded-2xl border border-white/15 bg-landing-panel/90 p-8 lg:col-span-7">
             <h2 className="font-landing-display text-2xl font-bold text-white">
               Tell us about your network
             </h2>

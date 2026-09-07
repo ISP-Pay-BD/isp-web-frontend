@@ -142,16 +142,7 @@ export function EmployeeSalariesPage() {
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gradientSalaryBar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
-                    </linearGradient>
-                    <filter id="salaryBarShadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#10b981" floodOpacity="0.3" />
-                    </filter>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <XAxis
                     dataKey="month"
                     tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
@@ -173,9 +164,9 @@ export function EmployeeSalariesPage() {
                   />
                   <Bar
                     dataKey="amount"
-                    fill="url(#gradientSalaryBar)"
-                    radius={[6, 6, 0, 0]}
-                    animationDuration={1200}
+                    fill="hsl(var(--primary))"
+                    radius={[4, 4, 0, 0]}
+                    animationDuration={280}
                     animationEasing="ease-out"
                   />
                 </BarChart>
