@@ -7,7 +7,7 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Eye, Sparkles } from 'lucide-react';
+import { Play, Eye, Star } from 'lucide-react';
 
 export function ShowcasePage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -42,7 +42,7 @@ export function ShowcasePage() {
               <Play className="h-12 w-12 text-white/90 relative z-10" />
               {item.featured ? (
                 <Badge className="absolute top-2 right-2 bg-primary text-xs">
-                  <Sparkles className="h-3 w-3 mr-1" /> Featured
+                  <Star className="mr-1 h-3 w-3" /> Featured
                 </Badge>
               ) : null}
             </div>

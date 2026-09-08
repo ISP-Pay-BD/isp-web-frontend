@@ -112,7 +112,7 @@ export function OltDiagnosticsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl p-0 gap-0 overflow-hidden border-border/80 shadow-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-5xl p-0 gap-0 overflow-hidden border-border/80 shadow-[var(--shadow-md)] max-h-[85vh] flex flex-col">
         {/* Header */}
         <DialogHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -227,13 +227,13 @@ export function OltDiagnosticsModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">#</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">PON Port</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">MAC Address</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">RX Power</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Vendor</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">#</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">PON Port</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Customer</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide hidden sm:table-cell">MAC Address</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Status</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">RX Power</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Vendor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,7 +254,7 @@ export function OltDiagnosticsModal({
                         <td className="px-4 py-2.5 font-mono text-[11px] text-muted-foreground hidden sm:table-cell">{onu.macAddress}</td>
                         <td className="px-4 py-2.5">
                           <span className={cn(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                            'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide',
                             onu.status === 'online' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                             onu.status === 'wire_down' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                             onu.status === 'offline' && 'bg-red-500/10 text-red-600 dark:text-red-400',

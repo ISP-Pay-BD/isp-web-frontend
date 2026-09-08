@@ -22,7 +22,7 @@ export function OpsSummaryStrip({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/25 px-4 py-2.5 text-xs text-muted-foreground shadow-[var(--shadow-xs)]',
         className,
       )}
     >
@@ -34,7 +34,7 @@ export function OpsSummaryStrip({
             </span>
           ) : null}
           <span>
-            <span className="font-semibold tabular-nums text-foreground">{item.value}</span>{' '}
+            <span className="font-medium tabular-nums text-foreground">{item.value}</span>{' '}
             {item.label}
           </span>
         </Fragment>

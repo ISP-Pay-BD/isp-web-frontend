@@ -19,10 +19,10 @@ export function PermissionsMatrix({ matrix }: PermissionsMatrixProps) {
     );
 
   return (
-    <section id="permissions" className="relative border-t border-white/10 bg-[#0c0118] py-20 md:py-28">
+    <section id="permissions" className="relative border-t border-white/10 bg-landing-bg py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
             {t('marketing.sections.permissions.badge')}
           </p>
           <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">

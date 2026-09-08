@@ -106,7 +106,7 @@ export function EmployeeAccountsPage() {
       </div>
 
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -128,14 +128,14 @@ export function EmployeeAccountsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-12 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">#</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Employee</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Designation</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Monthly Base</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Outstanding Advance</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Last Salary Month</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Net Balance Due</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Action</TableHead>
+                    <TableHead className="w-12 text-[11px] font-medium tracking-wide text-muted-foreground">#</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Employee</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Designation</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Monthly Base</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Outstanding Advance</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Last Salary Month</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Net Balance Due</TableHead>
+                    <TableHead className="text-right text-[11px] font-medium tracking-wide text-muted-foreground">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

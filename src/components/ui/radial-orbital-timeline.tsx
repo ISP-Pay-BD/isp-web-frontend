@@ -181,10 +181,10 @@ export default function RadialOrbitalTimeline({
               <div className={cn(
                 "relative flex h-16 w-16 items-center justify-center rounded-full border transition-all duration-300",
                 hubActive
-                  ? "border-landing-cta/50 bg-gradient-to-br from-white/15 via-landing-cta/30 to-amber-500/15 shadow-[0_0_60px_rgba(247,88,3,0.35),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl scale-110"
-                  : "border-white/20 bg-gradient-to-br from-white/10 via-landing-cta/20 to-amber-500/10 shadow-[0_0_50px_rgba(247,88,3,0.2),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-xl hover:scale-105 hover:border-white/30",
+                  ? "border-landing-cta/50 bg-gradient-to-br from-white/15 via-landing-cta/30 to-amber-500/15 shadow-[0_0_60px_rgba(232,90,26,0.35),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl scale-110"
+                  : "border-white/20 bg-gradient-to-br from-white/10 via-landing-cta/20 to-amber-500/10 shadow-[0_0_50px_rgba(232,90,26,0.2),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-xl hover:scale-105 hover:border-white/30",
               )}>
-                <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-[#0c0118] to-[#120228]" />
+                <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-[#0a0c10] to-[#12161d]" />
                 <span className="relative px-1 text-center font-landing-display text-[9px] font-bold tracking-wider text-white/90">
                   {hubLabel}
                 </span>
@@ -331,7 +331,7 @@ export default function RadialOrbitalTimeline({
                   {/* Status dot */}
                   <div
                     className={cn(
-                      'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0c0118]',
+                      'absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0a0c10]',
                       item.status === 'completed' && 'bg-emerald-400',
                       item.status === 'in-progress' && 'bg-landing-cta',
                       item.status === 'pending' && 'bg-white/30',

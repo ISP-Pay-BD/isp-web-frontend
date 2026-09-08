@@ -50,7 +50,7 @@ export function CustomerSubscriptionSkeleton() {
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-8 w-60 rounded-lg" />
           </div>
-          <Skeleton className="h-7 w-20 rounded-full" />
+          <Skeleton className="h-7 w-20 rounded-md" />
         </div>
         <div className="grid gap-4 sm:grid-cols-3 py-3 border-y border-border/40">
           <Skeleton className="h-16 rounded-xl" />
@@ -122,7 +122,7 @@ export function CustomerPaymentsSkeleton() {
             </div>
             <Skeleton className="h-4 w-24 hidden sm:block" />
             <Skeleton className="h-4 w-20 ml-auto" />
-            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-16 rounded-md" />
             <Skeleton className="h-7 w-7 rounded-lg" />
           </div>
         ))}
@@ -137,9 +137,9 @@ export function CustomerPackagesSkeleton() {
     <div className="space-y-6">
       {/* Category Pills */}
       <div className="flex items-center gap-2">
-        <Skeleton className="h-8 w-24 rounded-full" />
-        <Skeleton className="h-8 w-24 rounded-full" />
-        <Skeleton className="h-8 w-24 rounded-full" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+        <Skeleton className="h-8 w-24 rounded-md" />
       </div>
 
       {/* Packages Grid */}
@@ -148,7 +148,7 @@ export function CustomerPackagesSkeleton() {
           <div key={i} className="p-6 rounded-2xl border border-border/60 bg-card space-y-4">
             <div className="flex items-center justify-between">
               <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-md" />
             </div>
             <Skeleton className="h-8 w-28 rounded-md" />
             <div className="space-y-2 py-3 border-y border-border/40">
@@ -177,7 +177,7 @@ export function CustomerRouterSkeleton() {
             <Skeleton className="h-3.5 w-36" />
           </div>
         </div>
-        <Skeleton className="h-7 w-24 rounded-full" />
+        <Skeleton className="h-7 w-24 rounded-md" />
       </div>
 
       {/* Diagnostics & WiFi Cards */}
@@ -224,11 +224,11 @@ export function CustomerProfileSkeleton() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Profile Overview */}
       <div className="p-6 rounded-2xl border border-border/60 bg-card flex flex-col sm:flex-row items-center gap-5">
-        <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+        <Skeleton className="h-20 w-20 rounded-md shrink-0" />
         <div className="space-y-2 text-center sm:text-left flex-1">
           <Skeleton className="h-6 w-44" />
           <Skeleton className="h-3.5 w-56" />
-          <Skeleton className="h-5 w-28 rounded-full" />
+          <Skeleton className="h-5 w-28 rounded-md" />
         </div>
       </div>
 
@@ -273,7 +273,7 @@ export function CustomerSupportSkeleton() {
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-3 w-64" />
             </div>
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-md" />
           </div>
         ))}
       </div>
@@ -289,7 +289,7 @@ export function CustomerRewardsSkeleton() {
       <div className="p-6 rounded-2xl border border-border/60 bg-card space-y-4">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-10 w-44 rounded-lg" />
-        <Skeleton className="h-3 w-full rounded-full" />
+        <Skeleton className="h-3 w-full rounded-md" />
       </div>
 
       {/* Rewards Vouchers Grid */}
@@ -317,7 +317,7 @@ export function CustomerNewsSkeleton() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="p-5 rounded-2xl border border-border/60 bg-card space-y-3">
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-md" />
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-3.5 w-full" />
             <Skeleton className="h-3.5 w-4/5" />
@@ -350,17 +350,19 @@ interface CustomerEmptyStateProps {
 }
 
 export function CustomerEmptyState({
-  icon = <Inbox className="h-10 w-10 text-muted-foreground/60" />,
+  icon = <Inbox className="text-muted-foreground h-5 w-5" />,
   title,
   description,
   action,
 }: CustomerEmptyStateProps) {
   return (
-    <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center bg-card">
-      <div className="mb-4 rounded-full bg-muted p-4">{icon}</div>
-      <h3 className="text-base font-semibold">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm">{description}</p>
-      {action && <div className="mt-5">{action}</div>}
+    <div className="bg-muted/25 border-border/70 flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-dashed px-8 py-12 text-center shadow-[var(--shadow-xs)]">
+      <div className="border-border/60 bg-card text-muted-foreground mb-4 flex h-12 w-12 items-center justify-center rounded-lg border shadow-[var(--shadow-xs)]">
+        {icon}
+      </div>
+      <h3 className="text-foreground text-base font-semibold tracking-tight">{title}</h3>
+      <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">{description}</p>
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
 }
@@ -371,22 +373,22 @@ interface CustomerErrorStateProps {
 }
 
 export function CustomerErrorState({
-  message = 'Failed to load data. Please check your internet connection.',
+  message = 'Could not load this page. Check your connection and try again.',
   onRetry,
 }: CustomerErrorStateProps) {
   return (
-    <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
-      <div className="mb-4 rounded-full bg-destructive/10 p-4 text-destructive">
-        <AlertCircle className="h-8 w-8" />
+    <div className="border-destructive/25 bg-destructive/5 flex min-h-[260px] flex-col items-center justify-center rounded-xl border px-8 py-12 text-center shadow-[var(--shadow-xs)]">
+      <div className="border-destructive/20 bg-card text-destructive mb-4 flex h-12 w-12 items-center justify-center rounded-lg border">
+        <AlertCircle className="h-5 w-5" />
       </div>
-      <h3 className="text-base font-semibold text-destructive">Something went wrong</h3>
-      <p className="mt-1 text-sm text-muted-foreground max-w-sm">{message}</p>
-      {onRetry && (
+      <h3 className="text-foreground text-base font-semibold tracking-tight">Could not load data</h3>
+      <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">{message}</p>
+      {onRetry ? (
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-5 gap-2">
           <RefreshCw className="h-3.5 w-3.5" />
-          <span>Try Again</span>
+          <span>Try again</span>
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

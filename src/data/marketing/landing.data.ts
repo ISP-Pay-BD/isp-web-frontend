@@ -7,12 +7,12 @@ export const landingData = {
   },
   hero: {
     badge: 'Trusted by 120+ ISPs across Bangladesh',
-    titleEn: "Run your whole ISP from one operator's console",
+    titleEn: 'Run your whole ISP from one console',
     titleBn: 'পুরো ISP চালান একটি অপারেটর কনসোল থেকে',
     subtitleEn: 'Billing, MikroTik sync, and every bKash & Nagad payment — reconciled automatically.',
     subtitleBn: 'বিলিং, মাইক্রোটিক সিঙ্ক, এবং প্রতিটি বিকাশ ও নগদ পেমেন্ট — স্বয়ংক্রিয়ভাবে মিলিয়ে নেওয়া।',
-    ctaPrimary: 'Start Free Trial — no card required',
-    ctaSecondary: 'See it reconcile',
+    ctaPrimary: 'Start free trial',
+    ctaSecondary: 'See auto-reconcile',
   },
   features: [
     { id: 'f1', title: 'Auto-Reconciliation', titleBn: 'স্বয়ংক্রিয় মিল', desc: 'bKash & Nagad payments matched to customers automatically.', descBn: 'bKash ও Nagad পেমেন্ট স্বয়ংক্রিয়ভাবে গ্রাহকের সাথে মিলে যায়।', icon: 'CreditCard' },

@@ -48,7 +48,7 @@ export function CustomerAutoPayPage() {
         {' · '}
         Last {settings.lastStatus}
       </p>
-      <Card className="max-w-lg border-border/60 shadow-sm ring-1 ring-foreground/5">
+      <Card className="max-w-lg border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Settings</CardTitle>
           <Badge variant="outline" className="capitalize">

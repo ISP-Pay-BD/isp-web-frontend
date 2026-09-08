@@ -144,12 +144,12 @@ export function SelfRechargePage() {
       <div className="grid gap-6 lg:grid-cols-12 items-stretch">
         {/* Left Hero Card: Active Plan Overview */}
         <div className="lg:col-span-7">
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 flex flex-col justify-between h-full">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 flex flex-col justify-between h-full">
             <CardContent className="p-6 space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span className="text-xs font-semibold tracking-wide text-primary flex items-center gap-1.5">
                       <Shield className="h-3.5 w-3.5" /> Active SaaS License
                     </span>
                     <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-semibold">
@@ -191,7 +191,7 @@ export function SelfRechargePage() {
 
         {/* Right Card: Capacity & Quota Health */}
         <div className="lg:col-span-5">
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 flex flex-col justify-between h-full">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 flex flex-col justify-between h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center justify-between">
                 <span>Tenant Quotas & Usage</span>
@@ -264,7 +264,7 @@ export function SelfRechargePage() {
           </div>
 
           {/* Billing Cycle Switcher */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border border-border/60 shadow-sm ring-1 ring-foreground/5 self-start">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-card border border-border/60 shadow-sm ring-1 ring-border/60 self-start">
             <button
               type="button"
               onClick={() => setBillingCycle('monthly')}
@@ -310,7 +310,7 @@ export function SelfRechargePage() {
                   'rounded-2xl border p-5 flex flex-col justify-between cursor-pointer transition-colors duration-200 relative group',
                   isSelected
                     ? 'border-primary bg-primary/[0.03] ring-2 ring-primary/25 shadow-md shadow-primary/5'
-                    : 'border-border/60 bg-card hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 ring-1 ring-foreground/5'
+                    : 'border-border/60 bg-card hover:border-primary/30 hover:shadow-md hover:shadow-primary/5 ring-1 ring-border/60'
                 )}
               >
                 {/* Header Tag */}
@@ -400,7 +400,7 @@ export function SelfRechargePage() {
                   'p-4 rounded-xl border cursor-pointer transition-colors duration-200 flex flex-col justify-between group',
                   isSelected
                     ? 'border-primary bg-primary/[0.03] ring-2 ring-primary/20 shadow-sm shadow-primary/5'
-                    : 'border-border/60 bg-card hover:border-primary/30 hover:shadow-sm ring-1 ring-foreground/5'
+                    : 'border-border/60 bg-card hover:border-primary/30 hover:shadow-sm ring-1 ring-border/60'
                 )}
               >
                 <div>
@@ -442,10 +442,10 @@ export function SelfRechargePage() {
 
       {/* Row 4: Checkout Summary & Action Bar */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
           <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="space-y-1.5">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs font-semibold text-muted-foreground tracking-wide">
                 Order Summary
               </div>
               <div className="flex flex-wrap items-baseline gap-2">

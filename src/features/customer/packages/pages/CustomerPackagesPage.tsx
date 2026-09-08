@@ -6,7 +6,6 @@ import {
   Zap,
   Check,
   CreditCard,
-  Sparkles,
   ArrowRight,
   HelpCircle,
 } from 'lucide-react';
@@ -101,16 +100,16 @@ export function CustomerPackagesPage() {
               >
                 {isPopular && !isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-primary text-primary-foreground font-bold text-xs uppercase px-3 py-0.5 shadow-sm">
-                      Most Popular
+                    <Badge className="bg-primary text-primary-foreground px-3 py-0.5 text-xs font-medium shadow-[var(--shadow-xs)]">
+                      Most popular
                     </Badge>
                   </div>
                 )}
 
                 {isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="secondary" className="font-bold text-xs uppercase px-3 py-0.5 shadow-sm">
-                      Current Plan
+                    <Badge variant="secondary" className="px-3 py-0.5 text-xs font-medium shadow-[var(--shadow-xs)]">
+                      Current plan
                     </Badge>
                   </div>
                 )}

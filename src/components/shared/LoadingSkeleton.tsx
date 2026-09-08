@@ -60,7 +60,7 @@ export function DashboardSkeleton({ className }: { className?: string }) {
         <div className="space-y-4 rounded-xl border border-border/60 bg-card p-5 lg:col-span-5">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-md" />
           </div>
           <div className="space-y-3 pt-2">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -129,13 +129,13 @@ export function TablePageSkeleton({ rows = 6, className }: { rows?: number; clas
             <div key={i} className="flex items-center gap-4 px-4 py-3.5">
               <Skeleton className="h-4 w-6 rounded" />
               <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                <Skeleton className="h-8 w-8 rounded-md shrink-0" />
                 <div className="space-y-1 flex-1">
                   <Skeleton className="h-3.5 w-32" />
                   <Skeleton className="h-2.5 w-44" />
                 </div>
               </div>
-              <Skeleton className="h-5 w-24 rounded-full hidden md:block" />
+              <Skeleton className="h-5 w-24 rounded-md hidden md:block" />
               <Skeleton className="h-4 w-20 hidden sm:block" />
               <Skeleton className="h-4 w-24 ml-auto" />
               <Skeleton className="h-7 w-7 rounded-lg" />
@@ -209,9 +209,9 @@ export function CardGridSkeleton({ count = 6, className }: { count?: number; cla
 
       {/* Tabs */}
       <div className="flex items-center gap-2">
-        <Skeleton className="h-8 w-24 rounded-full" />
-        <Skeleton className="h-8 w-24 rounded-full" />
-        <Skeleton className="h-8 w-24 rounded-full" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+        <Skeleton className="h-8 w-24 rounded-md" />
+        <Skeleton className="h-8 w-24 rounded-md" />
       </div>
 
       {/* Grid */}
@@ -220,7 +220,7 @@ export function CardGridSkeleton({ count = 6, className }: { count?: number; cla
           <div key={i} className="p-6 rounded-2xl border border-border/60 bg-card space-y-4">
             <div className="flex items-center justify-between">
               <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-md" />
             </div>
             <Skeleton className="h-8 w-28 rounded-md" />
             <div className="space-y-2 py-2 border-y border-border/40">
@@ -255,8 +255,8 @@ export function DetailSkeleton({ className }: { className?: string }) {
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-72" />
           <div className="flex items-center gap-2 pt-1">
-            <Skeleton className="h-5 w-20 rounded-full" />
-            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-md" />
+            <Skeleton className="h-5 w-24 rounded-md" />
           </div>
         </div>
       </div>

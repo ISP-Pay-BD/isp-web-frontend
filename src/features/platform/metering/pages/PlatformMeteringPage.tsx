@@ -35,7 +35,7 @@ export function PlatformMeteringPage() {
       </p>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {data.map((m) => (
-          <Card key={m.tenantId} className="border-border/60 shadow-sm ring-1 ring-foreground/5">
+          <Card key={m.tenantId} className="border-border/60 shadow-sm ring-1 ring-border/60">
             <CardHeader className="pb-2">
               <CardTitle className="font-mono text-base">{m.domain}</CardTitle>
               <p className="text-xs text-muted-foreground">Period {m.period}</p>

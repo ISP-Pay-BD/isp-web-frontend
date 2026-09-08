@@ -12,7 +12,7 @@ export function AutoReconcile({ steps }: AutoReconcileProps) {
     <section id="auto-reconcile" className="py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">Flagship</p>
+          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">Flagship</p>
           <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Every bKash &amp; Nagad payment, matched in under a second.
           </h2>

@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { Play, Eye, Sparkles } from 'lucide-react';
+import { Play, Eye, Star } from 'lucide-react';
 import type { ProductShowcaseItem } from '@/data/platform/contacts.data';
 
 export function AdminProductShowcasePage() {
@@ -38,8 +38,8 @@ export function AdminProductShowcasePage() {
             <div className="relative aspect-video bg-muted flex items-center justify-center">
               <Play className="h-10 w-10 text-muted-foreground/60 transition group-hover:text-primary" />
               {item.featured && (
-                <Badge className="absolute left-2 top-2 gap-1">
-                  <Sparkles className="h-3 w-3" />
+                <Badge className="absolute top-2 left-2 gap-1">
+                  <Star className="h-3 w-3" />
                   Featured
                 </Badge>
               )}

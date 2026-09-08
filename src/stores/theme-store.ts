@@ -23,7 +23,7 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
   persist(
     (set, get) => ({
       presetId: 'isp_default',
-      primaryColor: '#f75803',
+      primaryColor: '#e85a1a',
       radius: 12,
       density: 'comfortable',
       reduceMotion: false,

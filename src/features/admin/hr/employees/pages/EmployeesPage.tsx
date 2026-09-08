@@ -154,7 +154,7 @@ export function EmployeesPage() {
 
       {/* Toolbar + Table */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 min-w-[200px] sm:min-w-[300px]">
@@ -213,22 +213,22 @@ export function EmployeesPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-12 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">#</TableHead>
+                    <TableHead className="w-12 text-[11px] font-medium tracking-wide text-muted-foreground">#</TableHead>
                     <TableHead>
-                      <button type="button" onClick={() => toggleSort('name')} className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                      <button type="button" onClick={() => toggleSort('name')} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors">
                         Name & Role {sortIcon('name')}
                       </button>
                     </TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Service Area</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Contact</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Service Area</TableHead>
                     <TableHead>
-                      <button type="button" onClick={() => toggleSort('salary')} className="flex items-center gap-1.5 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                      <button type="button" onClick={() => toggleSort('salary')} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors">
                         Salary {sortIcon('salary')}
                       </button>
                     </TableHead>
-                    <TableHead className="hidden md:table-cell text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Joined At</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Actions</TableHead>
+                    <TableHead className="hidden md:table-cell text-[11px] font-medium tracking-wide text-muted-foreground">Joined At</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-right text-[11px] font-medium tracking-wide text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

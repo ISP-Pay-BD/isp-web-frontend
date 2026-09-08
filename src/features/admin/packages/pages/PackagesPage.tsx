@@ -605,7 +605,7 @@ export function PackagesPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-2xl">
+        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">

@@ -91,7 +91,7 @@ export function PricingPage() {
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
             {t('marketing.pages.pricing.badge')}
           </p>
           <h1 className="font-landing-display mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
@@ -255,7 +255,7 @@ export function PricingPage() {
             </div>
 
             <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-6 text-center">
-              <span className="text-xs text-white/60 uppercase tracking-wider">
+              <span className="text-xs text-white/60 tracking-wide">
                 Total Estimated Monthly Deduct
               </span>
               <div className="font-landing-display mt-2 text-4xl sm:text-5xl font-extrabold text-white">
@@ -280,7 +280,7 @@ export function PricingPage() {
 
         <Reveal className="mt-24 border-t border-white/10 pt-16" delay={0.04}>
           <div className="mx-auto mb-12 max-w-2xl text-center">
-            <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
+            <span className="text-xs font-medium tracking-wide text-landing-cta">
               Frequently Asked Questions
             </span>
             <h2 className="font-landing-display mt-2 text-3xl font-bold text-white">
@@ -301,7 +301,7 @@ export function PricingPage() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-20 rounded-2xl border border-landing-cta/30 bg-landing-panel/90 p-8 text-center shadow-xl md:p-12">
+        <Reveal className="mt-20 rounded-2xl border border-landing-cta/30 bg-landing-panel/90 p-8 text-center shadow-[var(--shadow-md)] md:p-12">
           <h3 className="font-landing-display text-2xl font-bold text-white md:text-3xl">
             Need an enterprise plan for 10,000+ subscribers?
           </h3>

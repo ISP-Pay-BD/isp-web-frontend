@@ -30,7 +30,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
     <section id="pricing" className="border-t border-white/[0.07] py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">Pricing</p>
+          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">Pricing</p>
           <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Priced per subscriber, not per promise.
           </h2>
@@ -132,7 +132,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                       )}
                     >
                       {plan.highlighted && (
-                        <span className="absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider text-landing-cta">
+                        <span className="absolute top-4 right-4 text-[10px] font-medium tracking-wide text-landing-cta">
                           Popular
                         </span>
                       )}
@@ -156,6 +156,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                       </div>
                       <div className="mt-7">
                         <Button
+                          nativeButton={false}
                           render={<Link href="/register" />}
                           className={cn(
                             'h-10 w-full text-sm font-semibold',
@@ -207,7 +208,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   />
                 </div>
                 <div className="mt-8 border-t border-white/[0.07] pt-6">
-                  <p className="text-xs uppercase tracking-wider text-white/40">Estimated monthly</p>
+                  <p className="text-xs tracking-wide text-white/40">Estimated monthly</p>
                   <p className="font-landing-display mt-1 text-3xl font-semibold text-white">
                     {formatBdtWithSymbol(paygTotal)}
                     <span className="text-base font-normal text-white/40"> / mo</span>
@@ -215,6 +216,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                 </div>
                 <div className="mt-6">
                   <Button
+                    nativeButton={false}
                     render={<Link href="/register" />}
                     className="h-10 bg-landing-cta px-6 text-sm font-semibold text-white hover:bg-landing-cta-hover"
                   >

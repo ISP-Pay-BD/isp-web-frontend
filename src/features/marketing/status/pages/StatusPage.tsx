@@ -28,7 +28,7 @@ export function StatusPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0c0118] px-4 py-16 text-white">
+      <div className="min-h-dvh bg-landing-bg px-4 py-16 text-white">
         <div className="mx-auto max-w-2xl">
           <PageSkeleton variant="table" />
         </div>
@@ -38,7 +38,7 @@ export function StatusPage() {
 
   if (isError || !data) {
     return (
-      <div className="min-h-screen bg-[#0c0118] px-4 py-16 text-white">
+      <div className="min-h-dvh bg-landing-bg px-4 py-16 text-white">
         <div className="mx-auto max-w-2xl">
           <EmptyState title="Status unavailable" actionLabel="Retry" onAction={() => refetch()} />
         </div>
@@ -49,10 +49,10 @@ export function StatusPage() {
   const ok = data.overall === 'operational';
 
   return (
-    <div className="min-h-screen bg-[#0c0118] text-white">
+    <div className="min-h-dvh bg-landing-bg text-white">
       <div className="mx-auto max-w-2xl px-4 py-16">
         <Reveal>
-          <p className="text-sm font-medium text-[#f75803]">ISP Pay BD</p>
+          <p className="text-sm font-medium text-landing-cta">ISP Pay BD</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">System status</h1>
           <p className="mt-2 text-white/60">Public network and portal availability</p>
 

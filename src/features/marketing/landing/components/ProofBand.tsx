@@ -15,7 +15,7 @@ export function ProofBand({ stats }: ProofBandProps) {
   ];
 
   return (
-    <section id="proof" className="relative border-t border-white/10 bg-[#0c0118] py-16 md:py-20">
+    <section id="proof" className="relative border-t border-white/10 bg-landing-bg py-16 md:py-20">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
           <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">

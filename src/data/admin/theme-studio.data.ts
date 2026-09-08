@@ -12,10 +12,10 @@ export const themePresetsData: ThemePreset[] = [
   {
     id: 'isp_default',
     name: 'ISP Pay BD Default',
-    primary: '#f75803',
-    sidebar: '#1a0b38',
-    accent: '#2E8BFF',
-    description: 'Official ISP Pay BD orange + deep violet obsidian portal',
+    primary: '#e85a1a',
+    sidebar: '#10141a',
+    accent: '#e85a1a',
+    description: 'Official ISP Pay BD orange on deep ink neutrals',
     radius: 12,
   },
   {
@@ -49,7 +49,7 @@ export const themePresetsData: ThemePreset[] = [
     id: 'royal_cyber',
     name: 'Royal Cyber',
     primary: '#8b5cf6',
-    sidebar: '#0c0118',
+    sidebar: '#0a0c10',
     accent: '#38bdf8',
     description: 'Electric violet styling paired with deep space dark theme',
     radius: 12,

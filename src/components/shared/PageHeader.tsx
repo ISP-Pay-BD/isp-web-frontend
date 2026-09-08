@@ -37,9 +37,9 @@ export function PageHeader({
   const crumbs = breadcrumb ?? breadcrumbs ?? [];
 
   return (
-    <div className={cn('mb-6 space-y-2', className)}>
+    <div className={cn('mb-7 space-y-2.5', className)}>
       {crumbs.length > 0 ? (
-        <nav className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <nav aria-label="Breadcrumb" className="text-muted-foreground flex items-center gap-1.5 text-xs">
           {crumbs.map((item, idx) => {
             const href = crumbHref(item);
             const isLast = idx === crumbs.length - 1;
@@ -49,7 +49,7 @@ export function PageHeader({
                 {href && !isLast ? (
                   <Link
                     href={href}
-                    className="transition-colors duration-200 ease-out hover:text-foreground"
+                    className="hover:text-foreground transition-colors duration-200 ease-out"
                   >
                     {item.label}
                   </Link>
@@ -63,10 +63,14 @@ export function PageHeader({
           })}
         </nav>
       ) : null}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
-          {subtitle ? <p className="text-muted-foreground mt-0.5 text-sm">{subtitle}</p> : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-foreground font-heading text-2xl leading-tight font-semibold tracking-tight sm:text-[1.75rem]">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-relaxed">{subtitle}</p>
+          ) : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>

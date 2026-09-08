@@ -46,7 +46,7 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
     <Badge
       variant="secondary"
       className={cn(
-        'inline-flex items-center gap-1.5 font-semibold text-[11px] px-2 py-0.5 rounded-full border border-border/40 capitalize transition-colors',
+        'inline-flex items-center gap-1.5 rounded-md border border-border/40 px-2 py-0.5 text-[11px] font-medium capitalize transition-colors',
         statusStyles[key],
         className,
       )}

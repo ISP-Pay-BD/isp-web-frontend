@@ -170,7 +170,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
           </TabsList>
 
           <TabsContent value="default" className="mt-4">
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -218,7 +218,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
           </TabsContent>
 
           <TabsContent value="custom" className="mt-4">
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
                   <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">

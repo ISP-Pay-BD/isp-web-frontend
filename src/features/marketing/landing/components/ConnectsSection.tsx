@@ -36,7 +36,7 @@ export function ConnectsSection({ connects }: ConnectsSectionProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+            <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
               {t('marketing.sections.connects.badge')}
             </p>
             <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">

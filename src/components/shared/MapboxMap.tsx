@@ -188,7 +188,7 @@ export function MapboxMap({
                     'block h-3.5 w-3.5 rounded-full border-2 border-white shadow-md transition-transform',
                     selected && 'scale-125 ring-2 ring-primary/50 ring-offset-1',
                   )}
-                  style={{ backgroundColor: marker.color ?? '#f75803' }}
+                  style={{ backgroundColor: marker.color ?? '#e85a1a' }}
                   title={marker.label}
                 />
               )}

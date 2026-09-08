@@ -62,13 +62,13 @@ export function AccountingReportsPage() {
             onAction={() => refetch()}
           />
         ) : (
-          <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+          <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-xs uppercase tracking-wider">Report</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Period</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wider">Net Amount</TableHead>
+                  <TableHead className="text-xs tracking-wide">Report</TableHead>
+                  <TableHead className="text-xs tracking-wide">Period</TableHead>
+                  <TableHead className="text-right text-xs tracking-wide">Net Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

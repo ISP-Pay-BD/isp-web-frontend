@@ -88,12 +88,12 @@ export function CustomerBottomNav() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp Support"
-        className="fixed right-4 bottom-20 md:bottom-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg shadow-emerald-900/20 transition-transform active:scale-95 hover:scale-105"
+        className="bg-[#25D366] fixed right-4 bottom-20 z-40 flex h-12 w-12 items-center justify-center rounded-lg text-white shadow-[var(--shadow-md)] transition-transform hover:scale-[1.03] active:scale-95 md:bottom-6"
       >
         <MessageCircle className="h-6 w-6" />
       </a>
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-center justify-around border-t bg-background/95 backdrop-blur-md px-2 py-1 md:hidden">
+      <div className="bg-background/95 border-border/70 fixed right-0 bottom-0 left-0 z-30 flex h-16 items-center justify-around border-t px-2 py-1 shadow-[var(--shadow-sm)] backdrop-blur-md md:hidden">
         {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
@@ -102,13 +102,13 @@ export function CustomerBottomNav() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1.5 transition-colors',
+                'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-1.5 transition-colors',
                 isActive
-                  ? 'text-primary font-bold'
+                  ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.5]')} />
+              <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.25]')} />
               <span className="text-[11px] tracking-tight">{tab.label}</span>
             </Link>
           );
@@ -118,20 +118,20 @@ export function CustomerBottomNav() {
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger
               className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1.5 transition-colors',
+                'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-1.5 transition-colors',
                 moreIsActive
-                  ? 'text-primary font-bold'
+                  ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <MoreHorizontal className="h-5 w-5" />
               <span className="text-[11px] tracking-tight">More</span>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] p-4 pt-2">
-              <SheetHeader className="text-left pb-3 border-b">
-                <SheetTitle className="text-base font-bold flex items-center justify-between">
-                  <span>Customer Menu</span>
-                  <span className="text-xs font-normal text-muted-foreground">
+            <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl p-4 pt-2">
+              <SheetHeader className="border-border/60 border-b pb-3 text-left">
+                <SheetTitle className="flex items-center justify-between text-base font-semibold">
+                  <span>Menu</span>
+                  <span className="text-muted-foreground text-xs font-normal">
                     ID: {user?.id ?? 'cust_001'}
                   </span>
                 </SheetTitle>

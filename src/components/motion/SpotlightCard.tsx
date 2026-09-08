@@ -11,7 +11,7 @@ export function SpotlightCard({ children, className, ...props }: SpotlightCardPr
   return (
     <div
       className={cn(
-        'rounded-xl border border-border/60 bg-card transition-colors hover:border-border',
+        'rounded-xl border border-border/60 bg-card shadow-[var(--shadow-xs)] transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-border hover:shadow-[var(--shadow-sm)]',
         className,
       )}
       {...props}

@@ -10,7 +10,7 @@ export interface TenantTheme {
   /** Marketing page background */
   landingBg: string;
   landingPanel: string;
-  /** Accent / links */
+  /** Accent / links — same family as primary (single accent system) */
   accent: string;
   /** Admin sidebar */
   sidebar: string;
@@ -20,14 +20,14 @@ export interface TenantTheme {
   brandName?: string;
 }
 
-/** Default ISP Pay BD brand */
+/** Default ISP Pay BD brand — deep ink + restrained orange (no purple/blue dual accent) */
 export const defaultTenantTheme: TenantTheme = {
-  primary: '#f75803',
-  primaryHover: '#e04f00',
-  landingBg: '#0c0118',
-  landingPanel: '#180a30',
-  accent: '#2e8bff',
-  sidebar: '#1a0b38',
+  primary: '#e85a1a',
+  primaryHover: '#d14e14',
+  landingBg: '#0a0c10',
+  landingPanel: '#12161d',
+  accent: '#e85a1a',
+  sidebar: '#10141a',
   logoUrl: '/images/brand/logo.svg',
   brandName: 'ISP Pay BD',
 };

@@ -116,7 +116,7 @@ export function PopFundingPage() {
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Funding Form */}
         <div className="lg:col-span-2">
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
@@ -171,7 +171,7 @@ export function PopFundingPage() {
               <div
                 key={r.id}
               >
-                <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-300 group">
+                <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-300 group">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div>

@@ -34,7 +34,7 @@ export function HelpPage({ portal = false }: { portal?: boolean }) {
 
   const body = (
     <div className={portal ? '' : 'mx-auto max-w-2xl'}>
-      {!portal && <p className="text-sm font-medium text-[#f75803]">ISP Pay BD</p>}
+      {!portal && <p className="text-sm font-medium text-landing-cta">ISP Pay BD</p>}
       <h1 className={`font-semibold tracking-tight ${portal ? 'sr-only' : 'mt-2 text-3xl'}`}>Help center</h1>
       {!portal && (
         <p className="mt-2 text-white/60">Common answers for billing, reconnect, and support</p>
@@ -48,7 +48,7 @@ export function HelpPage({ portal = false }: { portal?: boolean }) {
             key={a.id}
             className={
               portal
-                ? 'rounded-xl border border-border/60 bg-card p-4 shadow-sm ring-1 ring-foreground/5'
+                ? 'rounded-xl border border-border/60 bg-card p-4 shadow-sm ring-1 ring-border/60'
                 : 'rounded-xl border border-white/10 bg-white/5 p-4'
             }
           >
@@ -73,7 +73,7 @@ export function HelpPage({ portal = false }: { portal?: boolean }) {
   );
 
   return (
-    <div className={portal ? 'space-y-6' : 'min-h-screen bg-[#0c0118] px-4 py-16 text-white'}>
+    <div className={portal ? 'space-y-6' : 'min-h-dvh bg-landing-bg px-4 py-16 text-white'}>
       {portal ? body : <Reveal>{body}</Reveal>}
     </div>
   );

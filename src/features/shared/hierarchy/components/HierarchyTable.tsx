@@ -136,7 +136,7 @@ export function HierarchyTable({ root }: { root: HierarchyNode }) {
       </div>
       <div className="overflow-x-auto rounded-xl border border-border/60">
         <table className="w-full min-w-[720px] text-left">
-          <thead className="bg-muted/40 text-[11px] uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-muted/40 text-[11px] tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2.5 font-medium">Name</th>
               <th className="px-3 py-2.5 font-medium">Role</th>

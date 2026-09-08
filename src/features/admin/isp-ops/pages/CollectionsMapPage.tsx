@@ -38,7 +38,7 @@ export function CollectionsMapPage() {
         id: r.id,
         latitude: r.lat,
         longitude: r.lng,
-        color: selectedId === r.id ? '#f75803' : '#2E8BFF',
+        color: selectedId === r.id ? '#e85a1a' : '#64748b',
         label: `${r.collector} — ${r.area}`,
       })),
     [rows, selectedId],
@@ -133,7 +133,7 @@ export function CollectionsMapPage() {
         selectedId={selectedId}
         onSelect={setSelectedId}
         height={420}
-        className="shadow-sm ring-1 ring-foreground/5"
+        className="shadow-sm ring-1 ring-border/60"
         renderMarker={(marker, selected) => (
           <div className="relative flex flex-col items-center">
             <span

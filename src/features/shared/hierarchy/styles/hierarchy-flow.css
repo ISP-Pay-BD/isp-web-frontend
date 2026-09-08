@@ -23,7 +23,7 @@
   /* Brighter edges + dots so the tree reads on near-black canvases */
   --xy-edge-stroke: hsl(210 20% 55%);
   --xy-edge-stroke-width: 2;
-  --xy-edge-stroke-selected: #f75803;
+  --xy-edge-stroke-selected: #e85a1a;
   --xy-background-pattern-color: hsl(220 15% 28%);
   --xy-controls-button-background-color: hsl(222 30% 14%);
   --xy-controls-button-background-color-hover: hsl(222 28% 20%);

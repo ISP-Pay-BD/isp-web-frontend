@@ -36,7 +36,7 @@ export function PlatformSlaPage() {
       </p>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {data.map((r) => (
-          <Card key={r.tenantId} className="border-border/60 shadow-sm ring-1 ring-foreground/5">
+          <Card key={r.tenantId} className="border-border/60 shadow-sm ring-1 ring-border/60">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="font-mono text-base">{r.tenantSlug}</CardTitle>
               <Badge

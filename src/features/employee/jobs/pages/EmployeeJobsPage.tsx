@@ -44,11 +44,11 @@ export function EmployeeJobsPage() {
       </p>
       <div className="space-y-3">
         {jobs.map((j) => (
-          <Card key={j.id} className="border-border/60 shadow-sm ring-1 ring-foreground/5">
+          <Card key={j.id} className="border-border/60">
             <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
               <div>
-                <CardTitle className="text-base">{j.title}</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <CardTitle className="text-base font-semibold">{j.title}</CardTitle>
+                <p className="text-muted-foreground mt-1 text-sm">
                   {j.customerName} · {j.area}
                 </p>
               </div>
@@ -66,7 +66,7 @@ export function EmployeeJobsPage() {
             </CardHeader>
             <CardContent className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Due {j.dueLabel}</span>
-              <Button size="sm" variant="outline" onClick={() => toast.success(`Updated ${j.id} (mock)`)}>
+              <Button size="sm" variant="outline" onClick={() => toast.success(`Updated ${j.id}`)}>
                 Update
               </Button>
             </CardContent>

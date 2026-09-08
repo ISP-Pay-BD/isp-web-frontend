@@ -145,8 +145,8 @@ function HierarchyGraphInner({
           className="!overflow-hidden !rounded-lg !border !border-border/60 !bg-card dark:!border-white/15"
           nodeColor={(n) => {
             const role = (n.data as { role?: string } | undefined)?.role;
-            if (role === 'super_admin') return isDark ? '#a78bfa' : '#1a0b38';
-            if (role === 'admin') return '#f75803';
+            if (role === 'super_admin') return isDark ? '#a78bfa' : '#10141a';
+            if (role === 'admin') return '#e85a1a';
             if (role === 'reseller') return isDark ? '#38bdf8' : '#0ea5e9';
             return isDark ? '#94a3b8' : '#64748b';
           }}

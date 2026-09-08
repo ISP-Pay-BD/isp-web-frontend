@@ -46,7 +46,7 @@ export function EmployeeAttendancePage() {
       <p className="text-sm text-muted-foreground tabular-nums">{punches.length} punches today / recent</p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {punches.map((p) => (
-          <Card key={p.id} className="border-border/60 shadow-sm ring-1 ring-foreground/5">
+          <Card key={p.id} className="border-border/60 shadow-sm ring-1 ring-border/60">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center justify-between text-base">
                 <span className="font-mono text-sm">{p.at}</span>

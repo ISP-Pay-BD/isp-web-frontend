@@ -11,11 +11,11 @@ export function ForbiddenPage() {
   const home = user ? (ROLE_HOME[user.role] ?? '/login') : '/login';
 
   return (
-    <div className="bg-background flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div className="bg-destructive/10 text-destructive mb-6 flex h-16 w-16 items-center justify-center rounded-2xl">
-        <ShieldOff className="h-8 w-8" />
+    <div className="bg-background flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <div className="border-destructive/20 bg-destructive/5 text-destructive mb-6 flex h-14 w-14 items-center justify-center rounded-lg border shadow-[var(--shadow-xs)]">
+        <ShieldOff className="h-6 w-6" />
       </div>
-      <h1 className="text-3xl font-semibold tracking-tight">403 — Access denied</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Access denied</h1>
       <p className="text-muted-foreground mt-3 max-w-md text-sm leading-relaxed">
         You don&apos;t have permission to view this page. Contact your administrator if you
         believe this is a mistake.

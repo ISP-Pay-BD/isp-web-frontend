@@ -110,7 +110,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
       {/* Hero Section */}
       <PageHero>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardContent className="p-6">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
@@ -220,7 +220,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
         <div className="lg:col-span-2 space-y-6">
           {/* Account Card */}
           <div >
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <User className="h-4 w-4 text-primary" /> Account
@@ -239,7 +239,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 {/* Address & GPS */}
                 <div className="pt-3 border-t border-border/50">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Address & GPS</span>
+                    <span className="text-xs font-semibold text-muted-foreground tracking-wide">Address & GPS</span>
                     <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 text-primary hover:bg-primary/10">
                       <RefreshCw className="h-3 w-3" /> Refresh Location
                     </Button>
@@ -255,7 +255,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                             id: customer.id,
                             latitude: customer.latitude,
                             longitude: customer.longitude,
-                            color: '#f75803',
+                            color: '#e85a1a',
                             label: customer.name,
                           },
                         ]}
@@ -299,7 +299,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
           {/* Connection Details Card */}
           {conn && (
             <div >
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Cpu className="h-4 w-4 text-primary" /> Connection Details
@@ -325,7 +325,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
           {/* Live Traffic Card */}
           <div >
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Activity className="h-4 w-4 text-primary" /> Live Traffic
@@ -353,7 +353,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
           {/* Bandwidth Usage Card */}
           {customer.bandwidthUsage && customer.bandwidthUsage.length > 0 && (
             <div >
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <HardDrive className="h-4 w-4 text-primary" /> Bandwidth Usage
@@ -399,7 +399,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
         <div className="space-y-6">
           {/* Live Session Card */}
           <div >
-            <Card className={`border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden ${customer.online ? 'ring-emerald-500/20' : ''}`}>
+            <Card className={`border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden ${customer.online ? 'ring-emerald-500/20' : ''}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -473,7 +473,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
           {/* Active Plan Card */}
           <div >
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <HardDrive className="h-4 w-4 text-primary" /> Active Plan
@@ -497,7 +497,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
           {/* MikroTik PPPoE Card */}
           {pppoe && (
             <div >
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -561,7 +561,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
           {/* OLT / ONU Card */}
           {olt && (
             <div >
-              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+              <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -600,7 +600,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
       {/* Payments Tab */}
       <div >
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-base flex items-center gap-2">

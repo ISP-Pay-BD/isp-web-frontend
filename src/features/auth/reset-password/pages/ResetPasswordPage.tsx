@@ -36,31 +36,33 @@ export function ResetPasswordPage() {
   const onSubmit = async () => {
     await new Promise((r) => setTimeout(r, 600));
     setDone(true);
-    toast.success('Password updated (mock)');
+    toast.success('Password updated');
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <AuthBrandPanel />
+    <div className="bg-background grid min-h-dvh lg:grid-cols-2">
+      <AuthBrandPanel variant="forgot" />
       <div className="flex flex-col justify-center px-6 py-12 sm:px-10">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div className="flex items-center gap-3 lg:hidden">
-            <Image src={brandAssets.logo} alt={siteConfig.name} width={36} height={36} />
+            <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
             <span className="font-semibold">{siteConfig.name}</span>
           </div>
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-              <Key className="h-5 w-5 text-primary" />
+              <Key className="text-primary h-5 w-5" />
               Reset password
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Choose a new password for your account</p>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Choose a new password for your account
+            </p>
           </div>
 
           {done ? (
             <Alert>
               <AlertDescription>
                 Password updated.{' '}
-                <Link href="/login" className="font-medium text-primary underline">
+                <Link href="/login" className="text-primary font-medium underline underline-offset-2">
                   Sign in
                 </Link>
               </AlertDescription>
@@ -69,13 +71,17 @@ export function ResetPasswordPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">New password</Label>
-                <Input id="password" type="password" {...register('password')} />
-                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+                <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
+                {errors.password ? (
+                  <p className="text-destructive text-sm">{errors.password.message}</p>
+                ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm">Confirm</Label>
-                <Input id="confirm" type="password" {...register('confirm')} />
-                {errors.confirm && <p className="text-xs text-destructive">{errors.confirm.message}</p>}
+                <Label htmlFor="confirm">Confirm password</Label>
+                <Input id="confirm" type="password" autoComplete="new-password" {...register('confirm')} />
+                {errors.confirm ? (
+                  <p className="text-destructive text-sm">{errors.confirm.message}</p>
+                ) : null}
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -84,8 +90,11 @@ export function ResetPasswordPage() {
             </form>
           )}
 
-          <Link href="/login" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to login
+          <Link
+            href="/login"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
           </Link>
         </div>
       </div>

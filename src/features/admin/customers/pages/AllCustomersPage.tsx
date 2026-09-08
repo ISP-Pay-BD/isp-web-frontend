@@ -260,7 +260,7 @@ export function AllCustomersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider text-[11px]">
+              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-medium tracking-wide">
                 <th className="py-3.5 px-4">Subscriber</th>
                 <th className="py-3.5 px-4">Package & POP Area</th>
                 <th className="py-3.5 px-4">Connection & IP</th>

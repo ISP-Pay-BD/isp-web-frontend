@@ -47,7 +47,7 @@ export function CustomerDashboardPage() {
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="Customer Dashboard" subtitle="Loading your network connection details...">
+      <CustomerPageShell title="Dashboard" subtitle="Loading your connection details�">
         <CustomerLoadingSkeleton />
       </CustomerPageShell>
     );
@@ -55,7 +55,7 @@ export function CustomerDashboardPage() {
 
   if (isError || !data) {
     return (
-      <CustomerPageShell title="Customer Dashboard" subtitle="Welcome to your ISP portal">
+      <CustomerPageShell title="Dashboard" subtitle="Welcome to your ISP portal">
         <CustomerErrorState onRetry={() => refetch()} />
       </CustomerPageShell>
     );
@@ -170,7 +170,7 @@ export function CustomerDashboardPage() {
             <div>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                  <p className="text-[11px] font-semibold tracking-wide text-primary">
                     Current plan
                   </p>
                   <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
@@ -195,20 +195,20 @@ export function CustomerDashboardPage() {
 
               <dl className="mt-6 grid grid-cols-3 gap-3 border-y border-border py-4">
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Speed</dt>
+                  <dt className="text-[10px] tracking-wide text-muted-foreground">Speed</dt>
                   <dd className="mt-1 text-lg font-semibold tabular-nums">
                     <NumberFlow value={subscription.speedMbps} />
                     <span className="ml-1 text-xs font-normal text-muted-foreground">Mbps</span>
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Fee</dt>
+                  <dt className="text-[10px] tracking-wide text-muted-foreground">Fee</dt>
                   <dd className="mt-1 text-lg font-semibold tabular-nums">
                     ৳<NumberFlow value={subscription.priceBdt} />
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</dt>
+                  <dt className="text-[10px] tracking-wide text-muted-foreground">Expires</dt>
                   <dd
                     className={cn(
                       'mt-1 text-lg font-semibold tabular-nums',
@@ -274,7 +274,7 @@ export function CustomerDashboardPage() {
                   </div>
                   <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1.5 font-medium">
-                      <span className="h-2.5 w-2.5 rounded-full bg-[#f75803] shadow-xs" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#e85a1a] shadow-xs" />
                       Download (RX)
                     </span>
                     <span className="flex items-center gap-1.5 font-medium">
@@ -290,8 +290,8 @@ export function CustomerDashboardPage() {
                     <AreaChart data={trafficData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="downloadGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f75803" stopOpacity={0.45} />
-                          <stop offset="95%" stopColor="#f75803" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor="#e85a1a" stopOpacity={0.45} />
+                          <stop offset="95%" stopColor="#e85a1a" stopOpacity={0.02} />
                         </linearGradient>
                         <linearGradient id="uploadGrad" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35} />
@@ -325,7 +325,7 @@ export function CustomerDashboardPage() {
                         type="monotone"
                         dataKey="downloadMbps"
                         name="Download"
-                        stroke="#f75803"
+                        stroke="#e85a1a"
                         strokeWidth={2.5}
                         fillOpacity={1}
                         fill="url(#downloadGrad)"
@@ -368,7 +368,7 @@ export function CustomerDashboardPage() {
         {/* Summary strip — bill, health, tickets, paid */}
         <div className="flex flex-wrap gap-x-6 gap-y-3 border-y border-border/60 py-4 text-sm">
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Next bill</p>
+            <p className="text-xs text-muted-foreground tracking-wide font-medium">Next bill</p>
             <p className="mt-0.5 font-semibold tabular-nums font-mono text-base">
               <span className="text-sm font-medium text-primary">৳</span>
               <NumberFlow value={subscription.priceBdt} />
@@ -378,7 +378,7 @@ export function CustomerDashboardPage() {
             </Link>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Connection</p>
+            <p className="text-xs text-muted-foreground tracking-wide font-medium">Connection</p>
             <p className={cn('mt-0.5 font-semibold text-base', isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>
               {isActive ? 'Online' : 'Offline'}
             </p>
@@ -387,7 +387,7 @@ export function CustomerDashboardPage() {
             </span>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Support</p>
+            <p className="text-xs text-muted-foreground tracking-wide font-medium">Support</p>
             <p className="mt-0.5 font-semibold tabular-nums text-base">
               <NumberFlow value={openTicketsCount} />
               <span className="text-sm font-medium text-muted-foreground ml-1">open</span>
@@ -397,7 +397,7 @@ export function CustomerDashboardPage() {
             </Link>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total paid</p>
+            <p className="text-xs text-muted-foreground tracking-wide font-medium">Total paid</p>
             <p className="mt-0.5 font-semibold tabular-nums font-mono text-base">
               <span className="text-sm font-medium text-muted-foreground">৳</span>
               <NumberFlow value={paymentsSummary.totalPaidBdt} />

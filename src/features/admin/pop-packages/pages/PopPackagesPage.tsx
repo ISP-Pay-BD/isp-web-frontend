@@ -168,7 +168,7 @@ export function PopPackagesPage() {
 
       {/* Toolbar */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -213,7 +213,7 @@ export function PopPackagesPage() {
 
       {/* Table */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-16">
               <EmptyState
@@ -227,25 +227,25 @@ export function PopPackagesPage() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
                     <TableHead className="w-[40px]">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">#</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">#</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">POP Package</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">POP Package</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Speed</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Speed</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Reseller Price</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Reseller Price</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Type</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Type</span>
                     </TableHead>
                     <TableHead className="text-right">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Status</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Status</span>
                     </TableHead>
                     <TableHead className="w-[60px]">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Action</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Action</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -335,7 +335,7 @@ export function PopPackagesPage() {
       </PageContent>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditPkg(null); }}>
-        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-2xl">
+        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader>
             <DialogTitle className="text-base font-bold flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">

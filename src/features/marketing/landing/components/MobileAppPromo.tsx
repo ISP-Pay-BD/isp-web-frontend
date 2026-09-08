@@ -18,7 +18,7 @@ export function MobileAppPromo({ data }: MobileAppPromoProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="grid gap-12 lg:grid-cols-12 lg:items-start">
           <div className="lg:col-span-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+            <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
               {t('marketing.sections.mobileApp.badge')}
             </p>
             <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
@@ -48,7 +48,7 @@ export function MobileAppPromo({ data }: MobileAppPromoProps) {
           </div>
 
           <div className="lg:col-span-5">
-            <div className="rounded-xl border border-white/10 bg-[#0c0118] p-5 text-sm">
+            <div className="rounded-xl border border-white/10 bg-landing-bg p-5 text-sm">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div>
                   <p className="font-landing-display text-sm font-semibold text-white">{data.title}</p>

@@ -82,12 +82,12 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               tooltip={item.label}
               className={
                 isParentActive
-                  ? 'ipb-sidebar-button relative font-bold text-primary rounded-lg'
-                  : 'ipb-sidebar-button hover:bg-sidebar-accent/80 hover:text-sidebar-foreground text-sidebar-foreground/80 rounded-lg'
+                  ? 'ipb-sidebar-button relative rounded-lg font-semibold text-primary'
+                  : 'ipb-sidebar-button rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground'
               }
             >
               {isParentActive && (
-                <span className="absolute inset-0 -z-10 rounded-lg border-l-2 border-primary bg-primary/10 dark:bg-primary/15" />
+                <span className="bg-primary/10 dark:bg-primary/15 absolute inset-0 -z-10 rounded-lg border-l-2 border-primary" />
               )}
               <NavIcon name={item.icon} />
               <span>{item.label}</span>
@@ -100,7 +100,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               )}
             </SidebarMenuButton>
             {isExpanded && !isCollapsed && (
-              <SidebarMenuSub className="my-1 ml-3.5 space-y-0.5 border-l border-sidebar-border/70 pl-2">
+              <SidebarMenuSub className="border-sidebar-border/70 my-1 ml-3.5 space-y-0.5 border-l pl-2">
                 {item.children.map((child: NavItem) => {
                   const isChildActive = child.href === currentPath;
                   return (
@@ -109,13 +109,13 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                         isActive={isChildActive}
                         className={
                           isChildActive
-                            ? 'ipb-sidebar-sub-button relative rounded-r-md font-bold text-primary'
+                            ? 'ipb-sidebar-sub-button relative rounded-r-md font-semibold text-primary'
                             : 'ipb-sidebar-sub-button rounded-md text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
                         }
                         render={<Link href={child.href ?? '#'} />}
                       >
                         {isChildActive && (
-                          <span className="absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary bg-primary/15 dark:bg-primary/20" />
+                          <span className="bg-primary/15 dark:bg-primary/20 absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary" />
                         )}
                         <span>{child.label}</span>
                       </SidebarMenuSubButton>
@@ -132,18 +132,18 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               tooltip={item.label}
               className={
                 isLeafActive
-                  ? 'ipb-sidebar-button relative rounded-r-md font-bold text-primary'
+                  ? 'ipb-sidebar-button relative rounded-r-md font-semibold text-primary'
                   : 'ipb-sidebar-button rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground'
               }
               render={<Link href={item.href ?? '#'} />}
             >
               {isLeafActive && (
-                <span className="absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary bg-primary/15 dark:bg-primary/20" />
+                <span className="bg-primary/15 dark:bg-primary/20 absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary" />
               )}
               <NavIcon name={item.icon} />
               <span>{item.label}</span>
               {item.badge ? (
-                <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground shadow-2xs">
+                <span className="bg-primary text-primary-foreground ml-auto rounded-md px-1.5 py-0.5 text-[10px] font-medium">
                   {item.badge}
                 </span>
               ) : null}
@@ -168,7 +168,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
 
   const handleLogout = () => {
     logout();
-    toast.success('Logged out successfully');
+    toast.success('You are signed out');
     router.push('/login');
   };
 
@@ -202,17 +202,17 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   const showNavSkeleton = !hydrated;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar shadow-xs">
+    <Sidebar collapsible="icon" className="border-sidebar-border bg-sidebar border-r shadow-[var(--shadow-xs)]">
       {/* Header — Logo + Brand */}
-      <div className={`flex items-center gap-3 border-b border-sidebar-border ${isCollapsed ? 'justify-center p-3' : 'p-3.5'}`}>
-        <div className="relative flex items-center justify-center p-1 rounded-xl bg-card border border-border/80 shadow-2xs dark:bg-sidebar-accent/50 dark:border-sidebar-border shrink-0">
-          <Image src={brandAssets.logo} alt="ISP Pay BD" width={28} height={28} className="shrink-0" />
+      <div className={`border-sidebar-border flex items-center gap-3 border-b ${isCollapsed ? 'justify-center p-3' : 'p-3.5'}`}>
+        <div className="bg-card border-border/80 relative flex shrink-0 items-center justify-center rounded-lg border p-1 shadow-[var(--shadow-xs)] dark:border-sidebar-border dark:bg-sidebar-accent/50">
+          <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={28} height={28} className="shrink-0" />
         </div>
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-bold tracking-tight text-sidebar-foreground">{siteConfig.name}</div>
-            <div className="text-muted-foreground truncate text-[11px] font-medium capitalize flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            <div className="text-sidebar-foreground truncate text-xs font-semibold tracking-tight">{siteConfig.name}</div>
+            <div className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px] font-medium capitalize">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
               {portal} portal
             </div>
           </div>
@@ -223,13 +223,13 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
       {!isCollapsed && (
         <div className="p-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
             <Input
-              placeholder="Search menu..."
+              placeholder="Search menu…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search menu"
-              className="h-8 pl-8 text-xs bg-background/50 focus:bg-background border-border/80 rounded-lg dark:bg-sidebar-accent/40 dark:focus:bg-sidebar-accent/70 dark:border-sidebar-border"
+              className="border-border/80 bg-background/50 focus:bg-background dark:border-sidebar-border dark:bg-sidebar-accent/40 dark:focus:bg-sidebar-accent/70 h-8 rounded-lg pl-8 text-xs"
             />
           </div>
         </div>
@@ -246,7 +246,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
           <>
             {sections.map(([section, sectionItems]) => (
               <SidebarGroup key={section}>
-                <SidebarGroupLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 px-3">
+                <SidebarGroupLabel className="text-muted-foreground/80 px-3 text-[11px] font-medium tracking-wide">
                   {section}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -264,10 +264,10 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
       </SidebarContent>
 
       {/* Sidebar Footer with User Profile and Logout */}
-      <SidebarFooter className={`border-t border-sidebar-border ${isCollapsed ? 'p-2' : 'p-3'}`}>
+      <SidebarFooter className={`border-sidebar-border border-t ${isCollapsed ? 'p-2' : 'p-3'}`}>
         {showNavSkeleton ? (
           <div className="flex items-center gap-2.5 p-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-md" />
             {!isCollapsed && (
               <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3 w-24" />
@@ -279,22 +279,20 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
           <div className="flex flex-col gap-2">
             <Link
               href={portal === 'customer' ? '/customer/profile' : '/admin/profile'}
-              className={`flex items-center gap-2.5 p-2 rounded-lg hover:bg-sidebar-accent/80 transition-colors group dark:hover:bg-sidebar-accent ${isCollapsed ? 'justify-center' : ''}`}
+              className={`hover:bg-sidebar-accent/80 group flex items-center gap-2.5 rounded-lg p-2 transition-colors dark:hover:bg-sidebar-accent ${isCollapsed ? 'justify-center' : ''}`}
               title={isCollapsed ? `${user.name} — Profile` : undefined}
             >
-              <Avatar className="h-8 w-8 border border-primary/25 shadow-2xs shrink-0">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs dark:bg-primary/20 dark:text-primary-foreground">
+              <Avatar className="border-primary/25 h-8 w-8 shrink-0 rounded-md border shadow-[var(--shadow-xs)]">
+                <AvatarFallback className="bg-primary/10 text-primary rounded-md text-xs font-semibold dark:bg-primary/20">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {!isCollapsed && (
                 <div className="min-w-0 flex-1 text-left">
-                  <div className="truncate text-xs font-bold text-sidebar-foreground group-hover:text-primary transition-colors">
+                  <div className="text-sidebar-foreground group-hover:text-primary truncate text-xs font-semibold transition-colors">
                     {user.name}
                   </div>
-                  <div className="truncate text-[10px] text-muted-foreground">
-                    {user.email}
-                  </div>
+                  <div className="text-muted-foreground truncate text-[10px]">{user.email}</div>
                 </div>
               )}
             </Link>
@@ -302,7 +300,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <button
               type="button"
               onClick={handleLogout}
-              className={`flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 hover:bg-destructive/15 text-destructive text-xs font-semibold py-2 transition-all hover:border-destructive/40 active:scale-[0.98] dark:bg-destructive/10 dark:hover:bg-destructive/20 dark:border-destructive/30 ${isCollapsed ? 'justify-center' : 'w-full'}`}
+              className={`border-destructive/20 bg-destructive/5 hover:bg-destructive/15 text-destructive hover:border-destructive/40 dark:border-destructive/30 dark:bg-destructive/10 dark:hover:bg-destructive/20 flex items-center gap-2 rounded-lg border py-2 text-xs font-medium transition-all active:scale-[0.98] ${isCollapsed ? 'justify-center' : 'w-full'}`}
               title={isCollapsed ? 'Log out' : undefined}
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -312,9 +310,9 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
         ) : (
           <Link
             href="/login"
-            className={`flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold py-2 hover:bg-primary/90 transition-all shadow-xs ${isCollapsed ? 'px-0' : 'w-full'}`}
+            className={`bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold shadow-[var(--shadow-primary)] transition-all ${isCollapsed ? 'px-0' : 'w-full'}`}
           >
-            {!isCollapsed && <span>Log In</span>}
+            {!isCollapsed && <span>Log in</span>}
           </Link>
         )}
       </SidebarFooter>

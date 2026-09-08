@@ -104,7 +104,7 @@ export function PopTransactionsPage() {
 
       {/* Search */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <div className="p-4 flex items-center gap-3">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -132,7 +132,7 @@ export function PopTransactionsPage() {
 
       {/* Table */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-16">
               <EmptyState
@@ -146,19 +146,19 @@ export function PopTransactionsPage() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Date</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Date</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">POP</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">POP</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Type</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Type</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Amount</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Amount</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Note</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Note</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>

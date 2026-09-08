@@ -51,7 +51,7 @@ export function OtcReportPage() {
           </p>
         </div>
 
-        <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-6">
             <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
@@ -63,11 +63,11 @@ export function OtcReportPage() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/50">
-                <TableHead className="text-xs uppercase tracking-wider">Date</TableHead>
-                <TableHead className="text-right text-xs uppercase tracking-wider">Opening Balance</TableHead>
-                <TableHead className="text-right text-xs uppercase tracking-wider">Collections</TableHead>
-                <TableHead className="text-right text-xs uppercase tracking-wider">Expenses</TableHead>
-                <TableHead className="text-right text-xs uppercase tracking-wider">Closing Balance</TableHead>
+                <TableHead className="text-xs tracking-wide">Date</TableHead>
+                <TableHead className="text-right text-xs tracking-wide">Opening Balance</TableHead>
+                <TableHead className="text-right text-xs tracking-wide">Collections</TableHead>
+                <TableHead className="text-right text-xs tracking-wide">Expenses</TableHead>
+                <TableHead className="text-right text-xs tracking-wide">Closing Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -27,9 +27,7 @@ export function DemoUserPicker({ onSelect, disabled }: DemoUserPickerProps) {
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-        Demo accounts
-      </p>
+      <p className="text-muted-foreground text-xs font-medium tracking-wide">Demo accounts</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {demoUserCredentials.map((demo) => (
           <Button

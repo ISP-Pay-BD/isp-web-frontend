@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { toast } from 'sonner';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Bot } from 'lucide-react';
 import type { AiChatMessage } from '@/data/admin/extras.data';
 import { cn } from '@/lib/utils';
 
@@ -45,7 +45,7 @@ export function AiChatPage() {
     };
     setMessages([...list, userMsg, reply]);
     setDraft('');
-    toast.success('Message sent (mock)');
+    toast.success('Message sent');
   };
 
   if (isLoading) return <PageSkeleton variant="dashboard" />;
@@ -56,16 +56,16 @@ export function AiChatPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="AI Chat Assistant"
+        title="AI assistant"
         subtitle="Ask about expiries, sync failures, billing, and ops playbooks"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'AI Chat' }]}
       />
 
       <Card className="border-border/60 overflow-hidden">
         <CardContent className="p-0">
-          <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-3">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">ISP Pay BD Copilot</span>
+          <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-b px-4 py-3">
+            <Bot className="text-primary h-4 w-4" />
+            <span className="text-sm font-medium">Ops assistant</span>
             <BadgeLike />
           </div>
           <div className="flex max-h-[480px] min-h-[360px] flex-col gap-3 overflow-y-auto p-4">
@@ -102,7 +102,7 @@ export function AiChatPage() {
 
 function BadgeLike() {
   return (
-    <span className="ml-auto rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+    <span className="ml-auto rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-600 dark:text-emerald-400">
       Demo
     </span>
   );

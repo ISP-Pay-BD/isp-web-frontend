@@ -55,13 +55,13 @@ export function PlatformDashboardPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Platform Overview"
-        subtitle="Super-admin control center — tenant telemetry, revenue analytics, and system status"
+        title="Platform overview"
+        subtitle="Tenant health, revenue, and support across the network"
         actions={
           <div className="flex items-center gap-2">
             <Link href="/platform/tenants/new">
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-1.5 h-4 w-4" /> Create Tenant Portal
+              <Button>
+                <Plus className="mr-1.5 h-4 w-4" /> Create tenant
               </Button>
             </Link>
           </div>
@@ -95,7 +95,7 @@ export function PlatformDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold">Platform Revenue Trend</CardTitle>
+                <CardTitle className="text-base font-semibold">Revenue trend</CardTitle>
                 <CardDescription>Monthly BDT volume over the last 6 months</CardDescription>
               </div>
               <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
@@ -109,12 +109,12 @@ export function PlatformDashboardPage() {
                 <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradientPlatformRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f75803" stopOpacity={0.4} />
-                      <stop offset="50%" stopColor="#f75803" stopOpacity={0.15} />
-                      <stop offset="100%" stopColor="#f75803" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#e85a1a" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#e85a1a" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#e85a1a" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gradientPlatformRevenueStroke" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#f75803" />
+                      <stop offset="0%" stopColor="#e85a1a" />
                       <stop offset="100%" stopColor="#f7a311" />
                     </linearGradient>
                     <filter id="platformGlow">
@@ -277,7 +277,7 @@ export function PlatformDashboardPage() {
                   <div className="flex items-center gap-3">
                     <div
                       className="h-9 w-9 rounded-md flex items-center justify-center text-white font-bold text-xs"
-                      style={{ backgroundColor: t.primaryColor || '#f75803' }}
+                      style={{ backgroundColor: t.primaryColor || '#e85a1a' }}
                     >
                       {t.name.slice(0, 2).toUpperCase()}
                     </div>

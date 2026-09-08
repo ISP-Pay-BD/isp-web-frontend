@@ -36,7 +36,7 @@ function SectionBlock({
   return (
     <div
       >
-      <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden h-full">
+      <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden h-full">
         <CardContent className="p-0">
           {/* Header */}
           <div className={cn('px-6 py-4 border-b border-border/50', bg)}>

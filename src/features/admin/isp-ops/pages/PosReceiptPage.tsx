@@ -48,7 +48,7 @@ export function PosReceiptPage() {
         }
       />
 
-      <Card className="mx-auto max-w-xs border-border/60 font-mono text-xs shadow-sm ring-1 ring-foreground/5">
+      <Card className="mx-auto max-w-xs border-border/60 font-mono text-xs shadow-sm ring-1 ring-border/60">
         <CardContent className="space-y-2 py-6 text-center">
           <div className="text-sm font-bold tracking-wide">ISP PAY BD</div>
           <div className="text-muted-foreground">{receipt.branch}</div>

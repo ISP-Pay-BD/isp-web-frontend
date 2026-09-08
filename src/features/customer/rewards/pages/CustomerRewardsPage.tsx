@@ -80,7 +80,7 @@ export function CustomerRewardsPage() {
           <div className="md:col-span-6 rounded-xl border border-border/60 bg-card p-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <span className="text-xs font-semibold tracking-wide text-muted-foreground flex items-center gap-1.5">
                   <Gift className="h-4 w-4 text-primary" /> Reward points
                 </span>
                 <Badge variant="outline" className="text-xs">

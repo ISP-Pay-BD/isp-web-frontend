@@ -354,7 +354,7 @@ function EngineHubInner({
                     </div>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                      <thead className="bg-muted/40 text-left text-[11px] tracking-wide text-muted-foreground">
                         <tr>
                           <th className="px-3 py-2 font-medium">Record</th>
                           <th className="px-3 py-2 font-medium">Status</th>

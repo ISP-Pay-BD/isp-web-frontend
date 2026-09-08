@@ -89,28 +89,28 @@ export function JournalEntriesPage() {
             />
           </div>
         ) : (
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Entry ID</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Entry ID</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Date</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Date</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Description</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Description</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Debit</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Debit</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Credit</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Credit</span>
                     </TableHead>
                     <TableHead className="text-right">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Status</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Status</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>

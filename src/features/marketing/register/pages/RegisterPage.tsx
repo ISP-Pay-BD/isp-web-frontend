@@ -80,7 +80,7 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
           <Reveal className="rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10 lg:col-span-8">
             <div className="mb-6 border-b border-white/10 pb-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+                <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
                   {isReferralFlow ? t('marketing.pages.register.referralBadge') : t('marketing.pages.register.badge')}
                 </p>
                 <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
@@ -104,7 +104,7 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Organization Info */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-landing-accent">
+                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
                   01. ISP Organization Details
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -213,7 +213,7 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
 
               {/* Geographic Location */}
               <div className="space-y-4 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-landing-accent">
+                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
                   02. Area &amp; Coverage POP
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -287,7 +287,7 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
 
               {/* Plan & Customer Types */}
               <div className="space-y-4 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-landing-accent">
+                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
                   03. Service Setup &amp; Plan
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -360,7 +360,7 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-landing-cta hover:bg-landing-cta-hover text-white h-12 text-base font-semibold shadow-xl shadow-orange-500/20"
+                  className="w-full bg-landing-cta hover:bg-landing-cta-hover text-white h-12 text-base font-semibold shadow-[var(--shadow-primary)]"
                 >
                   {submitting ? 'Creating Organization Account…' : 'Create Free Trial Account'}
                   <Rocket className="ml-2 h-5 w-5" />

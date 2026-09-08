@@ -52,7 +52,7 @@ export function PluginsPage() {
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
+          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
             {t('marketing.pages.plugins.badge')}
           </p>
           <h1 className="font-landing-display mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">

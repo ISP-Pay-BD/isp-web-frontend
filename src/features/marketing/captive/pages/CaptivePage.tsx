@@ -16,11 +16,11 @@ export function CaptivePage() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0c0118] px-4 text-white">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-landing-bg px-4 text-white">
       <Reveal className="relative z-10 w-full max-w-md space-y-6 rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f75803]/20">
-            <Wifi className="h-5 w-5 text-[#f75803]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-landing-cta/20">
+            <Wifi className="h-5 w-5 text-landing-cta" />
           </div>
           <div>
             <h1 className="text-xl font-semibold tracking-tight">Session expired</h1>
@@ -38,11 +38,11 @@ export function CaptivePage() {
           </div>
           <div className="mt-3 flex justify-between font-semibold">
             <span className="text-white/60">Due</span>
-            <span className="tabular-nums text-[#f75803]">{session.dueBdt.toLocaleString()} ৳</span>
+            <span className="tabular-nums text-landing-cta">{session.dueBdt.toLocaleString()} ৳</span>
           </div>
         </div>
         <Button
-          className="w-full bg-[#f75803] duration-200 ease-out hover:bg-[#f75803]/90"
+          className="w-full bg-landing-cta duration-200 ease-out hover:bg-landing-cta-hover"
           onClick={() => toast.success('Opening payment (mock)')}
         >
           Pay now
@@ -51,7 +51,7 @@ export function CaptivePage() {
           Already paid?{' '}
           <button
             type="button"
-            className="text-[#2E8BFF] underline"
+            className="text-landing-accent underline underline-offset-2"
             onClick={() => toast.success('Reconnecting… (mock)')}
           >
             Reconnect

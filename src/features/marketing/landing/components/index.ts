@@ -4,6 +4,7 @@ export { FeaturesGrid } from './FeaturesGrid';
 export { BenefitsSection } from './BenefitsSection';
 export { WhyChooseSection } from './WhyChooseSection';
 export { HowItWorks } from './HowItWorks';
+export { DesirePinSection } from './DesirePinSection';
 export { ProductPreview } from './ProductPreview';
 export { AutoReconcile } from './AutoReconcile';
 export { RoiSection } from './RoiSection';

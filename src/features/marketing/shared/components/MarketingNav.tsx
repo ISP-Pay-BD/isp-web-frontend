@@ -35,73 +35,69 @@ export function MarketingNav() {
   const [open, setOpen] = useState(false);
   const t = useTranslations();
 
-  const handleNavClick = useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-      if (isHashLink(href)) {
-        e.preventDefault();
-        scrollToSection(href);
-        setOpen(false);
-      }
-    },
-    [],
-  );
+  const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isHashLink(href)) {
+      e.preventDefault();
+      scrollToSection(href);
+      setOpen(false);
+    }
+  }, []);
 
   return (
-    <header className="lp-nav bg-landing-bg/80 supports-[backdrop-filter]:bg-landing-bg/70 sticky top-0 z-50 border-b border-white/10 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-6">
-        <Link href="/" className="flex items-center gap-3" aria-label={`${siteConfig.name} home`}>
-          <Image src={brandAssets.logo} alt="" width={36} height={36} className="h-9 w-9" priority />
-          <div className="hidden sm:block">
-            <div className="font-landing-display text-sm font-bold text-white">{siteConfig.name}</div>
-            <div className="text-landing-accent text-xs">{t('marketing.nav.tagline')}</div>
-          </div>
+    <header className="lp-nav pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-4 md:px-6 md:pt-5">
+      <div className="pointer-events-auto mx-auto flex max-w-5xl items-center justify-between gap-3 rounded-full border border-white/12 bg-landing-bg/55 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl supports-[backdrop-filter]:bg-landing-bg/45">
+        <Link href="/" className="flex items-center gap-2.5 pl-1" aria-label={`${siteConfig.name} home`}>
+          <Image src={brandAssets.logo} alt="" width={32} height={32} className="h-8 w-8" priority />
+          <span className="font-landing-display hidden text-sm font-semibold tracking-tight text-white sm:inline">
+            {siteConfig.name}
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
           {marketingNavLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="group relative text-sm text-white/80 transition-colors hover:text-white"
+              className="rounded-full px-3 py-1.5 text-sm text-white/70 transition-colors duration-200 hover:bg-white/[0.06] hover:text-white"
             >
-              <span className="inline-block transition-transform duration-150 group-hover:translate-x-0.5">
-                {t(navI18nKeys[link.href] ?? link.label)}
-              </span>
-              <span className="absolute -bottom-1 left-0 h-px w-full origin-left scale-x-0 bg-landing-cta transition-transform duration-200 group-hover:scale-x-100" />
+              {t(navI18nKeys[link.href] ?? link.label)}
             </a>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           <Link href="/login">
-            <Button variant="ghost" className="text-white hover:bg-white/10 hover:text-white">
+            <Button
+              variant="ghost"
+              className="h-9 rounded-full px-4 text-white/80 hover:bg-white/10 hover:text-white"
+            >
               {t('marketing.nav.login')}
             </Button>
           </Link>
           <Link href="/register">
-            <Button className="bg-landing-cta hover:bg-landing-cta-hover text-white">
+            <Button className="bg-landing-cta hover:bg-landing-cta-hover h-9 rounded-full px-4 font-semibold text-white">
               {t('marketing.nav.startTrial')}
             </Button>
           </Link>
         </div>
 
-        <div className="flex items-center gap-2 lg:hidden">
+        <div className="flex items-center lg:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
               aria-label="Open menu"
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </SheetTrigger>
-            <SheetContent side="right" className="bg-landing-panel border-white/10 text-white">
+            <SheetContent side="right" className="border-white/10 bg-landing-panel text-white">
               <nav className="mt-8 flex flex-col gap-4" aria-label="Mobile">
                 {marketingNavLinks.map((link) => (
                   <a
                     key={link.href}
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    className="text-lg font-medium text-white/90"
+                    className="font-landing-display text-lg font-medium text-white/90"
                   >
                     {t(navI18nKeys[link.href] ?? link.label)}
                   </a>
@@ -110,7 +106,7 @@ export function MarketingNav() {
                   {t('marketing.nav.login')}
                 </Link>
                 <Link href="/register" onClick={() => setOpen(false)}>
-                  <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full">
+                  <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full rounded-full">
                     {t('marketing.nav.startTrial')}
                   </Button>
                 </Link>

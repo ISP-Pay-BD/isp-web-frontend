@@ -205,7 +205,7 @@ export const initialPlatformSettings: PlatformSoftwareSettings = {
   maintenanceMode: false,
   allowSelfRegistration: true,
   sessionTimeoutMinutes: 120,
-  primaryBrandColor: '#f75803',
+  primaryBrandColor: '#e85a1a',
   notificationWebhookUrl: 'https://hooks.isppaybd.com/platform/events',
 };
 

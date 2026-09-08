@@ -124,7 +124,7 @@ export function ProductPreview({ tabs }: ProductPreviewProps) {
               </dl>
             </div>
 
-            <div className="overflow-hidden border border-white/10 bg-[#10061c] lg:col-span-8">
+            <div className="overflow-hidden border border-white/10 bg-landing-panel lg:col-span-8">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <span className="font-mono text-[11px] text-white/40">
                   operator-console / {currentTab.id}
@@ -133,7 +133,7 @@ export function ProductPreview({ tabs }: ProductPreviewProps) {
               </div>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/10 text-[11px] uppercase tracking-wide text-white/35">
+                  <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/35">
                     <th className="px-4 py-3 font-medium">Source</th>
                     <th className="px-4 py-3 font-medium">Ref</th>
                     <th className="px-4 py-3 text-right font-medium">Status</th>

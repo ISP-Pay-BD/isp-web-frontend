@@ -50,7 +50,7 @@ export function InvoiceDetailPage() {
         }
       />
 
-      <Card className="max-w-xl border-border/60 shadow-sm ring-1 ring-foreground/5">
+      <Card className="max-w-xl border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Invoice summary</CardTitle>
           <Badge variant="outline" className="capitalize">

@@ -24,7 +24,7 @@ export function TenantHealthPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader title="Tenant health" subtitle={`Scorecard for ${id}`} />
-      <Card className="max-w-md border-border/60 shadow-sm ring-1 ring-foreground/5">
+      <Card className="max-w-md border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader>
           <CardTitle className="text-base">Health score</CardTitle>
         </CardHeader>

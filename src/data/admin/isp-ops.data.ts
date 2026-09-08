@@ -517,7 +517,7 @@ export const routerDetails: RouterDetail[] = [
 
 export const pppoeSessions: PppoeSession[] = [
   { id: 'ses_01', routerId: 'rtr_1', username: 'user.rahim', ip: '10.20.1.44', uptime: '4h 12m', rxMbps: 42.1, txMbps: 8.3, mac: 'AA:BB:CC:11:22:33' },
-  { id: 'ses_02', routerId: 'rtr_1', username: 'corp.acme', ip: '10.20.1.12', uptime: '2d 1h', rxMbps: 180.4, txMbps: 55.2, mac: 'AA:BB:CC:44:55:66' },
+  { id: 'ses_02', routerId: 'rtr_1', username: 'corp.mirpur', ip: '10.20.1.12', uptime: '2d 1h', rxMbps: 180.4, txMbps: 55.2, mac: 'AA:BB:CC:44:55:66' },
   { id: 'ses_03', routerId: 'rtr_2', username: 'user.fatima', ip: '10.21.3.88', uptime: '55m', rxMbps: 18.0, txMbps: 2.1, mac: 'DD:EE:FF:01:02:03' },
   { id: 'ses_04', routerId: 'rtr_1', username: 'user.karim', ip: '10.20.1.91', uptime: '9h 40m', rxMbps: 65.5, txMbps: 12.0, mac: '11:22:33:44:55:66' },
 ];
@@ -531,12 +531,12 @@ export const radiusNas: RadiusNas[] = [
 export const radiusCoaLog: RadiusCoaLog[] = [
   { id: 'coa_01', at: '2026-09-07T18:10:00', nas: 'Gulshan Core', username: 'user.rahim', action: 'disconnect', result: 'ok' },
   { id: 'coa_02', at: '2026-09-07T17:55:00', nas: 'Dhanmondi Edge', username: 'user.fatima', action: 'coa', result: 'ok' },
-  { id: 'coa_03', at: '2026-09-07T16:02:00', nas: 'Gulshan Core', username: 'corp.acme', action: 'pod', result: 'timeout' },
+  { id: 'coa_03', at: '2026-09-07T16:02:00', nas: 'Gulshan Core', username: 'corp.mirpur', action: 'pod', result: 'timeout' },
 ];
 
 export const invoices: IspInvoice[] = [
   { id: 'inv_01', number: 'INV-2026-0901', customerName: 'Rahim Uddin', customerId: 'cust_001', period: '2026-09', amountBdt: 1200, taxBdt: 180, status: 'sent', dueDate: '2026-09-10' },
-  { id: 'inv_02', number: 'INV-2026-0902', customerName: 'Acme Corp', customerId: 'cust_010', period: '2026-09', amountBdt: 18500, taxBdt: 2775, status: 'paid', dueDate: '2026-09-05' },
+  { id: 'inv_02', number: 'INV-2026-0902', customerName: 'Mirpur Biz Link', customerId: 'cust_010', period: '2026-09', amountBdt: 18500, taxBdt: 2775, status: 'paid', dueDate: '2026-09-05' },
   { id: 'inv_03', number: 'INV-2026-0831', customerName: 'Fatima Begum', customerId: 'cust_002', period: '2026-08', amountBdt: 800, taxBdt: 120, status: 'overdue', dueDate: '2026-08-10' },
   { id: 'inv_04', number: 'INV-2026-0903', customerName: 'Karim Hossain', customerId: 'cust_003', period: '2026-09', amountBdt: 1500, taxBdt: 225, status: 'draft', dueDate: '2026-09-15' },
 ];
@@ -555,7 +555,7 @@ export const inactiveCustomers: InactiveCustomer[] = [
 
 export const ipNatLogs: IpNatLog[] = [
   { id: 'nat_01', at: '2026-09-07T18:01:12', publicIp: '103.112.20.8', privateIp: '10.20.1.44', port: 44321, protocol: 'tcp', username: 'user.rahim', bytes: 1_240_000 },
-  { id: 'nat_02', at: '2026-09-07T18:01:08', publicIp: '103.112.20.8', privateIp: '10.20.1.12', port: 51200, protocol: 'udp', username: 'corp.acme', bytes: 8_900_000 },
+  { id: 'nat_02', at: '2026-09-07T18:01:08', publicIp: '103.112.20.8', privateIp: '10.20.1.12', port: 51200, protocol: 'udp', username: 'corp.mirpur', bytes: 8_900_000 },
   { id: 'nat_03', at: '2026-09-07T17:59:40', publicIp: '103.112.20.9', privateIp: '10.21.3.88', port: 33112, protocol: 'tcp', username: 'user.fatima', bytes: 220_000 },
 ];
 
@@ -586,7 +586,7 @@ export const oltOnus: OltOnu[] = [
   { id: 'onu_01', oltId: 'olt_01', sn: 'HWTC12345678', rxDbm: -22.4, txDbm: 2.1, status: 'online', customerName: 'Rahim Uddin' },
   { id: 'onu_02', oltId: 'olt_01', sn: 'HWTC87654321', rxDbm: -28.1, txDbm: 1.8, status: 'online', customerName: 'Fatima Begum' },
   { id: 'onu_03', oltId: 'olt_01', sn: 'ZTEA99887766', rxDbm: -34.0, txDbm: 0.9, status: 'los', customerName: 'Sajjad Ali' },
-  { id: 'onu_04', oltId: 'olt_02', sn: 'HWTC11223344', rxDbm: -19.5, txDbm: 2.4, status: 'online', customerName: 'Acme Corp' },
+  { id: 'onu_04', oltId: 'olt_02', sn: 'HWTC11223344', rxDbm: -19.5, txDbm: 2.4, status: 'online', customerName: 'Mirpur Biz Link' },
 ];
 
 export const oltVendors: OltVendor[] = [
@@ -636,7 +636,7 @@ export const walledGardenRules: WalledGardenRule[] = [
 ];
 
 export const usageReports: UsageReportRow[] = [
-  { id: 'usg_01', customerName: 'Acme Corp', packageName: 'Biz 200Mbps', downloadGb: 812, uploadGb: 220, peakMbps: 188, period: '2026-08' },
+  { id: 'usg_01', customerName: 'Mirpur Biz Link', packageName: 'Biz 200Mbps', downloadGb: 812, uploadGb: 220, peakMbps: 188, period: '2026-08' },
   { id: 'usg_02', customerName: 'Rahim Uddin', packageName: 'Home 40Mbps', downloadGb: 142, uploadGb: 18, peakMbps: 38, period: '2026-08' },
   { id: 'usg_03', customerName: 'Fatima Begum', packageName: 'Home 20Mbps', downloadGb: 64, uploadGb: 9, peakMbps: 19, period: '2026-08' },
 ];
@@ -661,12 +661,12 @@ export const prorationExamples: ProrationExample[] = [
 
 export const creditNotes: CreditNote[] = [
   { id: 'cr_01', number: 'CN-2026-014', customerName: 'Rahim Uddin', amountBdt: 200, reason: 'Outage goodwill', at: '2026-09-05', status: 'applied' },
-  { id: 'cr_02', number: 'CN-2026-015', customerName: 'Acme Corp', amountBdt: 1500, reason: 'Billing error', at: '2026-09-06', status: 'open' },
+  { id: 'cr_02', number: 'CN-2026-015', customerName: 'Mirpur Biz Link', amountBdt: 1500, reason: 'Billing error', at: '2026-09-06', status: 'open' },
 ];
 
 export const deposits: DepositRow[] = [
   { id: 'dep_01', customerName: 'Karim Hossain', type: 'deposit', amountBdt: 2000, at: '2026-04-01', refundable: true },
-  { id: 'dep_02', customerName: 'Acme Corp', type: 'otc', amountBdt: 5000, at: '2026-03-15', refundable: false },
+  { id: 'dep_02', customerName: 'Mirpur Biz Link', type: 'otc', amountBdt: 5000, at: '2026-03-15', refundable: false },
 ];
 
 export const popCommissions: PopCommission[] = [
@@ -692,14 +692,14 @@ export const leads: LeadRow[] = [
 ];
 
 export const customerGroups: CustomerGroup[] = [
-  { id: 'grp_01', name: 'Acme HQ + Branches', parentName: 'Acme Corp', members: 6, billingMode: 'consolidated' },
+  { id: 'grp_01', name: 'Mirpur Biz + Branches', parentName: 'Mirpur Biz Link', members: 6, billingMode: 'consolidated' },
   { id: 'grp_02', name: 'Rahim Family', parentName: 'Rahim Uddin', members: 3, billingMode: 'individual' },
 ];
 
 export const kycDocs: KycDoc[] = [
   { id: 'kyc_01', customerId: 'cust_001', type: 'nid', fileName: 'rahim-nid.pdf', uploadedAt: '2026-04-10', status: 'verified' },
   { id: 'kyc_02', customerId: 'cust_001', type: 'photo', fileName: 'rahim-photo.jpg', uploadedAt: '2026-04-10', status: 'verified' },
-  { id: 'kyc_03', customerId: 'cust_010', type: 'trade', fileName: 'acme-trade.pdf', uploadedAt: '2026-03-01', status: 'pending' },
+  { id: 'kyc_03', customerId: 'cust_010', type: 'trade', fileName: 'mirpur-trade.pdf', uploadedAt: '2026-03-01', status: 'pending' },
 ];
 
 export const usageAlertRules: UsageAlertRule[] = [
@@ -741,7 +741,7 @@ export const webhooks: WebhookRow[] = [
 
 export const brandingSettings: BrandingSettings = {
   companyName: 'Demo ISP Pay BD',
-  primaryColor: '#f75803',
+  primaryColor: '#e85a1a',
   logoUrl: '/brand/logo.svg',
   supportPhone: '09678-xxxxxx',
   supportEmail: 'support@demo.isppaybd.com',
@@ -802,7 +802,7 @@ export const fraudEvents: FraudEvent[] = [
 ];
 
 export const contracts: ContractRow[] = [
-  { id: 'ct_01', customerName: 'Acme Corp', title: 'Annual SLA 2026', status: 'signed', signedAt: '2026-01-15' },
+  { id: 'ct_01', customerName: 'Mirpur Biz Link', title: 'Annual SLA 2026', status: 'signed', signedAt: '2026-01-15' },
   { id: 'ct_02', customerName: 'TechPark Ltd', title: 'Service agreement', status: 'sent', signedAt: null },
 ];
 
@@ -818,7 +818,7 @@ export const acsDevices: AcsDevice[] = [
 ];
 
 export const netflowTopTalkers: NetflowTalker[] = [
-  { id: 'nf_01', ip: '10.20.1.12', username: 'corp.acme', rxGb: 120.4, txGb: 40.2, apps: 'HTTPS, Zoom' },
+  { id: 'nf_01', ip: '10.20.1.12', username: 'corp.mirpur', rxGb: 120.4, txGb: 40.2, apps: 'HTTPS, Zoom' },
   { id: 'nf_02', ip: '10.20.1.44', username: 'user.rahim', rxGb: 28.1, txGb: 3.2, apps: 'YouTube, Gaming' },
 ];
 

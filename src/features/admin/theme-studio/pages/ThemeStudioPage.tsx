@@ -15,7 +15,6 @@ import {
   Upload,
   Copy,
   Info,
-  Sparkles,
   Sliders,
   Eye,
   Layers,
@@ -35,8 +34,8 @@ export function ThemeStudioPage() {
 
   // Selected preset or custom colors
   const [selectedPresetId, setSelectedPresetId] = useState<string>('isp_default');
-  const [primaryColor, setPrimaryColor] = useState<string>('#f75803');
-  const [secondaryColor, setSecondaryColor] = useState<string>('#1a0b38');
+  const [primaryColor, setPrimaryColor] = useState<string>('#e85a1a');
+  const [secondaryColor, setSecondaryColor] = useState<string>('#10141a');
   const [radius, setRadius] = useState<number>(12);
 
   // Display Preferences
@@ -167,7 +166,7 @@ export function ThemeStudioPage() {
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset Default
             </Button>
             <Button size="sm" onClick={handleApplyTheme} className="text-xs font-semibold">
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Apply Theme
+              <Check className="mr-1.5 h-3.5 w-3.5" /> Apply theme
             </Button>
           </div>
         }
@@ -204,7 +203,7 @@ export function ThemeStudioPage() {
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
                   className="font-mono text-xs h-9 uppercase"
-                  placeholder="#f75803"
+                  placeholder="#e85a1a"
                 />
               </div>
               {/* 10-step ramp */}
@@ -233,7 +232,7 @@ export function ThemeStudioPage() {
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
                   className="font-mono text-xs h-9 uppercase"
-                  placeholder="#1a0b38"
+                  placeholder="#10141a"
                 />
               </div>
               {/* 10-step ramp */}
@@ -364,7 +363,7 @@ export function ThemeStudioPage() {
                     Brand Badge
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full">
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Payment Due
@@ -392,7 +391,7 @@ export function ThemeStudioPage() {
               className="p-3.5 text-white rounded-xl flex items-center justify-between shadow-2xs"
               style={{
                 borderRadius: `${radius}px`,
-                background: `linear-gradient(135deg, ${secondaryColor} 0%, #0c0118 100%)`,
+                background: `linear-gradient(135deg, ${secondaryColor} 0%, #0a0c10 100%)`,
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >

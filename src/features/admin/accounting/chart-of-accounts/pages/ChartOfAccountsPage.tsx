@@ -103,22 +103,22 @@ export function ChartOfAccountsPage() {
             />
           </div>
         ) : (
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
                     <TableHead className="w-[100px]">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Code</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Code</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Account Name</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Account Name</span>
                     </TableHead>
                     <TableHead>
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Type</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Type</span>
                     </TableHead>
                     <TableHead className="text-right">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Balance (৳)</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Balance (৳)</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>

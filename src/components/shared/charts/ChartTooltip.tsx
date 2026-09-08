@@ -24,7 +24,7 @@ export function ChartTooltip({
 
   return (
     <div
-      className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl p-3 min-w-[160px]"
+      className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-md)] p-3 min-w-[160px]"
     >
       {label && (
         <p className="text-[11px] font-semibold text-muted-foreground mb-2 pb-2 border-b border-border/50">
@@ -64,7 +64,7 @@ export function ChartTooltipWithBadge({
 
   return (
     <div
-      className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl p-3 min-w-[180px]"
+      className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-md)] p-3 min-w-[180px]"
     >
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/50">
         <p className="text-[11px] font-semibold text-muted-foreground">

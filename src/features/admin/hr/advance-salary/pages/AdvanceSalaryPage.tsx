@@ -127,7 +127,7 @@ export function AdvanceSalaryPage() {
       </div>
 
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1 min-w-[200px] sm:min-w-[300px]">
@@ -163,13 +163,13 @@ export function AdvanceSalaryPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-12 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">#</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Staff Member</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Amount</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason / Notes</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Requested Date</TableHead>
-                    <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                    <TableHead className="text-right text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Action</TableHead>
+                    <TableHead className="w-12 text-[11px] font-medium tracking-wide text-muted-foreground">#</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Staff Member</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Amount</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Reason / Notes</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Requested Date</TableHead>
+                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-right text-[11px] font-medium tracking-wide text-muted-foreground">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -100,7 +100,7 @@ export function AdminDashboardPage() {
         <Link href="/admin/customers?status=expired" className="group block no-underline">
           <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Payment due</p>
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wide">Payment due</p>
               <p className="mt-1 font-mono text-xl font-semibold text-amber-600 dark:text-amber-400">
                 ৳<NumberFlow value={stats.customersExpaymentTotal ?? 54000} format={{ notation: 'compact' }} />
                 <span className="ml-1.5 text-xs font-normal text-muted-foreground">
@@ -114,7 +114,7 @@ export function AdminDashboardPage() {
         <Link href="/admin/customers?status=expired" className="group block no-underline">
           <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Expired</p>
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wide">Expired</p>
               <p className="mt-1 text-xl font-semibold text-rose-600 dark:text-rose-400">
                 <NumberFlow value={stats.expiredCustomers} />
                 <span className="ml-1.5 text-xs font-normal text-muted-foreground">subscribers</span>
@@ -126,7 +126,7 @@ export function AdminDashboardPage() {
         <Link href="/admin/support" className="group block no-underline">
           <SpotlightCard className="flex items-center justify-between px-4 py-3.5">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Open tickets</p>
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wide">Open tickets</p>
               <p className="mt-1 text-xl font-semibold text-foreground">
                 <NumberFlow value={stats.pendingTickets} />
                 <span className="ml-1.5 text-xs font-normal text-muted-foreground">
@@ -140,32 +140,32 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Primary metrics — summary strip (not 4 KPI tiles) */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
-        <Link href="/admin/customers" className="group transition-colors duration-200 ease-out hover:text-primary">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Active</span>
+      <div className="bg-card border-border/60 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border px-4 py-3 text-sm shadow-[var(--shadow-xs)]">
+        <Link href="/admin/customers" className="hover:text-primary group transition-colors duration-200 ease-out">
+          <span className="text-muted-foreground text-[11px] tracking-wide">Active</span>
           <p className="font-semibold tabular-nums">
             <NumberFlow value={stats.activeCustomers} />
-            <span className="ml-1 text-xs font-normal text-muted-foreground">/ {stats.totalCustomers}</span>
+            <span className="text-muted-foreground ml-1 text-xs font-normal">/ {stats.totalCustomers}</span>
           </p>
         </Link>
-        <span className="hidden text-border sm:inline">·</span>
-        <Link href="/admin/customer-payments" className="group transition-colors duration-200 ease-out hover:text-primary">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Collected</span>
+        <span className="text-border hidden sm:inline">·</span>
+        <Link href="/admin/customer-payments" className="hover:text-primary group transition-colors duration-200 ease-out">
+          <span className="text-muted-foreground text-[11px] tracking-wide">Collected</span>
           <p className="font-mono font-semibold tabular-nums">
             ৳<NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
           </p>
         </Link>
-        <span className="hidden text-border sm:inline">·</span>
-        <Link href="/admin/routers" className="group transition-colors duration-200 ease-out hover:text-primary">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Online</span>
+        <span className="text-border hidden sm:inline">·</span>
+        <Link href="/admin/routers" className="hover:text-primary group transition-colors duration-200 ease-out">
+          <span className="text-muted-foreground text-[11px] tracking-wide">Online</span>
           <p className="font-semibold tabular-nums">
             <NumberFlow value={stats.onlineUsers} />
-            <span className="ml-1 text-xs font-normal text-muted-foreground">sessions</span>
+            <span className="text-muted-foreground ml-1 text-xs font-normal">sessions</span>
           </p>
         </Link>
-        <span className="hidden text-border sm:inline">·</span>
-        <Link href="/admin/subscription" className="group min-w-[140px] transition-colors duration-200 ease-out hover:text-primary">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Quota</span>
+        <span className="text-border hidden sm:inline">·</span>
+        <Link href="/admin/subscription" className="hover:text-primary group min-w-[140px] transition-colors duration-200 ease-out">
+          <span className="text-muted-foreground text-[11px] tracking-wide">Quota</span>
           <p className="font-mono text-xs font-semibold tabular-nums">
             {stats.customerQuota?.used ?? 248}/{stats.customerQuota?.limit ?? 500}
           </p>
@@ -185,7 +185,7 @@ export function AdminDashboardPage() {
           <Link
             key={item.href + item.label}
             href={item.href}
-            className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors duration-200 ease-out hover:border-primary/40 hover:bg-muted/30"
+            className="border-border/60 bg-card hover:border-primary/40 hover:bg-muted/30 inline-flex items-center gap-2 rounded-lg border px-3 py-2 shadow-[var(--shadow-xs)] transition-colors duration-200 ease-out"
           >
             <span className="text-muted-foreground">{item.label}</span>
             <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
@@ -198,21 +198,21 @@ export function AdminDashboardPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Wifi className="h-4 w-4 text-muted-foreground" /> POP Live Sessions
+              <h2 className="text-foreground flex items-center gap-2 text-base font-semibold">
+                <Wifi className="text-muted-foreground h-4 w-4" /> POP live sessions
               </h2>
-              <p className="text-xs text-muted-foreground">Live PPPoE sessions across connected MikroTik access concentrators</p>
+              <p className="text-muted-foreground text-xs">Live PPPoE sessions across connected MikroTik access concentrators</p>
             </div>
             <Link href="/admin/routers">
-              <Button size="sm" variant="ghost" className="text-xs text-primary">
-                Manage Routers <ArrowRight className="ml-1 h-3 w-3" />
+              <Button size="sm" variant="ghost" className="text-primary text-xs">
+                Manage routers <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border/60">
+          <div className="border-border/60 overflow-hidden rounded-lg border shadow-[var(--shadow-xs)]">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+              <thead className="bg-muted/40 text-muted-foreground text-left text-[11px] tracking-wide">
                 <tr>
                   <th className="px-3 py-2 font-medium">Router</th>
                   <th className="px-3 py-2 font-medium">Host</th>
@@ -343,19 +343,19 @@ export function AdminDashboardPage() {
             {/* Summary Stats */}
             <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Total Collected</div>
+                <div className="text-[10px] tracking-wide text-muted-foreground mb-1">Total Collected</div>
                 <div className="text-sm font-bold font-mono text-foreground">
                   ৳{((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.collection, 0) / 1000000).toFixed(2)}M
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Target</div>
+                <div className="text-[10px] tracking-wide text-muted-foreground mb-1">Target</div>
                 <div className="text-sm font-bold font-mono text-muted-foreground">
                   ৳{((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.target, 0) / 1000000).toFixed(2)}M
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Achievement</div>
+                <div className="text-[10px] tracking-wide text-muted-foreground mb-1">Achievement</div>
                 <div className="text-sm font-bold font-mono text-emerald-500">
                   {((stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.collection, 0) /
                     (stats.monthlyTrend ?? []).reduce((sum, m) => sum + m.target, 0) *
@@ -383,11 +383,11 @@ export function AdminDashboardPage() {
                 <BarChart data={stats.weeklyCollections ?? []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradientBar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f75803" stopOpacity={1} />
+                      <stop offset="0%" stopColor="#e85a1a" stopOpacity={1} />
                       <stop offset="100%" stopColor="#c44103" stopOpacity={0.7} />
                     </linearGradient>
                     <filter id="barShadow">
-                      <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#f75803" floodOpacity="0.15" />
+                      <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#e85a1a" floodOpacity="0.15" />
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -430,21 +430,21 @@ export function AdminDashboardPage() {
             <div className="mt-4 pt-4 border-t border-border/50">
               <div className="flex items-center justify-between">
                 <div className="text-center flex-1">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div>
+                  <div className="text-[10px] tracking-wide text-muted-foreground">Total</div>
                   <div className="text-sm font-bold font-mono">
                     ৳{((stats.weeklyCollections ?? []).reduce((sum, d) => sum + d.amount, 0) / 1000).toFixed(0)}k
                   </div>
                 </div>
                 <div className="h-8 w-px bg-border/50" />
                 <div className="text-center flex-1">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Avg/Day</div>
+                  <div className="text-[10px] tracking-wide text-muted-foreground">Avg/Day</div>
                   <div className="text-sm font-bold font-mono">
                     ৳{((stats.weeklyCollections ?? []).reduce((sum, d) => sum + d.amount, 0) / 7 / 1000).toFixed(1)}k
                   </div>
                 </div>
                 <div className="h-8 w-px bg-border/50" />
                 <div className="text-center flex-1">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Peak</div>
+                  <div className="text-[10px] tracking-wide text-muted-foreground">Peak</div>
                   <div className="text-sm font-bold font-mono text-emerald-500">
                     ৳{Math.max(...(stats.weeklyCollections ?? []).map((d) => d.amount)) / 1000}k
                   </div>

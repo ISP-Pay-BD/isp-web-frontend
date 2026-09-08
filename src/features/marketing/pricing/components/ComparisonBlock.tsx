@@ -62,14 +62,14 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
       className={cn(
         'flex flex-col rounded-2xl border p-5',
         plan.highlighted
-          ? 'border-landing-cta/40 bg-landing-panel shadow-xl shadow-orange-500/5'
+          ? 'border-landing-cta/40 bg-landing-panel shadow-[var(--shadow-md)]'
           : 'border-white/10 bg-white/[0.02]'
       )}
     >
       {/* Plan header */}
       <div className="text-center">
         {plan.highlighted && (
-          <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+          <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-medium tracking-wide text-white">
             Most Popular
           </span>
         )}
@@ -93,7 +93,7 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
       <div className="mt-6 space-y-5">
         {groups.map((group) => (
           <div key={group.title}>
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-landing-cta">
+            <div className="mb-2 text-[10px] font-medium tracking-wide text-landing-cta">
               {group.title}
             </div>
             <div className="space-y-2.5">
@@ -136,8 +136,8 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
         <table className="w-full min-w-[640px] border-collapse">
           <thead>
             <tr>
-              <th className="sticky left-0 z-20 w-[260px] bg-[#0c0118] pb-4 pt-2 text-left">
-                <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
+              <th className="sticky left-0 z-20 w-[260px] bg-landing-bg pb-4 pt-2 text-left">
+                <span className="text-xs font-semibold tracking-wide text-white/40">
                   Features
                 </span>
               </th>
@@ -153,13 +153,13 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
                     className={cn(
                       'absolute inset-x-0 -top-2 bottom-0 rounded-t-2xl',
                       plan.highlighted
-                        ? 'bg-landing-panel border border-b-0 border-landing-cta/40 shadow-xl shadow-orange-500/5'
+                        ? 'bg-landing-panel border border-b-0 border-landing-cta/40 shadow-[var(--shadow-md)]'
                         : 'bg-transparent'
                     )}
                   />
                   <div className="relative">
                     {plan.highlighted && (
-                      <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-medium tracking-wide text-white">
                         Most Popular
                       </span>
                     )}
@@ -237,7 +237,7 @@ export default function ComparisonBlock() {
     <section className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
+          <span className="text-xs font-medium tracking-wide text-landing-cta">
             Feature Comparison
           </span>
           <h2 className="font-landing-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -270,14 +270,14 @@ function ComparisonGroup({ group, plans }: { group: ComparisonGroup; plans: Comp
       <tr>
         <td
           colSpan={4}
-          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold uppercase tracking-wider text-landing-cta"
+          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-cta"
         >
           {group.title}
         </td>
       </tr>
       {group.features.map((feature) => (
         <tr key={feature.label} className="group/row transition-colors hover:bg-white/[0.015]">
-          <td className="sticky left-0 z-10 bg-[#0c0118] px-4 py-3 text-sm text-white/70 group-hover/row:bg-[#0c0118]">
+          <td className="sticky left-0 z-10 bg-landing-bg px-4 py-3 text-sm text-white/70 group-hover/row:bg-landing-bg">
             {feature.label}
           </td>
           {feature.values.map((value, i) => (

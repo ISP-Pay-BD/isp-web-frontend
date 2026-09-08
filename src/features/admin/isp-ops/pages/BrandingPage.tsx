@@ -38,7 +38,7 @@ export function BrandingPage() {
       </p>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        <Card className="max-w-xl border-border/60 shadow-sm ring-1 ring-foreground/5 lg:max-w-none">
+        <Card className="max-w-xl border-border/60 shadow-sm ring-1 ring-border/60 lg:max-w-none">
           <CardHeader>
             <CardTitle className="text-base">Portal identity</CardTitle>
           </CardHeader>
@@ -72,7 +72,7 @@ export function BrandingPage() {
           </CardContent>
         </Card>
 
-        <Card className="h-fit border-border/60 shadow-sm ring-1 ring-foreground/5">
+        <Card className="h-fit border-border/60 shadow-sm ring-1 ring-border/60">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Preview</CardTitle>
           </CardHeader>

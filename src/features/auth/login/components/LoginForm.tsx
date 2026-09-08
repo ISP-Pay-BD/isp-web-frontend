@@ -62,7 +62,7 @@ export function LoginForm() {
       <div className="mx-auto w-full max-w-md space-y-8">
         <div className="space-y-4 lg:hidden">
           <div className="flex items-center gap-3">
-            <Image src={brandAssets.logo} alt="" width={36} height={36} />
+            <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
             <span className="text-lg font-semibold">{siteConfig.name}</span>
           </div>
         </div>

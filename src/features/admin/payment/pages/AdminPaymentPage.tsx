@@ -355,7 +355,7 @@ export function AdminPaymentPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[520px] p-0 gap-0 overflow-hidden border-border/80 shadow-2xl">
+        <DialogContent className="sm:max-w-[520px] p-0 gap-0 overflow-hidden border-border/80 shadow-[var(--shadow-md)]">
           {selectedInvoice && (
             <div
               className={cn(
@@ -399,14 +399,14 @@ export function AdminPaymentPage() {
               <div className="px-6 py-4 space-y-4 text-xs">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-0.5">
-                    <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
+                    <span className="text-muted-foreground text-[10px] tracking-wide font-semibold">
                       Issued To
                     </span>
                     <div className="font-bold text-foreground text-sm">Demo ISP Dhaka</div>
                     <div className="text-[11px] text-muted-foreground">Uttara NOC, Dhaka 1230</div>
                   </div>
                   <div className="space-y-0.5 text-right">
-                    <span className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
+                    <span className="text-muted-foreground text-[10px] tracking-wide font-semibold">
                       Payment Date
                     </span>
                     <div className="font-semibold text-foreground text-sm">
@@ -421,7 +421,7 @@ export function AdminPaymentPage() {
                 <div className="rounded-xl border overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-muted/40 text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
+                      <tr className="bg-muted/40 text-muted-foreground text-[10px] tracking-wide font-semibold">
                         <th className="text-left py-2 px-3.5">Description</th>
                         <th className="text-right py-2 px-3.5">Amount (BDT)</th>
                       </tr>
@@ -460,7 +460,7 @@ export function AdminPaymentPage() {
                     <div className="h-5 w-5 rounded bg-emerald-500/10 flex items-center justify-center">
                       <ShieldCheck className="h-3 w-3 text-emerald-500" />
                     </div>
-                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                    <span className="text-[10px] tracking-wide font-semibold text-muted-foreground">
                       Payment Gateway
                     </span>
                   </div>

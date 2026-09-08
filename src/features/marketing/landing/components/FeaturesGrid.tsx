@@ -6,61 +6,81 @@ interface FeaturesGridProps {
   features: FeatureItem[];
 }
 
+/** Gapless 12-col bento: 7+5 / 7+5 / 4+8 — zero empty cells with grid-flow-dense. */
+const SPANS = [
+  'md:col-span-7 md:row-span-2',
+  'md:col-span-5',
+  'md:col-span-5',
+  'md:col-span-4',
+  'md:col-span-8',
+] as const;
+
+const IMAGE_SEEDS = [
+  'fiber-splice',
+  'router-rack',
+  'city-network',
+  'mobile-pay',
+  'ops-desk',
+] as const;
+
 export function FeaturesGrid({ features }: FeaturesGridProps) {
-  const lead = features[0];
-  const rest = features.slice(1);
+  const cards = features.slice(0, 5);
 
   return (
-    <section id="features" className="py-20 md:py-28">
+    <section id="features" className="py-32 md:py-48">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="max-w-2xl">
-          <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            From the ONU port to the ৳ in your account.
+        <div className="max-w-3xl">
+          <h2 className="font-landing-display text-[clamp(2rem,4vw,3.25rem)] font-semibold tracking-tight text-white text-balance">
+            From the ONU port to the taka in your ledger
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-white/60">
-            OLT and MikroTik on one side; billing, resellers, and BTRC-ready reports on the other.
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+            OLT and MikroTik on one side. Billing, resellers, and BTRC-ready reports on the other.
           </p>
         </div>
 
-        {lead ? (
-          <div className="mt-14 grid gap-12 lg:grid-cols-12 lg:gap-16">
-            <div className="lg:col-span-5">
-              <p className="font-mono text-xs text-landing-cta">01</p>
-              <h3 className="font-landing-display mt-3 text-2xl font-semibold text-white">
-                {lead.title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-white/60">{lead.desc}</p>
-              {lead.bullets && lead.bullets.length > 0 ? (
-                <ul className="mt-6 space-y-2 text-sm text-white/55">
-                  {lead.bullets.map((b) => (
-                    <li key={b} className="border-l border-white/15 pl-3">
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-
-            <ol className="divide-y divide-white/10 border-y border-white/10 lg:col-span-7">
-              {rest.map((feat, i) => (
-                <li key={feat.id} className="grid gap-2 py-5 sm:grid-cols-[3rem_1fr] sm:gap-4">
-                  <span className="font-mono text-xs text-white/30">
-                    {String(i + 2).padStart(2, '0')}
-                  </span>
-                  <div className="min-w-0">
-                    <h3 className="font-landing-display text-base font-semibold text-white">
-                      {feat.title}
-                      {feat.badge ? (
-                        <span className="ml-2 text-xs font-normal text-white/40">{feat.badge}</span>
-                      ) : null}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-white/55">{feat.desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
+        <div className="mt-16 grid auto-rows-[minmax(11rem,auto)] grid-flow-dense gap-3 md:grid-cols-12 md:gap-4">
+          {cards.map((feat, i) => {
+            const isLead = i === 0;
+            return (
+              <article
+                key={feat.id}
+                className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-landing-panel ${SPANS[i]}`}
+              >
+                <div
+                  className="absolute inset-0 opacity-40 transition-transform duration-700 ease-out group-hover:scale-105"
+                  style={{
+                    backgroundImage: `url('https://picsum.photos/seed/${IMAGE_SEEDS[i]}/1200/800')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'grayscale(1) contrast(1.2) brightness(0.45)',
+                    mixBlendMode: 'luminosity',
+                  }}
+                  aria-hidden
+                />
+                <div
+                  className="absolute inset-0 bg-gradient-to-t from-landing-bg via-landing-bg/70 to-transparent"
+                  aria-hidden
+                />
+                <div className={`relative flex h-full flex-col justify-end p-6 ${isLead ? 'md:p-8' : ''}`}>
+                  <h3
+                    className={`font-landing-display font-semibold text-white ${
+                      isLead ? 'text-2xl md:text-3xl' : 'text-lg'
+                    }`}
+                  >
+                    {feat.title}
+                  </h3>
+                  <p
+                    className={`mt-2 leading-relaxed text-white/60 ${
+                      isLead ? 'max-w-md text-sm md:text-base' : 'text-sm'
+                    }`}
+                  >
+                    {feat.desc}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -25,7 +25,7 @@ import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
 import { formatBdt } from '@/lib/format';
 
-const COLORS = ['#f75803', '#2563eb', '#16a34a', '#9333ea'];
+const COLORS = ['#e85a1a', '#2563eb', '#16a34a', '#9333ea'];
 
 type TierRow = { plan: string; tenants: number; mrrBdt: number };
 
@@ -111,11 +111,11 @@ export function RevenuePage() {
                 <BarChart data={data.chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradientRevenueBar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f75803" stopOpacity={1} />
+                      <stop offset="0%" stopColor="#e85a1a" stopOpacity={1} />
                       <stop offset="100%" stopColor="#c44103" stopOpacity={0.8} />
                     </linearGradient>
                     <filter id="revenueBarShadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#f75803" floodOpacity="0.3" />
+                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#e85a1a" floodOpacity="0.3" />
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />

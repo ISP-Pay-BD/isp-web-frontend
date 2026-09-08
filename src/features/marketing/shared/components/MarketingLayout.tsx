@@ -12,15 +12,15 @@ interface MarketingLayoutProps {
 export function MarketingLayout({ children }: MarketingLayoutProps) {
   return (
     <LocaleProvider>
-      <div className="font-landing-body bg-landing-bg text-white min-h-screen">
+      <div className="font-landing-body bg-landing-bg relative min-h-dvh w-full max-w-full overflow-x-hidden text-white">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-black"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-black"
         >
           Skip to content
         </a>
         <MarketingNav />
-        <main id="main-content" className="pb-20 md:pb-0">
+        <main id="main-content" className="w-full max-w-full overflow-x-hidden pb-20 md:pb-0">
           {children}
         </main>
         <MarketingFooter />

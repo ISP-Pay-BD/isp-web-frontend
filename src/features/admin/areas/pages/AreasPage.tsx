@@ -1,7 +1,7 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { useState, useMemo } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import { Plus, MapPin, Edit, Trash2, ChevronDown, ChevronRight, Globe, Search, Filter, X, ArrowUpDown, ChevronUp, Building2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -247,7 +247,7 @@ export function AreasPage() {
 
       {/* Toolbar + Table */}
       <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
           {/* Toolbar */}
           <div className="p-4 border-b border-border/50">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -307,28 +307,28 @@ export function AreasPage() {
                       <button
                         type="button"
                         onClick={() => toggleSort('name')}
-                        className="flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Area Name <SortIcon field="name" />
                       </button>
                     </TableHead>
                     <TableHead className="hidden md:table-cell">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Code</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Code</span>
                     </TableHead>
                     <TableHead>
                       <button
                         type="button"
                         onClick={() => toggleSort('subareas')}
-                        className="flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Sub-areas <SortIcon field="subareas" />
                       </button>
                     </TableHead>
                     <TableHead className="hidden lg:table-cell">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Status</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Status</span>
                     </TableHead>
                     <TableHead className="text-right w-[100px]">
-                      <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Actions</span>
+                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Actions</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -336,9 +336,8 @@ export function AreasPage() {
                   {filteredAndSortedItems.map((area) => {
                     const isExpanded = expanded.has(area.id);
                     return (
-                      <>
+                      <Fragment key={area.id}>
                         <tr
-                          key={`row-${area.id}`}
                           className={`group border-border/40 transition-colors ${
                             isExpanded
                               ? 'bg-primary/[0.03] border-l-2 border-l-primary'
@@ -421,10 +420,7 @@ export function AreasPage() {
 
                         {/* Expanded Sub-areas Row */}
                         {isExpanded && (
-                          <tr
-                            key={`sub-${area.id}`}
-                            className="bg-muted/15 border-border/40"
-                          >
+                          <tr className="bg-muted/15 border-border/40">
                             <TableCell colSpan={6} className="p-0">
                               <div className="px-6 py-4 ml-10 border-l-2 border-primary/30">
                                 <div className="flex items-center gap-2 mb-3">
@@ -495,7 +491,7 @@ export function AreasPage() {
                             </TableCell>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </TableBody>

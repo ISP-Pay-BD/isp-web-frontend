@@ -22,27 +22,25 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/80 bg-card/50 p-12 text-center',
+        'relative flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/25 px-8 py-14 text-center shadow-[var(--shadow-xs)]',
         className,
       )}
     >
       {icon ? (
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+        <div className="border-border/60 bg-card text-muted-foreground flex h-12 w-12 items-center justify-center rounded-lg border shadow-[var(--shadow-xs)]">
           {icon}
         </div>
       ) : null}
       <div className="space-y-1.5">
-        <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
+        <h3 className="text-foreground text-base font-semibold tracking-tight">{title}</h3>
         {description ? (
-          <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">{description}</p>
+          <p className="text-muted-foreground mx-auto max-w-sm text-sm leading-relaxed">
+            {description}
+          </p>
         ) : null}
       </div>
       {actionLabel && onAction ? (
-        <Button
-          onClick={onAction}
-          size="sm"
-          className="mt-1 bg-primary font-semibold text-primary-foreground transition-colors duration-200 ease-out hover:bg-primary/90 active:scale-[0.98]"
-        >
+        <Button onClick={onAction} size="sm" className="mt-1">
           {actionLabel}
         </Button>
       ) : null}

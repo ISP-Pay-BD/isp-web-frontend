@@ -188,7 +188,7 @@ export const aiChatSeedMessages: AiChatMessage[] = [
 export const corporateQueuesData: CorporateQueueJob[] = [
   {
     id: 'cq_01',
-    customerName: 'Acme Logistics HQ',
+    customerName: 'Uttara Logistics HQ',
     packageName: 'Corporate 100 Mbps',
     routerName: 'Uttara-Core-01',
     action: 'create_pppoe',

@@ -88,7 +88,7 @@ export function NetworkMapPage() {
         id: node.id,
         latitude: node.lat,
         longitude: node.lng,
-        color: levelColors[node.level]?.hex ?? '#f75803',
+        color: levelColors[node.level]?.hex ?? '#e85a1a',
         label: node.name,
       })),
     [filtered],
@@ -122,7 +122,7 @@ export function NetworkMapPage() {
         ]}
       />
 
-      <Card className="overflow-hidden border-border/60 shadow-sm ring-1 ring-foreground/5">
+      <Card className="overflow-hidden border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader className="flex flex-col gap-4 border-b border-border/50 bg-muted/20 px-5 py-3.5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">

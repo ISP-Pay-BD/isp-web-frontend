@@ -14,7 +14,7 @@ function LoginFormFallback() {
 
 export function LoginPage() {
   return (
-    <div className="bg-background flex min-h-screen">
+    <div className="bg-background flex min-h-dvh">
       <AuthBrandPanel variant="login" />
       <Suspense fallback={<LoginFormFallback />}>
         <LoginForm />

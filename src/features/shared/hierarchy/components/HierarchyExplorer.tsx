@@ -28,10 +28,10 @@ const roleLabel: Record<HierarchyRole, string> = {
 };
 
 const legend = [
-  { role: 'Super Admin', color: 'bg-[#1a0b38]' },
+  { role: 'Super Admin', color: 'bg-foreground' },
   { role: 'Admin', color: 'bg-primary' },
-  { role: 'Reseller', color: 'bg-sky-500' },
-  { role: 'Customer', color: 'bg-slate-400' },
+  { role: 'Reseller', color: 'bg-muted-foreground' },
+  { role: 'Customer', color: 'bg-border' },
 ] as const;
 
 export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyExplorerProps) {
@@ -155,7 +155,7 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
               <aside className="space-y-3 rounded-xl border border-border/60 bg-card p-4 lg:col-span-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
                       Selected
                     </p>
                     <h3 className="mt-1 text-base font-semibold text-foreground">{selected.label}</h3>

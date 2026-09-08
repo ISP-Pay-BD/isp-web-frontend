@@ -101,7 +101,7 @@ export function TenantsListPage() {
             <div className="flex items-center gap-3">
               <div
                 className="h-8 w-8 rounded-md flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs"
-                style={{ backgroundColor: t.primaryColor || '#f75803' }}
+                style={{ backgroundColor: t.primaryColor || '#e85a1a' }}
               >
                 {t.name.slice(0, 2).toUpperCase()}
               </div>

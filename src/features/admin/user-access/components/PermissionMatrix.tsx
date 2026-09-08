@@ -140,7 +140,7 @@ export function PermissionMatrix({
                       <div className="h-1 w-2 bg-current rounded-full" />
                     )}
                   </button>
-                  <Label className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">All</Label>
+                  <Label className="text-[10px] font-medium tracking-wide text-muted-foreground">All</Label>
                 </div>
               </div>
 

@@ -103,7 +103,7 @@ export function EnginesIndexPage({ portal = 'admin' }: Props) {
       ) : (
         <div className="overflow-hidden rounded-lg border border-border/60">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted/40 text-left text-[11px] tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Engine</th>
                 <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Priority</th>

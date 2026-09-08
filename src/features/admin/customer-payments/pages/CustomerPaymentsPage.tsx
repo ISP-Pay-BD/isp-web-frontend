@@ -341,7 +341,7 @@ export function CustomerPaymentsPage() {
       />
 
       <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-2xl">
+        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

@@ -117,7 +117,7 @@ export function ExpensesPage() {
 
       {/* Filter Bar */}
       <div >
-        <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 p-4">
+        <Card className="border-border/60 shadow-sm ring-1 ring-border/60 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
@@ -156,17 +156,17 @@ export function ExpensesPage() {
             onAction={() => setModalOpen(true)}
           />
         ) : (
-          <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+          <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="w-12 text-xs uppercase tracking-wider">#</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Voucher ID</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Date</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Category</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Vendor</TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider">Amount</TableHead>
-                  <TableHead className="text-right text-xs uppercase tracking-wider">Action</TableHead>
+                  <TableHead className="w-12 text-xs tracking-wide">#</TableHead>
+                  <TableHead className="text-xs tracking-wide">Voucher ID</TableHead>
+                  <TableHead className="text-xs tracking-wide">Date</TableHead>
+                  <TableHead className="text-xs tracking-wide">Category</TableHead>
+                  <TableHead className="text-xs tracking-wide">Vendor</TableHead>
+                  <TableHead className="text-xs tracking-wide">Amount</TableHead>
+                  <TableHead className="text-right text-xs tracking-wide">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

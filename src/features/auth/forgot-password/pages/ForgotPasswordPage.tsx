@@ -39,23 +39,23 @@ export function ForgotPasswordPage() {
     try {
       const result = await mockFetch('auth.forgotPassword', { email: values.email });
       setSuccessMessage(result.message);
-      toast.success('Reset link dispatched');
+      toast.success('Reset link sent');
     } catch (err) {
       const message =
-        err instanceof MockApiError ? err.message : 'Something went wrong. Please try again.';
+        err instanceof MockApiError ? err.message : 'Could not send reset link. Try again.';
       setError(message);
     }
   };
 
   return (
-    <div className="bg-background flex min-h-screen">
+    <div className="bg-background flex min-h-dvh">
       <AuthBrandPanel variant="forgot" />
 
       <div className="flex w-full flex-col justify-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-16">
         <div className="mx-auto w-full max-w-md space-y-8">
           <Link
             href="/login"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to sign in
@@ -63,19 +63,19 @@ export function ForgotPasswordPage() {
 
           <div className="lg:hidden">
             <div className="mb-6 flex items-center gap-3">
-              <Image src={brandAssets.logo} alt="" width={36} height={36} />
+              <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
               <span className="text-lg font-semibold">{siteConfig.name}</span>
             </div>
           </div>
 
           {successMessage ? (
             <div className="space-y-6 text-center">
-              <div className="bg-primary/10 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full">
-                <Send className="h-7 w-7" />
+              <div className="bg-primary/10 text-primary mx-auto flex h-12 w-12 items-center justify-center rounded-lg">
+                <Send className="h-5 w-5" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold">Check your email</h2>
-                <p className="text-muted-foreground text-sm">{successMessage}</p>
+                <h2 className="text-2xl font-semibold tracking-tight">Check your email</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed">{successMessage}</p>
               </div>
               <Button render={<Link href="/login" />} className="w-full">
                 Back to sign in
@@ -84,12 +84,12 @@ export function ForgotPasswordPage() {
           ) : (
             <>
               <div className="space-y-4">
-                <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-xl">
-                  <Key className="text-primary h-6 w-6" />
+                <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-lg">
+                  <Key className="text-primary h-5 w-5" />
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-semibold tracking-tight">Reset your password</h2>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     Enter your account email and we&apos;ll send you a secure reset link.
                   </p>
                 </div>

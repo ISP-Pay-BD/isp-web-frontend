@@ -221,7 +221,7 @@ function ProfilePageInner({ initial }: { initial: AdminProfile }) {
           >
             {/* Sliding Background Indicator */}
             <div
-              className="absolute top-1.5 bottom-1.5 rounded-xl bg-gradient-to-r from-primary via-primary to-primary/90 shadow-lg shadow-primary/25"
+              className="absolute top-1.5 bottom-1.5 rounded-xl bg-primary shadow-[var(--shadow-primary)]"
             />
 
             {/* Tab Buttons */}
@@ -375,7 +375,7 @@ function ProfilePageInner({ initial }: { initial: AdminProfile }) {
                   <CardContent className="space-y-6">
                     {/* Section 1: Identification */}
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                      <h3 className="text-xs font-medium tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                         <Fingerprint className="h-3.5 w-3.5" /> Identity Details
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -404,7 +404,7 @@ function ProfilePageInner({ initial }: { initial: AdminProfile }) {
 
                     {/* Section 2: Contact Channels */}
                     <div className="pt-4 border-t border-border/60">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                      <h3 className="text-xs font-medium tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                         <Mail className="h-3.5 w-3.5" /> Communication Channels
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -438,7 +438,7 @@ function ProfilePageInner({ initial }: { initial: AdminProfile }) {
 
                     {/* Section 3: Office Address */}
                     <div className="pt-4 border-t border-border/60">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                      <h3 className="text-xs font-medium tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
                         <MapPin className="h-3.5 w-3.5" /> Location & Organization
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

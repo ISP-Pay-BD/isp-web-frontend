@@ -11,7 +11,6 @@ import {
   Check,
   RotateCcw,
   ExternalLink,
-  Sparkles,
 } from 'lucide-react';
 import {
   Dialog,
@@ -52,7 +51,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
   const handleSelectPreset = (id: string, name: string) => {
     setPreset(id);
-    toast.success(`Theme preset "${name}" activated`);
+    toast.success(`Preset "${name}" applied`);
   };
 
   const handleSelectRadius = (r: number, label: string) => {
@@ -62,26 +61,25 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
   const handleReset = () => {
     resetToDefault();
-    setTheme('dark');
+    setTheme('system');
     toast.info('Theme reset to ISP Pay BD default');
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-6 border-border/80 shadow-2xl backdrop-blur-md">
+      <DialogContent className="max-w-lg p-6 border-border/80 shadow-[var(--shadow-md)] backdrop-blur-md">
         <DialogHeader className="border-b border-border/60 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
                 <Palette className="h-4 w-4" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold flex items-center gap-1.5">
-                  Theme Studio & Customizer
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <DialogTitle className="flex items-center gap-1.5 text-base font-semibold">
+                  Theme & appearance
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Customize system color schemes, mode, radius, and UI density.
+                  Color scheme, mode, radius, and density
                 </DialogDescription>
               </div>
             </div>
@@ -101,10 +99,10 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
         <div className="space-y-5 pt-2 text-xs">
           {/* Section 1: Color Scheme Mode */}
           <div className="space-y-2">
-            <div className="font-bold text-foreground uppercase tracking-wider text-[11px] flex items-center justify-between">
-              <span>Appearance Mode</span>
-              <span className="text-muted-foreground font-normal normal-case text-xs capitalize">
-                {theme} Mode
+            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
+              <span>Appearance</span>
+              <span className="text-muted-foreground text-xs font-normal capitalize">
+                {theme}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -123,7 +121,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
               </button>
               <button
                 type="button"
-                onClick={() => setTheme('dark')}
+                onClick={() => setTheme('system')}
                 className={cn(
                   'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-semibold',
                   theme === 'dark'
@@ -152,7 +150,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
           {/* Section 2: Preset Brand Color Palette */}
           <div className="space-y-2">
-            <div className="font-bold text-foreground uppercase tracking-wider text-[11px]">
+            <div className="font-medium text-foreground tracking-wide text-[11px]">
               Brand Color Palette
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -191,7 +189,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
           {/* Section 3: Corner Radius Geometry */}
           <div className="space-y-2">
-            <div className="font-bold text-foreground uppercase tracking-wider text-[11px] flex items-center justify-between">
+            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
               <span>Component Corner Radius</span>
               <span className="text-muted-foreground font-normal normal-case font-mono">{radius}px</span>
             </div>
@@ -221,7 +219,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
           {/* Section 4: UI Density */}
           <div className="space-y-2">
-            <div className="font-bold text-foreground uppercase tracking-wider text-[11px]">
+            <div className="font-medium text-foreground tracking-wide text-[11px]">
               Interface Density
             </div>
             <div className="grid grid-cols-2 gap-2">

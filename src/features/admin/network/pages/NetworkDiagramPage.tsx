@@ -142,7 +142,7 @@ export function NetworkDiagramPage() {
 
       {/* Controls / Filter Toolbar */}
       <div>
-        <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardContent className="pt-5 pb-5 px-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
               <div className="w-52">
@@ -226,7 +226,7 @@ export function NetworkDiagramPage() {
 
       {/* Visual Interactive SVG Topology Canvas */}
       <div>
-        <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
+        <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-6 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
@@ -254,7 +254,7 @@ export function NetworkDiagramPage() {
                   Array.from(groupedTree.entries()).map(([ponPort, splittersMap], portIdx) => (
                     <div
                       key={ponPort}
-                      className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm p-5 shadow-sm space-y-6 ring-1 ring-foreground/5"
+                      className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm p-5 shadow-sm space-y-6 ring-1 ring-border/60"
                     >
                       {/* Port Header */}
                       <div className="flex items-center justify-between border-b border-border/50 pb-3">
@@ -405,7 +405,7 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center">
                       <svg className="h-3 w-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Customer</span>
+                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Customer</span>
                   </div>
                   <div className="divide-y divide-border/30">
                     {[
@@ -434,7 +434,7 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-blue-500/10 flex items-center justify-center">
                       <Network className="h-3 w-3 text-blue-500" />
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Network</span>
+                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Network</span>
                   </div>
                   <div className="divide-y divide-border/30">
                     {[
@@ -466,7 +466,7 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-emerald-500/10 flex items-center justify-center">
                       <Zap className="h-3 w-3 text-emerald-500" />
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Optical Levels</span>
+                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Optical Levels</span>
                   </div>
                   <div className="p-4 space-y-5">
                     {/* Rx Power */}

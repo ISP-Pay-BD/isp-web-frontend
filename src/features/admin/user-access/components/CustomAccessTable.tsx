@@ -46,19 +46,19 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border/50">
             <TableHead>
-              <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">User</span>
+              <span className="text-xs font-medium tracking-wide text-muted-foreground">User</span>
             </TableHead>
             <TableHead>
-              <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Role</span>
+              <span className="text-xs font-medium tracking-wide text-muted-foreground">Role</span>
             </TableHead>
             <TableHead>
-              <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Custom Rules</span>
+              <span className="text-xs font-medium tracking-wide text-muted-foreground">Custom Rules</span>
             </TableHead>
             <TableHead>
-              <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Last Updated</span>
+              <span className="text-xs font-medium tracking-wide text-muted-foreground">Last Updated</span>
             </TableHead>
             <TableHead className="text-right">
-              <span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Action</span>
+              <span className="text-xs font-medium tracking-wide text-muted-foreground">Action</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -70,7 +70,7 @@ export function CustomAccessTable({ records, onView }: CustomAccessTableProps) {
             >
               <TableCell className="py-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/10 flex items-center justify-center">
                     <User className="h-4 w-4 text-primary" />
                   </div>
                   <div>

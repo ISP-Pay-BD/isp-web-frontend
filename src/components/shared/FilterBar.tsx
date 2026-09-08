@@ -11,7 +11,7 @@ export function FilterBar({ filters, actions, className }: FilterBarProps) {
   return (
     <div
       className={cn(
-        'bg-card flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between',
+        'bg-card flex flex-col gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-[var(--shadow-xs)] sm:flex-row sm:items-center sm:justify-between',
         className,
       )}
     >
