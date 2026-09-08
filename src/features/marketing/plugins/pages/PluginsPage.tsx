@@ -6,6 +6,7 @@ import { Search, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { useTranslations } from '@/features/marketing/shared';
+import { Reveal } from '@/components/motion/Reveal';
 import { useMarketingPlugins } from '../hooks/use-marketing-plugins';
 
 export function PluginsPage() {
@@ -50,7 +51,7 @@ export function PluginsPage() {
   return (
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="max-w-2xl">
+        <Reveal className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
             {t('marketing.pages.plugins.badge')}
           </p>
@@ -60,16 +61,16 @@ export function PluginsPage() {
           <p className="mt-4 text-base leading-relaxed text-white/60">
             {t('marketing.pages.plugins.subtitle')}
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Reveal className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" delay={0.05}>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setActiveCategory(cat)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out ${
                   activeCategory === cat
                     ? 'bg-landing-cta text-white'
                     : 'border border-white/10 text-white/60 hover:text-white'
@@ -89,10 +90,11 @@ export function PluginsPage() {
               className="w-full rounded-lg border border-white/10 bg-transparent py-2 pl-9 pr-3 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
             />
           </div>
-        </div>
+        </Reveal>
 
+        <Reveal className="mt-10" delay={0.08}>
         {filteredPlugins.length === 0 ? (
-          <div className="mt-12 border-y border-white/10 py-12 text-center">
+          <div className="border-y border-white/10 py-12 text-center">
             <h3 className="text-base font-semibold text-white">No plugins match</h3>
             <p className="mt-1 text-sm text-white/50">Try another keyword or clear filters.</p>
             <Button
@@ -101,13 +103,13 @@ export function PluginsPage() {
                 setSearchQuery('');
               }}
               variant="outline"
-              className="mt-4 border-white/15 text-white"
+              className="mt-4 border-white/15 text-white duration-200 ease-out"
             >
               Reset filters
             </Button>
           </div>
         ) : (
-          <ul className="mt-10 divide-y divide-white/10 border-y border-white/10">
+          <ul className="divide-y divide-white/10 border-y border-white/10">
             {filteredPlugins.map((plugin) => (
               <li
                 key={plugin.id}
@@ -131,7 +133,7 @@ export function PluginsPage() {
                   <Link href="/register">
                     <Button
                       size="sm"
-                      className="h-8 bg-landing-cta px-3 text-xs font-semibold text-white hover:bg-landing-cta-hover"
+                      className="h-8 bg-landing-cta px-3 text-xs font-semibold text-white duration-200 ease-out hover:bg-landing-cta-hover"
                     >
                       Activate
                     </Button>
@@ -141,8 +143,9 @@ export function PluginsPage() {
             ))}
           </ul>
         )}
+        </Reveal>
 
-        <div className="mt-16 border-t border-white/10 pt-10">
+        <Reveal className="mt-16 border-t border-white/10 pt-10" delay={0.04}>
           <h3 className="font-landing-display text-xl font-semibold text-white">
             Need a custom integration or local gateway?
           </h3>
@@ -152,13 +155,13 @@ export function PluginsPage() {
           <Link href="/#contact" className="mt-5 inline-block">
             <Button
               variant="outline"
-              className="h-10 border-white/15 bg-transparent px-5 text-sm text-white hover:bg-white/5"
+              className="h-10 border-white/15 bg-transparent px-5 text-sm text-white duration-200 ease-out hover:bg-white/5"
             >
               Request custom addon
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-        </div>
+        </Reveal>
       </div>
     </div>
   );

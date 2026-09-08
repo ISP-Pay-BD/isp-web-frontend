@@ -9,12 +9,19 @@ import { usePlatformMetering } from '@/features/platform/shared/hooks/use-platfo
 export function PlatformMeteringPage() {
   const { data, isLoading, isError, refetch } = usePlatformMetering();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load metering" actionLabel="Retry" onAction={() => refetch()} />;
   }
   if (data.length === 0) {
-    return <EmptyState title="No metering data" description="Tenant usage will appear here once meters report." />;
+    return (
+      <EmptyState
+        title="No metering data"
+        description="Tenant usage will appear here once meters report."
+        actionLabel="Retry"
+        onAction={() => refetch()}
+      />
+    );
   }
 
   const totalCustomers = data.reduce((s, r) => s + r.customers, 0);

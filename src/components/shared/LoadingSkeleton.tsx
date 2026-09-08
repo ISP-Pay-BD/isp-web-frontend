@@ -7,12 +7,11 @@ export interface PageSkeletonProps {
   variant?: 'table' | 'dashboard' | 'form' | 'cards' | 'detail';
 }
 
-/** Dashboard Skeleton with KPI cards, hero bento charts, and activity feeds */
+/** Dashboard skeleton — triage row + summary strip + charts (no 4 equal KPI tiles) */
 export function DashboardSkeleton({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-6 max-w-7xl mx-auto p-1 md:p-2', className)}>
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-5">
+    <div className={cn('mx-auto max-w-7xl space-y-6 p-1 md:p-2', className)}>
+      <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-8 w-64 rounded-lg" />
@@ -24,26 +23,31 @@ export function DashboardSkeleton({ className }: { className?: string }) {
         </div>
       </div>
 
-      {/* Insights Banner */}
-      <Skeleton className="h-20 w-full rounded-2xl" />
-
-      {/* 4 KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-4 rounded-xl border border-border/60 bg-card space-y-3">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-3.5 w-24" />
-              <Skeleton className="h-8 w-8 rounded-xl" />
+      {/* Triage actions — 3 unequal-weight slots, not KPI tiles */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between rounded-xl border border-border/60 bg-card px-4 py-3.5"
+          >
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-6 w-28" />
             </div>
-            <Skeleton className="h-7 w-32 rounded-md" />
-            <Skeleton className="h-3 w-40" />
+            <Skeleton className="h-4 w-4 rounded" />
           </div>
         ))}
       </div>
 
-      {/* 2 Main Bento / Charts Cards */}
+      {/* Ops summary strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-3.5 w-20" />
+        ))}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-12">
-        <div className="lg:col-span-7 p-5 rounded-2xl border border-border/60 bg-card space-y-4">
+        <div className="space-y-4 rounded-xl border border-border/60 bg-card p-5 lg:col-span-7">
           <div className="flex items-center justify-between">
             <div className="space-y-1.5">
               <Skeleton className="h-5 w-40" />
@@ -53,16 +57,16 @@ export function DashboardSkeleton({ className }: { className?: string }) {
           </div>
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
-        <div className="lg:col-span-5 p-5 rounded-2xl border border-border/60 bg-card space-y-4">
+        <div className="space-y-4 rounded-xl border border-border/60 bg-card p-5 lg:col-span-5">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-6 w-16 rounded-full" />
           </div>
           <div className="space-y-3 pt-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-border/40">
-                <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-                <div className="space-y-1.5 flex-1">
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border/40 p-2">
+                <Skeleton className="h-7 w-7 shrink-0 rounded-lg" />
+                <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-3.5 w-full max-w-[180px]" />
                   <Skeleton className="h-2.5 w-24" />
                 </div>
@@ -75,12 +79,11 @@ export function DashboardSkeleton({ className }: { className?: string }) {
   );
 }
 
-/** Table Page Skeleton with search filter bar, column headers, and data rows */
+/** Table page skeleton — header + summary strip + filters + rows (list-hub shaped) */
 export function TablePageSkeleton({ rows = 6, className }: { rows?: number; className?: string }) {
   return (
-    <div className={cn('space-y-5 max-w-7xl mx-auto p-1 md:p-2', className)}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-5">
+    <div className={cn('mx-auto max-w-7xl space-y-5 p-1 md:p-2', className)}>
+      <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-28" />
           <Skeleton className="h-8 w-56 rounded-lg" />
@@ -92,10 +95,16 @@ export function TablePageSkeleton({ rows = 6, className }: { rows?: number; clas
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-3 rounded-xl border border-border/60 bg-card">
-        <Skeleton className="h-9 w-full sm:w-72 rounded-lg" />
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+      {/* Summary strip — matches OpsSummaryStrip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-3.5 w-24" />
+        ))}
+      </div>
+
+      <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 sm:flex-row">
+        <Skeleton className="h-9 w-full rounded-lg sm:w-72" />
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Skeleton className="h-9 w-28 rounded-lg" />
           <Skeleton className="h-9 w-28 rounded-lg" />
           <Skeleton className="h-9 w-20 rounded-lg" />

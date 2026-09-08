@@ -13,14 +13,21 @@ import { cn } from '@/lib/utils';
 export function EmployeeJobsPage() {
   const { data, isLoading, isError, refetch } = useEmployeeFieldOps();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load jobs" actionLabel="Retry" onAction={() => refetch()} />;
   }
 
   const jobs = data.jobs;
   if (jobs.length === 0) {
-    return <EmptyState title="No assigned jobs" description="New install and repair tickets will show here." />;
+    return (
+      <EmptyState
+        title="No assigned jobs"
+        description="New install and repair tickets will show here."
+        actionLabel="Refresh"
+        onAction={() => refetch()}
+      />
+    );
   }
 
   const openCount = jobs.filter((j) => j.status !== 'done').length;

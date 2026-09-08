@@ -24,7 +24,7 @@ export function BtrcReportPage() {
     );
   }, [subscribers, search]);
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={10} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={10} />;
 
   if (isError || !summary) {
     return (

@@ -205,7 +205,7 @@ function EngineHubInner({
   const basePath = portal === 'platform' ? '/platform/dashboard' : '/admin/dashboard';
 
   return (
-    <div className="ui-page-enter space-y-5">
+    <div className="space-y-5">
       <PageHeader
         title={group.title}
         subtitle={group.subtitle}

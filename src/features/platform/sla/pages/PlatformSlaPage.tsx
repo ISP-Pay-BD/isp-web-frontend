@@ -11,12 +11,19 @@ import { cn } from '@/lib/utils';
 export function PlatformSlaPage() {
   const { data, isLoading, isError, refetch } = usePlatformSla();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load SLA" actionLabel="Retry" onAction={() => refetch()} />;
   }
   if (data.length === 0) {
-    return <EmptyState title="No SLA rows" description="Tenant uptime targets will show here." />;
+    return (
+      <EmptyState
+        title="No SLA rows"
+        description="Tenant uptime targets will show here."
+        actionLabel="Retry"
+        onAction={() => refetch()}
+      />
+    );
   }
 
   const watching = data.filter((r) => r.severity !== 'ok').length;

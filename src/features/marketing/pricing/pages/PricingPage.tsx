@@ -6,6 +6,7 @@ import { Check, ArrowRight, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { useTranslations } from '@/features/marketing/shared';
+import { Reveal } from '@/components/motion/Reveal';
 import { useMarketingPricing } from '../hooks/use-marketing-pricing';
 
 interface Plan {
@@ -89,7 +90,7 @@ export function PricingPage() {
   return (
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="max-w-2xl">
+        <Reveal className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
             {t('marketing.pages.pricing.badge')}
           </p>
@@ -99,14 +100,14 @@ export function PricingPage() {
           <p className="mt-4 text-base leading-relaxed text-white/60">
             {t('marketing.pages.pricing.subtitle')}
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-12 flex justify-center">
+        <Reveal className="mt-12 flex justify-center" delay={0.05}>
           <div className="inline-flex rounded-xl border border-white/15 bg-white/5 p-1 backdrop-blur-md">
             <button
               type="button"
               onClick={() => setModel('fixed')}
-              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all ${
+              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all duration-200 ease-out ${
                 model === 'fixed'
                   ? 'bg-landing-cta text-white shadow-md'
                   : 'text-white/70 hover:text-white'
@@ -117,7 +118,7 @@ export function PricingPage() {
             <button
               type="button"
               onClick={() => setModel('payg')}
-              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all ${
+              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all duration-200 ease-out ${
                 model === 'payg'
                   ? 'bg-landing-cta text-white shadow-md'
                   : 'text-white/70 hover:text-white'
@@ -126,10 +127,11 @@ export function PricingPage() {
               Pay-As-You-Grow Wallet
             </button>
           </div>
-        </div>
+        </Reveal>
 
+        <Reveal className="mt-12" delay={0.08}>
         {model === 'fixed' && (
-          <div className="mt-12">
+          <div>
             <div className="flex items-center justify-center gap-3 text-sm mb-10">
               <span className={!isYearly ? 'font-semibold text-white' : 'text-white/60'}>
                 Monthly
@@ -216,7 +218,7 @@ export function PricingPage() {
         )}
 
         {model === 'payg' && (
-          <div className="mx-auto mt-12 max-w-2xl rounded-xl border border-white/10 bg-landing-panel/60 p-6 md:p-8">
+          <div className="mx-auto max-w-2xl rounded-xl border border-white/10 bg-landing-panel/60 p-6 md:p-8">
             <div>
               <p className="text-xs font-medium text-landing-cta">Pay as you grow</p>
               <h3 className="font-landing-display mt-2 text-xl font-semibold text-white">
@@ -274,9 +276,10 @@ export function PricingPage() {
             </div>
           </div>
         )}
+        </Reveal>
 
-        <div className="mt-24 border-t border-white/10 pt-16">
-          <div className="mx-auto max-w-2xl text-center mb-12">
+        <Reveal className="mt-24 border-t border-white/10 pt-16" delay={0.04}>
+          <div className="mx-auto mb-12 max-w-2xl text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-landing-cta">
               Frequently Asked Questions
             </span>
@@ -289,31 +292,31 @@ export function PricingPage() {
             {faqs.map((faq, i) => (
               <div key={i} className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                 <h4 className="flex items-start gap-2.5 font-landing-display text-base font-bold text-white">
-                  <HelpCircle className="h-5 w-5 text-landing-cta shrink-0 mt-0.5" />
+                  <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-landing-cta" />
                   {faq.q}
                 </h4>
-                <p className="mt-2 text-sm text-white/70 leading-relaxed pl-7">{faq.a}</p>
+                <p className="mt-2 pl-7 text-sm leading-relaxed text-white/70">{faq.a}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
 
-        <div className="mt-20 rounded-2xl border border-landing-cta/30 bg-landing-panel/90 p-8 md:p-12 text-center shadow-xl">
-          <h3 className="font-landing-display text-2xl md:text-3xl font-bold text-white">
+        <Reveal className="mt-20 rounded-2xl border border-landing-cta/30 bg-landing-panel/90 p-8 text-center shadow-xl md:p-12">
+          <h3 className="font-landing-display text-2xl font-bold text-white md:text-3xl">
             Need an enterprise plan for 10,000+ subscribers?
           </h3>
-          <p className="mt-3 text-sm md:text-base text-white/70 max-w-xl mx-auto">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-white/70 md:text-base">
             Custom dedicated database clusters, high-concurrency RouterOS multi-homing, and on-site training for your operations team.
           </p>
           <div className="mt-6 flex justify-center gap-4">
             <Link href="/#contact">
-              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-7 text-white font-semibold">
+              <Button className="h-11 bg-landing-cta px-7 font-semibold text-white hover:bg-landing-cta-hover">
                 Speak with Enterprise Sales
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </div>
-        </div>
+        </Reveal>
       </div>
     </div>
   );

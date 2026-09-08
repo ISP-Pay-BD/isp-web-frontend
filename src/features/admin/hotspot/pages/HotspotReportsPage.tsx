@@ -74,7 +74,7 @@ export function HotspotReportsPage() {
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (isError) {
     return (
       <div className="p-6">

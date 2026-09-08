@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { registrationSchema, type RegistrationFormData } from '../schemas/register.schema';
 import { useTranslations } from '@/features/marketing/shared';
+import { Reveal } from '@/components/motion/Reveal';
 
 const divisionDistricts: Record<string, string[]> = {
   Dhaka: ['Dhaka', 'Gazipur', 'Faridpur', 'Gopalganj', 'Kishoreganj', 'Madaripur', 'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari', 'Shariatpur', 'Tangail'],
@@ -74,9 +75,9 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
   return (
     <div className="py-12 md:py-20">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="grid gap-12 lg:grid-cols-12 items-start">
+        <div className="grid items-start gap-12 lg:grid-cols-12">
           {/* Left Column: Form */}
-          <div className="lg:col-span-8 rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10">
+          <Reveal className="rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10 lg:col-span-8">
             <div className="mb-6 border-b border-white/10 pb-6">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-landing-cta">
@@ -373,13 +374,13 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
                 </Link>
               </div>
             </form>
-          </div>
+          </Reveal>
 
           {/* Right Column: Trust & Highlights */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md space-y-6">
+          <Reveal className="space-y-6 lg:col-span-4" delay={0.06}>
+            <div className="space-y-6 rounded-xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-landing-cta/20 border border-landing-cta/30 flex items-center justify-center text-landing-cta">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-landing-cta/30 bg-landing-cta/20 text-landing-cta">
                   <Rocket className="h-5 w-5" />
                 </div>
                 <div>
@@ -392,40 +393,40 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
 
               <ul className="space-y-3.5 text-xs text-white/75">
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                   <span>Unlimited MikroTik router sync over RouterOS API</span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                   <span>Automated bKash &amp; Nagad payment reconciliation</span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                   <span>Multi-POP reseller ledger with auto commission splits</span>
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                   <span>Branded Bangla customer portal and Android self-care</span>
                 </li>
               </ul>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
+              <div className="mb-4 flex items-center gap-3">
                 <Headset className="h-5 w-5 text-landing-accent" />
                 <h4 className="font-landing-display text-sm font-bold text-white">
                   Need onboarding assistance?
                 </h4>
               </div>
-              <p className="text-xs text-white/70 leading-relaxed">
+              <p className="text-xs leading-relaxed text-white/70">
                 Our Dhaka engineering team is ready to guide you through initial RouterOS API setup and subscriber Excel import over phone or remote AnyDesk session.
               </p>
-              <div className="mt-4 pt-3 border-t border-white/10 flex justify-between text-xs">
+              <div className="mt-4 flex justify-between border-t border-white/10 pt-3 text-xs">
                 <span className="text-white/40">Hotline:</span>
-                <span className="font-mono text-landing-cta font-bold">+880 1781-808231</span>
+                <span className="font-mono font-bold text-landing-cta">+880 1781-808231</span>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </div>

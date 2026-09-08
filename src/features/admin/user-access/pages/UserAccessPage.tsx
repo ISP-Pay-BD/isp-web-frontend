@@ -86,7 +86,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
   const enabledCount = Object.values(permissions).reduce((sum, acts) => sum + acts.length, 0);
 
   if (loading && sections.length === 0) {
-    return <PageSkeleton variant="dashboard" rows={6} />;
+    return <PageSkeleton variant="table" rows={6} />;
   }
   if (isError && sections.length === 0) {
     return (

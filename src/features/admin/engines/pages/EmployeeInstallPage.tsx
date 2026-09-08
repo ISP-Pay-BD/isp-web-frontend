@@ -27,7 +27,7 @@ export function EmployeeInstallPage() {
   }
 
   return (
-    <div className="ui-page-enter space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="My Installations"
         subtitle="Assigned install jobs, checklist, GPS & completion (static)"

@@ -78,7 +78,12 @@ export function ContactsPage() {
 
       <div className="space-y-3">
         {items.length === 0 ? (
-          <EmptyState title="No contacts found" description="Try adjusting your search filters." />
+          <EmptyState
+            title="No contacts found"
+            description="Try adjusting your search filters."
+            actionLabel="Clear search"
+            onAction={() => setSearch('')}
+          />
         ) : (
           items.map((c) => (
             <Card key={c.id} className="border-border/60">

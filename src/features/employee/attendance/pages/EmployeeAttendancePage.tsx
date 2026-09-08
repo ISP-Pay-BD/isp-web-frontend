@@ -13,7 +13,7 @@ import { useEmployeeFieldOps } from '@/features/employee/shared/hooks/use-employ
 export function EmployeeAttendancePage() {
   const { data, isLoading, isError, refetch } = useEmployeeFieldOps();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load attendance" actionLabel="Retry" onAction={() => refetch()} />;
   }

@@ -140,7 +140,7 @@ export function AllCustomersPage() {
   }
 
   return (
-    <div className="ui-page-enter mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <PageHeader
         title="Customer Directory"
         subtitle="Manage broadband subscribers, PPPoE credentials, bandwidth tiers, and payment statuses"

@@ -26,7 +26,7 @@ const LINKS = [
 export function BandwidthBuyHubPage() {
   const { data, isLoading, isError, refetch } = useBandwidthData();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={4} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={4} />;
   if (isError) {
     return (
       <div className="p-6">

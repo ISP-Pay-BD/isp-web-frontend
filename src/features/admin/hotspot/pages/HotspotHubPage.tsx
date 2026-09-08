@@ -48,7 +48,7 @@ const QUICK_LINKS = [
 export function HotspotHubPage() {
   const { data, isLoading, isError, refetch } = useHotspotData();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (isError) {
     return (
       <div className="p-6">

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export function AccountingReportsPage() {
   const { reports, isLoading, isError, refetch } = useAccountingReports();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
 
   if (isError) {
     return (
@@ -55,7 +55,12 @@ export function AccountingReportsPage() {
       {/* Reports Table */}
       <div>
         {reports.length === 0 ? (
-          <EmptyState title="No reports generated" description="Run month-end close to populate reports." />
+          <EmptyState
+            title="No reports generated"
+            description="Run month-end close to populate reports."
+            actionLabel="Retry"
+            onAction={() => refetch()}
+          />
         ) : (
           <Card className="border-border/60 shadow-sm ring-1 ring-foreground/5 overflow-hidden">
             <Table>

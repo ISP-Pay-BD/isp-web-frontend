@@ -81,7 +81,7 @@ export function JobsPage() {
   const open = rows.filter((r) => r.status === 'open' || r.status === 'in_progress').length;
 
   return (
-    <div className="ui-page-enter space-y-5">
+    <div className="space-y-5">
       <PageHeader
         title="Work Orders"
         subtitle="Install, repair, shift, and collection jobs"

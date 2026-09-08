@@ -64,7 +64,14 @@ export function WhatsAppInboxPage() {
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0 divide-y">
             {filtered.length === 0 ? (
-              <div className="p-6"><EmptyState title="No conversations" description="Inbox is empty." /></div>
+              <div className="p-6">
+                <EmptyState
+                  title="No conversations"
+                  description="Inbox is empty."
+                  actionLabel="Refresh"
+                  onAction={() => refetch()}
+                />
+              </div>
             ) : (
               filtered.map((conv) => (
                 <button

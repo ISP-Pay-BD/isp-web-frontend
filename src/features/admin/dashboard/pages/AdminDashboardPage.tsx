@@ -68,7 +68,7 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="ui-page-enter mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       {/* Header */}
       <div>
         <PageHeader
@@ -140,7 +140,7 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Primary metrics — summary strip (not 4 KPI tiles) */}
-      <div className="ui-page-enter flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
         <Link href="/admin/customers" className="group transition-colors duration-200 ease-out hover:text-primary">
           <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Active</span>
           <p className="font-semibold tabular-nums">

@@ -68,7 +68,7 @@ export function EnginesIndexPage({ portal = 'admin' }: Props) {
   const featureCount = groups.reduce((s, g) => s + g.features.length, 0);
 
   return (
-    <div className="ui-page-enter space-y-5">
+    <div className="space-y-5">
       <PageHeader
         title="ISP Engines"
         subtitle="Configure automation, provisioning, NOC, and billing engines"
@@ -94,7 +94,12 @@ export function EnginesIndexPage({ portal = 'admin' }: Props) {
       </div>
 
       {groups.length === 0 ? (
-        <EmptyState title="No engines for this portal" />
+        <EmptyState
+          title="No engines for this portal"
+          description="Engine packs for this portal will appear when enabled."
+          actionLabel="Retry"
+          onAction={() => refetch()}
+        />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border/60">
           <table className="w-full text-sm">

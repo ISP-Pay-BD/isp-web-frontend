@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  Calendar,
   CreditCard,
   Zap,
   HardDrive,
@@ -26,6 +25,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { useCustomerSubscription } from '../hooks/use-customer-subscription';
 import { formatBdtWithSymbol, formatDate } from '@/lib/format';
 import { toast } from 'sonner';
@@ -184,39 +184,16 @@ export function CustomerSubscriptionPage() {
             </div>
           </div>
 
-          {/* Subscription Statistics Grid */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mt-6">
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-primary" /> Allocated Bandwidth
-              </span>
-              <div className="text-xl font-bold">{subscription.speedMbps} Mbps</div>
-              <p className="text-xs text-muted-foreground">1:1 Symmetrical Upload/Download</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <CreditCard className="h-4 w-4 text-emerald-500" /> Monthly Charge
-              </span>
-              <div className="text-xl font-bold">{formatBdtWithSymbol(subscription.priceBdt)}</div>
-              <p className="text-xs text-muted-foreground">Includes 5% Govt VAT & Charges</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-blue-500" /> Start Date
-              </span>
-              <div className="text-xl font-bold">{formatDate(subscription.startDate)}</div>
-              <p className="text-xs text-muted-foreground">Activated at start of cycle</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="h-4 w-4 text-amber-500" /> Valid Until
-              </span>
-              <div className="text-xl font-bold">{formatDate(subscription.expiryDate)}</div>
-              <p className="text-xs text-muted-foreground">Auto-suspension on midnight</p>
-            </div>
+          {/* Plan metrics — summary strip (not 4 KPI tiles) */}
+          <div className="mt-6">
+            <OpsSummaryStrip
+              items={[
+                { label: 'Mbps', value: subscription.speedMbps },
+                { label: 'monthly', value: formatBdtWithSymbol(subscription.priceBdt) },
+                { label: 'started', value: formatDate(subscription.startDate) },
+                { label: 'valid until', value: formatDate(subscription.expiryDate) },
+              ]}
+            />
           </div>
 
           {/* Quota Progress */}

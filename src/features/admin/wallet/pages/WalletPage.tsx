@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export function WalletPage() {
   const { wallet, isLoading, isError, refetch } = useWallet();
 
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
 
   if (isError || !wallet) {
     return (

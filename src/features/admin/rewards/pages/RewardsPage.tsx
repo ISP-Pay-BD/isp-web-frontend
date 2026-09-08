@@ -108,7 +108,7 @@ export function RewardsPage() {
   const { data, isLoading, isError, refetch } = useRewards();
   const [programEnabled, setProgramEnabled] = useState(true);
 
-  if (isLoading) return <PageSkeleton variant="dashboard" />;
+  if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return <EmptyState title="Failed to load rewards" actionLabel="Retry" onAction={() => refetch()} />;
   }

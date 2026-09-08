@@ -36,7 +36,7 @@ export function CustomerCxPage() {
   }
 
   return (
-    <div className="ui-page-enter space-y-6">
+    <div className="space-y-6">
       <PageHeader
         title="My Experience"
         subtitle="Notifications, feedback, and service requests"
@@ -66,7 +66,12 @@ export function CustomerCxPage() {
         </CardHeader>
         <CardContent className="space-y-2">
           {prefs.length === 0 ? (
-            <EmptyState title="No notifications yet" />
+            <EmptyState
+              title="No notifications yet"
+              description="Billing and support alerts will appear here."
+              actionLabel="Refresh"
+              onAction={() => refetch()}
+            />
           ) : (
             prefs.map((p) => (
               <div

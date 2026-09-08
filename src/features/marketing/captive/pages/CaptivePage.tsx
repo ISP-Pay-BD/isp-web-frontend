@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Reveal } from '@/components/motion/Reveal';
 
 /** Captive paywall — marketing dark surface; static mock session (no admin shell). */
 export function CaptivePage() {
@@ -16,8 +17,7 @@ export function CaptivePage() {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0c0118] px-4 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(247,88,3,0.22),_transparent_55%)]" />
-      <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+      <Reveal className="relative z-10 w-full max-w-md space-y-6 rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f75803]/20">
             <Wifi className="h-5 w-5 text-[#f75803]" />
@@ -42,7 +42,7 @@ export function CaptivePage() {
           </div>
         </div>
         <Button
-          className="w-full bg-[#f75803] hover:bg-[#f75803]/90"
+          className="w-full bg-[#f75803] duration-200 ease-out hover:bg-[#f75803]/90"
           onClick={() => toast.success('Opening payment (mock)')}
         >
           Pay now
@@ -61,7 +61,7 @@ export function CaptivePage() {
             Help
           </Link>
         </p>
-      </div>
+      </Reveal>
     </div>
   );
 }

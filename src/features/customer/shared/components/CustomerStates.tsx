@@ -17,23 +17,19 @@ export interface CustomerLoadingSkeletonProps {
     | 'form';
 }
 
-/** Dashboard Screen Bento Skeleton */
+/** Dashboard skeleton — hero + summary strip + cards (no 4 equal KPI tiles) */
 export function CustomerDashboardSkeleton() {
   return (
     <div className="space-y-6">
-      {/* Hero Bento Skeleton */}
       <div className="grid gap-6 lg:grid-cols-12">
-        <Skeleton className="lg:col-span-5 h-72 rounded-2xl" />
-        <Skeleton className="lg:col-span-7 h-72 rounded-2xl" />
+        <Skeleton className="h-72 rounded-xl lg:col-span-5" />
+        <Skeleton className="h-72 rounded-xl lg:col-span-7" />
       </div>
-      {/* 4 KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Skeleton className="h-28 rounded-xl" />
-        <Skeleton className="h-28 rounded-xl" />
-        <Skeleton className="h-28 rounded-xl" />
-        <Skeleton className="h-28 rounded-xl" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-3.5 w-24" />
+        ))}
       </div>
-      {/* 3 Bottom Bento Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Skeleton className="h-48 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
@@ -95,21 +91,15 @@ export function CustomerSubscriptionSkeleton() {
 export function CustomerPaymentsSkeleton() {
   return (
     <div className="space-y-6">
-      {/* 3 Summary KPIs */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="p-4 rounded-xl border border-border/60 bg-card space-y-2">
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-7 w-32 rounded-md" />
-            <Skeleton className="h-3 w-40" />
-          </div>
+          <Skeleton key={i} className="h-3.5 w-28" />
         ))}
       </div>
 
-      {/* Filter / Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-3 rounded-xl border border-border/60 bg-card">
-        <Skeleton className="h-9 w-full sm:w-72 rounded-lg" />
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+      <div className="flex flex-col items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 sm:flex-row">
+        <Skeleton className="h-9 w-full rounded-lg sm:w-72" />
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Skeleton className="h-9 w-28 rounded-lg" />
           <Skeleton className="h-9 w-24 rounded-lg" />
         </div>
@@ -264,18 +254,13 @@ export function CustomerProfileSkeleton() {
 export function CustomerSupportSkeleton() {
   return (
     <div className="space-y-6">
-      {/* 3 Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="p-4 rounded-xl border border-border/60 bg-card space-y-2">
-            <Skeleton className="h-3.5 w-28" />
-            <Skeleton className="h-7 w-20 rounded-md" />
-          </div>
+          <Skeleton key={i} className="h-3.5 w-24" />
         ))}
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <Skeleton className="h-6 w-36" />
         <Skeleton className="h-9 w-32 rounded-lg" />
       </div>
