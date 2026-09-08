@@ -323,4 +323,28 @@
   mask-image: radial-gradient(ellipse 75% 55% at 50% 15%, #000 50%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 15%, #000 50%, transparent 100%);
 }
+
+/* Mapbox controls — soft portal chrome instead of stark white */
+.mapbox-host .mapboxgl-ctrl-group {
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--foreground) 12%, transparent);
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.mapbox-host .mapboxgl-ctrl-group button {
+  background: transparent;
+  width: 32px;
+  height: 32px;
+}
+
+.mapbox-host .mapboxgl-ctrl-group button + button {
+  border-top-color: color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+.dark .mapbox-host .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
+  filter: invert(1) brightness(1.15);
+}
 

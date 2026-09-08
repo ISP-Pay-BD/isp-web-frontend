@@ -35,6 +35,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { Can } from '@/components/shared/Can';
+import { MapboxMap } from '@/components/shared/MapboxMap';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -247,24 +248,46 @@ export function CustomerDetailPage({ id }: { id: string }) {
                     <p className="text-sm mb-2">{customer.address}</p>
                   )}
                   {customer.latitude && customer.longitude && (
-                    <div className="rounded-lg bg-muted/30 border border-border/40 p-2.5 space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                          <MapPin className="h-3 w-3 text-indigo-500" /> Registration:
-                        </span>
-                        <a href={`https://www.google.com/maps?q=${customer.latitude},${customer.longitude}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline flex items-center gap-1">
-                          {customer.latitude.toFixed(5)}, {customer.longitude.toFixed(5)}
-                          <ArrowUpRight className="h-3 w-3" />
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-between border-t border-border/40 pt-1.5">
-                        <span className="text-muted-foreground flex items-center gap-1 font-medium">
-                          <MapPin className="h-3 w-3 text-emerald-500" /> Current:
-                        </span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                          {customer.latitude.toFixed(5)}, {customer.longitude.toFixed(5)}
-                          <ArrowUpRight className="h-3 w-3" />
-                        </span>
+                    <div className="space-y-2">
+                      <MapboxMap
+                        markers={[
+                          {
+                            id: customer.id,
+                            latitude: customer.latitude,
+                            longitude: customer.longitude,
+                            color: '#f75803',
+                            label: customer.name,
+                          },
+                        ]}
+                        height={180}
+                        initialZoom={14}
+                        showNavigation={false}
+                        className="border-border/40"
+                      />
+                      <div className="rounded-lg bg-muted/30 border border-border/40 p-2.5 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                            <MapPin className="h-3 w-3 text-indigo-500" /> Registration:
+                          </span>
+                          <a
+                            href={`https://www.google.com/maps?q=${customer.latitude},${customer.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-primary hover:underline flex items-center gap-1"
+                          >
+                            {customer.latitude.toFixed(5)}, {customer.longitude.toFixed(5)}
+                            <ArrowUpRight className="h-3 w-3" />
+                          </a>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border/40 pt-1.5">
+                          <span className="text-muted-foreground flex items-center gap-1 font-medium">
+                            <MapPin className="h-3 w-3 text-emerald-500" /> Current:
+                          </span>
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            {customer.latitude.toFixed(5)}, {customer.longitude.toFixed(5)}
+                            <ArrowUpRight className="h-3 w-3" />
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}

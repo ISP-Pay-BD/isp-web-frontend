@@ -19,3 +19,4 @@ export { SearchInput } from './SearchInput';
 export { DateDisplay } from './DateDisplay';
 export { FilterBar } from './FilterBar';
 export { ChartCard } from './ChartCard';
+export { MapboxMap, hasMapboxToken, type MapboxMarker } from './MapboxMap';

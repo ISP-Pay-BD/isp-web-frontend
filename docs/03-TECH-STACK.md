@@ -102,7 +102,7 @@ pnpm add -D vitest @testing-library/react @playwright/test prettier prettier-plu
 | Fonts | Self-host — `@fontsource` + Satoshi in `public/fonts/` — see **`docs/FONTS.md`** |
 | Images | `public/images/` only |
 | Icons | Lucide (bundled) — no Font Awesome CDN |
-| Maps | Static image placeholder in Phase 1 — no Mapbox API key |
+| Maps | Mapbox GL via `react-map-gl` — `NEXT_PUBLIC_MAPBOX_TOKEN` |
 | Charts | Recharts with mock data — no external analytics |
 
 ## Environment variables (Phase 1)
