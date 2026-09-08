@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -66,16 +67,19 @@ export function NocPage() {
   const enabled = rows.filter((r) => r.enabled).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="NOC Hooks"
         subtitle="SNMP and webhook alerting endpoints"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "NOC Hooks" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} hooks · {enabled} enabled
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "hooks" },
+          { value: enabled, label: "enabled" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

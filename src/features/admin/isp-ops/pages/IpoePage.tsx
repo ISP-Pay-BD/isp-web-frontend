@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -75,16 +76,19 @@ export function IpoePage() {
   const online = rows.filter((r) => r.status === 'online').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="IPoE Dual-Stack"
         subtitle="MAC-based IPoE sessions"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "IPoE Dual-Stack" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} sessions · {online} online
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "sessions" },
+          { value: online, label: "online" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

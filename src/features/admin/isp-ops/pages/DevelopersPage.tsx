@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ export function DevelopersPage() {
   const failing = data.webhooks.filter((w) => w.status === 'failing').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Developers"
         subtitle="API keys and webhook endpoints"
@@ -88,9 +89,13 @@ export function DevelopersPage() {
           </Button>
         }
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {data.apiKeys.length} API keys · {data.webhooks.length} webhooks · {failing} failing
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: data.apiKeys.length, label: "API keys" },
+          { value: data.webhooks.length, label: "webhooks" },
+          { value: failing, label: "failing" },
+        ]}
+      />
 
       <Card className="border-border/60">
         <CardHeader>

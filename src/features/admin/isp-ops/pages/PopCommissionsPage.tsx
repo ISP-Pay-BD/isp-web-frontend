@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -76,16 +77,19 @@ export function PopCommissionsPage() {
   const pending = rows.filter((r) => r.status === 'pending').reduce((s, r) => s + r.commissionBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="POP Commissions"
         subtitle="Reseller commission by collection period"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "POP Commissions" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} periods · {pending.toLocaleString()} ৳ pending
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "periods" },
+          { value: pending.toLocaleString(), label: "৳ pending" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

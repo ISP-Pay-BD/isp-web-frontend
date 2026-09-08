@@ -6,6 +6,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -83,7 +84,7 @@ export function RouterUsersPage() {
   const totalRx = sessions.reduce((s, x) => s + x.rxMbps, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title={`PPPoE users · ${router?.name ?? params.id}`}
         subtitle="Live sessions — kick sends mock RADIUS CoA / PoD"
@@ -94,9 +95,12 @@ export function RouterUsersPage() {
           { label: 'Users' },
         ]}
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {sessions.length} sessions · {totalRx.toFixed(1)} Mbps RX
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: sessions.length, label: "sessions" },
+          { value: totalRx.toFixed(1), label: "Mbps RX" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={sessions}

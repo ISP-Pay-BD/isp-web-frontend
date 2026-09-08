@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,7 +102,7 @@ export function RadiusPanelPage() {
   const nasOnline = data.radiusNas.filter((n) => n.status === 'online').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="RADIUS / CoA / PoD"
         subtitle="NAS inventory and disconnect / CoA audit trail"
@@ -112,9 +113,13 @@ export function RadiusPanelPage() {
           </Button>
         }
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {data.radiusNas.length} NAS · {data.radiusCoaLog.length} CoA logs · {nasOnline} online
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: data.radiusNas.length, label: "NAS" },
+          { value: data.radiusCoaLog.length, label: "CoA logs" },
+          { value: nasOnline, label: "online" },
+        ]}
+      />
 
       <Card className="border-border/60">
         <CardHeader>

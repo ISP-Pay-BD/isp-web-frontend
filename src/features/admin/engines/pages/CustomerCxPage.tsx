@@ -36,7 +36,7 @@ export function CustomerCxPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="ui-page-enter space-y-6">
       <PageHeader
         title="My Experience"
         subtitle="Notifications, feedback, and service requests"

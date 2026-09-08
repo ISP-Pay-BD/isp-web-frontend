@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -62,16 +63,19 @@ export function CgnatPage() {
   const sessions = rows.reduce((s, r) => s + r.activeSessions, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="CGNAT Map"
         subtitle="Private-to-public NAT pools and port budgets"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "CGNAT Map" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} pools · {sessions.toLocaleString()} sessions
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "pools" },
+          { value: sessions.toLocaleString(), label: "sessions" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

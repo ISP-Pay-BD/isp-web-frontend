@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -71,16 +72,19 @@ export function BillingPoliciesPage() {
   const autoSuspend = rows.filter((r) => r.autoSuspend).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Billing Policies"
         subtitle="Grace, FUP, prepaid / postpaid / hybrid rules"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Billing Policies" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} policies · {autoSuspend} auto-suspend
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "policies" },
+          { value: autoSuspend, label: "auto-suspend" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

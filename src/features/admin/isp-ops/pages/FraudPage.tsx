@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -71,16 +72,19 @@ export function FraudPage() {
   const open = rows.filter((r) => r.status === 'open').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Fraud Score"
         subtitle="Suspicious session and sharing signals"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Fraud Score" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} events · {open} open
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "events" },
+          { value: open, label: "open" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -78,16 +79,20 @@ export function CreditsPage() {
   const openTotal = open.reduce((s, r) => s + r.amountBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Credit Notes"
         subtitle="Refunds and goodwill credit ledger"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Credit Notes" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} notes · {open.length} open · {openTotal.toLocaleString()} ৳ open
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "notes" },
+          { value: open.length, label: "open" },
+          { value: openTotal.toLocaleString(), label: "৳ open" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

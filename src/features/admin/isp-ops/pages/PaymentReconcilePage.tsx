@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,7 @@ export function PaymentReconcilePage() {
   const unmatchedTotal = unmatched.reduce((s, r) => s + r.amountBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Payment reconcile"
         subtitle="Gateway settlements vs customer payments"
@@ -90,10 +91,13 @@ export function PaymentReconcilePage() {
           { label: 'Reconcile' },
         ]}
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {data.reconcileRows.length} rows · {unmatched.length} unmatched ·{' '}
-        {unmatchedTotal.toLocaleString()} ৳ unmatched
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: data.reconcileRows.length, label: "rows" },
+          { value: unmatched.length, label: "unmatched" },
+          { value: ' ', label: "{unmatchedTotal.toLocaleString()} ৳ unmatched" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={data.reconcileRows}

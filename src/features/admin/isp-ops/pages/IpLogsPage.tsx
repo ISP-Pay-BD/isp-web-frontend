@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -78,16 +79,18 @@ export function IpLogsPage() {
   const rows = data.ipNatLogs;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="BTRC IP / NAT Logs"
         subtitle="Compliance session NAT mapping for regulatory export"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "BTRC IP / NAT Logs" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} NAT logs
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "NAT logs" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

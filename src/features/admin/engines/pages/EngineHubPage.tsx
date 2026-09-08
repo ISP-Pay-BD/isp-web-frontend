@@ -1,22 +1,21 @@
 'use client';
 
 import { useMemo, useRef, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { StatCard } from '@/components/shared/StatCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Activity, CheckCircle2, Layers, ListTree } from 'lucide-react';
 import { getEngineGroup } from '@/data/admin/engines.catalog';
 import type { EngineLog, EngineRecord, EnginesData } from '@/data/admin/engines.data';
 import { useEngines } from '../hooks/use-engines';
+import { humanizeAction } from '../lib/humanize-action';
 
 type Props = {
   groupId: string;
@@ -68,6 +67,7 @@ function EngineHubInner({
   const [, startTransition] = useTransition();
 
   const feature = group.features.find((f) => f.id === activeFeature) ?? group.features[0]!;
+  const enabledCount = records.filter((r) => r.enabled).length;
 
   const featureRecords = useMemo(() => {
     const rows = records.filter((r) => r.featureId === feature.id);
@@ -94,19 +94,21 @@ function EngineHubInner({
   const pushLog = (message: string, level: EngineLog['level'] = 'info') => {
     seqRef.current += 1;
     const seq = seqRef.current;
-    const entry: EngineLog = {
-      id: `${feature.id}-${seq}`,
-      featureId: feature.id,
-      at: nextStamp(seq),
-      level,
-      message,
-    };
-    setLogs((prev) => [entry, ...prev]);
+    setLogs((prev) => [
+      {
+        id: `${feature.id}-${seq}`,
+        featureId: feature.id,
+        at: nextStamp(seq),
+        level,
+        message,
+      },
+      ...prev,
+    ]);
   };
 
   const runAction = (action: string) => {
     startTransition(() => {
-      const label = action.replaceAll('_', ' ');
+      const label = humanizeAction(action);
       if (action === 'enable' || action === 'disable') {
         const enabled = action === 'enable';
         setRecords((prev) =>
@@ -117,7 +119,7 @@ function EngineHubInner({
           ),
         );
         pushLog(`${feature.name}: ${label}`, 'success');
-        toast.success(`${feature.name} ${label}`);
+        toast.success(`${feature.name} — ${label}`);
         return;
       }
       if (action === 'ack' || action === 'unack') {
@@ -149,7 +151,7 @@ function EngineHubInner({
               : r,
           ),
         );
-        pushLog(`${feature.name}: ${label} started (static)`, 'info');
+        pushLog(`${feature.name}: ${label} started`, 'info');
         queueMicrotask(() => {
           seqRef.current += 1;
           const done = nextStamp(seqRef.current);
@@ -160,8 +162,8 @@ function EngineHubInner({
                 : r,
             ),
           );
-          pushLog(`${feature.name}: ${label} completed (static)`, 'success');
-          toast.success(`${feature.name}: ${label} OK`);
+          pushLog(`${feature.name}: ${label} completed`, 'success');
+          toast.success(`${feature.name}: ${label}`);
         });
         return;
       }
@@ -169,22 +171,24 @@ function EngineHubInner({
         const n = records.filter((r) => r.featureId === feature.id).length + 1;
         seqRef.current += 1;
         const stamp = nextStamp(seqRef.current);
-        const row: EngineRecord = {
-          id: `${feature.id}-new-${seqRef.current}`,
-          featureId: feature.id,
-          title: `${feature.name} · new ${n}`,
-          status: 'draft',
-          meta: `Created locally · ${stamp}`,
-          updatedAt: stamp,
-          enabled: true,
-        };
-        setRecords((prev) => [row, ...prev]);
-        pushLog(`${feature.name}: created local record`, 'success');
-        toast.success('Created (static)');
+        setRecords((prev) => [
+          {
+            id: `${feature.id}-new-${seqRef.current}`,
+            featureId: feature.id,
+            title: `${feature.name} · new ${n}`,
+            status: 'draft',
+            meta: `Created locally · ${stamp}`,
+            updatedAt: stamp,
+            enabled: true,
+          },
+          ...prev,
+        ]);
+        pushLog(`${feature.name}: created record`, 'success');
+        toast.success('Created');
         return;
       }
-      pushLog(`${feature.name}: action “${label}” applied locally`, 'info');
-      toast.message(`${feature.name}: ${label} (static)`);
+      pushLog(`${feature.name}: ${label}`, 'info');
+      toast.message(`${feature.name}: ${label}`);
     });
   };
 
@@ -194,39 +198,51 @@ function EngineHubInner({
         r.id === id ? { ...r, enabled, status: enabled ? 'enabled' : 'disabled' } : r,
       ),
     );
-    pushLog(`Record ${id} ${enabled ? 'enabled' : 'disabled'}`, 'info');
+    pushLog(`Record ${enabled ? 'enabled' : 'disabled'}`, 'info');
   };
 
+  const enginesIndex = portal === 'platform' ? '/platform/engines' : '/admin/engines';
   const basePath = portal === 'platform' ? '/platform/dashboard' : '/admin/dashboard';
 
   return (
-    <div className="space-y-6">
+    <div className="ui-page-enter space-y-5">
       <PageHeader
         title={group.title}
         subtitle={group.subtitle}
         breadcrumb={[
           { label: 'Dashboard', url: basePath },
-          { label: 'Engines' },
+          { label: 'Engines', url: enginesIndex },
           { label: group.title },
         ]}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Features" value={group.features.length} icon={Layers} />
-        <StatCard title="Records" value={records.length} icon={ListTree} />
-        <StatCard
-          title="Enabled"
-          value={records.filter((r) => r.enabled).length}
-          icon={CheckCircle2}
-        />
-        <StatCard title="Priority" value={group.priority} icon={Activity} description="Roadmap weight" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{group.features.length}</span> features
+        </span>
+        <span className="text-border">·</span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{records.length}</span> records
+        </span>
+        <span className="text-border">·</span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{enabledCount}</span> enabled
+        </span>
+        <span className="text-border">·</span>
+        <Badge variant="outline" className="capitalize">
+          {group.priority}
+        </Badge>
       </div>
 
       <Tabs value={activeFeature} onValueChange={setActiveFeature} className="gap-4">
         <ScrollArea className="w-full whitespace-nowrap pb-2">
           <TabsList variant="line" className="h-auto min-w-full justify-start gap-1">
             {group.features.map((f) => (
-              <TabsTrigger key={f.id} value={f.id} className="shrink-0 text-xs sm:text-sm">
+              <TabsTrigger
+                key={f.id}
+                value={f.id}
+                className="shrink-0 text-xs transition-colors duration-200 ease-out sm:text-sm"
+              >
                 {f.name}
               </TabsTrigger>
             ))}
@@ -234,167 +250,175 @@ function EngineHubInner({
         </ScrollArea>
 
         {group.features.map((f) => (
-          <TabsContent key={f.id} value={f.id} className="space-y-4">
+          <TabsContent key={f.id} value={f.id} className="space-y-4 outline-none">
             {f.id === feature.id ? (
-              <Card className="border-border/60 bg-card/80">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-lg">{feature.name}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
-                    </div>
-                    <Badge variant="outline" className="capitalize">
-                      {feature.kind}
-                    </Badge>
+              <div className="ui-panel-enter space-y-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold tracking-tight">{feature.name}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {feature.actions.map((action) => (
-                      <Button
-                        key={action}
-                        size="sm"
-                        variant={
-                          action.includes('delete') || action === 'reject' ? 'destructive' : 'secondary'
-                        }
-                        onClick={() => runAction(action)}
-                      >
-                        {action.replaceAll('_', ' ')}
-                      </Button>
+                  <Badge variant="outline" className="capitalize">
+                    {feature.kind}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {feature.actions.map((action) => (
+                    <Button
+                      key={action}
+                      size="sm"
+                      variant={
+                        action.includes('delete') || action === 'reject' ? 'destructive' : 'secondary'
+                      }
+                      className="ui-press capitalize"
+                      onClick={() => runAction(action)}
+                    >
+                      {humanizeAction(action)}
+                    </Button>
+                  ))}
+                </div>
+
+                {(feature.kind === 'analytics' || feature.kind === 'dashboard') &&
+                featureMetrics.length > 0 ? (
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg bg-muted/30 px-3 py-2.5 text-sm">
+                    {featureMetrics.map((m) => (
+                      <div key={`${m.featureId}-${m.label}`}>
+                        <span className="text-xs text-muted-foreground">{m.label}</span>
+                        <p className="font-semibold tabular-nums">
+                          {m.value}
+                          {m.unit ? (
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">{m.unit}</span>
+                          ) : null}
+                        </p>
+                      </div>
                     ))}
                   </div>
+                ) : null}
 
-                  {(feature.kind === 'analytics' || feature.kind === 'dashboard') &&
-                  featureMetrics.length > 0 ? (
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {featureMetrics.map((m) => (
-                        <div
-                          key={`${m.featureId}-${m.label}`}
-                          className="rounded-lg border border-border/50 bg-muted/30 p-3"
-                        >
-                          <p className="text-xs text-muted-foreground">{m.label}</p>
-                          <p className="text-xl font-semibold tabular-nums">
-                            {m.value}
-                            {m.unit ? (
-                              <span className="ml-1 text-sm font-normal text-muted-foreground">
-                                {m.unit}
-                              </span>
-                            ) : null}
-                          </p>
-                          {typeof m.delta === 'number' ? (
-                            <p className="text-xs text-muted-foreground tabular-nums">
-                              {m.delta > 0 ? '+' : ''}
-                              {m.delta}% vs prior
-                            </p>
-                          ) : null}
-                        </div>
-                      ))}
+                {(feature.kind === 'builder' ||
+                  feature.kind === 'workflow' ||
+                  feature.kind === 'policy') && (
+                  <div className="space-y-3 rounded-lg border border-border/50 bg-muted/15 p-4">
+                    <p className="text-sm font-medium">Rule / policy</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input placeholder="Name / rule title" defaultValue={`${feature.name} rule`} />
+                      <Input
+                        placeholder="Condition / cron / scope"
+                        defaultValue="status=active AND balance>0"
+                      />
                     </div>
-                  ) : null}
-
-                  {(feature.kind === 'builder' ||
-                    feature.kind === 'workflow' ||
-                    feature.kind === 'policy') && (
-                    <div className="space-y-3 rounded-lg border border-dashed border-border/60 bg-muted/20 p-4">
-                      <p className="text-sm font-medium">Static builder / policy panel</p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <Input placeholder="Name / rule title" defaultValue={`${feature.name} rule`} />
-                        <Input
-                          placeholder="Condition / cron / scope"
-                          defaultValue="status=active AND balance>0"
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button size="sm" onClick={() => runAction('save')}>
-                          Save draft
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={() => runAction('validate')}>
-                          Validate
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => runAction('publish')}>
-                          Publish
-                        </Button>
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" className="ui-press" onClick={() => runAction('save')}>
+                        Save draft
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="ui-press"
+                        onClick={() => runAction('validate')}
+                      >
+                        Validate
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ui-press"
+                        onClick={() => runAction('publish')}
+                      >
+                        Publish
+                      </Button>
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Filter records…"
-                      className="max-w-sm"
-                    />
-                    <Badge variant="secondary" className="tabular-nums">
-                      {featureRecords.length}
-                    </Badge>
                   </div>
+                )}
 
-                  <div className="overflow-hidden rounded-lg border border-border/60">
-                    {featureRecords.length === 0 ? (
-                      <div className="p-4">
-                        <EmptyState
-                          title="No records match"
-                          description="Clear the filter or create a new local record"
-                          actionLabel="Clear filter"
-                          onAction={() => setQuery('')}
-                        />
-                      </div>
-                    ) : (
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/40 text-left text-muted-foreground">
-                          <tr>
-                            <th className="px-3 py-2 font-medium">Record</th>
-                            <th className="px-3 py-2 font-medium">Status</th>
-                            <th className="px-3 py-2 font-medium">Meta</th>
-                            <th className="px-3 py-2 font-medium">Enabled</th>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Filter records…"
+                    className="max-w-sm transition-[box-shadow] duration-200 ease-out"
+                  />
+                  <span className="text-xs tabular-nums text-muted-foreground">{featureRecords.length}</span>
+                </div>
+
+                <div className="overflow-hidden rounded-lg border border-border/60">
+                  {featureRecords.length === 0 ? (
+                    <div className="p-4">
+                      <EmptyState
+                        title="No records match"
+                        description="Clear the filter or create a new local record"
+                        actionLabel="Clear filter"
+                        onAction={() => setQuery('')}
+                      />
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 font-medium">Record</th>
+                          <th className="px-3 py-2 font-medium">Status</th>
+                          <th className="hidden px-3 py-2 font-medium md:table-cell">Meta</th>
+                          <th className="px-3 py-2 font-medium">On</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {featureRecords.map((row) => (
+                          <tr
+                            key={row.id}
+                            className="border-t border-border/40 transition-colors duration-200 ease-out hover:bg-muted/20"
+                          >
+                            <td className="px-3 py-2">
+                              <div className="font-medium">{row.title}</div>
+                              <div className="text-xs text-muted-foreground tabular-nums">{row.id}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <Badge variant={statusVariant(row.status)} className="capitalize">
+                                {row.status}
+                              </Badge>
+                            </td>
+                            <td className="hidden px-3 py-2 text-muted-foreground md:table-cell">
+                              {row.meta}
+                            </td>
+                            <td className="px-3 py-2">
+                              <Switch
+                                checked={row.enabled}
+                                onCheckedChange={(v) => toggleRecord(row.id, Boolean(v))}
+                              />
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {featureRecords.map((row) => (
-                            <tr
-                              key={row.id}
-                              className="border-t border-border/40 transition-colors duration-200 ease-out hover:bg-muted/20"
-                            >
-                              <td className="px-3 py-2">
-                                <div className="font-medium">{row.title}</div>
-                                <div className="text-xs text-muted-foreground tabular-nums">{row.id}</div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <Badge variant={statusVariant(row.status)} className="capitalize">
-                                  {row.status}
-                                </Badge>
-                              </td>
-                              <td className="px-3 py-2 text-muted-foreground">{row.meta}</td>
-                              <td className="px-3 py-2">
-                                <Switch
-                                  checked={row.enabled}
-                                  onCheckedChange={(v) => toggleRecord(row.id, Boolean(v))}
-                                />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Execution / event log</p>
-                    <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/10 p-3 font-mono text-xs">
-                      {featureLogs.map((l) => (
-                        <div key={l.id} className="flex flex-wrap gap-2">
-                          <span className="text-muted-foreground tabular-nums">{l.at}</span>
-                          <Badge variant="outline" className="capitalize">
-                            {l.level}
-                          </Badge>
-                          <span>{l.message}</span>
-                        </div>
-                      ))}
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Execution log</p>
+                    <Link
+                      href={enginesIndex}
+                      className="text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                    >
+                      All engines
+                    </Link>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/10 p-3 font-mono text-xs">
+                    {featureLogs.map((l) => (
+                      <div
+                        key={l.id}
+                        className="flex flex-wrap gap-2 border-b border-border/20 py-1 last:border-0"
+                      >
+                        <span className="text-muted-foreground tabular-nums">{l.at}</span>
+                        <Badge variant="outline" className="capitalize">
+                          {l.level}
+                        </Badge>
+                        <span>{l.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : null}
           </TabsContent>
         ))}

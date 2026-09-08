@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -287,24 +288,14 @@ export function RoutersPage() {
         }
       />
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{totalRouters}</span>{' '}
-          <span className="text-muted-foreground">total routers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{onlineRouters}</span>{' '}
-          <span className="text-muted-foreground">online routers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{totalUsers}</span>{' '}
-          <span className="text-muted-foreground">active sessions</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{"4.2 ms"}</span>{' '}
-          <span className="text-muted-foreground">avg api latency</span>
-        </p>
-      </div>
+      <OpsSummaryStrip
+        items={[
+          { value: totalRouters, label: 'routers' },
+          { value: onlineRouters, label: 'online' },
+          { value: totalUsers, label: 'active sessions' },
+          { value: '4.2 ms', label: 'avg API latency' },
+        ]}
+      />
 
       <DataTable
         columns={columns}

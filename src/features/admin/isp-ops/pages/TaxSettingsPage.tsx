@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -72,16 +73,19 @@ export function TaxSettingsPage() {
   const active = rows.filter((r) => r.active).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Tax Settings"
         subtitle="VAT and service tax applied to invoices and OTC"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Tax Settings" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} taxes · {active} active
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "taxes" },
+          { value: active, label: "active" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

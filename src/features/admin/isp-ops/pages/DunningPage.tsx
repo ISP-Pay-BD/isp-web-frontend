@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -65,16 +66,19 @@ export function DunningPage() {
   const enabled = rows.filter((r) => r.enabled).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Dunning Schedule"
         subtitle="Automated collection and suspend timeline"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Dunning Schedule" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} steps · {enabled} enabled
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "steps" },
+          { value: enabled, label: "enabled" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

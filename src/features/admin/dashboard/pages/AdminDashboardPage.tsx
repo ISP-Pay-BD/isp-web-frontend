@@ -3,18 +3,12 @@
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import {
-  Users,
-  Wallet,
   Wifi,
   UserPlus,
   Receipt,
   MapPin,
-  Layers,
   ArrowRight,
   Clock,
-  Box,
-  UserCheck,
-  Server,
   PieChart as PieIcon,
   Search,
   ChevronRight,
@@ -49,7 +43,6 @@ import { useAdminDashboard } from '../hooks/use-admin-dashboard';
 
 export function AdminDashboardPage() {
   const { data: stats, isLoading, isError, refetch } = useAdminDashboard();
-  const [isGroupedMetrics, setIsGroupedMetrics] = useState(false);
   const [geoSearch, setGeoSearch] = useState('');
 
   const filteredGeoRevenue = useMemo(() => {
@@ -75,7 +68,7 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="ui-page-enter mx-auto max-w-7xl space-y-6 pb-12">
       {/* Header */}
       <div>
         <PageHeader
@@ -87,22 +80,13 @@ export function AdminDashboardPage() {
           ]}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant={isGroupedMetrics ? 'default' : 'outline'}
-                onClick={() => setIsGroupedMetrics(!isGroupedMetrics)}
-                className="text-xs"
-              >
-                <Layers className="mr-1.5 h-3.5 w-3.5" />
-                {isGroupedMetrics ? 'Grouped' : 'Sections'}
-              </Button>
               <Link href="/admin/customers/new">
-                <Button size="sm" className="text-xs font-medium">
+                <Button size="sm" className="ui-press text-xs font-medium">
                   <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Add customer
                 </Button>
               </Link>
               <Link href="/admin/customer-payments/new">
-                <Button size="sm" variant="outline" className="text-xs">
+                <Button size="sm" variant="outline" className="ui-press text-xs">
                   <Receipt className="mr-1.5 h-3.5 w-3.5" /> Record payment
                 </Button>
               </Link>
@@ -155,258 +139,58 @@ export function AdminDashboardPage() {
         </Link>
       </div>
 
-      {/* Ops snapshot */}
-      <div className="rounded-xl bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">৳{stats.monthlyCollectionBdt.toLocaleString()}</span>
-        {' '}collected ·{' '}
-        <span className="font-medium text-foreground">{stats.customersPaymentReceivedCount ?? 840}</span> payments ·{' '}
-        <span className="font-medium text-foreground">{stats.routerActive ?? 6}</span> routers online ·{' '}
-        <span className="font-medium text-foreground">{stats.allResellers ?? 12}</span> POP resellers
-      </div>
-
-      {/* Primary KPIs */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/admin/customers" className="block h-full group no-underline">
-          <SpotlightCard className="flex h-full flex-col justify-between p-5">
-            <div>
-              <div className="flex items-start justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Active Customers
-                </p>
-                <Users className="h-4 w-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1 text-2xl font-semibold text-foreground">
-                <NumberFlow value={stats.activeCustomers} />
-                <span className="text-xs font-normal text-muted-foreground">/ {stats.totalCustomers}</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Live service</p>
-              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">+4.2% this month</p>
-            </div>
-            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-              View customers <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-            </div>
-          </SpotlightCard>
+      {/* Primary metrics — summary strip (not 4 KPI tiles) */}
+      <div className="ui-page-enter flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
+        <Link href="/admin/customers" className="group transition-colors duration-200 ease-out hover:text-primary">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Active</span>
+          <p className="font-semibold tabular-nums">
+            <NumberFlow value={stats.activeCustomers} />
+            <span className="ml-1 text-xs font-normal text-muted-foreground">/ {stats.totalCustomers}</span>
+          </p>
         </Link>
-        <Link href="/admin/customer-payments" className="block h-full group no-underline">
-          <SpotlightCard className="flex h-full flex-col justify-between p-5">
-            <div>
-              <div className="flex items-start justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Payment Received
-                </p>
-                <Wallet className="h-4 w-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1 font-mono text-2xl font-semibold text-foreground">
-                <span>৳</span>
-                <NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Successful collections</p>
-              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">Target 94% on track</p>
-            </div>
-            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-              View payments <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-            </div>
-          </SpotlightCard>
+        <span className="hidden text-border sm:inline">·</span>
+        <Link href="/admin/customer-payments" className="group transition-colors duration-200 ease-out hover:text-primary">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Collected</span>
+          <p className="font-mono font-semibold tabular-nums">
+            ৳<NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
+          </p>
         </Link>
-        <Link href="/admin/routers" className="block h-full group no-underline">
-          <SpotlightCard className="flex h-full flex-col justify-between p-5">
-            <div>
-              <div className="flex items-start justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Online Sessions
-                </p>
-                <Wifi className="h-4 w-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3 text-2xl font-semibold text-foreground">
-                <NumberFlow value={stats.onlineUsers} />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Active PPPoE now</p>
-              <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                {stats.routerActive ?? 6} NAS online
-              </p>
-            </div>
-            <div className="flex items-center gap-1 pt-3 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-              View sessions <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-            </div>
-          </SpotlightCard>
+        <span className="hidden text-border sm:inline">·</span>
+        <Link href="/admin/routers" className="group transition-colors duration-200 ease-out hover:text-primary">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Online</span>
+          <p className="font-semibold tabular-nums">
+            <NumberFlow value={stats.onlineUsers} />
+            <span className="ml-1 text-xs font-normal text-muted-foreground">sessions</span>
+          </p>
         </Link>
-        <Link href="/admin/subscription" className="block h-full group no-underline">
-          <SpotlightCard className="flex h-full flex-col justify-between p-5">
-            <div>
-              <div className="flex items-start justify-between">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Customer quota
-                </p>
-                <UserCheck className="h-4 w-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3 font-mono text-2xl font-semibold text-foreground">
-                {stats.customerQuota?.used ?? 248} / {stats.customerQuota?.limit ?? 500}
-              </div>
-            </div>
-            <div className="mt-4 space-y-1.5">
-              <div className="flex justify-between text-[11px] text-muted-foreground">
-                <span>Used</span>
-                <span className="font-medium text-foreground">{stats.customerQuota?.percent ?? 49.6}%</span>
-              </div>
-              <Progress value={stats.customerQuota?.percent ?? 49.6} className="h-1.5" />
-              <div className="flex items-center gap-1 pt-1 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-                Manage capacity <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-              </div>
-            </div>
-          </SpotlightCard>
+        <span className="hidden text-border sm:inline">·</span>
+        <Link href="/admin/subscription" className="group min-w-[140px] transition-colors duration-200 ease-out hover:text-primary">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Quota</span>
+          <p className="font-mono text-xs font-semibold tabular-nums">
+            {stats.customerQuota?.used ?? 248}/{stats.customerQuota?.limit ?? 500}
+          </p>
+          <Progress value={stats.customerQuota?.percent ?? 49.6} className="mt-1 h-1" />
         </Link>
       </div>
 
-      {/* Metric sections */}
-      <div className="space-y-4">
-        {isGroupedMetrics ? (
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6 rounded-xl bg-muted/20 p-3">
-            <Link href="/admin/customers/new" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">New Customers</span>
-                <div className="text-xl font-semibold mt-1 text-emerald-600 dark:text-emerald-400">{stats.newCustomers ?? 28}</div>
-              </SpotlightCard>
-            </Link>
-            <Link href="/admin/customers?status=suspended" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">Inactive Customers</span>
-                <div className="text-xl font-semibold mt-1 text-rose-500">{stats.inactiveCustomers ?? 14}</div>
-              </SpotlightCard>
-            </Link>
-            <Link href="/admin/packages" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">Active Packages</span>
-                <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalPackages ?? 12}</div>
-              </SpotlightCard>
-            </Link>
-            <Link href="/admin/areas" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">Service Areas</span>
-                <div className="text-xl font-semibold mt-1 text-foreground">{stats.totalAreas ?? 8}</div>
-              </SpotlightCard>
-            </Link>
-            <Link href="/admin/hr/employees" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">Active Employees</span>
-                <div className="text-xl font-semibold mt-1 text-foreground">{stats.employeeActive ?? 18}</div>
-              </SpotlightCard>
-            </Link>
-            <Link href="/admin/routers" className="block no-underline">
-              <SpotlightCard className="p-3 cursor-pointer">
-                <span className="text-[11px] text-muted-foreground font-medium">Active Routers</span>
-                <div className="text-xl font-semibold mt-1 text-foreground">{stats.routerActive ?? 6}</div>
-              </SpotlightCard>
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-3 lg:grid-cols-4">
-            <Card className="p-4 space-y-3 ring-0 shadow-none">
-              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-primary" /> Customers
-                </span>
-                <Link href="/admin/customers" className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5">
-                  View <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
-                <Link href="/admin/customers/new" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">New</span>
-                  <div className="font-semibold text-emerald-600 dark:text-emerald-400">{stats.newCustomers ?? 28}</div>
-                </Link>
-                <Link href="/admin/customers?status=suspended" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Inactive</span>
-                  <div className="font-semibold text-rose-500">{stats.inactiveCustomers ?? 14}</div>
-                </Link>
-                <Link href="/admin/customers?status=expired" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Expired</span>
-                  <div className="font-semibold text-amber-500">{stats.expiredCustomers}</div>
-                </Link>
-                <Link href="/admin/customer-payments" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Total Billed</span>
-                  <div className="font-semibold font-mono text-[11px] text-foreground">৳1.45M</div>
-                </Link>
-              </div>
-            </Card>
-
-            <Card className="p-4 space-y-3 ring-0 shadow-none">
-              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Box className="h-3.5 w-3.5 text-primary" /> Packages & Areas
-                </span>
-                <Link href="/admin/packages" className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5">
-                  View <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
-                <Link href="/admin/packages" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Active Packages</span>
-                  <div className="font-semibold text-foreground">{stats.totalPackages ?? 12}</div>
-                </Link>
-                <Link href="/admin/areas" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Service Zones</span>
-                  <div className="font-semibold text-foreground">{stats.totalAreas ?? 8}</div>
-                </Link>
-                <div className="col-span-2 p-2 rounded-lg bg-muted/30 flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground">Efficiency</span>
-                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                    {stats.efficiencyRate ?? 92.8}%
-                  </span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4 space-y-3 ring-0 shadow-none">
-              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <UserCheck className="h-3.5 w-3.5 text-primary" /> Employees
-                </span>
-                <Link href="/admin/hr/employees" className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5">
-                  View <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
-                <Link href="/admin/hr/employees" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Active Staff</span>
-                  <div className="font-semibold text-foreground">{stats.employeeActive ?? 18}</div>
-                </Link>
-                <Link href="/admin/hr/employees" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Inactive</span>
-                  <div className="font-semibold text-muted-foreground">{stats.employeeInactive ?? 2}</div>
-                </Link>
-                <Link href="/admin/hr/salaries" className="col-span-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors flex justify-between items-center cursor-pointer no-underline">
-                  <span className="text-[11px] text-muted-foreground">Salaries Paid</span>
-                  <span className="font-semibold font-mono text-foreground">৳{(stats.employeePaymentReceived ?? 385000).toLocaleString()}</span>
-                </Link>
-              </div>
-            </Card>
-
-            <Card className="p-4 space-y-3 ring-0 shadow-none">
-              <div className="relative z-[1] flex items-center justify-between pb-2 border-b border-border/40">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Server className="h-3.5 w-3.5 text-primary" /> Network & POPs
-                </span>
-                <Link href="/admin/routers" className="text-[11px] text-primary hover:underline font-medium flex items-center gap-0.5">
-                  View <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <div className="relative z-[1] grid grid-cols-2 gap-2 text-xs">
-                <Link href="/admin/routers" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">Active Routers</span>
-                  <div className="font-semibold text-emerald-600 dark:text-emerald-400">{stats.routerActive ?? 6}</div>
-                </Link>
-                <Link href="/admin/pop/resellers" className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer block group no-underline">
-                  <span className="text-[10px] text-muted-foreground">POP Resellers</span>
-                  <div className="font-semibold text-foreground">{stats.allResellers ?? 12}</div>
-                </Link>
-                <div className="col-span-2 p-2 rounded-lg bg-muted/30 flex justify-between items-center">
-                  <span className="text-[11px] text-muted-foreground">Router Status</span>
-                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">All NAS Online</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
+      {/* Quick links — dense, not 4 card modules */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        {[
+          { href: '/admin/packages', label: 'Packages', value: stats.totalPackages ?? 12 },
+          { href: '/admin/areas', label: 'Areas', value: stats.totalAreas ?? 8 },
+          { href: '/admin/hr/employees', label: 'Staff', value: stats.employeeActive ?? 18 },
+          { href: '/admin/pop/resellers', label: 'POPs', value: stats.allResellers ?? 12 },
+          { href: '/admin/customers/new', label: 'New today', value: stats.newCustomers ?? 28 },
+        ].map((item) => (
+          <Link
+            key={item.href + item.label}
+            href={item.href}
+            className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors duration-200 ease-out hover:border-primary/40 hover:bg-muted/30"
+          >
+            <span className="text-muted-foreground">{item.label}</span>
+            <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
+          </Link>
+        ))}
       </div>
 
       {/* Router / POP Live Sessions (Real-time cards mirroring sAdmin.php) */}
@@ -415,7 +199,7 @@ export function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Wifi className="h-4 w-4 text-emerald-500" /> POP Live Sessions
+                <Wifi className="h-4 w-4 text-muted-foreground" /> POP Live Sessions
               </h2>
               <p className="text-xs text-muted-foreground">Live PPPoE sessions across connected MikroTik access concentrators</p>
             </div>
@@ -426,39 +210,33 @@ export function AdminDashboardPage() {
             </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {(stats.routers ?? []).map((router) => (
-              <Link key={router.id} href="/admin/routers" className="block group no-underline">
-                <SpotlightCard className="p-4 h-full flex flex-col justify-between cursor-pointer">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-semibold text-sm text-foreground truncate max-w-[170px]">{router.name}</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">{router.host}</div>
-                    </div>
-                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Online</span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-border/40 text-center">
-                    <div>
-                      <span className="text-[10px] text-muted-foreground">Total</span>
-                      <div className="font-semibold text-sm">{router.totalUsers}</div>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Online</span>
-                      <div className="font-semibold text-sm text-emerald-600 dark:text-emerald-400">{router.activeUsers}</div>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-muted-foreground">Offline</span>
-                      <div className="font-semibold text-sm text-muted-foreground">{router.inactiveUsers}</div>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 mt-2 flex items-center gap-1 text-[11px] font-medium text-primary opacity-80 group-hover:opacity-100">
-                    Manage sessions <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                  </div>
-                </SpotlightCard>
-              </Link>
-            ))}
+          <div className="overflow-hidden rounded-lg border border-border/60">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Router</th>
+                  <th className="px-3 py-2 font-medium">Host</th>
+                  <th className="px-3 py-2 font-medium tabular-nums">Total</th>
+                  <th className="px-3 py-2 font-medium tabular-nums">Online</th>
+                  <th className="px-3 py-2 font-medium tabular-nums">Offline</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stats.routers ?? []).map((router) => (
+                  <tr key={router.id} className="border-t border-border/40 transition-colors duration-200 hover:bg-muted/20">
+                    <td className="px-3 py-2.5">
+                      <Link href="/admin/routers" className="font-medium hover:text-primary">
+                        {router.name}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{router.host}</td>
+                    <td className="px-3 py-2.5 tabular-nums">{router.totalUsers}</td>
+                    <td className="px-3 py-2.5 tabular-nums text-foreground">{router.activeUsers}</td>
+                    <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{router.inactiveUsers}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -489,7 +267,7 @@ export function AdminDashboardPage() {
                 <ComposedChart data={stats.monthlyTrend ?? []} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
                   <defs>
                     <filter id="comboDotGlow">
-                      <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="var(--primary)" floodOpacity="0.5" />
+                      <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="var(--primary)" floodOpacity="0.25" />
                     </filter>
                   </defs>
                   <CartesianGrid
@@ -609,7 +387,7 @@ export function AdminDashboardPage() {
                       <stop offset="100%" stopColor="#c44103" stopOpacity={0.7} />
                     </linearGradient>
                     <filter id="barShadow">
-                      <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#f75803" floodOpacity="0.25" />
+                      <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#f75803" floodOpacity="0.15" />
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
@@ -781,7 +559,7 @@ export function AdminDashboardPage() {
                       <stop offset="100%" stopColor="#34d399" />
                     </linearGradient>
                     <filter id="bandwidthGlow">
-                      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                      <feGaussianBlur stdDeviation="0.8" result="coloredBlur" />
                       <feMerge>
                         <feMergeNode in="coloredBlur" />
                         <feMergeNode in="SourceGraphic" />

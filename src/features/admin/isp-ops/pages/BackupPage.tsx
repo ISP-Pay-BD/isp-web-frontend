@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -73,7 +74,7 @@ export function BackupPage() {
   const failed = rows.filter((r) => r.status === 'failed').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Backup / Restore"
         subtitle="Scheduled backup jobs"
@@ -84,9 +85,12 @@ export function BackupPage() {
           </Button>
         }
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} jobs · {failed} failed
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "jobs" },
+          { value: failed, label: "failed" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

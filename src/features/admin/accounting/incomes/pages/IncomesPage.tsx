@@ -6,6 +6,7 @@ import { useIncomes } from '../hooks/use-incomes';
 import type { IncomeItem } from '../types';
 import type { IncomeFormValues } from '../schemas';
 import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { IncomeModal } from '../components/IncomeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,23 +104,16 @@ export function IncomesPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* KPI summary */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">
-            <CurrencyDisplay amount={totalIncome} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">total incomes</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{filteredIncomes.length}</span>{' '}
-          <span className="text-muted-foreground">vouchers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{categories.length}</span>{' '}
-          <span className="text-muted-foreground">categories</span>
-        </p>
-      </div>
+      <OpsSummaryStrip
+        items={[
+          {
+            value: <CurrencyDisplay amount={totalIncome} className="inline font-semibold" />,
+            label: 'total incomes',
+          },
+          { value: filteredIncomes.length, label: 'vouchers' },
+          { value: categories.length, label: 'categories' },
+        ]}
+      />
 
       {/* Filter Bar */}
       <div>

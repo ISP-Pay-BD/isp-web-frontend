@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -77,16 +78,19 @@ export function CashbookPage() {
   const total = rows.reduce((s, r) => s + r.amountBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Collector Cash Book"
         subtitle="Field and counter collections pending bank deposit"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Collector Cash Book" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} entries · {total.toLocaleString()} ৳ collected
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "entries" },
+          { value: total.toLocaleString(), label: "৳ collected" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

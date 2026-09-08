@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -65,16 +66,19 @@ export function UsageAlertsPage() {
   const enabled = rows.filter((r) => r.enabled).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Usage Alert Rules"
         subtitle="FUP threshold notifications"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Usage Alert Rules" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} rules · {enabled} enabled
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "rules" },
+          { value: enabled, label: "enabled" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

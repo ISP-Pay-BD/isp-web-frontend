@@ -6,6 +6,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,7 +71,7 @@ export function CustomerKycPage() {
   const pending = rows.filter((r) => r.status === 'pending').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="KYC vault"
         subtitle={`Documents for ${customerId}`}
@@ -81,9 +82,12 @@ export function CustomerKycPage() {
           { label: 'KYC' },
         ]}
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} docs · {pending} pending
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "docs" },
+          { value: pending, label: "pending" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
+import { PortalPageMotion } from '@/components/layout/PortalPageMotion';
 import { AuthGuard, ExpiredBanner } from '@/features/shared/permission';
 
 /**
@@ -13,7 +14,7 @@ export default function AdminPortalLayout({ children }: { children: ReactNode })
     <AppShell portal="admin">
       <AuthGuard allowedRoles={['admin', 'resellerAdmin']}>
         <ExpiredBanner />
-        {children}
+        <PortalPageMotion>{children}</PortalPageMotion>
       </AuthGuard>
     </AppShell>
   );

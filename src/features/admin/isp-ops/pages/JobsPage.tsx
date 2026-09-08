@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -80,22 +81,24 @@ export function JobsPage() {
   const open = rows.filter((r) => r.status === 'open' || r.status === 'in_progress').length;
 
   return (
-    <div className="space-y-6">
+    <div className="ui-page-enter space-y-5">
       <PageHeader
         title="Work Orders"
         subtitle="Install, repair, shift, and collection jobs"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Work Orders" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Work Orders' }]}
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} jobs · {open} open
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: 'jobs' },
+          { value: open, label: 'open' },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}
         searchKey="title"
         searchFilterFn={searchFilter}
-        searchPlaceholder="Search…"
+        searchPlaceholder="Search jobs…"
       />
     </div>
   );

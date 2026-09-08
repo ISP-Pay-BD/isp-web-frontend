@@ -140,7 +140,7 @@ export function AllCustomersPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="ui-page-enter mx-auto max-w-7xl space-y-6 pb-12">
       <PageHeader
         title="Customer Directory"
         subtitle="Manage broadband subscribers, PPPoE credentials, bandwidth tiers, and payment statuses"
@@ -225,7 +225,7 @@ export function AllCustomersPage() {
                 onClick={() => setStatusFilter('online')}
                 className="text-xs h-7 px-2.5 transition-all duration-150"
               >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
+                <span className="mr-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Online ({onlineCount})
               </Button>
               <Button
@@ -278,13 +278,12 @@ export function AllCustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((c, index) => {
+                filteredData.map((c) => {
                   const isExpired = c.status === 'expired';
                   return (
                     <tr
                       key={c.id}
-                      className="hover:bg-muted/30 transition-colors group"
-                      style={{ animationDelay: `${320 + index * 30}ms` }}
+                      className="group transition-colors duration-200 ease-out hover:bg-muted/30"
                     >
                       {/* Subscriber */}
                       <td className="py-3.5 px-4">
@@ -296,7 +295,7 @@ export function AllCustomersPage() {
                             <span
                               className={cn(
                                 'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background',
-                                c.online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+                                c.online ? 'bg-emerald-500' : 'bg-muted-foreground/40',
                               )}
                               title={c.online ? 'Online' : 'Offline'}
                             />

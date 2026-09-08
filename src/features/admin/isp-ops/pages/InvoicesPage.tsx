@@ -6,6 +6,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -77,7 +78,7 @@ export function InvoicesPage() {
     .reduce((s, i) => s + i.amountBdt + i.taxBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Invoices"
         subtitle="Generate, send, and track customer invoices (mock PDF)"
@@ -88,9 +89,13 @@ export function InvoicesPage() {
           </Button>
         }
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {data.invoices.length} invoices · {overdue} overdue · {dueTotal.toLocaleString()} ৳ open
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: data.invoices.length, label: "invoices" },
+          { value: overdue, label: "overdue" },
+          { value: dueTotal.toLocaleString(), label: "৳ open" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={data.invoices}

@@ -8,6 +8,7 @@ import { formatBdtWithSymbol } from '@/lib/format';
 import { Reveal } from '@/components/motion/Reveal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useMotionSafe } from '@/lib/animations';
 import type { PricingPlan, PaygCalculatorData } from '../types';
 
 interface PricingSectionProps {
@@ -16,10 +17,14 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({ plans, payg }: PricingSectionProps) {
+  const { reduced } = useMotionSafe();
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
   const [isYearly, setIsYearly] = useState(false);
   const [paygSubscribers, setPaygSubscribers] = useState(payg.defaultCustomers);
   const paygTotal = payg.baseFeeBdt + paygSubscribers * payg.pricePerCustomerBdt;
+  const panelTransition = reduced
+    ? { duration: 0 }
+    : { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <section id="pricing" className="border-t border-white/[0.07] py-20 md:py-28">
@@ -80,10 +85,10 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
           {model === 'fixed' ? (
             <motion.div
               key="fixed"
-              initial={{ opacity: 0, y: 12 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              exit={reduced ? undefined : { opacity: 0, y: -12 }}
+              transition={panelTransition}
             >
               {/* Monthly/Yearly toggle */}
               <div className="mt-10 flex items-center gap-3">
@@ -170,10 +175,10 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
           ) : (
             <motion.div
               key="payg"
-              initial={{ opacity: 0, y: 12 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              exit={reduced ? undefined : { opacity: 0, y: -12 }}
+              transition={panelTransition}
               className="mt-12 max-w-xl"
             >
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8">

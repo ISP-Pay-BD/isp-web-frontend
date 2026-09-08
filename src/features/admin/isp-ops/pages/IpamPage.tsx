@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -71,16 +72,19 @@ export function IpamPage() {
   const total = rows.reduce((s, r) => s + r.total, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="IPAM"
         subtitle="IPv4 and IPv6 block utilization"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "IPAM" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} blocks · {used.toLocaleString()}/{total.toLocaleString()} IPs used
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "blocks" },
+          { value: used.toLocaleString(), label: "/{total.toLocaleString()} IPs used" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -74,7 +74,7 @@ export function PackagesPage() {
   const deleteMutation = useDeletePackage();
 
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'home' | 'corporate' | 'pop'>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [gridSearch, setGridSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editPkg, setEditPkg] = useState<Package | null>(null);
@@ -392,10 +392,8 @@ export function PackagesPage() {
   }
 
   return (
-    <div
-      className="space-y-6 max-w-7xl mx-auto pb-12"
-    >
-      <div >
+    <div className="ui-page-enter mx-auto max-w-7xl space-y-6 pb-12">
+      <div>
         <PageHeader
           title="Internet Packages & Bandwidth Tiers"
           subtitle="Manage subscriber broadband profiles, queue rate limits, and retail prices"

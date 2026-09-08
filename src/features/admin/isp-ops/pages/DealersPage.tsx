@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -71,16 +72,19 @@ export function DealersPage() {
   const active = rows.filter((r) => r.status === 'active').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Dealers (6-tier)"
         subtitle="Dealer hierarchy and footprint"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Dealers (6-tier)" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} dealers · {active} active
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "dealers" },
+          { value: active, label: "active" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

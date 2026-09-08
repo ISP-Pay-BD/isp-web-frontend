@@ -4,12 +4,12 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Can } from '@/components/shared/Can';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Eye, LifeBuoy } from 'lucide-react';
 import { formatDate } from '@/lib/format';
@@ -133,36 +133,24 @@ export function SupportTicketsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div >
-        <PageHeader
-          title="Support Tickets"
-          subtitle="Manage customer support requests and response SLA"
-          breadcrumb={[
-            { label: 'Dashboard', url: '/admin/dashboard' },
-            { label: 'Support Tickets' },
-          ]}
-        />
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Support Tickets"
+        subtitle="Manage customer support requests and response SLA"
+        breadcrumb={[
+          { label: 'Dashboard', url: '/admin/dashboard' },
+          { label: 'Support Tickets' },
+        ]}
+      />
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{data.stats.open}</span>{' '}
-          <span className="text-muted-foreground">open</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{data.stats.pending}</span>{' '}
-          <span className="text-muted-foreground">pending</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{data.stats.closed}</span>{' '}
-          <span className="text-muted-foreground">closed</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{data.stats.avgResponseHours}h</span>{' '}
-          <span className="text-muted-foreground">avg response</span>
-        </p>
-      </div>
+      <OpsSummaryStrip
+        items={[
+          { value: data.stats.open, label: 'open' },
+          { value: data.stats.pending, label: 'pending' },
+          { value: data.stats.closed, label: 'closed' },
+          { value: `${data.stats.avgResponseHours}h`, label: 'avg response' },
+        ]}
+      />
 
       <div className="space-y-3">
         <div className="flex items-center gap-2 text-base font-medium">

@@ -15,15 +15,15 @@ export function StatsBand({ stats }: StatsBandProps) {
   ];
 
   return (
-    <section id="stats" className="border-b border-white/10 py-12 md:py-14">
+    <section id="stats" className="border-b border-white/10 py-8 md:py-10">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <dl className="grid grid-cols-2 gap-y-8 md:grid-cols-4 md:gap-x-8">
+        <dl className="grid grid-cols-2 gap-y-6 md:grid-cols-4 md:gap-x-8">
           {items.map((item) => (
             <div key={item.label} className="md:border-l md:border-white/10 md:pl-6 first:md:border-0 first:md:pl-0">
-              <dd className="font-landing-display text-2xl font-semibold tracking-tight text-white md:text-[1.75rem]">
+              <dd className="font-landing-display text-xl font-semibold tracking-tight text-white/90 md:text-2xl">
                 {item.value}
               </dd>
-              <dt className="mt-1.5 text-xs text-white/45">{item.label}</dt>
+              <dt className="mt-1 text-[11px] text-white/40">{item.label}</dt>
             </div>
           ))}
         </dl>

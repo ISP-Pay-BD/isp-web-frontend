@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -76,18 +77,22 @@ export function LeadsPage() {
 
   const rows = data.leads;
   const open = rows.filter((r) => r.stage !== 'won' && r.stage !== 'lost').length;
+  const won = rows.filter((r) => r.stage === 'won').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Leads Pipeline"
         subtitle="Sales leads and conversion stages"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Leads Pipeline" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Leads Pipeline' }]}
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} leads · {open} open
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: 'leads' },
+          { value: open, label: 'open' },
+          { value: won, label: 'won' },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

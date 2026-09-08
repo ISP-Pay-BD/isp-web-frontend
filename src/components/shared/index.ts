@@ -1,4 +1,5 @@
 export { EmptyState } from './EmptyState';
+export { OpsSummaryStrip } from './OpsSummaryStrip';
 export { StatCard } from './StatCard';
 export {
   PageSkeleton,

@@ -240,7 +240,7 @@ export function CustomerDashboardPage() {
             {/* Plan Card Actions */}
             <div className="mt-6 pt-4 border-t border-border dark:border-white/15 flex flex-wrap gap-2.5">
               <Link href="/customer/payments/pay" className="flex-1 min-w-[140px]">
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 shadow-md shadow-primary/20 transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                <Button className="ui-press h-10 w-full bg-primary font-semibold text-primary-foreground transition-colors duration-200 ease-out hover:bg-primary/90">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Pay Now
                 </Button>

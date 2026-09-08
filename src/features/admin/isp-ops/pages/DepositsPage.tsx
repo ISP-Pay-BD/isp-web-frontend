@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -72,16 +73,19 @@ export function DepositsPage() {
   const total = rows.reduce((s, r) => s + r.amountBdt, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Deposits / OTC"
         subtitle="Security deposits and one-time charges"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Deposits / OTC" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} deposits · {total.toLocaleString()} ৳
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "deposits" },
+          { value: total.toLocaleString(), label: "৳" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -47,7 +47,10 @@ export function PageHeader({
               <span key={`${item.label}-${idx}`} className="flex items-center gap-1.5">
                 {idx > 0 ? <ChevronRight className="h-3 w-3 opacity-60" /> : null}
                 {href && !isLast ? (
-                  <Link href={href} className="hover:text-foreground transition-colors">
+                  <Link
+                    href={href}
+                    className="transition-colors duration-200 ease-out hover:text-foreground"
+                  >
                     {item.label}
                   </Link>
                 ) : (

@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -75,16 +76,19 @@ export function PonMapPage() {
   const capacity = rows.reduce((s, r) => s + r.capacity, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="PON / Splitter Map"
         subtitle="PON port utilization and average optical levels"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "PON / Splitter Map" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} PONs · {used}/{capacity} ONUs
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "PONs" },
+          { value: used, label: "/{capacity} ONUs" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

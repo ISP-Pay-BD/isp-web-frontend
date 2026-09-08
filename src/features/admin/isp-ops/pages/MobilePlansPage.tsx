@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -69,16 +70,19 @@ export function MobilePlansPage() {
   const active = rows.filter((r) => r.active).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Mobile Broadband"
         subtitle="LTE / mobile plan catalog"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Mobile Broadband" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} plans · {active} active
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "plans" },
+          { value: active, label: "active" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

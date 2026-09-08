@@ -6,6 +6,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,7 @@ export function OltOnusPage() {
   const los = rows.filter((r) => r.status === 'los').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="ONU optical power"
         subtitle={`OLT ${oltId} — discovery & provision`}
@@ -95,9 +96,13 @@ export function OltOnusPage() {
           </Button>
         }
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} ONUs · {online} online · {los} LOS
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "ONUs" },
+          { value: online, label: "online" },
+          { value: los, label: "LOS" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

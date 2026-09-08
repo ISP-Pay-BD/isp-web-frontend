@@ -6,6 +6,7 @@ import { useExpenses } from '../hooks/use-expenses';
 import type { ExpenseItem } from '../types';
 import type { ExpenseFormValues } from '../schemas';
 import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, Can } from '@/components/shared';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { ExpenseModal } from '../components/ExpenseModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,23 +104,16 @@ export function ExpensesPage() {
       </PageHero>
       <PageContent className="space-y-6">
 
-      {/* KPI Cards */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">
-            <CurrencyDisplay amount={totalExpenses} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">total expenses</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{filteredExpenses.length}</span>{' '}
-          <span className="text-muted-foreground">vouchers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{categories.length}</span>{' '}
-          <span className="text-muted-foreground">categories</span>
-        </p>
-      </div>
+      <OpsSummaryStrip
+        items={[
+          {
+            value: <CurrencyDisplay amount={totalExpenses} className="inline font-semibold" />,
+            label: 'total expenses',
+          },
+          { value: filteredExpenses.length, label: 'vouchers' },
+          { value: categories.length, label: 'categories' },
+        ]}
+      />
 
       {/* Filter Bar */}
       <div >

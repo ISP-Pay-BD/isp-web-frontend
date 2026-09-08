@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -64,16 +65,19 @@ export function OltVendorsPage() {
   const profiles = rows.reduce((s, r) => s + r.profileCount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="OLT Vendors"
         subtitle="Multi-vendor OLT profiles and sync status"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "OLT Vendors" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} vendors · {profiles} profiles
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "vendors" },
+          { value: profiles, label: "profiles" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

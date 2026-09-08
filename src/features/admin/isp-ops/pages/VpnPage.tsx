@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -73,16 +74,19 @@ export function VpnPage() {
   const up = rows.filter((r) => r.status === 'up').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="VPN Tunnels"
         subtitle="Backhaul and POP tunnels"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "VPN Tunnels" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} tunnels · {up} up
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "tunnels" },
+          { value: up, label: "up" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -68,16 +69,19 @@ export function NetflowPage() {
   const totalGb = rows.reduce((s, r) => s + r.rxGb + r.txGb, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="NetFlow Top Talkers"
         subtitle="High bandwidth talkers by username"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "NetFlow Top Talkers" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} talkers · {totalGb.toLocaleString()} GB
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "talkers" },
+          { value: totalGb.toLocaleString(), label: "GB" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -79,16 +80,20 @@ export function OutagesPage() {
   const affected = open.reduce((s, r) => s + r.affected, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Outage Board"
         subtitle="Live network incidents and customer impact"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Outage Board" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} incidents · {open.length} open · {affected.toLocaleString()} affected
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "incidents" },
+          { value: open.length, label: "open" },
+          { value: affected.toLocaleString(), label: "affected" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

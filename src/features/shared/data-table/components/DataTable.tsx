@@ -433,7 +433,11 @@ export function DataTable<TData extends RowData>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="transition-colors duration-200 ease-out"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="last:py-0">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

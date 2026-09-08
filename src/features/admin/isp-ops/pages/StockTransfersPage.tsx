@@ -5,6 +5,7 @@ import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
@@ -78,16 +79,19 @@ export function StockTransfersPage() {
   const pending = rows.filter((r) => r.status === 'pending').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Stock Transfers"
         subtitle="Warehouse and field stock movement"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Stock Transfers" }]}
         
       />
-      <p className="text-sm text-muted-foreground tabular-nums">
-        {rows.length} transfers · {pending} pending
-      </p>
+      <OpsSummaryStrip
+        items={[
+          { value: rows.length, label: "transfers" },
+          { value: pending, label: "pending" },
+        ]}
+      />
       <DataTable
         columns={columns}
         data={rows}

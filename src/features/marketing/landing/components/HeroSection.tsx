@@ -40,19 +40,19 @@ export function HeroSection({ data }: HeroSectionProps) {
           transition={{ duration: reduced ? 0 : 0.35, ease: easeOutExpo }}
           className="max-w-3xl"
         >
-          <p className="font-landing-display text-sm font-semibold tracking-wide text-white/90 sm:text-base">
+          <p className="font-landing-display text-sm font-semibold tracking-wide text-white sm:text-base">
             {siteConfig.name}
           </p>
 
-          <h1 className="font-landing-display mt-5 text-[2.125rem] font-semibold leading-[1.12] tracking-[-0.035em] text-white sm:text-5xl lg:text-[3.5rem]">
+          <h1 className="font-landing-display mt-4 text-[2.125rem] font-semibold leading-[1.1] tracking-[-0.035em] text-white sm:text-5xl lg:text-[3.25rem]">
             {data.titleEn}
           </h1>
 
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/58 sm:text-lg">
             {data.subtitleEn}
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button
               render={<Link href="/register" />}
               className="h-12 rounded-lg bg-landing-cta px-6 text-sm font-semibold text-white hover:bg-landing-cta-hover"

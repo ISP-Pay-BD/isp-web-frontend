@@ -6,6 +6,7 @@ import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
 import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog } from '@/components/shared';
+import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { EmployeeModal } from '../components/EmployeeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,44 +127,30 @@ export function EmployeesPage() {
       {/* Header */}
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-              <Users className="h-6 w-6" />
-            </div>
-            Staff & Employees
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1.5">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Staff & Employees</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Manage organization team members, field technicians, designations, and salary structures.
           </p>
         </div>
-        <div >
-          <Button onClick={handleOpenCreate} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
+        <div>
+          <Button onClick={handleOpenCreate} className="gap-1.5 bg-primary font-semibold shadow-sm hover:bg-primary/90">
             <UserPlus className="h-4 w-4" /> New Employee
           </Button>
         </div>
       </PageHero>
       <PageContent className="space-y-6">
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{employees.length}</span>{' '}
-          <span className="text-muted-foreground">staff</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{activeCount}</span>{' '}
-          <span className="text-muted-foreground">active</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">
-            <CurrencyDisplay amount={totalPayroll} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">monthly payroll</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{departmentCount}</span>{' '}
-          <span className="text-muted-foreground">roles</span>
-        </p>
-      </div>
+      <OpsSummaryStrip
+        items={[
+          { value: employees.length, label: 'staff' },
+          { value: activeCount, label: 'active' },
+          { value: departmentCount, label: 'roles' },
+          {
+            value: <CurrencyDisplay amount={totalPayroll} className="inline font-semibold" />,
+            label: 'payroll',
+          },
+        ]}
+      />
 
       {/* Toolbar + Table */}
       <div>
