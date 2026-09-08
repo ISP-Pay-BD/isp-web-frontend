@@ -85,6 +85,7 @@ All specification documents are written. No missing plan MD for P0–Phase 8.
 ## Trigger / current focus
 
 **Phases 1–7 mock UI + inventory sync: COMPLETE** (dummy data only).
-§H stretch + §I ISP Feature Catalog (75 items): COMPLETE in mock UI.
+§H stretch + §I ISP Feature Catalog: COMPLETE.
+§J ISP Engines suite (~300 features, 20 groups): COMPLETE static mock UI.
 Active remaining: **Phase 8 API** (when you say go).
 Premium craft tracker: `docs/PONYTAIL-TRACKER.md`.

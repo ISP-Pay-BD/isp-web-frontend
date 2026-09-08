@@ -420,3 +420,38 @@ Industry / BD competitor gaps implemented as mock UI (data: `src/data/admin/isp-
 | I66 | `/admin/backup` | Backup / restore | [x] |
 
 **Catalog mock UI:** complete · Next real work: **Phase 8 API**
+
+---
+
+## J. ISP Engines suite (static mock — full feature dump)
+
+All groups from the engines roadmap. Data: `src/data/admin/engines.catalog.ts` + `engines.data.ts`. Hub UI with per-feature actions, records, logs, builders.
+
+| # | Route | Title | Portal | Status |
+|---|-------|-------|--------|--------|
+| J0 | `/admin/engines` | Engines index | admin | [x] |
+| J1 | `/admin/engines/automation` | Automation / Workflow (19 features) | admin | [x] |
+| J2 | `/admin/engines/provisioning` | Service Provisioning (18) | admin | [x] |
+| J3 | `/admin/engines/network-events` | Network Event Management (22) | admin | [x] |
+| J4 | `/admin/engines/lifecycle` | Customer Lifecycle (16) | admin | [x] |
+| J5 | `/admin/engines/installation` | Installation Management (14) | admin | [x] |
+| J6 | `/admin/engines/accounting-x` | Accounting Expansion (16) | admin | [x] |
+| J7 | `/admin/engines/crm` | CRM / Sales (14) | admin | [x] |
+| J8 | `/admin/engines/api-platform` | API Platform (16) | admin | [x] |
+| J9 | `/admin/engines/security` | Security (19) | admin | [x] |
+| J10 | `/admin/engines/backup-dr` | Backup / DR (12) | admin | [x] |
+| J11 | `/admin/engines/ai-platform` | AI Platform (18) | admin | [x] |
+| J12 | `/admin/engines/cx` | Customer Experience (11) | admin | [x] |
+| J13 | `/admin/engines/inventory-x` | Inventory Expansion (14) | admin | [x] |
+| J14 | `/admin/engines/reseller-x` | Reseller Expansion (12) | admin | [x] |
+| J15 | `/admin/engines/noc-advanced` | NOC Advanced (14) | admin | [x] |
+| J16 | `/admin/engines/ftth-advanced` | Advanced FTTH (16) | admin | [x] |
+| J17 | `/admin/engines/billing-advanced` | Advanced Billing (16) | admin | [x] |
+| J18 | `/admin/engines/reporting-bi` | Reporting / BI (17) | admin | [x] |
+| J19 | `/platform/engines` | Platform engines index | platform | [x] |
+| J20 | `/platform/engines/multi-tenant` | Multi-Tenant SaaS (15) | platform | [x] |
+| J21 | `/platform/engines/saas-bi` | SaaS BI (14) | platform | [x] |
+| J22 | `/customer/experience` | Customer CX prefs/feedback | customer | [x] |
+| J23 | `/employee/installations` | Field installations | employee | [x] |
+
+**Engines total:** 20 groups · ~300+ named features · dummy records + logs + static action logic

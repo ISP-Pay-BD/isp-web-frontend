@@ -116,4 +116,16 @@ export const platformNavigation: NavItem[] = [
     icon: 'Wrench',
     roles: ['super_admin'],
   },
+  {
+    id: 'platform-engines',
+    label: 'Platform Engines',
+    icon: 'Workflow',
+    roles: ['super_admin'],
+    section: 'Engines',
+    children: [
+      { id: 'platform-engines-index', label: 'All Engines', href: '/platform/engines' },
+      { id: 'platform-engines-tenant', label: 'Multi-Tenant SaaS', href: '/platform/engines/multi-tenant' },
+      { id: 'platform-engines-saas-bi', label: 'SaaS BI', href: '/platform/engines/saas-bi' },
+    ],
+  },
 ];

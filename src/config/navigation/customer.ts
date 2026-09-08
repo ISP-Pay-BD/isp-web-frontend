@@ -47,6 +47,14 @@ export const customerNavigation: NavItem[] = [
     hideWhenExpired: true,
   },
   {
+    id: 'customer-experience',
+    label: 'My Experience',
+    href: '/customer/experience',
+    icon: 'HeartHandshake',
+    roles: ['user'],
+    hideWhenExpired: true,
+  },
+  {
     id: 'customer-support',
     label: 'Support',
     href: '/customer/support',

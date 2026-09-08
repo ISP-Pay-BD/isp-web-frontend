@@ -70,6 +70,7 @@ import {
 } from '@/data/admin/extras.data';
 import { productShowcase } from '@/data/platform/contacts.data';
 import * as ispOps from '@/data/admin/isp-ops.data';
+import { enginesData } from '@/data/admin/engines.data';
 
 // In-memory clones for interactive mock mutations
 let adminCustomers = [...customers];
@@ -400,6 +401,7 @@ export async function getAdminDomain(domain: string) {
     sidebarPins: { items: sidebarPinsData },
     customerAudit: { items: customerAuditEvents },
     ispOps: ispOps.ispOpsData,
+    engines: enginesData,
   };
   return map[domain] ?? { items: [] };
 }
@@ -435,6 +437,7 @@ export async function getPlatformDomain(domain: string) {
     sla: { items: platformCatalogData.sla },
     tenantHealth: platformCatalogData.tenantHealth,
     billingModes: { items: platformCatalogData.billingModes },
+    engines: enginesData,
   };
   return map[domain] ?? {};
 }

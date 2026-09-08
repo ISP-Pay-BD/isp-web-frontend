@@ -28,6 +28,7 @@ export const employeeNavigation: NavItem[] = [
   { id: 'emp-advance', label: 'Advance Salary', href: '/employee/advance-salary', icon: 'Wallet', roles: ['employee'] },
   { id: 'emp-attendance', label: 'Attendance', href: '/employee/attendance', icon: 'MapPinned', roles: ['employee'] },
   { id: 'emp-jobs', label: 'Work Orders', href: '/employee/jobs', icon: 'ClipboardList', roles: ['employee'] },
+  { id: 'emp-installs', label: 'Installations', href: '/employee/installations', icon: 'HardHat', roles: ['employee'] },
   { id: 'emp-profile', label: 'Profile', href: '/employee/profile', icon: 'User', roles: ['employee'] },
 ];
 
