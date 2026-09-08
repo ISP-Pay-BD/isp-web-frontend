@@ -131,15 +131,15 @@
         "openPanel": "Open {role}"
       },
       "ctaFinal": {
-        "badge": "Ready to Modernize Your ISP?",
-        "title": "Stop reconciling payments by hand.",
-        "desc": "Connect your MikroTik, switch on bKash & Nagad auto-matching, and bill your entire subscriber tree from one clean panel — set up in an afternoon.",
-        "primary": "Start Free Trial — 14 Days, No Card",
-        "whatsapp": "Book WhatsApp Demo",
-        "sales": "Talk to Sales",
-        "bullet1": "✓ Instant account activation",
-        "bullet2": "✓ Free subscriber & billing data migration",
-        "bullet3": "✓ Live telephone & WhatsApp support in Bangla"
+        "badge": "Ready to modernize your ISP?",
+        "title": "Stop matching payments by hand",
+        "desc": "Connect MikroTik, enable bKash and Nagad auto-matching, and bill your full subscriber tree from one operator panel. Most teams go live within an afternoon.",
+        "primary": "Start free trial",
+        "whatsapp": "Book WhatsApp demo",
+        "sales": "Talk to sales",
+        "bullet1": "14-day trial, no card required",
+        "bullet2": "Free subscriber and billing migration",
+        "bullet3": "Bangla phone and WhatsApp support"
       }
     },
     "pages": {

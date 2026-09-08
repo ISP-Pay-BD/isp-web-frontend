@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useMotionSafe, easeOutExpo } from '@/lib/animations';
 import type { ProductPreviewTab } from '../types';
 
 interface ProductPreviewProps {
@@ -62,20 +64,21 @@ const CONSOLE_BY_TAB: Record<
 };
 
 export function ProductPreview({ tabs }: ProductPreviewProps) {
+  const { reduced } = useMotionSafe();
   const [activeTab, setActiveTab] = useState(tabs[0]?.id ?? 'billing');
   const currentTab = tabs.find((t) => t.id === activeTab) ?? tabs[0];
   const consoleData = CONSOLE_BY_TAB[activeTab] ?? CONSOLE_BY_TAB.billing;
 
   return (
-    <section id="product-preview" className="border-t border-white/10 py-20 md:py-28">
+    <section id="product-preview" className="relative z-[1] border-t border-white/10 py-32 md:py-48">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
           <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            The operator console, not a pitch deck.
+            See it in action
           </h2>
           <p className="mt-4 text-base leading-relaxed text-white/60">
-            Live collections, PPPoE sessions, and ticket queues — the screens your team opens every
-            morning.
+            Browse operator screens for billing, MikroTik sync, OLT, and reports — the desks your
+            team opens every morning.
           </p>
         </div>
 
@@ -87,74 +90,104 @@ export function ProductPreview({ tabs }: ProductPreviewProps) {
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`-mb-px border-b-2 px-4 py-3 text-sm transition-colors ${
+                className={`relative -mb-px px-4 py-3 text-sm transition-colors ${
                   active
-                    ? 'border-landing-cta font-semibold text-white'
-                    : 'border-transparent text-white/45 hover:text-white/80'
+                    ? 'font-semibold text-white'
+                    : 'text-white/45 hover:text-white/80'
                 }`}
               >
                 {t.label}
+                {active ? (
+                  <motion.span
+                    layoutId="product-tab-underline"
+                    className="absolute right-0 bottom-0 left-0 h-0.5 bg-landing-cta"
+                    transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32 }}
+                  />
+                ) : null}
               </button>
             );
           })}
         </div>
 
         {currentTab && consoleData ? (
-          <div className="mt-10 grid gap-10 lg:grid-cols-12 lg:gap-12">
-            <div className="lg:col-span-4">
-              <h3 className="font-landing-display text-xl font-semibold text-white">
-                {currentTab.label}
-              </h3>
-              <ul className="mt-5 space-y-3">
-                {currentTab.bullets.map((bullet) => (
-                  <li key={bullet} className="border-l border-white/15 pl-3 text-sm leading-relaxed text-white/55">
-                    {bullet}
-                  </li>
-                ))}
-              </ul>
-              <dl className="mt-8 flex gap-8">
-                {consoleData.kpi.map((m) => (
-                  <div key={m.label}>
-                    <dd className="font-landing-display text-2xl font-semibold tabular-nums text-white">
-                      {m.value}
-                    </dd>
-                    <dt className="mt-1 text-xs text-white/40">{m.label}</dt>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <div className="overflow-hidden border border-white/10 bg-landing-panel lg:col-span-8">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <span className="font-mono text-[11px] text-white/40">
-                  operator-console / {currentTab.id}
-                </span>
-                <span className="font-mono text-[11px] text-emerald-400">Online</span>
-              </div>
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/35">
-                    <th className="px-4 py-3 font-medium">Source</th>
-                    <th className="px-4 py-3 font-medium">Ref</th>
-                    <th className="px-4 py-3 text-right font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="font-mono text-xs sm:text-[13px]">
-                  {consoleData.rows.map((row) => (
-                    <tr key={`${row.col1}-${row.col2}`} className="border-b border-white/[0.06] last:border-0">
-                      <td
-                        className={`px-4 py-3.5 ${row.hot ? 'text-landing-cta' : 'text-white/80'}`}
-                      >
-                        {row.col1}
-                      </td>
-                      <td className="px-4 py-3.5 text-white/55">{row.col2}</td>
-                      <td className="px-4 py-3.5 text-right tabular-nums text-white/70">{row.col3}</td>
-                    </tr>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={reduced ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduced ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.35, ease: easeOutExpo }}
+              className="mt-10 grid gap-10 lg:grid-cols-12 lg:gap-12"
+            >
+              <div className="lg:col-span-4">
+                <h3 className="font-landing-display text-xl font-semibold text-white">
+                  {currentTab.label}
+                </h3>
+                <ul className="mt-5 space-y-3">
+                  {currentTab.bullets.map((bullet) => (
+                    <li
+                      key={bullet}
+                      className="border-l border-landing-cta/40 pl-3 text-sm leading-relaxed text-white/55"
+                    >
+                      {bullet}
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                </ul>
+                <dl className="mt-8 flex gap-8">
+                  {consoleData.kpi.map((m) => (
+                    <div key={m.label}>
+                      <dd className="font-landing-display text-2xl font-semibold tabular-nums text-white">
+                        {m.value}
+                      </dd>
+                      <dt className="mt-1 text-xs text-white/40">{m.label}</dt>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-landing-panel/90 shadow-[0_20px_60px_rgba(12,1,24,0.45)] backdrop-blur-md lg:col-span-8">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                  <span className="font-mono text-[11px] text-white/40">
+                    operator-console / {currentTab.id}
+                  </span>
+                  <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                    Online
+                  </span>
+                </div>
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/35">
+                      <th className="px-4 py-3 font-medium">Source</th>
+                      <th className="px-4 py-3 font-medium">Ref</th>
+                      <th className="px-4 py-3 text-right font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono text-xs sm:text-[13px]">
+                    {consoleData.rows.map((row, i) => (
+                      <motion.tr
+                        key={`${row.col1}-${row.col2}`}
+                        initial={reduced ? false : { opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05, duration: 0.3 }}
+                        className="border-b border-white/[0.06] last:border-0"
+                      >
+                        <td
+                          className={`px-4 py-3.5 ${row.hot ? 'text-landing-cta' : 'text-white/80'}`}
+                        >
+                          {row.col1}
+                        </td>
+                        <td className="px-4 py-3.5 text-white/55">{row.col2}</td>
+                        <td className="px-4 py-3.5 text-right tabular-nums text-white/70">
+                          {row.col3}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         ) : null}
       </div>
     </section>

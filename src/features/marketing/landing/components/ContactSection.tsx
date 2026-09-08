@@ -43,19 +43,16 @@ export function ContactSection() {
     setSubmitting(false);
     setSubmitted(true);
     toast.success('Message received!', {
-      description: `Thanks ${data.name} — our Dhaka operations team will reach out within the hour.`,
+      description: `Thanks ${data.name} - our Dhaka operations team will reach out within the hour.`,
     });
     reset();
   };
 
   return (
-    <section id="contact" className="border-t border-white/[0.07] py-20 md:py-28">
+    <section id="contact" className="border-t border-white/[0.07] py-32 md:py-48">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
-            {t('marketing.pages.contact.badge')}
-          </p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="font-landing-display text-[clamp(2rem,4.2vw,3.75rem)] font-semibold tracking-tight text-white text-balance">
             {t('marketing.pages.contact.title')}
           </h2>
           <p className="mt-4 text-base leading-relaxed text-white/60">
@@ -155,7 +152,7 @@ export function ContactSection() {
               <div>
                 <h3 className="font-landing-display text-sm font-bold text-white">Office Hours</h3>
                 <p className="mt-1 text-xs text-white/70">
-                  Saturday – Thursday: 10:00 AM – 8:00 PM<br />
+                  Saturday - Thursday: 10:00 AM - 8:00 PM<br />
                   Friday: Closed (Emergency automated line active)
                 </p>
               </div>

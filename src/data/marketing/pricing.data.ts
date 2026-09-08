@@ -19,7 +19,14 @@ export const pricingTiers = [
     period: 'month',
     customers: 500,
     highlight: false,
-    features: ['MikroTik sync', 'bKash & Nagad', 'Customer portal', 'SMS alerts'],
+    features: [
+      'Up to 500 subscribers',
+      'Unlimited MikroTik routers',
+      'bKash & Nagad auto-match',
+      'Customer portal',
+      'SMS expiry alerts',
+      'Bangla + English support',
+    ],
   },
   {
     id: 'growth',
@@ -29,7 +36,14 @@ export const pricingTiers = [
     period: 'month',
     customers: 2000,
     highlight: true,
-    features: ['Everything in Starter', 'Multi-POP resellers', 'WhatsApp Business', 'HR module'],
+    features: [
+      'Up to 2,000 subscribers',
+      'Everything in Starter',
+      'Multi-POP reseller wallets',
+      'WhatsApp Business alerts',
+      'Staff HR & attendance',
+      'Priority onboarding help',
+    ],
   },
   {
     id: 'scale',
@@ -39,7 +53,14 @@ export const pricingTiers = [
     period: 'month',
     customers: null,
     highlight: false,
-    features: ['Everything in Growth', 'OLT tools', 'Accounting suite', 'Priority support'],
+    features: [
+      'Unlimited subscribers',
+      'Everything in Growth',
+      'Huawei & ZTE OLT tools',
+      'Accounting suite',
+      'BTRC report exports',
+      'Dedicated success manager',
+    ],
   },
 ] as const;
 

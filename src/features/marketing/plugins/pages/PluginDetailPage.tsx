@@ -48,7 +48,7 @@ export function PluginDetailPage() {
               <p className="mt-4 text-lg font-medium text-landing-cta">{plugin.price}</p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button
-                  className="bg-landing-cta duration-200 ease-out hover:bg-landing-cta-hover"
+                  className="bg-landing-cta text-white duration-200 ease-out hover:bg-landing-cta-hover"
                   onClick={() => toast.success('Addon requested (mock)')}
                 >
                   Request enable

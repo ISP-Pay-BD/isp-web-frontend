@@ -4,18 +4,24 @@
  */
 
 import { landingData } from './landing.data';
-import { landingSections, landingFaqExtended, landingTestimonialsExtended } from './sections.data';
+import { landingSections } from './sections.data';
 import { paygCalculator, pricingTiers } from './pricing.data';
 
 const featureBullets: Record<string, string[]> = {
-  f1: ['Auto SMS reconciliation', 'bKash & Nagad instant match', 'Zero disputes'],
-  f2: ['Real-time PPPoE sync', 'Hotspot user management', 'Bandwidth queues'],
-  f3: ['POP ledger tracking', 'Sub-reseller quotas', 'Automated commissions'],
+  f1: ['bKash & Nagad TrxID match', 'SMS and app payments', 'Dispute rate under 0.01%'],
+  f2: ['Live PPPoE & hotspot sync', 'Auto disconnect on expiry', 'Unlimited routers'],
+  f3: ['POP wallet funding', 'Automatic commissions', 'Scoped permissions per desk'],
+  f4: ['Your logo and brand', 'Bangla + English UI', 'Pay, tickets, usage history'],
+  f5: ['Expiry reminders', 'Payment confirmations', 'WhatsApp Business API'],
+  f6: ['Fixed monthly plans', 'Pay-as-you-go option', 'No seat or router fees'],
+  f7: ['Huawei & ZTE support', 'Optical power alerts', 'ONU MAC bind tools'],
+  f8: ['Attendance & salary', 'Field staff roles', 'Cash-safe permissions'],
 };
 
 const featureBadges: Record<string, string> = {
-  f2: 'Advanced',
-  f3: 'Popular',
+  f1: 'Core',
+  f2: 'Network',
+  f3: 'Growth',
 };
 
 export const landingSectionsAData = {
@@ -70,23 +76,23 @@ export const landingSectionsAData = {
   howItWorks: [
     {
       step: 1,
-      title: 'Connect MikroTik',
-      desc: 'Add your RouterOS IP and API credentials. We sync active PPPoE and hotspot queues in seconds.',
+      title: 'Connect your MikroTik',
+      desc: 'Add RouterOS IP and API credentials. Active PPPoE and hotspot users sync within seconds.',
     },
     {
       step: 2,
-      title: 'Import customers',
-      desc: 'Upload an Excel list or let us migrate your existing subscriber profiles and package dues.',
+      title: 'Import your subscribers',
+      desc: 'Upload Excel or migrate from your current panel. Packages, areas, and dues stay intact with zero downtime.',
     },
     {
       step: 3,
-      title: 'Enable payments',
-      desc: 'Connect your bKash merchant or personal number. Invoices auto-generate with SMS reminders.',
+      title: 'Enable bKash & Nagad',
+      desc: 'Connect merchant or personal numbers. Invoices generate automatically with Bangla SMS reminders.',
     },
     {
       step: 4,
       title: 'Go live on autopilot',
-      desc: 'Customers pay and reconnect instantly; expired lines disconnect automatically at 12:00 AM.',
+      desc: 'Paid customers reconnect instantly. Expired lines disconnect at midnight without manual SSH.',
     },
   ],
   productPreview: [
@@ -149,27 +155,68 @@ export const landingSectionsAData = {
   ],
   reconciliation: [
     {
-      step: '01 · ingest',
-      title: 'Payment SMS arrives',
-      desc: 'Subscriber pays via bKash or Nagad merchant/personal number, or initiates payment via customer app.',
-      metric: 'real-time',
-      metricHighlight: 'read instantaneously',
+      step: 'Step 1',
+      title: 'Payment notification received',
+      desc: 'A subscriber pays via bKash, Nagad, or the customer app. The SMS or gateway callback reaches ISP Pay BD immediately.',
+      metric: 'Real-time',
+      metricHighlight: 'Instant ingest',
     },
     {
-      step: '02 · match',
-      title: 'Fingerprinted to subscriber',
-      desc: 'System cross-references TrxID, sender phone, and invoice balance against database records.',
+      step: 'Step 2',
+      title: 'Matched to the open invoice',
+      desc: 'TrxID, sender mobile number, and amount are checked against open invoices so the payment lands on the correct subscriber.',
       metric: '98%+',
-      metricHighlight: 'matched first try',
+      metricHighlight: 'Matched first try',
     },
     {
-      step: '03 · reconnect',
-      title: 'Paid, extended, online',
-      desc: 'Invoice closes, expiry rolls forward, and RouterOS API triggers line unblock in under a second.',
+      step: 'Step 3',
+      title: 'Line extended and reconnected',
+      desc: 'The invoice closes, expiry moves forward, and RouterOS API restores the PPPoE or hotspot session in under a second.',
       metric: '~0.8s',
-      metricHighlight: 'end-to-end speed',
+      metricHighlight: 'End-to-end latency',
     },
   ],
+  desire: {
+    scrubLine:
+      'Match every payment. Sync every session. Keep every reseller wallet accurate before midnight.',
+    title: 'Built for Bangladesh ISP operations',
+    subtitle:
+      'Collections, MikroTik sync, POP ledgers, and subscriber self-care stay on one operator desk while your network stays online.',
+    items: [
+      {
+        title: 'Live network visibility',
+        copy: 'Monitor PPPoE sessions, expiry windows, and optical power alerts from one NOC-friendly surface for night operations.',
+      },
+      {
+        title: 'Automatic payment matching',
+        copy: 'bKash and Nagad payments attach to the correct invoice before your accounts team opens a spreadsheet.',
+      },
+      {
+        title: 'Reseller and POP ledgers',
+        copy: 'Fund POP wallets, track commissions, and keep every reseller scoped to their customers and cash.',
+      },
+      {
+        title: 'Subscriber self-care',
+        copy: 'Offer a branded Bangla app for balance checks, renewals, and tickets so midnight support calls drop.',
+      },
+    ],
+  },
+  sectionCopy: {
+    featuresTitle: 'One platform, from the ONU port to the ৳ in your account',
+    featuresSubtitle:
+      'OLT and MikroTik on one side; billing, resellers, and BTRC-ready reports on the other.',
+    partnersTitle: 'Trusted on the ground by ISPs in 30+ districts',
+    partnersSubtitle: 'Neighborhood networks to multi-branch fiber operators run billing on ISP Pay BD.',
+    pricingTitle: 'Priced per subscriber, not per promise',
+    pricingSubtitle:
+      'Lock a fixed monthly plan for predictable billing, or go pay-as-you-go: base fee plus a low per-customer rate, wallet-funded, no tier ceiling to outgrow.',
+    testimonialsTitle: 'What Bangladesh ISP operators say',
+    testimonialsSubtitle:
+      'Feedback from owners, NOC leads, and accounts teams managing hundreds to thousands of lines.',
+    faqTitle: 'Answers before you ask sales',
+    faqSubtitle:
+      'How billing, MikroTik sync, bKash/Nagad reconciliation, and reseller payouts work on ISP Pay BD.',
+  },
   roi: landingSections.roi,
   pricing: {
     plans: pricingTiers.map((tier) => ({
@@ -196,14 +243,26 @@ export const landingSectionsAData = {
       { capability: 'Auto disconnect/reconnect on billing', us: true, legacy: 'Semi-manual SSH scripting' },
     ],
   },
-  testimonials: landingTestimonialsExtended.map((t) => ({
-    name: t.name,
-    role: t.role,
-    quote: t.quote,
-    rating: t.rating ?? 5,
-    image: t.image,
-  })),
-  faq: landingFaqExtended,
+  testimonials: landingData.testimonials,
+  faq: [
+    ...landingData.faq,
+    {
+      q: 'How does POP reseller billing work?',
+      a: 'You fund POP wallets. Resellers sell packages to their customers. The ledger tracks funding, sales, and commissions automatically.',
+    },
+    {
+      q: 'Do you support fiber OLT hardware?',
+      a: 'Yes. Huawei and ZTE OLT modules cover ONU provisioning, optical power monitoring, and MAC bind controls.',
+    },
+    {
+      q: 'Can customers use Bangla in the portal and app?',
+      a: 'Yes. The customer portal, SMS templates, and mobile app support a full Bangla interface alongside English.',
+    },
+    {
+      q: 'What about BTRC compliance reports?',
+      a: 'ISP Pay BD includes BTRC-ready subscriber and bandwidth report exports for regulatory filing.',
+    },
+  ],
   integrations: [
     { name: 'MikroTik RouterOS', category: 'Network', icon: 'Server' },
     { name: 'bKash Merchant & Personal', category: 'Payment', icon: 'CreditCard' },
@@ -254,7 +313,7 @@ export const landingSectionsAData = {
     'SpeedNet Khulna', 'WaveISP', 'ConnectBD', 'NetZone', 'DhakaNet', 'GreenLink',
   ],
   trustBadges: [
-    { label: '120+ ISPs', sub: 'Across Bangladesh' },
+    { label: '149+ ISPs', sub: 'Across Bangladesh' },
     { label: '85K+ users', sub: 'Managed daily' },
     { label: '2M+ payments', sub: 'Reconciled' },
     { label: '99.9% uptime', sub: 'Platform SLA' },

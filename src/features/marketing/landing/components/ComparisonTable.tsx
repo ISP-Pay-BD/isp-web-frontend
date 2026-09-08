@@ -15,10 +15,7 @@ export function ComparisonTable({ comparison }: ComparisonTableProps) {
     <section id="comparison" className="border-t border-white/10 bg-landing-bg py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
-            Comparison
-          </p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             The things you stop doing by hand
           </h2>
           <p className="mt-4 text-base text-white/60">

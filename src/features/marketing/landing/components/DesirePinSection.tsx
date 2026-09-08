@@ -5,39 +5,45 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import { useMotionSafe } from '@/lib/animations';
+import { landingMedia } from '../media';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const GALLERY = [
-  {
-    seed: 'noc-wall',
-    title: 'NOC visibility',
-    copy: 'Live PPPoE sessions, optical power, and expiry windows — one surface for night ops.',
-  },
-  {
-    seed: 'payment-match',
-    title: 'Payment gravity',
-    copy: 'bKash and Nagad land on the right invoice before your accountant opens Excel.',
-  },
-  {
-    seed: 'reseller-map',
-    title: 'Reseller ledger',
-    copy: 'Fund POPs, split commission, and keep every wallet scoped to the right desk.',
-  },
-  {
-    seed: 'customer-app-ui',
-    title: 'Subscriber self-care',
-    copy: 'Branded Bangla app for balance, renewals, and tickets — midnight calls drop.',
-  },
-] as const;
+export interface DesireItem {
+  title: string;
+  copy: string;
+}
 
-export function DesirePinSection() {
+interface DesirePinSectionProps {
+  scrubLine: string;
+  title: string;
+  subtitle: string;
+  items: DesireItem[];
+}
+
+export function DesirePinSection({ scrubLine, title, subtitle, items }: DesirePinSectionProps) {
   const { reduced } = useMotionSafe();
   const rootRef = useRef<HTMLElement>(null);
 
   useGSAP(
     () => {
       if (reduced || !rootRef.current) return;
+
+      const words = gsap.utils.toArray<HTMLElement>('[data-scrub-word]');
+      if (words.length) {
+        gsap.set(words, { opacity: 0.12 });
+        gsap.to(words, {
+          opacity: 1,
+          ease: 'none',
+          stagger: 0.08,
+          scrollTrigger: {
+            trigger: '[data-scrub-line]',
+            start: 'top 80%',
+            end: 'top 35%',
+            scrub: true,
+          },
+        });
+      }
 
       const mm = gsap.matchMedia();
 
@@ -89,38 +95,49 @@ export function DesirePinSection() {
 
       return () => mm.revert();
     },
-    { dependencies: [reduced], scope: rootRef },
+    { dependencies: [reduced, scrubLine], scope: rootRef },
   );
 
   return (
     <section id="desire" ref={rootRef} className="relative py-32 md:py-48">
+      <div className="mx-auto max-w-6xl px-4 md:px-6">
+        <p
+          data-scrub-line
+          className="font-landing-display max-w-4xl text-[clamp(1.5rem,3.2vw,2.75rem)] leading-tight font-semibold tracking-tight text-white text-balance"
+        >
+          {scrubLine.split(' ').map((word, i, words) => (
+            <span key={`${word}-${i}`} data-scrub-word className="inline-block will-change-[opacity]">
+              {word}
+              {i < words.length - 1 ? '\u00A0' : ''}
+            </span>
+          ))}
+        </p>
+      </div>
+
       <div
         data-desire-track
-        className="mx-auto grid max-w-6xl gap-12 px-4 md:px-6 lg:grid-cols-12 lg:items-start lg:gap-10"
+        className="mx-auto mt-20 grid max-w-6xl gap-12 px-4 md:mt-28 md:px-6 lg:grid-cols-12 lg:items-start lg:gap-10"
       >
         <div data-desire-pin className="lg:col-span-5">
           <h2 className="font-landing-display text-[clamp(2rem,4vw,3.5rem)] font-semibold tracking-tight text-white text-balance">
-            Built for the desk that never sleeps
+            {title}
           </h2>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-white/60">
-            Scroll the night shift. Collection, sync, and support stay in frame while the network
-            keeps moving.
-          </p>
+          <p className="mt-6 max-w-md text-base leading-relaxed text-white/60">{subtitle}</p>
         </div>
 
         <div className="flex flex-col gap-10 lg:col-span-7 lg:gap-16">
-          {GALLERY.map((item) => (
+          {items.map((item, index) => (
             <article
-              key={item.seed}
+              key={item.title}
               data-desire-card
               className="group overflow-hidden rounded-2xl border border-white/10 bg-landing-panel"
             >
-              <div className="relative aspect-[16/10] overflow-hidden">
+              <div className="relative aspect-16/10 overflow-hidden">
                 <div
                   data-desire-media
                   className="absolute inset-0 origin-center will-change-transform transition-transform duration-700 ease-out group-hover:scale-105"
                   style={{
-                    backgroundImage: `url('https://picsum.photos/seed/${item.seed}/1400/900')`,
+                    backgroundImage: `url('${landingMedia.desire[index] ?? landingMedia.desire[0]}')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     filter: 'grayscale(0.85) contrast(1.2) brightness(0.55)',
@@ -128,7 +145,7 @@ export function DesirePinSection() {
                   }}
                   aria-hidden
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-landing-panel via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-landing-panel via-transparent to-transparent" />
               </div>
               <div className="p-6 md:p-8">
                 <h3 className="font-landing-display text-xl font-semibold text-white md:text-2xl">

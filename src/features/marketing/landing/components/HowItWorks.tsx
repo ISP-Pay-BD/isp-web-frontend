@@ -4,13 +4,16 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { landingMedia } from '../media';
 import type { HowItWorksStep } from '../types';
 
 interface HowItWorksProps {
   steps: HowItWorksStep[];
 }
 
-const PANEL_SEEDS = ['connect-mt', 'import-csv', 'bkash-desk', 'live-ops'] as const;
+function cleanCopy(text: string) {
+  return text.replace(/\s*[—–]\s*/g, ', ');
+}
 
 export function HowItWorks({ steps }: HowItWorksProps) {
   const [active, setActive] = useState(0);
@@ -21,7 +24,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
             <h2 className="font-landing-display text-[clamp(2rem,4vw,3.25rem)] font-semibold tracking-tight text-white text-balance">
-              Live this week — history intact
+              Go live this week — with history intact
             </h2>
             <p className="mt-5 text-base leading-relaxed text-white/60">
               Self-serve trial in minutes, or a guided migration in 2–5 days with zero subscriber
@@ -30,7 +33,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/register">
-              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 rounded-full px-5 text-sm font-semibold text-white">
+              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 rounded-full px-5 text-sm font-semibold text-white transition-transform active:scale-[0.98]">
                 Start trial
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -38,7 +41,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
             <a href="#contact">
               <Button
                 variant="ghost"
-                className="h-11 rounded-full border border-white/15 px-4 text-sm text-white hover:bg-white/[0.06]"
+                className="h-11 rounded-full border border-white/15 px-4 text-sm text-white transition-colors hover:bg-white/6 active:scale-[0.98]"
               >
                 Book migration
               </Button>
@@ -47,11 +50,12 @@ export function HowItWorks({ steps }: HowItWorksProps) {
         </div>
 
         <div
-          className="mt-16 hidden h-[28rem] overflow-hidden rounded-2xl border border-white/10 md:flex"
+          className="mt-16 hidden h-112 overflow-hidden rounded-2xl border border-white/10 md:flex"
           onMouseLeave={() => setActive(0)}
         >
           {steps.map((item, i) => {
             const open = active === i;
+            const image = landingMedia.howItWorks[i] ?? landingMedia.howItWorks[0];
             return (
               <button
                 key={item.step}
@@ -66,7 +70,7 @@ export function HowItWorks({ steps }: HowItWorksProps) {
                 <div
                   className="absolute inset-0 transition-transform duration-700 ease-out"
                   style={{
-                    backgroundImage: `url('https://picsum.photos/seed/${PANEL_SEEDS[i] ?? 'isp-step'}/900/1200')`,
+                    backgroundImage: `url('${image}')`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     filter: 'grayscale(1) contrast(1.15) brightness(0.4)',
@@ -74,26 +78,24 @@ export function HowItWorks({ steps }: HowItWorksProps) {
                   }}
                   aria-hidden
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-landing-bg via-landing-bg/50 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-landing-bg via-landing-bg/50 to-transparent" />
                 <div className="relative mt-auto p-6">
                   <h3
                     className={`font-landing-display font-semibold text-white transition-all duration-300 ${
                       open ? 'text-2xl' : 'text-sm'
                     }`}
                     style={
-                      open
-                        ? undefined
-                        : { writingMode: 'vertical-rl', transform: 'rotate(180deg)' }
+                      open ? undefined : { writingMode: 'vertical-rl', transform: 'rotate(180deg)' }
                     }
                   >
-                    {item.title}
+                    {cleanCopy(item.title)}
                   </h3>
                   <p
                     className={`mt-3 max-w-sm text-sm leading-relaxed text-white/65 transition-opacity duration-300 ${
                       open ? 'opacity-100' : 'pointer-events-none h-0 opacity-0'
                     }`}
                   >
-                    {item.desc}
+                    {cleanCopy(item.desc)}
                   </p>
                 </div>
               </button>
@@ -101,17 +103,32 @@ export function HowItWorks({ steps }: HowItWorksProps) {
           })}
         </div>
 
-        <ul className="mt-10 space-y-4 md:hidden">
-          {steps.map((item) => (
-            <li
-              key={item.step}
-              className="overflow-hidden rounded-xl border border-white/10 bg-landing-panel p-5"
-            >
-              <h3 className="font-landing-display text-base font-semibold text-white">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-white/55">{item.desc}</p>
-            </li>
-          ))}
-        </ul>
+        <div className="-mx-4 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:hidden">
+          {steps.map((item, i) => {
+            const image = landingMedia.howItWorks[i] ?? landingMedia.howItWorks[0];
+            return (
+              <article
+                key={item.step}
+                className="w-[82vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-white/10 bg-landing-panel"
+              >
+                <div
+                  className="aspect-16/10 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url('${image}')`,
+                    filter: 'grayscale(1) contrast(1.15) brightness(0.45)',
+                  }}
+                  aria-hidden
+                />
+                <div className="p-5">
+                  <h3 className="font-landing-display text-base font-semibold text-white">
+                    {cleanCopy(item.title)}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/55">{cleanCopy(item.desc)}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -27,3 +27,6 @@ export { ConnectsSection } from './ConnectsSection';
 export { TryItSection } from './TryItSection';
 export { CTASection } from './CTASection';
 export { ContactSection } from './ContactSection';
+export { LandingAtmosphere } from './LandingAtmosphere';
+export { ScrollProgress } from './ScrollProgress';
+export { SpotlightCard } from './SpotlightCard';

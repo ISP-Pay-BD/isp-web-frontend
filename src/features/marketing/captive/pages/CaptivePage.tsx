@@ -42,7 +42,7 @@ export function CaptivePage() {
           </div>
         </div>
         <Button
-          className="w-full bg-landing-cta duration-200 ease-out hover:bg-landing-cta-hover"
+          className="w-full bg-landing-cta text-white duration-200 ease-out hover:bg-landing-cta-hover"
           onClick={() => toast.success('Opening payment (mock)')}
         >
           Pay now

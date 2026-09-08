@@ -106,7 +106,7 @@ export function MarketingNav() {
                   {t('marketing.nav.login')}
                 </Link>
                 <Link href="/register" onClick={() => setOpen(false)}>
-                  <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full rounded-full">
+                  <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full rounded-full text-white">
                     {t('marketing.nav.startTrial')}
                   </Button>
                 </Link>

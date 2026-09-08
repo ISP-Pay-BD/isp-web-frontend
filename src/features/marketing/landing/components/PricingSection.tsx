@@ -14,9 +14,16 @@ import type { PricingPlan, PaygCalculatorData } from '../types';
 interface PricingSectionProps {
   plans: PricingPlan[];
   payg: PaygCalculatorData;
+  title?: string;
+  subtitle?: string;
 }
 
-export function PricingSection({ plans, payg }: PricingSectionProps) {
+export function PricingSection({
+  plans,
+  payg,
+  title = 'Clear pricing for ISP subscriber counts',
+  subtitle,
+}: PricingSectionProps) {
   const { reduced } = useMotionSafe();
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
   const [isYearly, setIsYearly] = useState(false);
@@ -25,56 +32,55 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
   const panelTransition = reduced
     ? { duration: 0 }
     : { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const };
+  const resolvedSubtitle =
+    subtitle ??
+    `Fixed monthly plans for predictability, or pay-as-you-go at ${formatBdtWithSymbol(payg.baseFeeBdt)} base plus ${formatBdtWithSymbol(payg.pricePerCustomerBdt)} per active subscriber. No admin seat fees. No per-router licenses.`;
 
   return (
-    <section id="pricing" className="border-t border-white/[0.07] py-20 md:py-28">
+    <section id="pricing" className="border-t border-white/[0.07] py-32 md:py-48">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <Reveal className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">Pricing</p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Priced per subscriber, not per promise.
+        <Reveal className="max-w-3xl">
+          <h2 className="font-landing-display text-[clamp(2rem,4.2vw,3.75rem)] font-semibold tracking-tight text-white text-balance">
+            {title}
           </h2>
-          <p className="mt-4 text-base text-white/60">
-            Fixed monthly plans, or Pay-As-You-Go at ৳1.5/subscriber — no tier traps.
-          </p>
+          <p className="mt-4 text-base text-white/60">{resolvedSubtitle}</p>
         </Reveal>
 
-        {/* Model Toggle — Premium segmented control */}
         <Reveal className="mt-10">
           <div className="inline-flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 backdrop-blur-md">
             <button
               type="button"
               onClick={() => setModel('fixed')}
-                    className={cn(
-                      'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
-                      model === 'fixed' ? 'text-white' : 'text-white/45 hover:text-white/70',
-                    )}
-                  >
-                    {model === 'fixed' && (
-                      <motion.span
-                        layoutId="pricing-model-bg"
-                        className="absolute inset-0 rounded-lg bg-landing-cta"
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                      />
-                    )}
+              className={cn(
+                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
+                model === 'fixed' ? 'text-white' : 'text-white/45 hover:text-white/70',
+              )}
+            >
+              {model === 'fixed' && (
+                <motion.span
+                  layoutId="pricing-model-bg"
+                  className="absolute inset-0 rounded-lg bg-landing-cta"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
               <Calendar size={15} className="relative z-10" />
               <span className="relative z-10">Fixed Monthly</span>
             </button>
             <button
               type="button"
               onClick={() => setModel('payg')}
-                    className={cn(
-                      'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
-                      model === 'payg' ? 'text-white' : 'text-white/45 hover:text-white/70',
-                    )}
-                  >
-                    {model === 'payg' && (
-                      <motion.span
-                        layoutId="pricing-model-bg"
-                        className="absolute inset-0 rounded-lg bg-landing-cta"
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                      />
-                    )}
+              className={cn(
+                'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
+                model === 'payg' ? 'text-white' : 'text-white/45 hover:text-white/70',
+              )}
+            >
+              {model === 'payg' && (
+                <motion.span
+                  layoutId="pricing-model-bg"
+                  className="absolute inset-0 rounded-lg bg-landing-cta"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
               <Wallet size={15} className="relative z-10" />
               <span className="relative z-10">Pay-As-You-Go</span>
             </button>
@@ -90,7 +96,6 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
               exit={reduced ? undefined : { opacity: 0, y: -12 }}
               transition={panelTransition}
             >
-              {/* Monthly/Yearly toggle */}
               <div className="mt-10 flex items-center gap-3">
                 <span className={cn('text-sm', !isYearly ? 'font-medium text-white' : 'text-white/45')}>
                   Monthly
@@ -125,7 +130,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                     <div
                       key={plan.id}
                       className={cn(
-                        'relative flex flex-col justify-between rounded-xl border p-7',
+                        'group relative flex flex-col justify-between rounded-2xl border p-7 transition-transform duration-300 ease-out hover:scale-[1.02]',
                         plan.highlighted
                           ? 'border-landing-cta/50 bg-white/[0.04]'
                           : 'border-white/10 bg-white/[0.02]',
@@ -159,7 +164,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                           nativeButton={false}
                           render={<Link href="/register" />}
                           className={cn(
-                            'h-10 w-full text-sm font-semibold',
+                            'h-10 w-full text-sm font-semibold transition-transform active:scale-[0.98]',
                             plan.highlighted
                               ? 'bg-landing-cta text-white hover:bg-landing-cta-hover'
                               : 'bg-white/10 text-white hover:bg-white/15',
@@ -182,7 +187,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
               transition={panelTransition}
               className="mt-12 max-w-xl"
             >
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 transition-transform duration-300 ease-out hover:scale-[1.02]">
                 <h3 className="font-landing-display text-xl font-semibold text-white">
                   Pay only for active subscribers
                 </h3>
@@ -218,7 +223,7 @@ export function PricingSection({ plans, payg }: PricingSectionProps) {
                   <Button
                     nativeButton={false}
                     render={<Link href="/register" />}
-                    className="h-10 bg-landing-cta px-6 text-sm font-semibold text-white hover:bg-landing-cta-hover"
+                    className="h-10 bg-landing-cta px-6 text-sm font-semibold text-white transition-transform hover:bg-landing-cta-hover active:scale-[0.98]"
                   >
                     Get started with PAYG
                   </Button>

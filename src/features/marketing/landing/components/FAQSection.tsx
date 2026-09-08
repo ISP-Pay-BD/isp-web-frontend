@@ -9,22 +9,26 @@ import type { FaqItem } from '../types';
 
 interface FAQSectionProps {
   faq: FaqItem[];
+  title?: string;
+  subtitle?: string;
 }
 
-export function FAQSection({ faq }: FAQSectionProps) {
+export function FAQSection({
+  faq,
+  title = 'Frequently asked questions',
+  subtitle = 'MikroTik sync, payment gateways, reseller billing, fiber OLT, Bangla customer tools, and BTRC reports.',
+}: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const { reduced } = useMotionSafe();
 
   return (
-    <section id="faq" className="border-t border-white/[0.07] py-20 md:py-28">
+    <section id="faq" className="border-t border-white/[0.07] py-32 md:py-48">
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         <Reveal className="max-w-xl">
-          <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Answers before you ask sales
+          <h2 className="font-landing-display text-[clamp(2rem,4.2vw,3.75rem)] font-semibold tracking-tight text-white text-balance">
+            {title}
           </h2>
-          <p className="mt-4 text-base text-white/55">
-            Billing, MikroTik sync, bKash/Nagad reconciliation, and reseller payouts.
-          </p>
+          <p className="mt-4 text-base text-white/55">{subtitle}</p>
         </Reveal>
 
         <Reveal className="mt-12 divide-y divide-white/[0.07] border-y border-white/[0.07]">
