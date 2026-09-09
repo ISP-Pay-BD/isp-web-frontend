@@ -87,7 +87,10 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               }
             >
               {isParentActive && (
-                <span className="bg-primary/10 dark:bg-primary/15 absolute inset-0 -z-10 rounded-lg border-l-2 border-primary" />
+                <>
+                  <span className="absolute inset-0 -z-10 rounded-lg bg-primary/10 dark:bg-primary/15" />
+                  <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary" aria-hidden />
+                </>
               )}
               <NavIcon name={item.icon} />
               <span>{item.label}</span>
@@ -115,7 +118,10 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                         render={<Link href={child.href ?? '#'} />}
                       >
                         {isChildActive && (
-                          <span className="bg-primary/15 dark:bg-primary/20 absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary" />
+                          <>
+                            <span className="absolute inset-0 -z-10 rounded-r-md bg-primary/15 dark:bg-primary/20" />
+                            <span className="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary" aria-hidden />
+                          </>
                         )}
                         <span>{child.label}</span>
                       </SidebarMenuSubButton>
@@ -138,7 +144,10 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               render={<Link href={item.href ?? '#'} />}
             >
               {isLeafActive && (
-                <span className="bg-primary/15 dark:bg-primary/20 absolute inset-0 -z-10 rounded-r-md border-l-2 border-primary" />
+                <>
+                  <span className="absolute inset-0 -z-10 rounded-r-md bg-primary/15 dark:bg-primary/20" />
+                  <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary" aria-hidden />
+                </>
               )}
               <NavIcon name={item.icon} />
               <span>{item.label}</span>

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-09T04:25:00.000Z",
+  "title": "Design System: ISP Pay BD",
+  "extensions": {
+    "colorMeta": {
+      "cta": {
+        "role": "primary",
+        "displayName": "Vermilion CTA",
+        "canonical": "#f75803",
+        "tonalRamp": ["#ff8a4c", "#f75803", "#e04f00", "#b83f00"]
+      },
+      "landing-bg": {
+        "role": "neutral",
+        "displayName": "Midnight Canvas",
+        "canonical": "#0c0118",
+        "tonalRamp": ["#180a30", "#0c0118", "#080110"]
+      },
+      "sidebar-violet": {
+        "role": "secondary",
+        "displayName": "Sidebar Violet",
+        "canonical": "#1a0b38",
+        "tonalRamp": ["#2a1450", "#1a0b38", "#120728"]
+      },
+      "accent-azure": {
+        "role": "tertiary",
+        "displayName": "Azure Accent",
+        "canonical": "#2E8BFF",
+        "tonalRamp": ["#6aadff", "#2E8BFF", "#1a6fd6"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Marketing Display",
+        "purpose": "Hero and major landing section titles (Plus Jakarta)."
+      },
+      "body": {
+        "displayName": "Marketing Body",
+        "purpose": "Landing paragraphs, nav, footer (Inter)."
+      },
+      "body-portal": {
+        "displayName": "Portal Body",
+        "purpose": "Admin/customer/platform dense UI (Satoshi)."
+      },
+      "mono": {
+        "displayName": "Mono IDs",
+        "purpose": "Invoice numbers, TrxIDs, PPPoE usernames, IPs."
+      },
+      "bengali": {
+        "displayName": "Bengali",
+        "purpose": "Locale bn UI and marketing copy."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 2px rgba(12, 1, 24, 0.06)",
+        "purpose": "Default portal card lift with border."
+      },
+      {
+        "name": "marketing-glow",
+        "value": "0 0 40px rgba(247, 88, 3, 0.15)",
+        "purpose": "Hero/CTA bloom only — never full-page neon."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-snappy",
+        "value": "200ms ease-out",
+        "purpose": "Portal hover and state transitions."
+      },
+      {
+        "name": "marketing-reveal",
+        "value": "framer-motion scroll reveal; respect prefers-reduced-motion",
+        "purpose": "Landing section entry only."
+      }
+    ],
+    "breakpoints": [
+      { "name": "xs", "value": "320px" },
+      { "name": "sm", "value": "375px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1440px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Vermilion CTA for primary actions on both surfaces.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Save changes</button>",
+      "css": ".ds-btn-primary{background:#f75803;color:#fff;padding:10px 20px;border:none;border-radius:8px;font-family:Satoshi,system-ui,sans-serif;font-weight:600;font-size:0.875rem;cursor:pointer;transition:background 0.2s ease-out}.ds-btn-primary:hover{background:#e04f00}.ds-btn-primary:focus-visible{outline:2px solid rgba(247,88,3,0.45);outline-offset:2px}"
+    },
+    {
+      "name": "Marketing CTA",
+      "kind": "button",
+      "refersTo": "button-marketing-cta",
+      "description": "Larger landing primary action on midnight canvas.",
+      "html": "<button class=\"ds-btn-mkt\" type=\"button\">Get started</button>",
+      "css": ".ds-btn-mkt{background:#f75803;color:#fff;padding:12px 28px;border:none;border-radius:12px;font-family:\"Plus Jakarta Sans\",system-ui,sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:background 0.2s ease-out,box-shadow 0.2s ease-out}.ds-btn-mkt:hover{background:#e04f00;box-shadow:0 0 40px rgba(247,88,3,0.15)}.ds-btn-mkt:focus-visible{outline:2px solid #2E8BFF;outline-offset:3px}"
+    },
+    {
+      "name": "Landing Panel Card",
+      "kind": "card",
+      "refersTo": "card-landing",
+      "description": "Lifted panel on marketing midnight background.",
+      "html": "<article class=\"ds-card-landing\"><h3>PPPoE billing</h3><p>Collect dues and expire users on schedule.</p></article>",
+      "css": ".ds-card-landing{background:#180a30;color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:24px;font-family:Inter,system-ui,sans-serif}.ds-card-landing h3{font-family:\"Plus Jakarta Sans\",system-ui,sans-serif;font-size:1.25rem;margin:0 0 8px}.ds-card-landing p{margin:0;color:rgba(255,255,255,0.7);line-height:1.6}"
+    },
+    {
+      "name": "Portal Card",
+      "kind": "card",
+      "refersTo": "card-portal",
+      "description": "Default shadcn-style portal container.",
+      "html": "<div class=\"ds-card-portal\"><h3>Due today</h3><p class=\"ds-mono\">৳12,450</p></div>",
+      "css": ".ds-card-portal{background:#fff;color:#1a0b38;border:1px solid rgba(26,11,56,0.08);border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(12,1,24,0.06);font-family:Satoshi,system-ui,sans-serif}.ds-card-portal h3{margin:0 0 8px;font-size:0.875rem;font-weight:600;color:#64748b}.ds-mono{font-family:\"IBM Plex Mono\",ui-monospace,monospace;font-size:1.25rem;font-weight:600;margin:0}"
+    },
+    {
+      "name": "Sidebar Active Item",
+      "kind": "nav",
+      "refersTo": "sidebar-active",
+      "description": "Active nav: primary wash + thin rail (not thick side-tab border).",
+      "html": "<a class=\"ds-nav-active\" href=\"#\"><span class=\"ds-nav-rail\" aria-hidden=\"true\"></span>Dashboard</a>",
+      "css": ".ds-nav-active{position:relative;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(247,88,3,0.12);color:#f75803;font-family:Satoshi,system-ui,sans-serif;font-weight:700;text-decoration:none}.ds-nav-rail{position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:999px;background:#f75803}.ds-nav-active:focus-visible{outline:2px solid rgba(247,88,3,0.4);outline-offset:2px}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": null,
+      "description": "Portal field with primary focus ring.",
+      "html": "<label class=\"ds-field\">Username<input class=\"ds-input\" type=\"text\" placeholder=\"user_01…\" /></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;font-family:Satoshi,system-ui,sans-serif;font-size:0.75rem;font-weight:500;color:#64748b}.ds-input{padding:8px 12px;border:1px solid rgba(26,11,56,0.12);border-radius:6px;font-size:0.875rem;font-family:\"IBM Plex Mono\",ui-monospace,monospace;color:#1a0b38;background:#fff}.ds-input:focus{outline:none;border-color:#f75803;box-shadow:0 0 0 3px rgba(247,88,3,0.25)}.ds-input:disabled{opacity:0.5}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Midnight Vermilion Ops",
+    "overview": "Dual-surface ISP Pay BD: midnight marketing canvas with vermilion CTAs and azure accents, plus dense Satoshi portals on shadcn with the same brand tokens. Anti-flat, Bangladesh ISP domain fidelity, no generic CRM chrome.",
+    "keyCharacteristics": [
+      "Two surfaces, one brand",
+      "Vermilion for action only",
+      "Self-hosted five-font stack",
+      "Marketing motion; portal snappy CSS"
+    ],
+    "rules": [
+      {
+        "name": "The One Flame Rule",
+        "body": "Vermilion is for action and selection only — roughly ≤10% of any viewport.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dual Surface Rule",
+        "body": "Do not mix landing full-bleed dark section language into portal CRUD, or light dashboard grey into the marketing hero.",
+        "section": "colors"
+      },
+      {
+        "name": "The Route Font Rule",
+        "body": "Plus Jakarta + Inter on marketing; Satoshi on portals/auth.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Quiet at rest; depth for hierarchy or interaction.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Keep marketing on #0c0118 end-to-end",
+      "Ship loading/empty/error/success states",
+      "Self-host fonts; use Lucide",
+      "Read REFERENCE-MAP + PHP before inventing workflows"
+    ],
+    "donts": [
+      "No MUI/Chakra/Ant/DaisyUI or CRM templates",
+      "No Font Awesome CDN / Google Fonts CDN / Roboto primary",
+      "No heavy 21st.dev shaders on marketing",
+      "No thick border-l side-tab active accents",
+      "No @/data imports from features"
+    ]
+  }
+}
