@@ -144,19 +144,22 @@ export function HeroSection({ data, stats }: HeroSectionProps) {
             {cleanCopy(data.subtitleEn)}
           </p>
 
-          <div data-hero-copy className="mt-9 flex flex-wrap gap-3">
+          <div data-hero-copy className="mt-9 flex flex-wrap items-center gap-3.5">
             <Button
               nativeButton={false}
               render={<Link href="/register" />}
-              className="bg-landing-cta hover:bg-landing-cta-hover relative h-12 overflow-hidden rounded-full px-7 text-sm font-semibold text-white shadow-[0_0_0_0_rgba(247,88,3,0.35)] transition-[transform,box-shadow] duration-300 hover:shadow-[0_0_32px_rgba(247,88,3,0.35)] active:scale-[0.98]"
+              className="group bg-landing-cta hover:bg-landing-cta-hover relative h-13 overflow-hidden rounded-full pl-7 pr-2 text-sm font-semibold text-white shadow-[0_0_0_0_rgba(247,88,3,0.35)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(247,88,3,0.45)] active:scale-[0.98]"
             >
-              {data.ctaPrimary}
+              <span className="mr-3">{data.ctaPrimary}</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
+                ↗
+              </span>
             </Button>
             <Button
               variant="ghost"
               nativeButton={false}
               render={<a href="#auto-reconcile" />}
-              className="h-12 rounded-full border border-white/15 bg-white/4 px-6 text-sm font-medium text-white backdrop-blur-sm transition-colors duration-200 hover:border-white/25 hover:bg-white/8 active:scale-[0.98]"
+              className="h-13 rounded-full border border-white/15 bg-white/4 px-7 text-sm font-medium text-white backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/30 hover:bg-white/8 active:scale-[0.98]"
             >
               {data.ctaSecondary}
             </Button>
@@ -216,27 +219,29 @@ export function HeroSection({ data, stats }: HeroSectionProps) {
 
       <div
         ref={planeRef}
-        className="relative origin-center border-y border-white/10 bg-landing-panel/90 backdrop-blur-md will-change-transform"
+        className="relative mx-auto max-w-6xl px-4 md:px-6 will-change-transform"
       >
-        <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <div className="flex items-center justify-between gap-4 border-b border-white/10 py-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="font-landing-display truncate text-sm font-semibold text-white">
-                Operator console
-              </span>
-              <span className="hidden font-mono text-[11px] text-white/35 sm:inline">
-                collections · live
+        <div className="overflow-hidden rounded-[2rem] bg-white/[0.04] p-1.5 ring-1 ring-white/10 backdrop-blur-xl">
+          <div className="overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel/95 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-3.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="font-landing-display truncate text-sm font-semibold text-white">
+                  Operator console
+                </span>
+                <span className="hidden font-mono text-[11px] text-white/35 sm:inline">
+                  collections · live
+                </span>
+              </div>
+              <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                </span>
+                Online
               </span>
             </div>
-            <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              </span>
-              Online
-            </span>
-          </div>
-          <table className="w-full text-left text-sm">
+            <div className="px-5">
+              <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/35">
                 <th className="py-3 pr-3 font-medium">Time</th>
@@ -268,6 +273,8 @@ export function HeroSection({ data, stats }: HeroSectionProps) {
               })}
             </tbody>
           </table>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -34,7 +34,7 @@ export function SpotlightCard({ children, className, as = 'article' }: Spotlight
       onMouseMove={onMove}
       onMouseLeave={() => setSpot((s) => ({ ...s, visible: false }))}
       className={cn(
-        'group relative overflow-hidden rounded-2xl border border-white/10 bg-landing-panel transition-transform duration-500 ease-out will-change-transform hover:-translate-y-1',
+        'group relative overflow-hidden rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform hover:-translate-y-1 hover:ring-white/20 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
         className,
       )}
       style={
@@ -42,19 +42,14 @@ export function SpotlightCard({ children, className, as = 'article' }: Spotlight
           ? undefined
           : {
               backgroundImage: spot.visible
-                ? `radial-gradient(520px circle at ${spot.x}% ${spot.y}%, color-mix(in srgb, var(--landing-cta) 16%, transparent), transparent 42%)`
+                ? `radial-gradient(520px circle at ${spot.x}% ${spot.y}%, color-mix(in srgb, var(--landing-cta) 18%, transparent), transparent 45%)`
                 : undefined,
             }
       }
     >
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(247,88,3,0.12)',
-        }}
-        aria-hidden
-      />
-      <div className="relative z-[1]">{children}</div>
+      <div className="relative z-[1] h-full w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
+        {children}
+      </div>
     </Comp>
   );
 }

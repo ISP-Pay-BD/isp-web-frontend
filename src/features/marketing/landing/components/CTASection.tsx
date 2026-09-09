@@ -43,16 +43,19 @@ export function CTASection() {
           {t('marketing.sections.ctaFinal.desc')}
         </p>
 
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-3.5">
           <Link href="/register">
-            <Button className="bg-landing-cta hover:bg-landing-cta-hover h-12 rounded-full px-8 text-sm font-semibold text-white shadow-[0_0_40px_rgba(247,88,3,0.25)] transition-[transform,box-shadow] duration-300 hover:shadow-[0_0_56px_rgba(247,88,3,0.4)] active:scale-[0.98] sm:h-14 sm:px-10 sm:text-base">
-              {t('marketing.sections.ctaFinal.primary')}
+            <Button className="group bg-landing-cta hover:bg-landing-cta-hover relative h-13 overflow-hidden rounded-full pl-8 pr-2 text-sm font-semibold text-white shadow-[0_0_40px_rgba(247,88,3,0.28)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_60px_rgba(247,88,3,0.5)] active:scale-[0.98] sm:h-14 sm:pl-9 sm:text-base">
+              <span className="mr-3">{t('marketing.sections.ctaFinal.primary')}</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105 sm:h-10 sm:w-10">
+                ↗
+              </span>
             </Button>
           </Link>
           <a href="/contact">
             <Button
               variant="ghost"
-              className="h-12 rounded-full border border-white/20 bg-white/4 px-7 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/8 active:scale-[0.98] sm:h-14 sm:px-8 sm:text-base"
+              className="h-13 rounded-full border border-white/20 bg-white/4 px-8 text-sm font-medium text-white backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/35 hover:bg-white/8 active:scale-[0.98] sm:h-14 sm:px-9 sm:text-base"
             >
               {t('marketing.sections.ctaFinal.sales')}
             </Button>
