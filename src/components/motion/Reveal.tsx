@@ -32,7 +32,7 @@ export function Reveal({
       variants={stagger ? staggerV : revealV}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, amount: 0.05, margin: '0px 0px -40px 0px' }}
       transition={reduced ? { duration: 0 } : { delay }}
     >
       {children}

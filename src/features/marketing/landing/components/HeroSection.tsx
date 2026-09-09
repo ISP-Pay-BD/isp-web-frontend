@@ -193,25 +193,35 @@ export function HeroSection({ data, stats }: HeroSectionProps) {
         </div>
 
         <div data-hero-copy className="relative hidden md:col-span-5 md:block lg:col-span-4">
+          {/* Subtle Ambient Glow Behind Card */}
+          <div className="pointer-events-none absolute -inset-4 rounded-full bg-gradient-to-tr from-landing-cta/20 via-purple-500/10 to-transparent blur-2xl" />
+
           <motion.div
-            className="absolute -bottom-6 -left-8 right-0 top-8 overflow-hidden rounded-2xl border border-white/10 bg-landing-panel shadow-[0_24px_80px_rgba(12,1,24,0.55)]"
-            animate={reduced ? undefined : { y: [0, -10, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+            className="group relative overflow-hidden rounded-[2rem] bg-white/[0.04] p-1.5 ring-1 ring-white/10 shadow-[0_24px_80px_rgba(12,1,24,0.7)] backdrop-blur-xl transition-all duration-700 hover:ring-white/20"
+            animate={reduced ? undefined : { y: [0, -8, 0] }}
+            transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <div
-              className="absolute inset-0 transition-transform duration-700 ease-out hover:scale-105"
-              style={{
-                backgroundImage: `url('${landingMedia.features[1]}')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'grayscale(0.7) contrast(1.15) brightness(0.55)',
-                mixBlendMode: 'luminosity',
-              }}
-              aria-hidden
-            />
-            <div className="absolute inset-0 bg-linear-to-t from-landing-bg via-transparent to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <p className="font-mono text-[10px] tracking-wide text-white/50">NOC · live fiber</p>
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel shadow-[inset_0_1px_1px_rgba(255,255,255,0.18)]">
+              <div
+                className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-105"
+                style={{
+                  backgroundImage: `url('${landingMedia.features[1]}')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'contrast(1.15) brightness(0.72)',
+                }}
+                aria-hidden
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-landing-bg via-landing-bg/25 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-5">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <p className="font-mono text-xs font-medium tracking-wide text-white/80">NOC · live fiber telemetry</p>
+                </div>
+                <span className="rounded-full border border-white/15 bg-black/40 px-2.5 py-0.5 font-mono text-[10px] text-white/60 backdrop-blur-sm">
+                  10Gbps
+                </span>
+              </div>
             </div>
           </motion.div>
         </div>

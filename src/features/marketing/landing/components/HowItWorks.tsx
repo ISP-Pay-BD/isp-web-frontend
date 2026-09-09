@@ -50,57 +50,62 @@ export function HowItWorks({ steps }: HowItWorksProps) {
         </div>
 
         <div
-          className="mt-16 hidden h-112 overflow-hidden rounded-2xl border border-white/10 md:flex"
+          className="mt-16 hidden h-112 overflow-hidden rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl md:flex"
           onMouseLeave={() => setActive(0)}
         >
-          {steps.map((item, i) => {
-            const open = active === i;
-            const image = landingMedia.howItWorks[i] ?? landingMedia.howItWorks[0];
-            return (
-              <button
-                key={item.step}
-                type="button"
-                onMouseEnter={() => setActive(i)}
-                onFocus={() => setActive(i)}
-                className={`relative flex h-full flex-col overflow-hidden border-r border-white/10 text-left last:border-r-0 transition-[flex] duration-500 ease-out ${
-                  open ? 'flex-[3.2]' : 'flex-[0.85]'
-                }`}
-                aria-expanded={open}
-              >
-                <div
-                  className="absolute inset-0 transition-transform duration-700 ease-out"
-                  style={{
-                    backgroundImage: `url('${image}')`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    filter: 'grayscale(1) contrast(1.15) brightness(0.4)',
-                    transform: open ? 'scale(1.05)' : 'scale(1)',
-                  }}
-                  aria-hidden
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-landing-bg via-landing-bg/50 to-transparent" />
-                <div className="relative mt-auto p-6">
-                  <h3
-                    className={`font-landing-display font-semibold text-white transition-all duration-300 ${
-                      open ? 'text-2xl' : 'text-sm'
-                    }`}
-                    style={
-                      open ? undefined : { writingMode: 'vertical-rl', transform: 'rotate(180deg)' }
-                    }
-                  >
-                    {cleanCopy(item.title)}
-                  </h3>
-                  <p
-                    className={`mt-3 max-w-sm text-sm leading-relaxed text-white/65 transition-opacity duration-300 ${
-                      open ? 'opacity-100' : 'pointer-events-none h-0 opacity-0'
-                    }`}
-                  >
-                    {cleanCopy(item.desc)}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+          <div className="flex h-full w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
+            {steps.map((item, i) => {
+              const open = active === i;
+              const image = landingMedia.howItWorks[i] ?? landingMedia.howItWorks[0];
+              return (
+                <button
+                  key={item.step}
+                  type="button"
+                  onMouseEnter={() => setActive(i)}
+                  onFocus={() => setActive(i)}
+                  className={`relative flex h-full flex-col overflow-hidden border-r border-white/10 text-left last:border-r-0 transition-[flex] duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                    open ? 'flex-[3.2]' : 'flex-[0.85]'
+                  }`}
+                  aria-expanded={open}
+                >
+                  <div
+                    className="absolute inset-0 transition-transform duration-700 ease-out"
+                    style={{
+                      backgroundImage: `url('${image}')`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      filter: 'contrast(1.15) brightness(0.48)',
+                      transform: open ? 'scale(1.05)' : 'scale(1)',
+                    }}
+                    aria-hidden
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-landing-bg via-landing-bg/50 to-transparent" />
+                  <div className="relative mt-auto p-7">
+                    <span className="mb-2 inline-block rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-landing-cta backdrop-blur-sm">
+                      Step {i + 1}
+                    </span>
+                    <h3
+                      className={`font-landing-display font-semibold text-white transition-all duration-300 ${
+                        open ? 'text-2xl' : 'text-sm'
+                      }`}
+                      style={
+                        open ? undefined : { writingMode: 'vertical-rl', transform: 'rotate(180deg)' }
+                      }
+                    >
+                      {cleanCopy(item.title)}
+                    </h3>
+                    <p
+                      className={`mt-3 max-w-sm text-sm leading-relaxed text-white/70 transition-opacity duration-300 ${
+                        open ? 'opacity-100' : 'pointer-events-none h-0 opacity-0'
+                      }`}
+                    >
+                      {cleanCopy(item.desc)}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="-mx-4 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:hidden">
@@ -109,21 +114,26 @@ export function HowItWorks({ steps }: HowItWorksProps) {
             return (
               <article
                 key={item.step}
-                className="w-[82vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-2xl border border-white/10 bg-landing-panel"
+                className="w-[82vw] max-w-sm shrink-0 snap-center overflow-hidden rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10"
               >
-                <div
-                  className="aspect-16/10 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `url('${image}')`,
-                    filter: 'grayscale(1) contrast(1.15) brightness(0.45)',
-                  }}
-                  aria-hidden
-                />
-                <div className="p-5">
-                  <h3 className="font-landing-display text-base font-semibold text-white">
-                    {cleanCopy(item.title)}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/55">{cleanCopy(item.desc)}</p>
+                <div className="overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel">
+                  <div
+                    className="aspect-16/10 bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url('${image}')`,
+                      filter: 'contrast(1.15) brightness(0.55)',
+                    }}
+                    aria-hidden
+                  />
+                  <div className="p-5">
+                    <span className="mb-1 inline-block font-mono text-[10px] text-landing-cta uppercase">
+                      Step {i + 1}
+                    </span>
+                    <h3 className="font-landing-display text-base font-semibold text-white">
+                      {cleanCopy(item.title)}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-white/60">{cleanCopy(item.desc)}</p>
+                  </div>
                 </div>
               </article>
             );

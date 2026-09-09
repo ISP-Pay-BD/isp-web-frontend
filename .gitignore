@@ -43,3 +43,8 @@ next-env.d.ts
 
 # git worktrees (parallel agents)
 .worktrees/
+
+# playwright artifacts
+.playwright-cli/
+*.png
+!public/**/*.png
