@@ -23,8 +23,11 @@ export function AutoReconcile({ steps }: AutoReconcileProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal>
           <div className="max-w-3xl">
-            <p className="text-sm font-medium text-[#2E8BFF]">Flagship workflow</p>
-            <h2 className="font-landing-display mt-3 text-[clamp(2rem,4.2vw,3.5rem)] font-semibold tracking-tight text-white text-balance">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2E8BFF]/25 bg-[#2E8BFF]/10 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[#2E8BFF] backdrop-blur-md">
+              <span className="h-1 w-1 rounded-full bg-[#2E8BFF]" aria-hidden />
+              Flagship Workflow
+            </span>
+            <h2 className="font-landing-display mt-4 text-[clamp(2rem,4.2vw,3.5rem)] font-semibold tracking-tight text-white text-balance">
               Every bKash & Nagad payment, matched in under a second
             </h2>
             <p className="mt-5 text-base leading-relaxed text-white/60 sm:text-lg">
