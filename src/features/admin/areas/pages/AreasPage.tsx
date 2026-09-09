@@ -1,16 +1,43 @@
 'use client';
-import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { Fragment, useState, useMemo } from 'react';
-import { Plus, MapPin, Edit, Trash2, ChevronDown, ChevronRight, Globe, Search, Filter, X, ArrowUpDown, ChevronUp, Building2 } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { PageHero, PageContent } from '@/components/motion/PageHero';
+import {
+  Plus,
+  MapPin,
+  Edit,
+  Trash2,
+  Globe,
+  Search,
+  Filter,
+  X,
+  Building2,
+  Users,
+  Layers,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronRight,
+  ShieldAlert,
+  ArrowRight,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAreas, useCreateArea, useUpdateArea, useDeleteArea, useAddSubArea, useUpdateSubArea, useDeleteSubArea } from '../hooks/use-areas';
+import {
+  useAreas,
+  useCreateArea,
+  useUpdateArea,
+  useDeleteArea,
+  useAddSubArea,
+  useUpdateSubArea,
+  useDeleteSubArea,
+} from '../hooks/use-areas';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
+import { TablePagination } from '@/components/shared/TablePagination';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,8 +82,6 @@ const subAreaSchema = z.object({
 
 type SubAreaFormValues = z.infer<typeof subAreaSchema>;
 
-type SortField = 'name' | 'subareas';
-type SortDir = 'asc' | 'desc';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function AreasPage() {
@@ -68,81 +93,139 @@ export function AreasPage() {
   const updateSubAreaMutation = useUpdateSubArea();
   const deleteSubAreaMutation = useDeleteSubArea();
 
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
+  // Dialogs
+  const [areaDialogOpen, setAreaDialogOpen] = useState(false);
   const [editArea, setEditArea] = useState<Area | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteAreaId, setDeleteAreaId] = useState<string | null>(null);
+
   const [subAreaDialogOpen, setSubAreaDialogOpen] = useState(false);
   const [editingSubArea, setEditingSubArea] = useState<{ areaId: string; sub: SubArea } | null>(null);
   const [creatingSubAreaFor, setCreatingSubAreaFor] = useState<string | null>(null);
-  const [deleteSubAreaId, setDeleteSubAreaId] = useState<{ areaId: string; subId: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [deleteSubAreaInfo, setDeleteSubAreaInfo] = useState<{ areaId: string; subId: string } | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<AreaFormValues>({
+  const {
+    register: registerArea,
+    handleSubmit: handleSubmitArea,
+    reset: resetArea,
+    formState: { errors: areaErrors, isSubmitting: isSubmittingArea },
+  } = useForm<AreaFormValues>({
     resolver: zodResolver(areaSchema),
     defaultValues: { name: '', subareas: '' },
   });
 
-  const { register: registerSub, handleSubmit: handleSubmitSub, reset: resetSub, formState: { errors: subErrors, isSubmitting: isSubmittingSub }, watch: watchSub } = useForm<SubAreaFormValues>({
+  const {
+    register: registerSub,
+    handleSubmit: handleSubmitSub,
+    reset: resetSub,
+    setValue: setSubValue,
+    watch: watchSub,
+    formState: { errors: subErrors, isSubmitting: isSubmittingSub },
+  } = useForm<SubAreaFormValues>({
     resolver: zodResolver(subAreaSchema),
     defaultValues: { name: '', areaCode: '', status: 'active' },
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
-  const filteredAndSortedItems = useMemo(() => {
+  // Set default selected area on initial load or if selected is deleted
+  useEffect(() => {
+    if (items.length > 0) {
+      if (!selectedAreaId || !items.some((a) => a.id === selectedAreaId)) {
+        setSelectedAreaId(items[0].id);
+      }
+    } else {
+      setSelectedAreaId(null);
+    }
+  }, [items, selectedAreaId]);
+
+  const filteredAreas = useMemo(() => {
     let result = items;
-
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       result = result.filter(
-        (area) =>
-          area.name.toLowerCase().includes(query) ||
-          area.id.toLowerCase().includes(query)
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.id.toLowerCase().includes(q) ||
+          a.subareas.some(
+            (s) =>
+              s.name.toLowerCase().includes(q) ||
+              s.areaCode.toLowerCase().includes(q)
+          )
       );
     }
-
     if (statusFilter === 'inactive') {
-      result = [];
+      result = []; // In mock schema all parent areas are active
     }
-
-    result = [...result].sort((a, b) => {
-      let comparison = 0;
-      if (sortField === 'name') {
-        comparison = a.name.localeCompare(b.name);
-      } else if (sortField === 'subareas') {
-        comparison = a.subareas.length - b.subareas.length;
-      }
-      return sortDir === 'asc' ? comparison : -comparison;
-    });
-
     return result;
-  }, [items, searchQuery, statusFilter, sortField, sortDir]);
+  }, [items, searchQuery, statusFilter]);
 
-  const toggleExpand = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  const selectedArea = useMemo(
+    () => items.find((a) => a.id === selectedAreaId) || null,
+    [items, selectedAreaId]
+  );
 
-  const openCreate = () => {
+  // Subarea Pagination
+  const [subCurrentPage, setSubCurrentPage] = useState(1);
+  const [subPageSize, setSubPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+
+  const subareasList = useMemo(() => selectedArea?.subareas ?? [], [selectedArea?.subareas]);
+  const subTotalPages = Math.max(1, Math.ceil(subareasList.length / subPageSize));
+  const safeSubPage = Math.min(Math.max(1, subCurrentPage), subTotalPages);
+
+  const paginatedSubareas = useMemo(() => {
+    const start = (safeSubPage - 1) * subPageSize;
+    return subareasList.slice(start, start + subPageSize);
+  }, [subareasList, safeSubPage, subPageSize]);
+
+  // High-level KPI Stats like the old PHP system
+  const totalAreas = items.length;
+  const activeAreas = items.length; // all active in default mock
+  const totalSubAreas = items.reduce((acc, a) => acc + a.subareas.length, 0);
+  const areasWithoutSubareas = items.filter((a) => a.subareas.length === 0).length;
+
+  // Handlers for Area Modals
+  const openCreateArea = () => {
     setEditArea(null);
-    reset({ name: '', subareas: '' });
-    setDialogOpen(true);
+    resetArea({ name: '', subareas: '' });
+    setAreaDialogOpen(true);
   };
 
-  const openEdit = (area: Area) => {
+  const openEditArea = (area: Area) => {
     setEditArea(area);
-    reset({ name: area.name, subareas: area.subareas.map((s) => s.name).join(', ') });
-    setDialogOpen(true);
+    resetArea({
+      name: area.name,
+      subareas: area.subareas.map((s) => s.name).join(', '),
+    });
+    setAreaDialogOpen(true);
   };
 
+  const onSubmitArea = async (values: AreaFormValues) => {
+    const subareas = values.subareas
+      ? values.subareas
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined;
+
+    if (editArea) {
+      await updateMutation.mutateAsync({ id: editArea.id, name: values.name });
+    } else {
+      const res = await createMutation.mutateAsync({
+        name: values.name,
+        subareas,
+      });
+      if (res?.id) {
+        setSelectedAreaId(res.id);
+      }
+    }
+    setAreaDialogOpen(false);
+  };
+
+  // Handlers for SubArea Modals
   const openCreateSubArea = (areaId: string) => {
     setEditingSubArea(null);
     setCreatingSubAreaFor(areaId);
@@ -175,381 +258,560 @@ export function AreasPage() {
     setCreatingSubAreaFor(null);
   };
 
-  const onSubmit = async (values: AreaFormValues) => {
-    const subareas = values.subareas
-      ? values.subareas.split(',').map((s) => s.trim()).filter(Boolean)
-      : undefined;
-    if (editArea) {
-      await updateMutation.mutateAsync({ id: editArea.id, name: values.name });
-    } else {
-      await createMutation.mutateAsync({ name: values.name, subareas });
-    }
-    setDialogOpen(false);
-  };
-
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortDir('asc');
-    }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
-    return sortDir === 'asc' ? (
-      <ChevronUp className="h-3 w-3 text-primary" />
-    ) : (
-      <ChevronDown className="h-3 w-3 text-primary" />
-    );
-  };
-
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) {
     return (
-      <EmptyState title="Failed to load areas" description="Could not fetch service area tree." actionLabel="Retry" onAction={() => refetch()} />
+      <EmptyState
+        title="Failed to load areas"
+        description="Could not fetch service area workspace data."
+        actionLabel="Retry"
+        onAction={() => refetch()}
+      />
     );
   }
 
-  const totalSubAreas = items.reduce((sum, area) => sum + area.subareas.length, 0);
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header */}
+      {/* Page Hero */}
       <PageHero className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
               <Globe className="h-6 w-6" />
             </div>
             Service Areas
           </h1>
           <p className="text-muted-foreground text-sm mt-1.5">
-            Geographic coverage zones and sub-areas for customer assignment and routing.
+            Geographic coverage zones, point-of-presence regions, and sub-area network routing.
           </p>
         </div>
         <Can menu="area" action="create">
-          <Button size="sm" onClick={openCreate} className="shadow-sm font-semibold gap-1.5">
+          <Button
+            size="sm"
+            onClick={openCreateArea}
+            className="shadow-md font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
+          >
             <Plus className="h-4 w-4" /> New Area
           </Button>
         </Can>
       </PageHero>
+
       <PageContent className="space-y-6">
-
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p><span className="font-semibold tabular-nums">{items.length}</span> <span className="text-muted-foreground">areas</span></p>
-        <p><span className="font-semibold tabular-nums">{totalSubAreas}</span> <span className="text-muted-foreground">sub-areas</span></p>
-        <p className="text-muted-foreground">
-          Avg <span className="font-medium text-foreground tabular-nums">{Math.round(totalSubAreas / Math.max(1, items.length))}</span> sub-areas / area
-        </p>
-      </div>
-
-      {/* Toolbar + Table */}
-      <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-          {/* Toolbar */}
-          <div className="p-4 border-b border-border/50">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative flex-1 min-w-[200px] sm:min-w-[280px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name or code..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-9 bg-background border-border/60 text-sm shadow-sm"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                  <SelectTrigger className="w-full sm:w-[130px] h-9 bg-background border-border/60 text-sm shadow-sm">
-                    <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* KPI Metric Strips (From PHP All.php) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-primary/40 transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Areas
+              </span>
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Globe className="h-4 w-4" />
               </div>
-              <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1 w-fit bg-muted/50">
-                {filteredAndSortedItems.length} result{filteredAndSortedItems.length !== 1 ? 's' : ''}
-              </Badge>
             </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-bold tracking-tight tabular-nums">
+                {totalAreas}
+              </span>
+              <span className="text-xs text-muted-foreground">zones</span>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-emerald-500/40 transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Active Areas
+              </span>
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
+                {activeAreas}
+              </span>
+              <span className="text-xs text-muted-foreground">operational</span>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-blue-500/40 transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Total Sub-areas
+              </span>
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                <Layers className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-blue-600 dark:text-blue-400">
+                {totalSubAreas}
+              </span>
+              <span className="text-xs text-muted-foreground">sectors</span>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-amber-500/40 transition-all duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Without Sub-areas
+              </span>
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-2xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
+                {areasWithoutSubareas}
+              </span>
+              <span className="text-xs text-muted-foreground">pending breakdown</span>
+            </div>
+          </Card>
+        </div>
+
+        {/* Master-Detail 2-Pane Workspace */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT PANE: Areas Navigator List */}
+          <div className="lg:col-span-4 xl:col-span-4 space-y-3">
+            <Card className="border-border/60 bg-card/90 shadow-sm overflow-hidden ring-1 ring-border/50">
+              <div className="p-3.5 border-b border-border/60 bg-muted/20 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Coverage Zones
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 bg-primary/10 text-primary border border-primary/20">
+                      {filteredAreas.length}
+                    </Badge>
+                  </div>
+                  <Can menu="area" action="create">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={openCreateArea}
+                      className="h-7 px-2 text-xs font-semibold text-primary hover:bg-primary/10 gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </Button>
+                  </Can>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Filter areas & sub-areas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 pr-7 h-8 bg-background border-border/60 text-xs shadow-inner"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                  >
+                    <SelectTrigger className="w-[100px] h-8 bg-background border-border/60 text-xs">
+                      <Filter className="h-3 w-3 mr-1 text-muted-foreground" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Area List Items */}
+              <div className="divide-y divide-border/40 max-h-[620px] overflow-y-auto p-1.5 space-y-1">
+                {filteredAreas.length === 0 ? (
+                  <div className="py-12 px-4 text-center">
+                    <p className="text-xs text-muted-foreground">No areas match filter</p>
+                  </div>
+                ) : (
+                  filteredAreas.map((area) => {
+                    const isSelected = selectedAreaId === area.id;
+                    return (
+                      <div
+                        key={area.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedAreaId(area.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedAreaId(area.id);
+                          }
+                        }}
+                        className={`group relative flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 text-left ${
+                          isSelected
+                            ? 'bg-primary/10 border border-primary/30 shadow-sm text-foreground'
+                            : 'hover:bg-muted/40 border border-transparent text-foreground/80 hover:text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={`p-2 rounded-lg transition-colors shrink-0 ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                            }`}
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-semibold text-sm truncate ${isSelected ? 'text-primary' : ''}`}>
+                                {area.name}
+                              </span>
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                            </div>
+                            <div className="text-[11px] font-mono text-muted-foreground truncate">
+                              {area.id}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <Badge
+                            variant={isSelected ? 'default' : 'secondary'}
+                            className={`text-[10px] font-mono px-2 py-0.5 ${
+                              isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted/70 text-muted-foreground'
+                            }`}
+                          >
+                            {area.subareas.length} sub
+                          </Badge>
+                          <ChevronRight
+                            className={`h-4 w-4 transition-transform ${
+                              isSelected ? 'text-primary translate-x-0.5' : 'text-muted-foreground/50 opacity-0 group-hover:opacity-100'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
           </div>
 
-          {/* Table */}
-          {filteredAndSortedItems.length === 0 ? (
-            <div className="py-16">
-              <EmptyState
-                title={searchQuery || statusFilter !== 'all' ? "No areas found" : "No service areas"}
-                description={searchQuery || statusFilter !== 'all' ? "Try a different search term or filter." : "Create your first coverage zone to assign customers."}
-                actionLabel={searchQuery || statusFilter !== 'all' ? undefined : "New Area"}
-                onAction={searchQuery || statusFilter !== 'all' ? undefined : openCreate}
-              />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-[40px]"></TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort('name')}
-                        className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Area Name <SortIcon field="name" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Code</span>
-                    </TableHead>
-                    <TableHead>
-                      <button
-                        type="button"
-                        onClick={() => toggleSort('subareas')}
-                        className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Sub-areas <SortIcon field="subareas" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">
-                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Status</span>
-                    </TableHead>
-                    <TableHead className="text-right w-[100px]">
-                      <span className="text-xs font-medium tracking-wide text-muted-foreground">Actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAndSortedItems.map((area) => {
-                    const isExpanded = expanded.has(area.id);
-                    return (
-                      <Fragment key={area.id}>
-                        <tr
-                          className={`group border-border/40 transition-colors ${
-                            isExpanded
-                              ? 'bg-primary/[0.03] border-l-2 border-l-primary'
-                              : 'hover:bg-muted/30 border-l-2 border-l-transparent'
-                          }`}
-                        >
-                          <TableCell className="pr-0">
-                            <button
-                              type="button"
-                              onClick={() => toggleExpand(area.id)}
-                              className="p-1.5 rounded-lg hover:bg-muted/50 transition-all duration-200 active:scale-95"
-                            >
-                              <ChevronRight
-                                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-90' : ''
-                                }`}
-                              />
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`p-2 rounded-lg transition-colors ${
-                                  isExpanded
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-primary/10 text-primary border border-primary/20'
-                                }`}
-                              >
-                                <MapPin className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <div className={`font-semibold text-sm transition-colors ${isExpanded ? 'text-primary' : 'group-hover:text-primary'}`}>
-                                  {area.name}
-                                </div>
-                                <div className="text-xs text-muted-foreground md:hidden font-mono">{area.id}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <span className="font-mono text-xs text-muted-foreground bg-muted/40 px-2 py-1 rounded-md">
-                              {area.id}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="font-mono text-xs bg-muted/40">
-                              {area.subareas.length}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                              Active
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-0.5">
-                              <Can menu="area" action="update">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                  onClick={() => openEdit(area)}
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
-                              </Can>
-                              <Can menu="area" action="delete">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                  onClick={() => setDeleteId(area.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </Can>
-                            </div>
-                          </TableCell>
-                        </tr>
+          {/* RIGHT PANE: Selected Area Detail & Sub-areas Table */}
+          <div className="lg:col-span-8 xl:col-span-8 space-y-4">
+            {selectedArea ? (
+              <>
+                {/* Active Area Banner Card */}
+                <Card className="border-border/60 bg-gradient-to-br from-card via-card to-primary/5 p-5 shadow-sm ring-1 ring-border/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="p-3 rounded-xl bg-primary text-primary-foreground shadow-md">
+                        <MapPin className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h2 className="text-xl font-bold tracking-tight text-foreground">
+                            {selectedArea.name}
+                          </h2>
+                          <Badge variant="outline" className="font-mono text-xs bg-background/80 border-border/80 text-muted-foreground">
+                            {selectedArea.id}
+                          </Badge>
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                            Active Zone
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                          <span>Contains <strong className="text-foreground">{selectedArea.subareas.length}</strong> defined sub-areas</span>
+                          <span>•</span>
+                          <span>Ready for customer assignment</span>
+                        </p>
+                      </div>
+                    </div>
 
-                        {/* Expanded Sub-areas Row */}
-                        {isExpanded && (
-                          <tr className="bg-muted/15 border-border/40">
-                            <TableCell colSpan={6} className="p-0">
-                              <div className="px-6 py-4 ml-10 border-l-2 border-primary/30">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium text-foreground">
-                                    Sub-areas in {area.name}
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <Can menu="area" action="update">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditArea(selectedArea)}
+                          className="h-8 gap-1.5 text-xs font-medium border-border/80 hover:bg-muted/50"
+                        >
+                          <Edit className="h-3.5 w-3.5" /> Edit Area
+                        </Button>
+                      </Can>
+                      <Can menu="area" action="delete">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteAreaId(selectedArea.id)}
+                          className="h-8 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </Can>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Sub-areas Management Section */}
+                <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/50 overflow-hidden">
+                  <div className="p-4 border-b border-border/60 bg-muted/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                        <Building2 className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                          Sub-areas in {selectedArea.name}
+                          <Badge variant="secondary" className="text-xs font-mono bg-primary/10 text-primary border border-primary/20">
+                            {selectedArea.subareas.length}
+                          </Badge>
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground">
+                          Specific sectors, streets, or local distribution blocks under this coverage zone.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Can menu="area" action="create">
+                      <Button
+                        size="sm"
+                        onClick={() => openCreateSubArea(selectedArea.id)}
+                        className="h-8 text-xs font-semibold gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Sub-area
+                      </Button>
+                    </Can>
+                  </div>
+
+                  {selectedArea.subareas.length === 0 ? (
+                    <div className="p-12 text-center">
+                      <div className="max-w-sm mx-auto space-y-3">
+                        <div className="mx-auto w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground border border-border/60">
+                          <Layers className="h-6 w-6 opacity-60" />
+                        </div>
+                        <h4 className="text-sm font-semibold text-foreground">No sub-areas configured</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Break down <strong className="text-foreground">{selectedArea.name}</strong> into sectors, blocks, or wards to streamline router routing and field technician tasks.
+                        </p>
+                        <Can menu="area" action="create">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openCreateSubArea(selectedArea.id)}
+                            className="mt-2 text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Create First Sub-area
+                          </Button>
+                        </Can>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-border/60 bg-muted/30">
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[40%]">
+                              Sub-area Name
+                            </TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[30%]">
+                              Area Code
+                            </TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[15%]">
+                              Status
+                            </TableHead>
+                            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[15%]">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedSubareas.map((sub) => (
+                            <TableRow
+                              key={sub.id}
+                              className="group border-border/40 hover:bg-muted/30 transition-colors"
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2.5">
+                                  <div className="p-1.5 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                  </div>
+                                  <span className="font-semibold text-sm text-foreground">
+                                    {sub.name}
                                   </span>
-                                  <Badge variant="secondary" className="text-[10px] font-mono ml-1 bg-primary/10 text-primary border border-primary/20">
-                                    {area.subareas.length}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded border border-border/40">
+                                  {sub.areaCode}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {sub.status === 'active' ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium gap-1"
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                                    Active
                                   </Badge>
-                                  <Can menu="area" action="create">
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-muted text-muted-foreground border-border/60 text-[11px] font-medium gap-1"
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground inline-block" />
+                                    Inactive
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Can menu="area" action="update">
                                     <Button
                                       variant="ghost"
-                                      size="sm"
-                                      className="h-6 ml-2 text-xs gap-1 text-primary hover:bg-primary/10"
-                                      onClick={() => openCreateSubArea(area.id)}
+                                      size="icon"
+                                      className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
+                                      onClick={() => openEditSubArea(selectedArea.id, sub)}
+                                      title="Edit sub-area"
                                     >
-                                      <Plus className="h-3 w-3" /> Add
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </Can>
+                                  <Can menu="area" action="delete">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:bg-destructive/10 transition-colors"
+                                      onClick={() =>
+                                        setDeleteSubAreaInfo({
+                                          areaId: selectedArea.id,
+                                          subId: sub.id,
+                                        })
+                                      }
+                                      title="Delete sub-area"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                   </Can>
                                 </div>
-                                {area.subareas.length > 0 ? (
-                                  <div className="flex flex-wrap gap-2">
-                                    {area.subareas.map((sub) => (
-                                      <div
-                                        key={sub.id}
-                                        className="group/sub flex items-center gap-1"
-                                      >
-                                        <Badge
-                                          variant="secondary"
-                                          className="text-xs bg-background hover:bg-primary/10 text-foreground border border-border/60 hover:border-primary/30 transition-all duration-200 shadow-sm hover:shadow-md"
-                                        >
-                                          <MapPin className="h-3 w-3 mr-1 text-primary/60" />
-                                          {sub.name}
-                                          {sub.status === 'inactive' && (
-                                            <span className="ml-1 text-[10px] text-muted-foreground">(off)</span>
-                                          )}
-                                        </Badge>
-                                        <div className="flex items-center gap-0.5">
-                                          <Can menu="area" action="update">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
-                                              onClick={() => openEditSubArea(area.id, sub)}
-                                            >
-                                              <Edit className="h-2.5 w-2.5" />
-                                            </Button>
-                                          </Can>
-                                          <Can menu="area" action="delete">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 text-destructive hover:bg-destructive/10"
-                                              onClick={() => setDeleteSubAreaId({ areaId: area.id, subId: sub.id })}
-                                            >
-                                              <Trash2 className="h-2.5 w-2.5" />
-                                            </Button>
-                                          </Can>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-muted-foreground italic">No sub-areas defined</p>
-                                )}
-                              </div>
-                            </TableCell>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </Card>
-      </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
 
-      {/* Create/Edit Dialog */}
+                  {/* Subareas Pagination */}
+                  {selectedArea.subareas.length > 0 && (
+                    <TablePagination
+                      currentPage={safeSubPage}
+                      pageSize={subPageSize}
+                      totalItems={selectedArea.subareas.length}
+                      onPageChange={setSubCurrentPage}
+                      onPageSizeChange={setSubPageSize}
+                      pageSizeOptions={[10, 20, 50, 100]}
+                    />
+                  )}
+                </Card>
+              </>
+            ) : (
+              <Card className="border-border/60 bg-card p-12 text-center ring-1 ring-border/50">
+                <div className="max-w-md mx-auto space-y-3">
+                  <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                    <Globe className="h-7 w-7" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground">Select a Coverage Zone</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Pick any service area from the left sidebar to inspect and configure its nested sub-areas, coverage codes, and operational status.
+                  </p>
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
       </PageContent>
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+
+      {/* ── Area Create/Edit Dialog ─────────────────────────────────── */}
+      <Dialog open={areaDialogOpen} onOpenChange={setAreaDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 {editArea ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editArea ? 'Edit Area' : 'Add Service Area'}
+              {editArea ? 'Edit Coverage Zone' : 'Add Service Area'}
             </DialogTitle>
-            <DialogDescription>Define a coverage zone and optional sub-areas (comma-separated).</DialogDescription>
+            <DialogDescription>
+              {editArea
+                ? 'Update the coverage zone designation.'
+                : 'Define a new master coverage zone and optional initial sub-areas.'}
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmitArea(onSubmitArea)} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Area Name</Label>
-              <Input {...register('name')} placeholder="e.g. Uttara" className="h-10 shadow-sm" />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              <Input
+                {...registerArea('name')}
+                placeholder="e.g. Uttara / Dhanmondi"
+                className="h-10 shadow-sm"
+              />
+              {areaErrors.name && (
+                <p className="text-xs text-destructive">{areaErrors.name.message}</p>
+              )}
             </div>
             {!editArea && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Sub-areas (comma-separated)</Label>
-                <Input {...register('subareas')} placeholder="Sector 7, Sector 11, Sector 13" className="h-10 shadow-sm" />
+                <Label className="text-xs font-semibold">
+                  Sub-areas (comma-separated, optional)
+                </Label>
+                <Input
+                  {...registerArea('subareas')}
+                  placeholder="Sector 7, Sector 11, Sector 13"
+                  className="h-10 shadow-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  You can also add and manage individual sub-areas inside the workspace later.
+                </p>
               </div>
             )}
-            <Button type="submit" className="w-full font-semibold shadow-sm" disabled={isSubmitting}>
-              {editArea ? 'Save Changes' : 'Create Area'}
+            <Button
+              type="submit"
+              className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={isSubmittingArea}
+            >
+              {editArea ? 'Save Changes' : 'Create Service Area'}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* ── Area Delete Confirmation ────────────────────────────────── */}
       <ConfirmDialog
-        open={Boolean(deleteId)}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete Area"
-        description="Customers assigned to this area will need reassignment."
-        confirmLabel="Delete"
+        open={Boolean(deleteAreaId)}
+        onOpenChange={(open) => !open && setDeleteAreaId(null)}
+        title="Delete Service Area"
+        description="Are you sure you want to delete this coverage zone? Sub-areas and customer associations will need reassignment."
+        confirmLabel="Delete Area"
         destructive
         onConfirm={() => {
-          if (deleteId) {
-            deleteMutation.mutate(deleteId);
-            setDeleteId(null);
+          if (deleteAreaId) {
+            deleteMutation.mutate(deleteAreaId);
+            setDeleteAreaId(null);
           }
         }}
       />
 
-      {/* Sub-Area Create/Edit Dialog */}
+      {/* ── Sub-area Create/Edit Dialog ─────────────────────────────── */}
       <Dialog open={subAreaDialogOpen} onOpenChange={setSubAreaDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -557,26 +819,43 @@ export function AreasPage() {
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 {editingSubArea ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editingSubArea ? 'Edit Sub-area' : 'Add Sub-area'}
+              {editingSubArea ? 'Edit Sub-area' : 'Add New Sub-area'}
             </DialogTitle>
             <DialogDescription>
-              {editingSubArea ? 'Update the sub-area details.' : 'Create a new sub-area within this coverage zone.'}
+              {editingSubArea
+                ? 'Update sub-area label, area code, or activation status.'
+                : `Create a dedicated sub-area inside ${selectedArea?.name || 'this zone'}.`}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitSub(onSubmitSubArea)} className="space-y-4">
+          <form onSubmit={handleSubmitSub(onSubmitSubArea)} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Sub-area Name</Label>
-              <Input {...registerSub('name')} placeholder="e.g. Sector 7" className="h-10 shadow-sm" />
-              {subErrors.name && <p className="text-xs text-destructive">{subErrors.name.message}</p>}
+              <Input
+                {...registerSub('name')}
+                placeholder="e.g. Sector 7 / Road 12"
+                className="h-10 shadow-sm"
+              />
+              {subErrors.name && (
+                <p className="text-xs text-destructive">{subErrors.name.message}</p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Area Code</Label>
-              <Input {...registerSub('areaCode')} placeholder="e.g. UTT-S7" className="h-10 shadow-sm font-mono" />
-              {subErrors.areaCode && <p className="text-xs text-destructive">{subErrors.areaCode.message}</p>}
+              <Label className="text-xs font-semibold">Area Code / Routing Prefix</Label>
+              <Input
+                {...registerSub('areaCode')}
+                placeholder="e.g. UTT-S7 / DHAN-R12"
+                className="h-10 shadow-sm font-mono"
+              />
+              {subErrors.areaCode && (
+                <p className="text-xs text-destructive">{subErrors.areaCode.message}</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Status</Label>
-              <Select {...registerSub('status')} defaultValue={watchSub('status')}>
+              <Select
+                value={watchSub('status')}
+                onValueChange={(v) => setSubValue('status', v as 'active' | 'inactive')}
+              >
                 <SelectTrigger className="h-10 shadow-sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -586,25 +865,29 @@ export function AreasPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit" className="w-full font-semibold shadow-sm" disabled={isSubmittingSub}>
+            <Button
+              type="submit"
+              className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={isSubmittingSub}
+            >
               {editingSubArea ? 'Save Changes' : 'Add Sub-area'}
             </Button>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Sub-Area Delete Confirmation */}
+      {/* ── Sub-area Delete Confirmation ────────────────────────────── */}
       <ConfirmDialog
-        open={Boolean(deleteSubAreaId)}
-        onOpenChange={(open) => !open && setDeleteSubAreaId(null)}
+        open={Boolean(deleteSubAreaInfo)}
+        onOpenChange={(open) => !open && setDeleteSubAreaInfo(null)}
         title="Delete Sub-area"
-        description="This sub-area will be permanently removed. Customers assigned here may need reassignment."
-        confirmLabel="Delete"
+        description="Are you sure you want to delete this sub-area? Customers assigned here may need re-routing."
+        confirmLabel="Delete Sub-area"
         destructive
         onConfirm={() => {
-          if (deleteSubAreaId) {
-            deleteSubAreaMutation.mutate(deleteSubAreaId);
-            setDeleteSubAreaId(null);
+          if (deleteSubAreaInfo) {
+            deleteSubAreaMutation.mutate(deleteSubAreaInfo);
+            setDeleteSubAreaInfo(null);
           }
         }}
       />

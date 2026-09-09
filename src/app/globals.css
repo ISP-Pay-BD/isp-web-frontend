@@ -300,17 +300,58 @@
 /* ISP Sidebar Smooth Motion & Hover Effects */
 .ipb-sidebar-button,
 .ipb-sidebar-sub-button {
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition:
+    background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .ipb-sidebar-button:hover,
 .ipb-sidebar-sub-button:hover {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 .ipb-sidebar-button:active,
 .ipb-sidebar-sub-button:active {
-  transform: translateX(1px) scale(0.99);
+  transform: translateX(0) scale(0.985);
+}
+
+/* Active state glow pulse */
+.ipb-sidebar-button.active-parent,
+.ipb-sidebar-button.active-leaf,
+.ipb-sidebar-sub-button.active-child {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+/* Sub-menu expand animation */
+.ipb-sidebar-sub-button {
+  animation: sidebar-sub-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes sidebar-sub-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ipb-sidebar-button,
+  .ipb-sidebar-sub-button {
+    transition: none !important;
+  }
+  .ipb-sidebar-button:hover,
+  .ipb-sidebar-sub-button:hover {
+    transform: none;
+  }
+  .ipb-sidebar-sub-button {
+    animation: none;
+  }
 }
 
 /* Portal motion — intentional, reduced-motion aware (no Framer on portals) */

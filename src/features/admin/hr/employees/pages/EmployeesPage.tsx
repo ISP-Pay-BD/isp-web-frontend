@@ -5,7 +5,8 @@ import { useState, useMemo } from 'react';
 import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
-import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog } from '@/components/shared';
+import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, TablePagination } from '@/components/shared';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { EmployeeModal } from '../components/EmployeeModal';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,9 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
+  Eye,
 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 type SortField = 'name' | 'salary' | 'joinedAt';
@@ -52,6 +55,8 @@ export function EmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeItem | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
 
   const filteredEmployees = useMemo(() => {
     let result = employees.filter((emp) => {
@@ -74,6 +79,13 @@ export function EmployeesPage() {
 
     return result;
   }, [employees, search, roleFilter, statusFilter, sortField, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedEmployees = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredEmployees.slice(start, start + pageSize);
+  }, [filteredEmployees, safeCurrentPage, pageSize]);
 
   const totalPayroll = useMemo(
     () => employees.filter((e) => e.status === 'active').reduce((sum, e) => sum + (e.salaryBdt || 0), 0),
@@ -232,25 +244,26 @@ export function EmployeesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEmployees.map((emp, idx) => {
+                  {paginatedEmployees.map((emp, idx) => {
+                    const globalIdx = (safeCurrentPage - 1) * pageSize + idx + 1;
                     return (
                       <tr
                         key={emp.id}
                         className="group border-border/40 hover:bg-muted/30 transition-colors"
                       >
-                        <TableCell className="text-muted-foreground font-mono text-xs">{idx + 1}</TableCell>
+                        <TableCell className="text-muted-foreground font-mono text-xs">{globalIdx}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-xs border border-border/60 bg-muted/50 text-muted-foreground">
+                          <Link href={`/admin/hr/employees/${emp.id}`} className="flex items-center gap-3 group/item">
+                            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-xs border border-border/60 bg-muted/50 text-muted-foreground group-hover/item:border-primary/50 group-hover/item:text-primary transition-colors">
                               {emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-semibold text-sm group-hover:text-primary transition-colors">{emp.name}</div>
+                              <div className="font-semibold text-sm group-hover/item:text-primary transition-colors">{emp.name}</div>
                               <Badge variant="secondary" className="text-[10px] font-medium mt-0.5 border border-border/50 bg-muted/40 text-muted-foreground">
                                 {emp.role}
                               </Badge>
                             </div>
-                          </div>
+                          </Link>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -285,7 +298,17 @@ export function EmployeesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-0.5">
-                            <div >
+                            <Link href={`/admin/hr/employees/${emp.id}`}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                title="View activity & profile"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            </Link>
+                            <div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -296,7 +319,7 @@ export function EmployeesPage() {
                                 <Edit2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
-                            <div >
+                            <div>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -316,6 +339,16 @@ export function EmployeesPage() {
               </Table>
             </div>
           )}
+
+          {/* Global Pagination Controls */}
+          <TablePagination
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            totalItems={filteredEmployees.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
         </Card>
       </div>
 

@@ -156,11 +156,13 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </Link>
                 </Can>
                 <DropdownMenu>
-                  <DropdownMenuTrigger>
-                    <Button size="sm" variant="outline" className="gap-1.5">
-                      <MoreVertical className="h-4 w-4" /> More
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <MoreVertical className="h-4 w-4" /> More
+                      </Button>
+                    }
+                  />
                   <DropdownMenuContent align="end" className="w-52">
                     <DropdownMenuItem
                       className="gap-2 cursor-pointer"
