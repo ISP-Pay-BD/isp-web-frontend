@@ -1,42 +1,42 @@
 /* Hierarchy React Flow — theme-aware contrast overrides */
 
 .hierarchy-flow {
-  --xy-edge-stroke: hsl(var(--muted-foreground) / 0.55);
+  --xy-edge-stroke: color-mix(in oklch, var(--muted-foreground) 55%, transparent);
   --xy-edge-stroke-width: 1.75;
-  --xy-edge-stroke-selected: hsl(var(--primary));
+  --xy-edge-stroke-selected: var(--primary);
   --xy-background-color: transparent;
-  --xy-background-pattern-color: hsl(var(--border));
-  --xy-controls-button-background-color: hsl(var(--card));
-  --xy-controls-button-background-color-hover: hsl(var(--muted));
-  --xy-controls-button-color: hsl(var(--foreground));
-  --xy-controls-button-color-hover: hsl(var(--foreground));
-  --xy-controls-button-border-color: hsl(var(--border));
-  --xy-controls-box-shadow: 0 1px 2px hsl(var(--foreground) / 0.06);
-  --xy-minimap-background-color: hsl(var(--card));
-  --xy-minimap-mask-background-color: hsl(var(--foreground) / 0.12);
-  --xy-minimap-mask-stroke-color: hsl(var(--border));
+  --xy-background-pattern-color: var(--border);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 6%, transparent);
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in oklch, var(--foreground) 12%, transparent);
+  --xy-minimap-mask-stroke-color: var(--border);
   --xy-minimap-node-stroke-color: transparent;
 }
 
 .dark .hierarchy-flow,
 .hierarchy-flow.dark {
   /* Brighter edges + dots so the tree reads on near-black canvases */
-  --xy-edge-stroke: hsl(210 20% 55%);
+  --xy-edge-stroke: oklch(0.65 0.02 250);
   --xy-edge-stroke-width: 2;
   --xy-edge-stroke-selected: #e85a1a;
-  --xy-background-pattern-color: hsl(220 15% 28%);
-  --xy-controls-button-background-color: hsl(222 30% 14%);
-  --xy-controls-button-background-color-hover: hsl(222 28% 20%);
-  --xy-controls-button-color: hsl(210 20% 92%);
-  --xy-controls-button-border-color: hsl(220 15% 28%);
+  --xy-background-pattern-color: oklch(0.28 0.02 250);
+  --xy-controls-button-background-color: oklch(0.16 0.02 250);
+  --xy-controls-button-background-color-hover: oklch(0.22 0.02 250);
+  --xy-controls-button-color: oklch(0.92 0.01 250);
+  --xy-controls-button-border-color: oklch(0.28 0.02 250);
   --xy-controls-box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
-  --xy-minimap-background-color: hsl(222 30% 12%);
+  --xy-minimap-background-color: oklch(0.14 0.02 250);
   --xy-minimap-mask-background-color: rgb(0 0 0 / 0.45);
-  --xy-minimap-mask-stroke-color: hsl(220 15% 35%);
+  --xy-minimap-mask-stroke-color: oklch(0.32 0.02 250);
 }
 
 .hierarchy-flow .react-flow__controls-button {
-  border-bottom-color: hsl(var(--border)) !important;
+  border-bottom-color: var(--border) !important;
   width: 28px !important;
   height: 28px !important;
 }

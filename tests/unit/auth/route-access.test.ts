@@ -3,6 +3,7 @@ import {
   canAccessPath,
   isRoleAllowedForPrefix,
   isExpiredPathAllowed,
+  getPostLoginRedirect,
   ROLE_HOME,
 } from '@/lib/auth/route-access';
 
@@ -35,4 +36,22 @@ describe('auth/route-access', () => {
   it('allows active users on dashboard', () => {
     expect(canAccessPath('admin', 'active', '/admin/dashboard').allowed).toBe(true);
   });
+
+  it('computes safe post-login destination without 403 cross-portal redirect', () => {
+    // If a customer logs in with a redirect URL pointing to admin portal, fallback to customer home
+    expect(getPostLoginRedirect('user', '/admin/dashboard')).toBe('/customer/dashboard');
+
+    // If an admin logs in with redirect to customer portal, fallback to admin home
+    expect(getPostLoginRedirect('admin', '/customer/profile')).toBe('/admin/dashboard');
+
+    // If redirect points to 403 or login, fallback to role home
+    expect(getPostLoginRedirect('user', '/403')).toBe('/customer/dashboard');
+    expect(getPostLoginRedirect('admin', '/login')).toBe('/admin/dashboard');
+
+    // If redirect is valid for role, preserve it
+    expect(getPostLoginRedirect('user', '/customer/payments')).toBe('/customer/payments');
+    expect(getPostLoginRedirect('admin', '/admin/packages')).toBe('/admin/packages');
+    expect(getPostLoginRedirect('super_admin', '/platform/tenants')).toBe('/platform/tenants');
+  });
 });
+

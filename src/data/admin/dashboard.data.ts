@@ -152,6 +152,31 @@ export const adminDashboardStats = {
     { package: 'Home 50 Mbps', amountBdt: 198000 },
     { package: 'Corporate 50 Mbps', amountBdt: 150000 },
   ],
+  // Package Distribution data for Donut Chart
+  packageDistribution: [
+    { name: '10 Mbps Starter', count: 420, percent: 45, color: '#f75803' },
+    { name: '20 Mbps Turbo', count: 280, percent: 30, color: '#2E8BFF' },
+    { name: '30 Mbps Blaze', count: 140, percent: 15, color: '#10b981' },
+    { name: '50 Mbps Pro', count: 65, percent: 7, color: '#8b5cf6' },
+    { name: '100 Mbps Corp', count: 28, percent: 3, color: '#ec4899' },
+  ],
+  // Growth vs Churn
+  growthChurn: [
+    { month: 'Apr', newUsers: 34, churned: 6 },
+    { month: 'May', newUsers: 48, churned: 8 },
+    { month: 'Jun', newUsers: 42, churned: 5 },
+    { month: 'Jul', newUsers: 56, churned: 9 },
+    { month: 'Aug', newUsers: 64, churned: 12 },
+    { month: 'Sep', newUsers: 52, churned: 7 },
+  ],
+  // Employee Payroll Trend
+  employeePayrollTrend: [
+    { month: 'May', paidBdt: 360000, pendingBdt: 20000 },
+    { month: 'Jun', paidBdt: 375000, pendingBdt: 15000 },
+    { month: 'Jul', paidBdt: 380000, pendingBdt: 25000 },
+    { month: 'Aug', paidBdt: 385000, pendingBdt: 30000 },
+    { month: 'Sep', paidBdt: 385000, pendingBdt: 45000 },
+  ],
   recentActivities: [
     { id: 'act_1', text: 'Payment ৳1,200 received from Rahim Uddin (bKash)', time: '2 min ago' },
     { id: 'act_2', text: 'New customer registered — Mirpur 10', time: '15 min ago' },

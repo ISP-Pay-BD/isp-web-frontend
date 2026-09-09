@@ -70,3 +70,25 @@ export function canAccessPath(
 
   return { allowed: true };
 }
+
+export function getPostLoginRedirect(role: UserRole, redirectUrl?: string | null): string {
+  const home = ROLE_HOME[role] ?? '/login';
+  if (!redirectUrl || !redirectUrl.startsWith('/')) {
+    return home;
+  }
+  if (
+    redirectUrl.startsWith('/login') ||
+    redirectUrl.startsWith('/register') ||
+    redirectUrl.startsWith('/forgot-password') ||
+    redirectUrl.startsWith('/403') ||
+    redirectUrl.startsWith('/404') ||
+    redirectUrl.startsWith('/500')
+  ) {
+    return home;
+  }
+  if (!isRoleAllowedForPrefix(role, redirectUrl)) {
+    return home;
+  }
+  return redirectUrl;
+}
+

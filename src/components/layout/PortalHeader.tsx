@@ -47,11 +47,9 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
   const logout = useAuthStore((s) => s.logout);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [themeCustomizerOpen, setThemeCustomizerOpen] = useState(false);
-  const showCommandPalette = portal === 'admin';
+  const showCommandPalette = true;
 
   useEffect(() => {
-    if (!showCommandPalette) return;
-
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -61,7 +59,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showCommandPalette]);
+  }, []);
 
   const handleLogout = () => {
     logout();

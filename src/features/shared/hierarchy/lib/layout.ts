@@ -55,8 +55,8 @@ export function flattenHierarchy(
   const q = query.trim().toLowerCase();
   const nodes: Node<HierarchyFlowNodeData>[] = [];
   const edges: Edge[] = [];
-  const edgeStroke = dark ? 'hsl(210 20% 58%)' : 'hsl(var(--border))';
-  const edgeHot = dark ? '#e85a1a' : 'var(--primary)';
+  const edgeStroke = dark ? 'oklch(0.65 0.02 250)' : 'oklch(0.48 0.018 250 / 0.55)';
+  const edgeHot = dark ? '#e85a1a' : 'oklch(0.62 0.17 41)';
 
   const walk = (node: HierarchyNode, parentId?: string) => {
     const matched =

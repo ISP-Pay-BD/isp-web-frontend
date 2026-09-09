@@ -129,7 +129,7 @@ function HierarchyGraphInner({
         <Background
           gap={18}
           size={1.25}
-          color={isDark ? 'hsl(220 15% 30%)' : 'hsl(var(--border))'}
+          color={isDark ? 'oklch(0.28 0.02 250)' : 'var(--border)'}
         />
         <Controls
           position="bottom-left"

@@ -47,7 +47,7 @@ export function CustomerDashboardPage() {
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="Dashboard" subtitle="Loading your connection details…">
+      <CustomerPageShell title="Dashboard" subtitle="Loading your connection details...">
         <CustomerLoadingSkeleton />
       </CustomerPageShell>
     );

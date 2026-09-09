@@ -123,7 +123,7 @@ export function PricingSection({
                 </span>
               </div>
 
-              <div className="mt-8 grid gap-5 md:grid-cols-3">
+              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {plans.map((plan) => {
                   const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
                   return (
@@ -183,6 +183,27 @@ export function PricingSection({
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Addons Strip */}
+              <div className="mt-14 rounded-2xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-landing-display text-base font-semibold text-white">
+                      Need custom add-ons or burst capacity?
+                    </h4>
+                    <p className="mt-1 text-xs text-white/60">
+                      Enable SMS Credits (৳200/1k), White Label domain branding (৳500/mo), WhatsApp Alerts engine, or Extra Cloud Backups on any plan.
+                    </p>
+                  </div>
+                  <Link
+                    href="/plugins"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-landing-cta hover:underline shrink-0"
+                  >
+                    <span>Browse all add-ons</span>
+                    <span>→</span>
+                  </Link>
+                </div>
               </div>
             </motion.div>
           ) : (
