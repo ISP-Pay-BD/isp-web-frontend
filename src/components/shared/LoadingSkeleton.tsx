@@ -5,12 +5,25 @@ export interface PageSkeletonProps {
   rows?: number;
   className?: string;
   variant?: 'table' | 'dashboard' | 'form' | 'cards' | 'detail';
+  layoutMode?: 'full' | 'centered';
 }
 
 /** Dashboard skeleton — triage row + summary strip + charts (no 4 equal KPI tiles) */
-export function DashboardSkeleton({ className }: { className?: string }) {
+export function DashboardSkeleton({
+  className,
+  layoutMode = 'full',
+}: {
+  className?: string;
+  layoutMode?: 'full' | 'centered';
+}) {
   return (
-    <div className={cn('mx-auto max-w-7xl space-y-6 p-1 md:p-2', className)}>
+    <div
+      className={cn(
+        'space-y-6 p-1 md:p-2 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
+        className
+      )}
+    >
       <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-28" />
@@ -80,9 +93,23 @@ export function DashboardSkeleton({ className }: { className?: string }) {
 }
 
 /** Table page skeleton — header + summary strip + filters + rows (list-hub shaped) */
-export function TablePageSkeleton({ rows = 6, className }: { rows?: number; className?: string }) {
+export function TablePageSkeleton({
+  rows = 6,
+  className,
+  layoutMode = 'full',
+}: {
+  rows?: number;
+  className?: string;
+  layoutMode?: 'full' | 'centered';
+}) {
   return (
-    <div className={cn('mx-auto max-w-7xl space-y-5 p-1 md:p-2', className)}>
+    <div
+      className={cn(
+        'space-y-5 p-1 md:p-2 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
+        className
+      )}
+    >
       <div className="flex flex-col gap-4 border-b border-border/40 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-4 w-28" />
@@ -194,9 +221,23 @@ export function FormPageSkeleton({ className }: { className?: string }) {
 }
 
 /** Card Grid Skeleton for packages, vouchers, devices, catalogs */
-export function CardGridSkeleton({ count = 6, className }: { count?: number; className?: string }) {
+export function CardGridSkeleton({
+  count = 6,
+  className,
+  layoutMode = 'full',
+}: {
+  count?: number;
+  className?: string;
+  layoutMode?: 'full' | 'centered';
+}) {
   return (
-    <div className={cn('space-y-6 max-w-7xl mx-auto p-1 md:p-2', className)}>
+    <div
+      className={cn(
+        'space-y-6 p-1 md:p-2 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
+        className
+      )}
+    >
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-5">
         <div className="space-y-2">
@@ -287,20 +328,25 @@ export function DetailSkeleton({ className }: { className?: string }) {
 }
 
 /** Adaptive PageSkeleton routing to screen-accurate layout */
-export function PageSkeleton({ rows = 6, className, variant = 'table' }: PageSkeletonProps) {
+export function PageSkeleton({
+  rows = 6,
+  className,
+  variant = 'table',
+  layoutMode = 'full',
+}: PageSkeletonProps) {
   if (variant === 'dashboard') {
-    return <DashboardSkeleton className={className} />;
+    return <DashboardSkeleton className={className} layoutMode={layoutMode} />;
   }
   if (variant === 'form') {
     return <FormPageSkeleton className={className} />;
   }
   if (variant === 'cards') {
-    return <CardGridSkeleton className={className} />;
+    return <CardGridSkeleton className={className} layoutMode={layoutMode} />;
   }
   if (variant === 'detail') {
     return <DetailSkeleton className={className} />;
   }
-  return <TablePageSkeleton rows={rows} className={className} />;
+  return <TablePageSkeleton rows={rows} className={className} layoutMode={layoutMode} />;
 }
 
 export function TableSkeleton({ rows = 6 }: { rows?: number }) {

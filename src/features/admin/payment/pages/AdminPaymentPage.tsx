@@ -271,7 +271,7 @@ export function AdminPaymentPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Subscription Invoices & Payments"
         subtitle="Manage your ISP Pay BD platform licensing invoices, receipts, and payment transactions."

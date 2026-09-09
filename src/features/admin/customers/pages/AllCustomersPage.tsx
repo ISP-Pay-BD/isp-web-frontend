@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -32,6 +32,8 @@ import {
   Key,
   Calendar,
   X,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import { useCustomers, useDeleteCustomer } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -41,7 +43,8 @@ import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
 import { TablePagination } from '@/components/shared/TablePagination';
-import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { DEFAULT_PAGE_SIZE, STORAGE_KEYS } from '@/lib/constants/status';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,9 +150,31 @@ export function AllCustomersPage() {
   const [targetAccStatus, setTargetAccStatus] = useState<'active' | 'suspended'>('active');
   const [smsMessage, setSmsMessage] = useState('Dear customer, your ISP Pay BD monthly internet subscription is due. Please pay to avoid service disconnection. Thank you.');
 
-  // Pagination state
+  // Pagination & Layout Mode state
+  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEYS.tableLayout);
+      if (saved === 'centered' || saved === 'full') return saved;
+    }
+    return globalTableLayout || 'full';
+  });
+
+  // Sync when global theme setting changes
+  useEffect(() => {
+    if (globalTableLayout) {
+      setLayoutMode(globalTableLayout);
+    }
+  }, [globalTableLayout]);
+
+  const handleLayoutModeChange = (mode: 'full' | 'centered') => {
+    setLayoutMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.tableLayout, mode);
+    }
+  };
 
   // Column Visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
@@ -421,7 +446,7 @@ export function AllCustomersPage() {
     );
   };
 
-  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={8} layoutMode={layoutMode} />;
   if (isError) {
     return (
       <EmptyState
@@ -434,7 +459,12 @@ export function AllCustomersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-16">
+    <div
+      className={cn(
+        'space-y-6 pb-16 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full'
+      )}
+    >
       {/* Page Header with Action Toolbar */}
       <PageHeader
         title="Customer Directory"
@@ -445,6 +475,38 @@ export function AllCustomersPage() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {/* Layout Alignment Toggle */}
+            <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40">
+              <button
+                type="button"
+                onClick={() => handleLayoutModeChange('full')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  layoutMode === 'full'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Full width edge-to-edge layout"
+              >
+                <AlignJustify className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Full</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLayoutModeChange('centered')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  layoutMode === 'centered'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Centered container layout"
+              >
+                <AlignCenter className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Center</span>
+              </button>
+            </div>
+
             {/* Column Picker */}
             <Popover>
               <PopoverTrigger
@@ -837,7 +899,7 @@ export function AllCustomersPage() {
       {/* Customers Comprehensive Data Table */}
       <Card className="border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[1300px] text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
                 {/* Bulk Checkbox */}

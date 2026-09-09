@@ -84,7 +84,7 @@ export function IncomesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Header */}
       <PageHero className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>

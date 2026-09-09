@@ -25,6 +25,19 @@ const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unkno
   );
 };
 
+const severityBadgeClass: Record<string, string> = {
+  minor: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/25',
+  major: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25',
+  critical: 'bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/25',
+};
+
+const statusBadgeClass: Record<string, string> = {
+  investigating: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25',
+  identified: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:bg-violet-500/15 dark:text-violet-400 dark:border-violet-500/25',
+  monitoring: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/25',
+  resolved: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+};
+
 export function OutagesPage() {
   const { data, isLoading, isError, refetch } = useIspOps();
 
@@ -34,38 +47,55 @@ export function OutagesPage() {
         accessorKey: 'title',
         header: 'Incident',
         enableHiding: false,
-        cell: ({ row }) => <span className="text-sm">{String(row.original.title)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium">{String(row.original.title)}</span>
+        ),
       },
       {
         accessorKey: 'severity',
         header: 'Severity',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.severity)}</Badge>
-        ),
+        cell: ({ row }) => {
+          const severity = String(row.original.severity);
+          return (
+            <Badge variant="outline" className={`capitalize ${severityBadgeClass[severity] ?? ''}`}>
+              {severity}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'area',
         header: 'Area',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.area)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.area)}</span>
+        ),
       },
       {
         accessorKey: 'affected',
         header: 'Affected',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.affected)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium tabular-nums">{String(row.original.affected)}</span>
+        ),
       },
       {
         accessorKey: 'startedAt',
         header: 'Started',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.startedAt)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground tabular-nums">{String(row.original.startedAt)}</span>
+        ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.status)}</Badge>
-        ),
-      }
+        cell: ({ row }) => {
+          const status = String(row.original.status);
+          return (
+            <Badge variant="outline" className={`capitalize ${statusBadgeClass[status] ?? ''}`}>
+              {status}
+            </Badge>
+          );
+        },
+      },
     ],
     [],
   );
@@ -84,14 +114,13 @@ export function OutagesPage() {
       <PageHeader
         title="Outage Board"
         subtitle="Live network incidents and customer impact"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "Outage Board" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Outage Board' }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: rows.length, label: "incidents" },
-          { value: open.length, label: "open" },
-          { value: affected.toLocaleString(), label: "affected" },
+          { value: rows.length, label: 'incidents' },
+          { value: open.length, label: 'open' },
+          { value: affected.toLocaleString(), label: 'affected' },
         ]}
       />
       <DataTable

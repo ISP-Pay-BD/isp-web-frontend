@@ -7,7 +7,6 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
-import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
 import type { IspOpsData } from '@/data/admin/isp-ops.data';
 
@@ -34,34 +33,61 @@ export function PonMapPage() {
         accessorKey: 'oltName',
         header: 'OLT',
         enableHiding: false,
-        cell: ({ row }) => <span className="text-sm">{String(row.original.oltName)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium">{String(row.original.oltName)}</span>
+        ),
       },
       {
         accessorKey: 'pon',
         header: 'PON',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.pon)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.pon)}</span>
+        ),
       },
       {
         accessorKey: 'splitter',
         header: 'Splitter',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.splitter)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.splitter)}</span>
+        ),
       },
       {
         accessorKey: 'usedOnus',
         header: 'Used',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.usedOnus)}</span>,
+        cell: ({ row }) => {
+          const used = row.original.usedOnus;
+          const capacity = row.original.capacity;
+          const pct = Math.round((used / capacity) * 100);
+          return (
+            <span className="text-foreground font-mono text-xs tabular-nums">
+              {used}
+              <span className="text-muted-foreground/60">/{capacity}</span>
+              <span className={`ml-1.5 text-[10px] ${pct > 80 ? 'text-red-500' : pct > 60 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                {pct}%
+              </span>
+            </span>
+          );
+        },
       },
       {
         accessorKey: 'capacity',
         header: 'Capacity',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.capacity)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.capacity)}</span>
+        ),
       },
       {
         accessorKey: 'avgRxDbm',
         header: 'Avg Rx dBm',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.avgRxDbm)}</span>,
-      }
+        cell: ({ row }) => {
+          const dbm = row.original.avgRxDbm;
+          return (
+            <span className={`font-mono text-xs tabular-nums ${dbm < -25 ? 'text-amber-500' : dbm < -20 ? 'text-sky-500' : 'text-emerald-500'}`}>
+              {dbm} dBm
+            </span>
+          );
+        },
+      },
     ],
     [],
   );
@@ -80,13 +106,12 @@ export function PonMapPage() {
       <PageHeader
         title="PON / Splitter Map"
         subtitle="PON port utilization and average optical levels"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "PON / Splitter Map" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'PON / Splitter Map' }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: rows.length, label: "PONs" },
-          { value: used, label: "/{capacity} ONUs" },
+          { value: rows.length, label: 'PONs' },
+          { value: used, label: `/${capacity} ONUs` },
         ]}
       />
       <DataTable

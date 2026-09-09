@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { useIspOps } from '../hooks/use-isp-ops';
 import type { IspOpsData } from '@/data/admin/isp-ops.data';
 
@@ -32,33 +33,65 @@ export function BillingPoliciesPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Policy',
+        header: 'Policy Name',
         enableHiding: false,
-        cell: ({ row }) => <span className="text-sm">{String(row.original.name)}</span>,
+        cell: ({ row }) => <span className="font-semibold text-foreground text-sm">{String(row.original.name)}</span>,
       },
       {
         accessorKey: 'mode',
         header: 'Mode',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.mode)}</Badge>
-        ),
+        cell: ({ row }) => {
+          const mode = String(row.original.mode);
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                'capitalize text-xs font-semibold',
+                mode === 'prepaid' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+                mode === 'postpaid' && 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+                mode === 'hybrid' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              )}
+            >
+              {mode}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'graceDays',
-        header: 'Grace days',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.graceDays)}</span>,
+        header: 'Grace Period',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-medium text-foreground tabular-nums">
+            {row.original.graceDays} {row.original.graceDays === 1 ? 'day' : 'days'}
+          </span>
+        ),
       },
       {
         accessorKey: 'fupGb',
-        header: 'FUP GB',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.fupGb)}</span>,
+        header: 'FUP Cap',
+        cell: ({ row }) => (
+          <span className="font-mono text-xs tabular-nums text-foreground">
+            {row.original.fupGb ? `${row.original.fupGb} GB` : <span className="text-muted-foreground italic">Unlimited</span>}
+          </span>
+        ),
       },
       {
         accessorKey: 'autoSuspend',
-        header: 'Auto suspend',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.autoSuspend)}</span>,
-      }
+        header: 'Auto Suspend',
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-[11px] font-semibold',
+              row.original.autoSuspend
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-muted/40 text-muted-foreground border-border/60'
+            )}
+          >
+            {row.original.autoSuspend ? 'Enabled' : 'Disabled'}
+          </Badge>
+        ),
+      },
     ],
     [],
   );

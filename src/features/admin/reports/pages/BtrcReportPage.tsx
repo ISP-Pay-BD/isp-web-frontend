@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   FileText,
   Search,
@@ -16,10 +16,13 @@ import {
   X,
   Printer,
   ShieldCheck,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import { useBtrcReport } from '../hooks/use-btrc-report';
 import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge, TablePagination } from '@/components/shared';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +41,21 @@ import { areas } from '@/data/admin/areas.data';
 
 export function BtrcReportPage() {
   const { summary, subscribers = [], isLoading, isError, refetch } = useBtrcReport();
+  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
+  const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
+  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
+
+  useEffect(() => {
+    if (globalTableLayout) {
+      setLayoutMode(globalTableLayout);
+    }
+  }, [globalTableLayout]);
+
+  const toggleLayoutMode = (mode: 'full' | 'centered') => {
+    setLayoutMode(mode);
+    setGlobalTableLayout(mode);
+  };
+
   const [search, setSearch] = useState('');
   const [clientTypeFilter, setClientTypeFilter] = useState('all'); // all | Home | Corporate | SME
   const [areaFilter, setAreaFilter] = useState('all');
@@ -133,7 +151,12 @@ export function BtrcReportPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div
+      className={cn(
+        'space-y-6 pb-16 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full'
+      )}
+    >
       {/* Header */}
       <PageHeader
         title="BTRC Regulatory Report"
@@ -291,6 +314,38 @@ export function BtrcReportPage() {
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Table Layout Toggle */}
+            <div className="flex items-center rounded-lg border border-border/70 bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={() => toggleLayoutMode('full')}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  layoutMode === 'full'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Full width layout"
+              >
+                <AlignJustify className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Full</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleLayoutMode('centered')}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  layoutMode === 'centered'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Centered container layout"
+              >
+                <AlignCenter className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Center</span>
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

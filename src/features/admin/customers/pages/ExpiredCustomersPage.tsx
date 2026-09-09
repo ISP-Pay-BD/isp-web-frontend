@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -18,12 +18,17 @@ import {
   Clock,
   ArrowUpDown,
   X,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import { useExpiredCustomers } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { TablePagination } from '@/components/shared/TablePagination';
+import { DEFAULT_PAGE_SIZE, STORAGE_KEYS } from '@/lib/constants/status';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,12 +60,37 @@ export function ExpiredCustomersPage() {
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('all');
   const [daysFilter, setDaysFilter] = useState('all'); // all | today | last_7 | over_30
+  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
   const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEYS.tableLayout);
+      if (saved === 'centered' || saved === 'full') return saved;
+    }
+    return globalTableLayout || 'full';
+  });
+
+  // Sync when global theme setting changes
+  useEffect(() => {
+    if (globalTableLayout) {
+      setLayoutMode(globalTableLayout);
+    }
+  }, [globalTableLayout]);
+
+  const handleLayoutModeChange = (mode: 'full' | 'centered') => {
+    setLayoutMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.tableLayout, mode);
+    }
+  };
+
   const [smsBody, setSmsBody] = useState(
     'Dear subscriber, your ISP internet line has expired. Please recharge your account to resume high-speed browsing.'
   );
 
-  const expiredList: Customer[] = data?.items ?? [];
+  const expiredList = useMemo(() => data?.items ?? [], [data?.items]);
 
   const totalDueBdt = useMemo(
     () => expiredList.reduce((acc, c) => acc + (c.balanceBdt || c.packagePrice || 800), 0),
@@ -70,12 +100,12 @@ export function ExpiredCustomersPage() {
   const filtered = useMemo(() => {
     return expiredList.filter((c) => {
       if (search) {
-        const q = search.toLowerCase().trim();
+        const q = search.toLowerCase();
         const matches =
           c.name.toLowerCase().includes(q) ||
           c.username.toLowerCase().includes(q) ||
           c.phone.includes(q) ||
-          (c.ipAddress && c.ipAddress.includes(q));
+          c.packageName.toLowerCase().includes(q);
         if (!matches) return false;
       }
 
@@ -95,6 +125,13 @@ export function ExpiredCustomersPage() {
       return true;
     });
   }, [expiredList, search, areaFilter, daysFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedExpired = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, safeCurrentPage, pageSize]);
 
   const handleExportCsv = () => {
     const headers = ['Name', 'Username', 'Phone', 'Package', 'Area', 'Expired Date', 'Due BDT'];
@@ -125,7 +162,7 @@ export function ExpiredCustomersPage() {
     setBulkSmsOpen(false);
   };
 
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
+  if (isLoading) return <PageSkeleton variant="table" rows={6} layoutMode={layoutMode} />;
   if (isError) {
     return (
       <EmptyState
@@ -138,7 +175,12 @@ export function ExpiredCustomersPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div
+      className={cn(
+        'space-y-6 pb-16 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full'
+      )}
+    >
       {/* Page Header */}
       <PageHeader
         title="Expired Customers"
@@ -149,7 +191,39 @@ export function ExpiredCustomersPage() {
           { label: 'Expired Customers' },
         ]}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Layout Toggle */}
+            <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40">
+              <button
+                type="button"
+                onClick={() => handleLayoutModeChange('full')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  layoutMode === 'full'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Full width layout"
+              >
+                <AlignJustify className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Full</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLayoutModeChange('centered')}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  layoutMode === 'centered'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Centered layout"
+              >
+                <AlignCenter className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Center</span>
+              </button>
+            </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -307,7 +381,7 @@ export function ExpiredCustomersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filtered.length === 0 ? (
+              {paginatedExpired.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-muted-foreground">
                     <div className="max-w-xs mx-auto space-y-2">
@@ -320,7 +394,7 @@ export function ExpiredCustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((c) => (
+                paginatedExpired.map((c) => (
                   <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
@@ -396,6 +470,16 @@ export function ExpiredCustomersPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Global Pagination Controls */}
+        <TablePagination
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          totalItems={filtered.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+        />
       </Card>
 
       {/* Bulk SMS Dialog */}

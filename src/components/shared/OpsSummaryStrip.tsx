@@ -22,20 +22,20 @@ export function OpsSummaryStrip({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/25 px-4 py-2.5 text-xs text-muted-foreground shadow-[var(--shadow-xs)]',
+        'flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-border/50 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground shadow-[var(--shadow-xs)]',
         className,
       )}
     >
       {items.map((item, idx) => (
         <Fragment key={`${item.label}-${idx}`}>
           {idx > 0 ? (
-            <span className="text-border" aria-hidden>
+            <span className="text-border/60" aria-hidden>
               ·
             </span>
           ) : null}
-          <span>
-            <span className="font-medium tabular-nums text-foreground">{item.value}</span>{' '}
-            {item.label}
+          <span className="flex items-center gap-1.5">
+            <span className="text-foreground font-semibold tabular-nums">{item.value}</span>
+            <span className="text-muted-foreground/80">{item.label}</span>
           </span>
         </Fragment>
       ))}

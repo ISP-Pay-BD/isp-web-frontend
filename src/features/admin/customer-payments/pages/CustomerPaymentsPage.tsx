@@ -268,7 +268,7 @@ export function CustomerPaymentsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       <PageHeader
         title="Customer Payments"
         subtitle="Broadband subscriber collection ledger — bKash, Nagad, cash handovers, and bank deposits"

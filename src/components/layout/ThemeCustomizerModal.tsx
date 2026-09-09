@@ -11,6 +11,8 @@ import {
   Check,
   RotateCcw,
   ExternalLink,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import {
   Dialog,
@@ -37,9 +39,11 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
     presetId,
     radius,
     density,
+    tableLayout,
     setPreset,
     setRadius,
     setDensity,
+    setTableLayout,
     resetToDefault,
     applyDomStyles,
   } = useThemeCustomizerStore();
@@ -246,6 +250,50 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 Compact (High Information)
+              </button>
+            </div>
+          </div>
+
+          {/* Section 5: Table & Data Layout (Global Full vs Centered default) */}
+          <div className="space-y-2">
+            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
+              <span>Table & Data Presentation Layout</span>
+              <span className="text-muted-foreground font-normal normal-case capitalize">
+                {tableLayout === 'centered' ? 'Centered Boxed' : 'Full Width (Default)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTableLayout('full');
+                  toast.success('Default table presentation set to Full Width');
+                }}
+                className={cn(
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition-all text-xs font-semibold',
+                  tableLayout === 'full' || !tableLayout
+                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
+                    : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
+                )}
+              >
+                <AlignJustify className="h-4 w-4 shrink-0" />
+                <span>Full Width (Default)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTableLayout('centered');
+                  toast.success('Default table presentation set to Centered');
+                }}
+                className={cn(
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition-all text-xs font-semibold',
+                  tableLayout === 'centered'
+                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
+                    : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
+                )}
+              >
+                <AlignCenter className="h-4 w-4 shrink-0" />
+                <span>Centered Container</span>
               </button>
             </div>
           </div>

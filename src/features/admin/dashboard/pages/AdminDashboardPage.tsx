@@ -95,7 +95,7 @@ export function AdminDashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       {/* Header & Quick Action Hub */}
       <div>
         <PageHeader

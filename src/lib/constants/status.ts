@@ -66,6 +66,7 @@ export const STORAGE_KEYS = {
   locale: 'ipb_locale',
   theme: 'ipb_theme',
   sidebarCollapsed: 'ipb_sidebar_collapsed',
+  tableLayout: 'ipb_table_layout',
 } as const;
 
 /** Bangladesh country dial */

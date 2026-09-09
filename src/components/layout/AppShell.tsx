@@ -20,7 +20,7 @@ export function AppShell({ children, portal }: AppShellProps) {
       <PortalSidebar portal={portal} />
       <SidebarInset>
         <PortalHeader portal={portal} />
-        <div className="flex-1 overflow-x-hidden px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-8">{children}</div>
+        <div className="flex-1 min-w-0 overflow-x-hidden px-4 pt-4 pb-6 md:px-6 md:pt-5 md:pb-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Receipt,
   Download,
@@ -13,11 +13,14 @@ import {
   DollarSign,
   Printer,
   CheckCircle2,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CurrencyDisplay, PageSkeleton, EmptyState, TablePagination } from '@/components/shared';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +37,21 @@ import { useOtcReport } from '../hooks/use-otc-report';
 
 export function OtcReportPage() {
   const { data: otcReport = [], isLoading, isError, refetch } = useOtcReport();
+  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
+  const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
+  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
+
+  useEffect(() => {
+    if (globalTableLayout) {
+      setLayoutMode(globalTableLayout);
+    }
+  }, [globalTableLayout]);
+
+  const toggleLayoutMode = (mode: 'full' | 'centered') => {
+    setLayoutMode(mode);
+    setGlobalTableLayout(mode);
+  };
+
   const [periodFilter, setPeriodFilter] = useState('all'); // all | 7days | 30days
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
@@ -93,7 +111,12 @@ export function OtcReportPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div
+      className={cn(
+        'space-y-6 pb-16 transition-all duration-200',
+        layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full'
+      )}
+    >
       {/* Header */}
       <PageHeader
         title="OTC & Daily Cash Flow"
@@ -221,8 +244,42 @@ export function OtcReportPage() {
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground font-mono">
-            {filtered.length} daily ledger cycles
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-muted-foreground font-mono">
+              {filtered.length} daily ledger cycles
+            </div>
+
+            {/* Table Layout Toggle */}
+            <div className="flex items-center rounded-lg border border-border/70 bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={() => toggleLayoutMode('full')}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  layoutMode === 'full'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Full width layout"
+              >
+                <AlignJustify className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Full</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleLayoutMode('centered')}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  layoutMode === 'centered'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Centered container layout"
+              >
+                <AlignCenter className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Center</span>
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

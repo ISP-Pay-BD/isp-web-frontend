@@ -7,7 +7,6 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
-import { Badge } from '@/components/ui/badge';
 import { useIspOps } from '../hooks/use-isp-ops';
 import type { IspOpsData } from '@/data/admin/isp-ops.data';
 
@@ -33,23 +32,31 @@ export function CgnatPage() {
       {
         accessorKey: 'privateCidr',
         header: 'Private',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.privateCidr)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.privateCidr)}</span>
+        ),
       },
       {
         accessorKey: 'publicPool',
         header: 'Public pool',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.publicPool)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.publicPool)}</span>
+        ),
       },
       {
         accessorKey: 'portsPerUser',
         header: 'Ports/user',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.portsPerUser)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.portsPerUser)}</span>
+        ),
       },
       {
         accessorKey: 'activeSessions',
         header: 'Sessions',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.activeSessions)}</span>,
-      }
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium tabular-nums">{String(row.original.activeSessions)}</span>
+        ),
+      },
     ],
     [],
   );
@@ -67,13 +74,12 @@ export function CgnatPage() {
       <PageHeader
         title="CGNAT Map"
         subtitle="Private-to-public NAT pools and port budgets"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "CGNAT Map" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'CGNAT Map' }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: rows.length, label: "pools" },
-          { value: sessions.toLocaleString(), label: "sessions" },
+          { value: rows.length, label: 'pools' },
+          { value: sessions.toLocaleString(), label: 'sessions' },
         ]}
       />
       <DataTable

@@ -9,11 +9,13 @@ interface ThemeCustomizerState {
   primaryColor: string;
   radius: number;
   density: 'comfortable' | 'compact';
+  tableLayout: 'full' | 'centered';
   reduceMotion: boolean;
   setPreset: (presetId: string) => void;
   setPrimaryColor: (color: string) => void;
   setRadius: (radius: number) => void;
   setDensity: (density: 'comfortable' | 'compact') => void;
+  setTableLayout: (layout: 'full' | 'centered') => void;
   setReduceMotion: (reduce: boolean) => void;
   resetToDefault: () => void;
   applyDomStyles: () => void;
@@ -26,6 +28,7 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
       primaryColor: '#e85a1a',
       radius: 12,
       density: 'comfortable',
+      tableLayout: 'full',
       reduceMotion: false,
 
       setPreset: (presetId: string) => {
@@ -53,6 +56,14 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
         get().applyDomStyles();
       },
 
+      setTableLayout: (tableLayout: 'full' | 'centered') => {
+        set({ tableLayout });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ipb_table_layout', tableLayout);
+        }
+        get().applyDomStyles();
+      },
+
       setReduceMotion: (reduceMotion: boolean) => {
         set({ reduceMotion });
         get().applyDomStyles();
@@ -65,8 +76,12 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
           primaryColor: def.primary,
           radius: def.radius,
           density: 'comfortable',
+          tableLayout: 'full',
           reduceMotion: false,
         });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('ipb_table_layout', 'full');
+        }
         get().applyDomStyles();
       },
 
@@ -84,6 +99,9 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
         } else {
           root.removeAttribute('data-density');
         }
+
+        // Table layout attribute
+        root.setAttribute('data-table-layout', state.tableLayout || 'full');
 
         // Reduce motion
         if (state.reduceMotion) {

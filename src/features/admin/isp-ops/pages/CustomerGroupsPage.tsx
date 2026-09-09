@@ -147,7 +147,7 @@ export function CustomerGroupsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 w-full pb-16">
       {/* Page Header */}
       <PageHeader
         title="Customer Groups"

@@ -24,12 +24,14 @@ import { generateColorRamp } from '@/lib/theme/generate-color-ramp';
 import type { ThemePreset } from '@/data/admin/theme-studio.data';
 import { useThemeStudio } from '../hooks/use-theme-studio';
 import { useTheme } from 'next-themes';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 
 export function ThemeStudioPage() {
   const { theme, setTheme } = useTheme();
   const { data, isLoading, isError, refetch } = useThemeStudio();
+  const { tableLayout, setTableLayout } = useThemeCustomizerStore();
   const themePresetsData = data?.presets ?? [];
 
   // Selected preset or custom colors
@@ -155,7 +157,7 @@ export function ThemeStudioPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Theme Studio"
         subtitle="Brand colors, density, radius and presets — customized for your ISP organization"
@@ -468,6 +470,42 @@ export function ThemeStudioPage() {
                   className="text-xs"
                 >
                   Compact
+                </Button>
+              </div>
+            </div>
+
+            {/* Table & Data Layout (Global) */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>Default Table Layout</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  {tableLayout === 'centered' ? 'Centered' : 'Full Width'}
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={tableLayout === 'full' || !tableLayout ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setTableLayout('full');
+                    toast.success('Default table layout set to Full Width');
+                  }}
+                  className="text-xs"
+                >
+                  Full Width
+                </Button>
+                <Button
+                  type="button"
+                  variant={tableLayout === 'centered' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setTableLayout('centered');
+                    toast.success('Default table layout set to Centered');
+                  }}
+                  className="text-xs"
+                >
+                  Centered
                 </Button>
               </div>
             </div>

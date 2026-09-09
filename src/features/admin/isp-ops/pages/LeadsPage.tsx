@@ -25,6 +25,14 @@ const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unkno
   );
 };
 
+const stageBadgeClass: Record<string, string> = {
+  new: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/25',
+  contacted: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:bg-violet-500/15 dark:text-violet-400 dark:border-violet-500/25',
+  survey: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25',
+  won: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+  lost: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25',
+};
+
 export function LeadsPage() {
   const { data, isLoading, isError, refetch } = useIspOps();
 
@@ -34,38 +42,52 @@ export function LeadsPage() {
         accessorKey: 'name',
         header: 'Lead',
         enableHiding: false,
-        cell: ({ row }) => <span className="text-sm">{String(row.original.name)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium">{String(row.original.name)}</span>
+        ),
       },
       {
         accessorKey: 'phone',
         header: 'Phone',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.phone)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.phone)}</span>
+        ),
       },
       {
         accessorKey: 'area',
         header: 'Area',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.area)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.area)}</span>
+        ),
       },
       {
         accessorKey: 'packageInterest',
         header: 'Interest',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.packageInterest)}</span>,
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="font-medium">
+            {String(row.original.packageInterest)}
+          </Badge>
+        ),
       },
       {
         accessorKey: 'stage',
         header: 'Stage',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.stage)}</Badge>
-        ),
+        cell: ({ row }) => {
+          const stage = String(row.original.stage);
+          return (
+            <Badge variant="outline" className={`capitalize ${stageBadgeClass[stage] ?? ''}`}>
+              {stage}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'owner',
         header: 'Owner',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.owner)}</span>,
-      }
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.owner)}</span>
+        ),
+      },
     ],
     [],
   );

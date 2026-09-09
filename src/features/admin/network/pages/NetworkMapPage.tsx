@@ -111,7 +111,7 @@ export function NetworkMapPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       <PageHeader
         title="Network Geographic Mapping"
         subtitle="Geographic distribution of NOC core, distribution POPs, OLT headends, and customer fiber nodes"

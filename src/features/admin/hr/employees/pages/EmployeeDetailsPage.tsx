@@ -112,7 +112,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const isTechnician = employee.role.toLowerCase().includes('technician') || employee.role.toLowerCase().includes('engineer');
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+    <div className="space-y-6 w-full pb-16">
       {/* Top Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
         <Link href="/admin/dashboard" className="hover:text-foreground transition-colors">

@@ -1,13 +1,15 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useEmployees } from '../hooks/use-employees';
 import type { EmployeeItem } from '../types';
 import type { EmployeeFormValues } from '../schemas';
 import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, TablePagination } from '@/components/shared';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
+import { cn } from '@/lib/utils';
 import { EmployeeModal } from '../components/EmployeeModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +37,8 @@ import {
   ChevronUp,
   ChevronDown,
   Eye,
+  AlignJustify,
+  AlignCenter,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -44,6 +48,20 @@ type SortDir = 'asc' | 'desc';
 
 export function EmployeesPage() {
   const { employees, isLoading, isError, refetch, createEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
+  const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
+  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
+
+  useEffect(() => {
+    if (globalTableLayout) {
+      setLayoutMode(globalTableLayout);
+    }
+  }, [globalTableLayout]);
+
+  const toggleLayoutMode = (mode: 'full' | 'centered') => {
+    setLayoutMode(mode);
+    setGlobalTableLayout(mode);
+  };
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -150,7 +168,12 @@ export function EmployeesPage() {
           </Button>
         </div>
       </PageHero>
-      <PageContent className="space-y-6">
+      <PageContent
+        className={cn(
+          'space-y-6 pb-16 transition-all duration-200',
+          layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full'
+        )}
+      >
 
       <OpsSummaryStrip
         items={[
@@ -203,6 +226,39 @@ export function EmployeesPage() {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {/* Table Layout Toggle */}
+                <div className="flex items-center rounded-lg border border-border/70 bg-muted/40 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleLayoutMode('full')}
+                    className={cn(
+                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                      layoutMode === 'full'
+                        ? 'bg-background text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    title="Full width layout"
+                  >
+                    <AlignJustify className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Full</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleLayoutMode('centered')}
+                    className={cn(
+                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                      layoutMode === 'centered'
+                        ? 'bg-background text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    title="Centered container layout"
+                  >
+                    <AlignCenter className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Center</span>
+                  </button>
+                </div>
+
                 <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1">
                   {filteredEmployees.length} result{filteredEmployees.length !== 1 ? 's' : ''}
                 </Badge>

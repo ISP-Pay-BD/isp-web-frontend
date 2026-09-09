@@ -25,6 +25,11 @@ const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unkno
   );
 };
 
+const statusBadgeClass: Record<string, string> = {
+  online: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+  offline: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25',
+};
+
 export function IpoePage() {
   const { data, isLoading, isError, refetch } = useIspOps();
 
@@ -33,36 +38,50 @@ export function IpoePage() {
       {
         accessorKey: 'mac',
         header: 'MAC',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.mac)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.mac)}</span>
+        ),
       },
       {
         accessorKey: 'ipv4',
         header: 'IPv4',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.ipv4)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.ipv4)}</span>
+        ),
       },
       {
         accessorKey: 'ipv6',
         header: 'IPv6',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.ipv6)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.ipv6)}</span>
+        ),
       },
       {
         accessorKey: 'vlan',
         header: 'VLAN',
-        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{String(row.original.vlan)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.vlan)}</span>
+        ),
       },
       {
         accessorKey: 'uptime',
         header: 'Uptime',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.uptime)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground tabular-nums">{String(row.original.uptime)}</span>
+        ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.status)}</Badge>
-        ),
-      }
+        cell: ({ row }) => {
+          const status = String(row.original.status);
+          return (
+            <Badge variant="outline" className={`capitalize ${statusBadgeClass[status] ?? ''}`}>
+              {status}
+            </Badge>
+          );
+        },
+      },
     ],
     [],
   );
@@ -80,13 +99,12 @@ export function IpoePage() {
       <PageHeader
         title="IPoE Dual-Stack"
         subtitle="MAC-based IPoE sessions"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: "IPoE Dual-Stack" }]}
-        
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'IPoE Dual-Stack' }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: rows.length, label: "sessions" },
-          { value: online, label: "online" },
+          { value: rows.length, label: 'sessions' },
+          { value: online, label: 'online' },
         ]}
       />
       <DataTable

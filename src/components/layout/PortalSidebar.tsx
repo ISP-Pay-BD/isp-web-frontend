@@ -38,10 +38,10 @@ interface PortalSidebarProps {
   portal: 'admin' | 'customer' | 'platform' | 'employee';
 }
 
-function NavIcon({ name }: { name?: string }) {
+function NavIcon({ name, className }: { name?: string; className?: string }) {
   if (!name) return null;
   const Icon = LucideIcons[name as keyof typeof LucideIcons] as LucideIcon | undefined;
-  return Icon ? <Icon className="h-4 w-4 shrink-0" /> : null;
+  return Icon ? <Icon className={className ?? 'h-4 w-4 shrink-0'} /> : null;
 }
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
@@ -96,14 +96,14 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               <span className="truncate">{item.label}</span>
               {!isCollapsed && (
                 <ChevronDown
-                  className={`ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition-transform duration-250 ease-out ${
+                  className={`ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-250 ease-out group-hover:text-muted-foreground/80 ${
                     isExpanded ? 'rotate-0' : '-rotate-90'
                   }`}
                 />
               )}
             </SidebarMenuButton>
             {isExpanded && !isCollapsed && (
-              <SidebarMenuSub className="border-sidebar-border/50 my-1 ml-4 space-y-0.5 border-l py-1 pl-2.5">
+              <SidebarMenuSub className="border-sidebar-border/30 my-0.5 ml-4 space-y-px border-l-2 py-1 pl-3">
                 {item.children.map((child: NavItem) => {
                   const isChildActive = child.href === currentPath;
                   return (
@@ -112,15 +112,15 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                         isActive={isChildActive}
                         className={
                           isChildActive
-                            ? 'ipb-sidebar-sub-button active-child relative rounded-md py-4 font-semibold text-primary'
-                            : 'ipb-sidebar-sub-button rounded-md py-4 text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                            ? 'ipb-sidebar-sub-button active-child relative rounded-md py-[7px] pl-3 text-[13px] font-semibold text-primary'
+                            : 'ipb-sidebar-sub-button rounded-md py-[7px] pl-3 text-[13px] text-sidebar-foreground/55 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/85'
                         }
                         render={<Link href={child.href ?? '#'} />}
                       >
                         {isChildActive && (
                           <>
-                            <span className="absolute inset-0 -z-10 rounded-md bg-primary/[0.08] dark:bg-primary/[0.14]" />
-                            <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-primary" aria-hidden />
+                            <span className="absolute inset-0 -z-10 rounded-md bg-primary/[0.07] dark:bg-primary/[0.12]" />
+                            <span className="absolute inset-y-1.5 left-0 w-[2.5px] rounded-full bg-primary" aria-hidden />
                           </>
                         )}
                         <span className="truncate">{child.label}</span>
@@ -256,9 +256,9 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             {sections.map(([section, sectionItems], idx) => (
               <SidebarGroup key={section}>
                 {idx > 0 && (
-                  <div className="border-sidebar-border/40 mx-3 my-1 border-t" />
+                  <div className="border-sidebar-border/30 mx-3 my-1 border-t" />
                 )}
-                <SidebarGroupLabel className="text-muted-foreground/60 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                <SidebarGroupLabel className="text-muted-foreground/50 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]">
                   {section}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>

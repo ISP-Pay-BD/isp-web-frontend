@@ -25,6 +25,20 @@ const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unkno
   );
 };
 
+const typeBadgeClass: Record<string, string> = {
+  install: 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:bg-violet-500/15 dark:text-violet-400 dark:border-violet-500/25',
+  repair: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25',
+  shift: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/25',
+  collect: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+};
+
+const statusBadgeClass: Record<string, string> = {
+  open: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/25',
+  in_progress: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25',
+  done: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+  cancelled: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25',
+};
+
 export function JobsPage() {
   const { data, isLoading, isError, refetch } = useIspOps();
 
@@ -34,40 +48,56 @@ export function JobsPage() {
         accessorKey: 'title',
         header: 'Job',
         enableHiding: false,
-        cell: ({ row }) => <span className="text-sm">{String(row.original.title)}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-medium">{String(row.original.title)}</span>
+        ),
       },
       {
         accessorKey: 'customerName',
         header: 'Customer',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.customerName)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.customerName)}</span>
+        ),
       },
       {
         accessorKey: 'type',
         header: 'Type',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.type)}</Badge>
-        ),
+        cell: ({ row }) => {
+          const type = String(row.original.type);
+          return (
+            <Badge variant="outline" className={`capitalize ${typeBadgeClass[type] ?? ''}`}>
+              {type}
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: 'assignee',
         header: 'Assignee',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.assignee)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{String(row.original.assignee)}</span>
+        ),
       },
       {
         accessorKey: 'dueAt',
         header: 'Due',
-        
-        cell: ({ row }) => <span className="text-sm">{String(row.original.dueAt)}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground tabular-nums">{String(row.original.dueAt)}</span>
+        ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => (
-          <Badge variant="outline" className="capitalize">{String(row.original.status)}</Badge>
-        ),
-      }
+        cell: ({ row }) => {
+          const status = String(row.original.status);
+          const label = status.replace('_', ' ');
+          return (
+            <Badge variant="outline" className={`capitalize ${statusBadgeClass[status] ?? ''}`}>
+              {label}
+            </Badge>
+          );
+        },
+      },
     ],
     [],
   );
