@@ -414,27 +414,83 @@
   -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 15%, #000 50%, transparent 100%);
 }
 
-/* Mapbox controls — soft portal chrome instead of stark white */
-.mapbox-host .mapboxgl-ctrl-group {
-  overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-  border-radius: 0.75rem;
-  box-shadow: 0 8px 24px color-mix(in oklab, var(--foreground) 12%, transparent);
-  background: color-mix(in oklab, var(--card) 92%, transparent);
-  backdrop-filter: blur(8px);
-}
+/* Global Print Engine for Official Invoices & Vouchers */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
 
-.mapbox-host .mapboxgl-ctrl-group button {
-  background: transparent;
-  width: 32px;
-  height: 32px;
-}
+  /* Reset body and hide screen-only application shells */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
 
-.mapbox-host .mapboxgl-ctrl-group button + button {
-  border-top-color: color-mix(in oklab, var(--border) 80%, transparent);
-}
+  /* Universal print hide */
+  nav,
+  header,
+  aside,
+  footer,
+  [data-slot="sidebar"],
+  .no-print,
+  button,
+  .toaster,
+  div[role="dialog"] > div[data-state="open"] > button,
+  div[data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
 
-.dark .mapbox-host .mapboxgl-ctrl-group button .mapboxgl-ctrl-icon {
-  filter: invert(1) brightness(1.15);
+  /* Container isolation for dedicated printable invoice vouchers */
+  body:has(#printable-invoice-voucher) * {
+    visibility: hidden;
+  }
+
+  body:has(#printable-invoice-voucher) #printable-invoice-voucher,
+  body:has(#printable-invoice-voucher) #printable-invoice-voucher * {
+    visibility: visible;
+  }
+
+  #printable-invoice-voucher {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    display: block !important;
+    z-index: 999999 !important;
+  }
+
+  /* Clean table borders and crisp print typography */
+  #printable-invoice-voucher table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  #printable-invoice-voucher th,
+  #printable-invoice-voucher td {
+    border: 1px solid #111111 !important;
+    padding: 6px 10px !important;
+    color: #000000 !important;
+  }
+
+  #printable-invoice-voucher th {
+    background-color: #f2f2f2 !important;
+    font-weight: bold !important;
+    -webkit-print-color-adjust: exact !important;
+  }
 }
 

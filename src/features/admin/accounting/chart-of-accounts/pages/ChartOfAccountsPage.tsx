@@ -149,7 +149,7 @@ export function ChartOfAccountsPage() {
               variant="outline"
               size="sm"
               onClick={() => refetch()}
-              className="border-white/10 hover:bg-white/5 text-xs h-9 gap-1.5"
+              className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Refresh
@@ -158,7 +158,7 @@ export function ChartOfAccountsPage() {
               variant="outline"
               size="sm"
               onClick={handleExportCSV}
-              className="border-white/10 hover:bg-white/5 text-xs h-9 gap-1.5"
+              className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
               Export COA
@@ -166,7 +166,7 @@ export function ChartOfAccountsPage() {
             <Button
               size="sm"
               onClick={() => setIsNewModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 text-xs h-9 gap-1.5"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5"
             >
               <Plus className="h-4 w-4" />
               New GL Account
@@ -464,7 +464,7 @@ export function ChartOfAccountsPage() {
                       placeholder="e.g. 5210"
                       value={newCode}
                       onChange={(e) => setNewCode(e.target.value)}
-                      className="h-9 bg-[#1a0b38]/80 border-white/10 text-xs font-mono"
+                      className="h-9 text-xs font-mono"
                       required
                     />
                   </div>
@@ -472,10 +472,10 @@ export function ChartOfAccountsPage() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Classification *</label>
                     <Select value={newType} onValueChange={(v) => v && setNewType(v as any)}>
-                      <SelectTrigger className="h-9 bg-[#1a0b38]/80 border-white/10 text-xs">
+                      <SelectTrigger className="h-9 text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#1a0b38] border-white/10 text-xs">
+                      <SelectContent className="text-xs">
                         <SelectItem value="asset">Asset (1000)</SelectItem>
                         <SelectItem value="liability">Liability (2000)</SelectItem>
                         <SelectItem value="equity">Equity (3000)</SelectItem>
@@ -492,17 +492,17 @@ export function ChartOfAccountsPage() {
                     placeholder="e.g. NTTN Metro Redundancy Lease"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="h-9 bg-[#1a0b38]/80 border-white/10 text-xs"
+                    className="h-9 text-xs"
                     required
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-white/5">
+                <div className="flex justify-end gap-2 pt-4 border-t border-border/60">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsNewModalOpen(false)}
-                    className="border-white/10 hover:bg-white/5 text-xs"
+                    className="border-border hover:bg-accent text-xs"
                   >
                     Cancel
                   </Button>

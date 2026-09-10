@@ -55,26 +55,52 @@ export function ContactsPage() {
       c.email.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const newCount = data.items.filter((c) => c.status === 'new').length;
+  const qualifiedCount = data.items.filter((c) => c.status === 'qualified').length;
+  const wonCount = data.items.filter((c) => c.status === 'won').length;
+
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Contact Inquiries"
-        subtitle="Inbound leads from landing forms, pricing page, and demo requests"
+        title="Inbound Leads & Contacts"
+        subtitle="Inbound inquiries from public marketing pages, enterprise demo requests, and pricing calculators"
+        breadcrumb={[
+          { label: 'Platform', href: '/platform/dashboard' },
+          { label: 'Contacts' },
+        ]}
       />
 
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search name, company, email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* KPI Stats Ribbon */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums text-foreground">{data.items.length}</span>{' '}
+          <span className="text-muted-foreground">total inquiries</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-primary">{newCount}</span>{' '}
+          <span className="text-muted-foreground">new unread leads</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-amber-500">{qualifiedCount}</span>{' '}
+          <span className="text-muted-foreground">qualified prospects</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-emerald-500">{wonCount}</span>{' '}
+          <span className="text-muted-foreground">converted tenants</span>
+        </p>
+      </div>
+
+      <div className="flex justify-between items-center gap-3">
+        <div className="relative max-w-sm w-full">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search lead name, company, email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-9 text-xs"
+          />
+        </div>
+      </div>
 
       <div className="space-y-3">
         {items.length === 0 ? (
@@ -86,29 +112,29 @@ export function ContactsPage() {
           />
         ) : (
           items.map((c) => (
-            <Card key={c.id} className="border-border/60">
+            <Card key={c.id} className="border-border/60 bg-card hover:border-primary/40 transition-all">
               <CardContent className="p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold">{c.name}</span>
-                      <Badge variant="outline" className="text-xs">
+                      <span className="font-bold text-sm text-foreground">{c.name}</span>
+                      <Badge variant="outline" className="text-[10px] font-mono">
                         {c.source}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">{c.company}</div>
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" /> {c.email}
+                    <div className="text-xs font-medium text-foreground/80">{c.company}</div>
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="h-3 w-3 text-primary" /> {c.email}
                       </span>
-                      <span className="flex items-center gap-1 font-mono">
-                        <Phone className="h-3 w-3" /> {c.phone}
+                      <span className="flex items-center gap-1.5 font-mono">
+                        <Phone className="h-3 w-3 text-emerald-500" /> {c.phone}
                       </span>
                     </div>
                     {c.message ? (
-                      <p className="text-sm text-muted-foreground/90 mt-2 max-w-2xl">&ldquo;{c.message}&rdquo;</p>
+                      <p className="text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-lg border border-border/30 mt-2 max-w-2xl leading-relaxed">&ldquo;{c.message}&rdquo;</p>
                     ) : null}
-                    <div className="text-[11px] text-muted-foreground">{c.createdAt}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono pt-1">{c.createdAt}</div>
                   </div>
                   <Select
                     value={c.status}
@@ -116,12 +142,12 @@ export function ContactsPage() {
                       statusMutation.mutate({ id: c.id, status: value as PlatformContact['status'] })
                     }
                   >
-                    <SelectTrigger className="h-9 w-[140px] capitalize shrink-0">
+                    <SelectTrigger className="h-8 w-[130px] capitalize shrink-0 text-xs font-semibold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s}>
+                        <SelectItem key={s} value={s} className="capitalize text-xs">
                           {s}
                         </SelectItem>
                       ))}

@@ -6,6 +6,7 @@ import {
   CreditCard,
   Receipt,
   Printer,
+  Download,
   CheckCircle2,
 } from 'lucide-react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
@@ -158,7 +159,7 @@ export function CustomerPaymentsPage() {
   const { summary } = data;
 
   const handlePrint = () => {
-    toast.success('Preparing invoice for printing/download...');
+    toast.success('Preparing official invoice document for printing...');
     window.print();
   };
 
@@ -209,8 +210,9 @@ export function CustomerPaymentsPage() {
           emptyDescription="There are no transaction records matching your current search or filter criteria."
         />
 
+        {/* Screen Dialog View */}
         <Dialog open={!!selectedInvoice} onOpenChange={(open) => !open && setSelectedInvoice(null)}>
-          <DialogContent className="max-w-md print:max-w-none print:m-0">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span>Official Receipt</span>
@@ -258,11 +260,11 @@ export function CustomerPaymentsPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Includes 5% Govt VAT / SD</span>
-                    <span>৳0.00</span>
+                    <span>৳{(selectedInvoice.amountBdt - selectedInvoice.amountBdt / 1.05).toFixed(2)}</span>
                   </div>
                   <div className="border-t pt-2 flex justify-between font-bold text-sm">
                     <span>Total Paid</span>
-                    <span className="text-primary">
+                    <span className="text-primary font-mono font-bold">
                       {formatBdtWithSymbol(selectedInvoice.amountBdt)}
                     </span>
                   </div>
@@ -282,20 +284,22 @@ export function CustomerPaymentsPage() {
 
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
                       size="sm"
+                      variant="outline"
                       onClick={handlePrint}
-                      className="gap-1.5 text-xs"
+                      className="text-xs font-semibold gap-1.5"
                     >
-                      <Printer className="h-3.5 w-3.5" />
-                      Print
+                      <Printer className="h-3.5 w-3.5" /> Print A4 Invoice
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => setSelectedInvoice(null)}
-                      className="text-xs"
+                      onClick={() => {
+                        toast.success(`PDF receipt for ${selectedInvoice.invoiceNo} saved.`);
+                        setSelectedInvoice(null);
+                      }}
+                      className="text-xs font-semibold"
                     >
-                      Close
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Download
                     </Button>
                   </div>
                 </div>
@@ -303,6 +307,117 @@ export function CustomerPaymentsPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* ========================================================================= */}
+        {/* FORMAL A4 PRINTABLE TAX INVOICE & MONEY RECEIPT (Shown during window.print) */}
+        {/* ========================================================================= */}
+        {selectedInvoice && (
+          <div id="printable-invoice-voucher" className="hidden print:block text-black bg-white p-8 max-w-[210mm] mx-auto font-sans">
+            <div className="flex justify-between items-start border-b-2 border-black pb-4">
+              <div>
+                <h1 className="text-2xl font-black uppercase tracking-tight text-black">ISP PAY BD NETWORK (PVT) LTD.</h1>
+                <p className="text-xs text-gray-700 font-medium">Nationwide Internet Service Provider · BTRC Category-A License</p>
+                <p className="text-[11px] text-gray-600 mt-1">Head Office: House 42, Road 11, Block D, Banani, Dhaka-1213, Bangladesh</p>
+                <p className="text-[11px] text-gray-600">Support Hotline: 09678-000111 · Email: billing@isppaybd.com · Web: www.isppaybd.com</p>
+                <p className="text-[10px] font-mono text-gray-800 font-bold mt-1">BIN: 003819283-0101 · TIN: 481920481920 · Mushak-6.3 Tax Invoice</p>
+              </div>
+              <div className="text-right border-2 border-black p-3 rounded bg-gray-50 min-w-[190px]">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-gray-800 border-b border-black pb-1 mb-1">
+                  MONEY RECEIPT
+                </div>
+                <div className="text-sm font-mono font-black">{selectedInvoice.invoiceNo}</div>
+                <div className="text-[10px] text-gray-600 mt-1">Date: {formatDate(selectedInvoice.paidAt)}</div>
+                <div className="text-[10px] text-gray-600 font-bold uppercase">Status: {selectedInvoice.status.toUpperCase()}</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 my-4 p-3 border border-black rounded text-xs bg-gray-50/50">
+              <div>
+                <div className="font-bold text-gray-700 uppercase text-[10px] tracking-wider mb-1">SUBSCRIBER INFO:</div>
+                <div className="font-black text-sm text-black">{selectedInvoice.customerName}</div>
+                <div className="font-mono text-gray-800 mt-0.5">Subscriber ID: <strong>{selectedInvoice.customerId}</strong></div>
+                <div className="text-gray-700 mt-0.5">Service: High-Speed Optical Fiber Internet (FTTH)</div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold text-gray-700 uppercase text-[10px] tracking-wider mb-1">PAYMENT DETAILS:</div>
+                <div className="font-mono font-bold text-black uppercase">Via {selectedInvoice.method}</div>
+                <div className="font-mono text-gray-800 mt-0.5">TrxID: {selectedInvoice.note || 'MFS-AUTO-SETTLED'}</div>
+                <div className="text-gray-700 mt-0.5">Paid Date: {formatDate(selectedInvoice.paidAt)}</div>
+              </div>
+            </div>
+
+            <div className="my-5">
+              <table className="w-full text-xs border-collapse border border-black">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-black text-black">
+                    <th className="border border-black p-2 text-center w-12 font-bold">SL</th>
+                    <th className="border border-black p-2 text-left font-bold">ITEM & DESCRIPTION</th>
+                    <th className="border border-black p-2 text-center w-24 font-bold">PERIOD</th>
+                    <th className="border border-black p-2 text-right w-24 font-bold">RATE (BDT)</th>
+                    <th className="border border-black p-2 text-right w-20 font-bold">VAT (5%)</th>
+                    <th className="border border-black p-2 text-right w-28 font-bold">TOTAL (BDT)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-black p-2.5 text-center font-mono font-bold">01</td>
+                    <td className="border border-black p-2.5">
+                      <div className="font-bold text-black">Monthly Broadband Internet Subscription</div>
+                      <div className="text-[11px] text-gray-600">Bandwidth allocation, unlimited internet quota & FTTH maintenance</div>
+                    </td>
+                    <td className="border border-black p-2.5 text-center font-mono">1 Month</td>
+                    <td className="border border-black p-2.5 text-right font-mono">
+                      ৳{(selectedInvoice.amountBdt / 1.05).toFixed(2)}
+                    </td>
+                    <td className="border border-black p-2.5 text-right font-mono">
+                      ৳{(selectedInvoice.amountBdt - selectedInvoice.amountBdt / 1.05).toFixed(2)}
+                    </td>
+                    <td className="border border-black p-2.5 text-right font-mono font-bold">
+                      ৳{selectedInvoice.amountBdt.toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid grid-cols-12 gap-4 my-4">
+              <div className="col-span-7 space-y-3">
+                <div className="p-3 border border-black rounded text-xs bg-gray-50/50">
+                  <span className="font-bold text-black block mb-1">Amount in Words:</span>
+                  <span className="italic font-semibold text-gray-900">
+                    {selectedInvoice.amountBdt.toLocaleString()} Bangladeshi Taka Only (Inclusive of all Taxes & VAT).
+                  </span>
+                </div>
+              </div>
+              <div className="col-span-5">
+                <table className="w-full text-xs border border-black border-collapse">
+                  <tbody>
+                    <tr className="bg-gray-100 font-black text-sm">
+                      <td className="border border-black p-2">Total Paid:</td>
+                      <td className="border border-black p-2 text-right font-mono text-base">
+                        ৳{selectedInvoice.amountBdt.toLocaleString()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-16 pt-6 grid grid-cols-2 gap-12 text-xs">
+              <div className="text-center">
+                <div className="border-t border-black pt-1.5 font-bold uppercase tracking-wider text-[11px]">
+                  Subscriber Signature
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="border-t border-black pt-1.5 font-bold uppercase tracking-wider text-[11px]">
+                  Authorized Signatory & Accounts Seal
+                </div>
+                <div className="text-[10px] text-gray-500">ISP Pay BD Network (Pvt) Ltd.</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </CustomerPageShell>
   );

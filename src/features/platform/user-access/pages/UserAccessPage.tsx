@@ -103,27 +103,42 @@ export function UserAccessPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="User Access Management"
-        subtitle="Platform-level roles and permission presets for super-admin staff"
+        title="Platform Access & Security Roles"
+        subtitle="Manage super-admin credentials, multi-factor policies, and granular platform access levels"
+        breadcrumb={[
+          { label: 'Platform', href: '/platform/dashboard' },
+          { label: 'User Access Management' },
+        ]}
       />
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+      {/* Role Summary Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.roles.map((role) => (
-          <p key={role.id}>
-            <span className="font-semibold tabular-nums">{role.users}</span>{' '}
-            <span className="text-muted-foreground">{role.name}</span>
-            <span className="text-muted-foreground"> · {role.permissions} perms</span>
-          </p>
+          <Card key={role.id} className="border-border/60 bg-card hover:border-primary/40 transition-all">
+            <CardContent className="p-4 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-sm text-foreground">{role.name}</span>
+                <Badge variant="secondary" className="font-mono text-[10px]">
+                  {role.permissions} perms
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">{role.permissions} active system capabilities assigned.</p>
+              <div className="pt-2 flex items-center justify-between text-xs font-semibold">
+                <span className="text-muted-foreground">Assigned:</span>
+                <span className="font-mono text-primary">{role.users} staff members</span>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      <Card className="border-border/60">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <UserLock className="h-4 w-4" /> Platform Administrators
+      <Card className="border-border/60 bg-card shadow-xs">
+        <CardHeader className="pb-3 border-b border-border/40">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <UserLock className="h-4 w-4 text-primary" /> Active Platform Super-Administrators
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <DataTable
             columns={columns}
             data={platformAdmins}

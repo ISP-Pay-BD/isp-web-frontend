@@ -38,30 +38,57 @@ export function FileManagerPage() {
 
   const breadcrumbs = currentPath ? currentPath.split('/').filter(Boolean) : [];
 
+  const totalFolders = data.items.filter((i) => i.type === 'folder').length;
+  const totalFiles = data.items.filter((i) => i.type === 'file').length;
+
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="File Manager"
-        subtitle="Platform assets — tenant logos, backups, and system documents"
+        title="Platform File Manager"
+        subtitle="Tenant static assets, branding logos, firmware bin files, automated database backups, and invoice PDFs"
+        breadcrumb={[
+          { label: 'Platform', href: '/platform/dashboard' },
+          { label: 'File Manager' },
+        ]}
       />
 
-      <Card className="border-border/60">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
+      {/* KPI Stats Ribbon */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums text-foreground">{data.items.length}</span>{' '}
+          <span className="text-muted-foreground">total objects</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-amber-500">{totalFolders}</span>{' '}
+          <span className="text-muted-foreground">directories</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-blue-500">{totalFiles}</span>{' '}
+          <span className="text-muted-foreground">files</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-emerald-500">S3 / MinIO</span>{' '}
+          <span className="text-muted-foreground">storage backend</span>
+        </p>
+      </div>
+
+      <Card className="border-border/60 bg-card shadow-xs">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/40 border border-border/40 text-xs text-muted-foreground">
             <button
               type="button"
               onClick={() => setCurrentPath('')}
-              className="hover:text-foreground font-mono text-xs"
+              className="hover:text-foreground font-mono font-semibold px-1.5 py-0.5 rounded hover:bg-background transition-colors text-primary"
             >
               {data.root}
             </button>
             {breadcrumbs.map((part, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <ChevronRight className="h-3 w-3" />
+              <span key={i} className="flex items-center gap-1.5">
+                <ChevronRight className="h-3.5 w-3.5 opacity-50" />
                 <button
                   type="button"
                   onClick={() => setCurrentPath(breadcrumbs.slice(0, i + 1).join('/'))}
-                  className="hover:text-foreground font-mono text-xs"
+                  className="hover:text-foreground font-mono px-1.5 py-0.5 rounded hover:bg-background transition-colors font-medium text-foreground"
                 >
                   {part}
                 </button>
@@ -71,30 +98,32 @@ export function FileManagerPage() {
 
           <div className="divide-y divide-border/40">
             {data.items.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">This folder is empty.</p>
+              <p className="py-12 text-center text-xs text-muted-foreground">This storage folder is currently empty.</p>
             ) : (
               data.items.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => item.type === 'folder' && setCurrentPath(item.path)}
-                  className="flex w-full items-center justify-between py-3 px-2 hover:bg-muted/50 rounded-md text-left text-sm transition-colors"
+                  className="flex w-full items-center justify-between py-3 px-3 hover:bg-muted/50 rounded-lg text-left text-sm transition-colors group"
                 >
                   <div className="flex items-center gap-3">
-                    {item.type === 'folder' ? (
-                      <Folder className="h-5 w-5 text-amber-500" />
-                    ) : (
-                      <File className="h-5 w-5 text-blue-500" />
-                    )}
+                    <div className="p-2 rounded-lg bg-muted/60 text-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      {item.type === 'folder' ? (
+                        <Folder className="h-4 w-4 text-amber-500 fill-amber-500/20" />
+                      ) : (
+                        <File className="h-4 w-4 text-blue-500" />
+                      )}
+                    </div>
                     <div>
-                      <div className="font-medium">{item.name}</div>
+                      <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">{item.name}</div>
                       {item.ext ? (
-                        <div className="text-xs text-muted-foreground uppercase">{item.ext}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono uppercase">{item.ext} file</div>
                       ) : null}
                     </div>
                   </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    <div>{formatSize(item.size)}</div>
+                  <div className="text-right text-[11px] text-muted-foreground">
+                    <div className="font-mono font-medium">{formatSize(item.size)}</div>
                     <div>{item.modifiedAt}</div>
                   </div>
                 </button>

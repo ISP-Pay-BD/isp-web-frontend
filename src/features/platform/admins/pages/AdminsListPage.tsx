@@ -141,6 +141,10 @@ export function AdminsListPage() {
       <PlatformPageHeader
         title="Second Admins"
         subtitle="Tenant owner accounts and platform-level administrators"
+        breadcrumb={[
+          { label: 'Platform', href: '/platform/dashboard' },
+          { label: 'Admins' },
+        ]}
         actions={
           <Link href="/platform/admins/packages">
             <Button variant="outline" size="sm">
@@ -150,19 +154,43 @@ export function AdminsListPage() {
         }
       />
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{data.total}</span>{' '}
-          <span className="text-muted-foreground">total admins</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{activeCount}</span>{' '}
-          <span className="text-muted-foreground">active accounts</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{linkedCount}</span>{' '}
-          <span className="text-muted-foreground">linked to tenants</span>
-        </p>
+      {/* KPI Stats Ribbon */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-border/60 bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Total Administrators</p>
+              <p className="text-2xl font-bold tracking-tight text-foreground font-mono mt-0.5">{data.total}</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Users className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Active Accounts</p>
+              <p className="text-2xl font-bold tracking-tight text-emerald-500 font-mono mt-0.5">{activeCount}</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Tenant Linked</p>
+              <p className="text-2xl font-bold tracking-tight text-blue-500 font-mono mt-0.5">{linkedCount}</p>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <Users className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <DataTable
