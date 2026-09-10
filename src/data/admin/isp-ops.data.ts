@@ -45,11 +45,20 @@ export interface IspInvoice {
   number: string;
   customerName: string;
   customerId: string;
+  customerPhone?: string;
+  packageName?: string;
+  area?: string;
   period: string;
   amountBdt: number;
   taxBdt: number;
+  discountBdt?: number;
+  paidAmountBdt?: number;
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'void';
+  paymentMethod?: 'bKash' | 'Nagad' | 'Cash' | 'Bank Transfer' | 'Card';
+  trxId?: string;
+  paidAt?: string;
   dueDate: string;
+  createdAt?: string;
 }
 
 export interface ReconcileRow {
@@ -89,7 +98,10 @@ export interface BillingPolicy {
   mode: 'prepaid' | 'postpaid' | 'hybrid';
   graceDays: number;
   fupGb: number | null;
+  throttleSpeedMbps?: number;
   autoSuspend: boolean;
+  customersCount?: number;
+  description?: string;
 }
 
 export interface TaxSetting {
@@ -98,27 +110,45 @@ export interface TaxSetting {
   ratePct: number;
   inclusive: boolean;
   applyTo: 'invoice' | 'otc' | 'both';
+  code?: string;
+  nbrCode?: string;
+  description?: string;
+  collectedThisMonthBdt?: number;
   active: boolean;
 }
 
 export interface ReminderRow {
   id: string;
+  reminderNo?: string;
   customerName: string;
+  customerId?: string;
+  customerPhone?: string;
+  area?: string;
   channel: 'sms' | 'whatsapp' | 'email' | 'voice';
   template: string;
+  messagePreview?: string;
   scheduledAt: string;
-  status: 'queued' | 'sent' | 'failed';
+  sentAt?: string;
+  status: 'queued' | 'sent' | 'failed' | 'delivered';
   dueBdt: number;
+  deliveryResponse?: string;
 }
 
 export interface CashbookEntry {
   id: string;
+  receiptNo?: string;
   at: string;
   collector: string;
+  collectorPhone?: string;
   customerName: string;
+  customerId?: string;
+  customerArea?: string;
   amountBdt: number;
-  method: 'cash' | 'bkash' | 'nagad';
+  method: 'cash' | 'bkash' | 'nagad' | 'bank';
   note: string;
+  verifiedByAccounts?: boolean;
+  depositSlipNo?: string;
+  status?: 'collected' | 'deposited' | 'verified';
 }
 
 export interface OltOnu {
@@ -225,26 +255,39 @@ export interface DunningStep {
   id: string;
   dayOffset: number;
   action: string;
-  channel: string;
+  channel: 'SMS' | 'WhatsApp' | 'Email' | 'Voice' | 'System';
+  templateName?: string;
+  messagePreview?: string;
+  targetAudience?: string;
   enabled: boolean;
 }
 
 export interface ProrationExample {
   id: string;
+  customerName?: string;
   fromPackage: string;
+  fromPriceBdt?: number;
   toPackage: string;
+  toPriceBdt?: number;
   daysUsed: number;
+  cycleDays?: number;
   creditBdt: number;
   chargeBdt: number;
   netBdt: number;
+  actionType?: 'upgrade' | 'downgrade';
 }
 
 export interface CreditNote {
   id: string;
   number: string;
   customerName: string;
+  customerId?: string;
+  customerPhone?: string;
+  area?: string;
   amountBdt: number;
   reason: string;
+  invoiceNo?: string;
+  approvedBy?: string;
   at: string;
   status: 'open' | 'applied' | 'void';
 }
@@ -252,10 +295,15 @@ export interface CreditNote {
 export interface DepositRow {
   id: string;
   customerName: string;
-  type: 'deposit' | 'otc';
+  customerId?: string;
+  type: 'deposit' | 'otc' | 'installation' | 'router_deposit';
+  itemDescription?: string;
   amountBdt: number;
   at: string;
   refundable: boolean;
+  status?: 'active' | 'refunded' | 'adjusted';
+  paymentMethod?: 'cash' | 'bkash' | 'nagad' | 'bank';
+  voucherNo?: string;
 }
 
 export interface PopCommission {
@@ -280,22 +328,45 @@ export interface PackageProfitRow {
 
 export interface WorkOrder {
   id: string;
+  orderNo?: string;
   title: string;
   customerName: string;
-  type: 'install' | 'repair' | 'shift' | 'collect';
+  customerId?: string;
+  phone?: string;
+  area?: string;
+  address?: string;
+  type: 'install' | 'repair' | 'shift' | 'collect' | 'upgrade' | 'maintenance';
+  priority?: 'critical' | 'high' | 'medium' | 'low';
   assignee: string;
-  status: 'open' | 'in_progress' | 'done' | 'cancelled';
+  assigneePhone?: string;
+  team?: string;
+  status: 'open' | 'in_progress' | 'done' | 'cancelled' | 'pending_materials';
   dueAt: string;
+  createdAt?: string;
+  estimatedMinutes?: number;
+  materialsUsed?: string;
+  notes?: string;
 }
 
 export interface LeadRow {
   id: string;
+  leadNo?: string;
   name: string;
+  organization?: string;
   phone: string;
+  email?: string;
   area: string;
+  address?: string;
   packageInterest: string;
-  stage: 'new' | 'contacted' | 'survey' | 'won' | 'lost';
+  estimatedMonthlyBdt?: number;
+  otcQuoteBdt?: number;
+  stage: 'new' | 'contacted' | 'survey' | 'negotiation' | 'won' | 'lost';
   owner: string;
+  source?: 'website' | 'referral' | 'field_agent' | 'social' | 'inbound_call';
+  surveyFeasible?: boolean;
+  notes?: string;
+  createdAt?: string;
+  lastContactedAt?: string;
 }
 
 export interface CustomerGroup {
@@ -440,9 +511,23 @@ export interface NetflowTalker {
   id: string;
   ip: string;
   username: string;
+  customerName?: string;
+  mac?: string;
+  router?: string;
+  interfaceName?: string;
   rxGb: number;
   txGb: number;
+  currentRxMbps?: number;
+  currentTxMbps?: number;
+  packetsPerSec?: number;
+  activeFlows?: number;
+  tcpFlows?: number;
+  udpFlows?: number;
   apps: string;
+  topDestination?: string;
+  status?: 'bursting' | 'active' | 'idle';
+  lastSeen?: string;
+  fupLimitGb?: number;
 }
 
 export interface NocHook {
@@ -535,16 +620,161 @@ export const radiusCoaLog: RadiusCoaLog[] = [
 ];
 
 export const invoices: IspInvoice[] = [
-  { id: 'inv_01', number: 'INV-2026-0901', customerName: 'Rahim Uddin', customerId: 'cust_001', period: '2026-09', amountBdt: 1200, taxBdt: 180, status: 'sent', dueDate: '2026-09-10' },
-  { id: 'inv_02', number: 'INV-2026-0902', customerName: 'Mirpur Biz Link', customerId: 'cust_010', period: '2026-09', amountBdt: 18500, taxBdt: 2775, status: 'paid', dueDate: '2026-09-05' },
-  { id: 'inv_03', number: 'INV-2026-0831', customerName: 'Fatima Begum', customerId: 'cust_002', period: '2026-08', amountBdt: 800, taxBdt: 120, status: 'overdue', dueDate: '2026-08-10' },
-  { id: 'inv_04', number: 'INV-2026-0903', customerName: 'Karim Hossain', customerId: 'cust_003', period: '2026-09', amountBdt: 1500, taxBdt: 225, status: 'draft', dueDate: '2026-09-15' },
+  {
+    id: 'inv_01',
+    number: 'INV-2026-0901',
+    customerName: 'Rahim Uddin',
+    customerId: 'cust_001',
+    customerPhone: '+880 1711-234567',
+    packageName: 'Home Ultra 40 Mbps',
+    area: 'Gulshan-2, Dhaka',
+    period: '2026-09',
+    amountBdt: 1200,
+    taxBdt: 180,
+    discountBdt: 0,
+    paidAmountBdt: 0,
+    status: 'sent',
+    paymentMethod: 'bKash',
+    dueDate: '2026-09-15',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: 'inv_02',
+    number: 'INV-2026-0902',
+    customerName: 'Mirpur Biz Link Headquarters',
+    customerId: 'cust_010',
+    customerPhone: '+880 1822-998877',
+    packageName: 'Corporate Fiber 200 Mbps',
+    area: 'Mirpur-10, Dhaka',
+    period: '2026-09',
+    amountBdt: 18500,
+    taxBdt: 2775,
+    discountBdt: 500,
+    paidAmountBdt: 20775,
+    status: 'paid',
+    paymentMethod: 'Bank Transfer',
+    trxId: 'EBL-TRX-992144',
+    paidAt: '2026-09-04 14:30',
+    dueDate: '2026-09-05',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: 'inv_03',
+    number: 'INV-2026-0831',
+    customerName: 'Fatima Begum',
+    customerId: 'cust_002',
+    customerPhone: '+880 1933-445566',
+    packageName: 'Home Basic 20 Mbps',
+    area: 'Dhanmondi 8/A, Dhaka',
+    period: '2026-08',
+    amountBdt: 800,
+    taxBdt: 120,
+    discountBdt: 0,
+    paidAmountBdt: 0,
+    status: 'overdue',
+    paymentMethod: 'Nagad',
+    dueDate: '2026-08-10',
+    createdAt: '2026-08-01',
+  },
+  {
+    id: 'inv_04',
+    number: 'INV-2026-0903',
+    customerName: 'Karim Hossain',
+    customerId: 'cust_003',
+    customerPhone: '+880 1744-556677',
+    packageName: 'Home Turbo 50 Mbps',
+    area: 'Uttara Sector 7, Dhaka',
+    period: '2026-09',
+    amountBdt: 1500,
+    taxBdt: 225,
+    discountBdt: 0,
+    paidAmountBdt: 0,
+    status: 'draft',
+    dueDate: '2026-09-20',
+    createdAt: '2026-09-07',
+  },
+  {
+    id: 'inv_05',
+    number: 'INV-2026-0904',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    customerId: 'cust_012',
+    customerPhone: '+880 1755-112233',
+    packageName: 'Dedicated Premium 100 Mbps',
+    area: 'Banani Block C, Dhaka',
+    period: '2026-09',
+    amountBdt: 12500,
+    taxBdt: 1875,
+    discountBdt: 0,
+    paidAmountBdt: 14375,
+    status: 'paid',
+    paymentMethod: 'bKash',
+    trxId: 'BKG9X882190',
+    paidAt: '2026-09-06 11:20',
+    dueDate: '2026-09-10',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: 'inv_06',
+    number: 'INV-2026-0905',
+    customerName: 'Sajjad Ali',
+    customerId: 'cust_005',
+    customerPhone: '+880 1819-776655',
+    packageName: 'Home Gamer 35 Mbps',
+    area: 'Mirpur-2, Dhaka',
+    period: '2026-09',
+    amountBdt: 1000,
+    taxBdt: 150,
+    discountBdt: 0,
+    paidAmountBdt: 0,
+    status: 'sent',
+    dueDate: '2026-09-12',
+    createdAt: '2026-09-01',
+  },
+  {
+    id: 'inv_07',
+    number: 'INV-2026-0832',
+    customerName: 'TechPark Enterprise Solutions',
+    customerId: 'cust_015',
+    customerPhone: '+880 1912-334455',
+    packageName: 'Symmetric Biz 150 Mbps',
+    area: 'Motijheel C/A, Dhaka',
+    period: '2026-08',
+    amountBdt: 25000,
+    taxBdt: 3750,
+    discountBdt: 1000,
+    paidAmountBdt: 0,
+    status: 'overdue',
+    dueDate: '2026-08-25',
+    createdAt: '2026-08-10',
+  },
+  {
+    id: 'inv_08',
+    number: 'INV-2026-0906',
+    customerName: 'Nusrat Jahan',
+    customerId: 'cust_006',
+    customerPhone: '+880 1622-443322',
+    packageName: 'Home Basic 20 Mbps',
+    area: 'Uttara Sector 11, Dhaka',
+    period: '2026-09',
+    amountBdt: 800,
+    taxBdt: 120,
+    discountBdt: 0,
+    paidAmountBdt: 920,
+    status: 'paid',
+    paymentMethod: 'Cash',
+    paidAt: '2026-09-05 16:45',
+    dueDate: '2026-09-10',
+    createdAt: '2026-09-01',
+  },
 ];
 
 export const reconcileRows: ReconcileRow[] = [
-  { id: 'rec_01', at: '2026-09-07T14:00:00', gateway: 'bKash', trxId: 'BKG9X221', amountBdt: 1200, matchedPaymentId: 'pay_101', status: 'matched' },
-  { id: 'rec_02', at: '2026-09-07T13:40:00', gateway: 'Nagad', trxId: 'NGD8821', amountBdt: 800, matchedPaymentId: null, status: 'unmatched' },
-  { id: 'rec_03', at: '2026-09-07T12:10:00', gateway: 'SSLCommerz', trxId: 'SSL991', amountBdt: 18500, matchedPaymentId: 'pay_099', status: 'duplicate' },
+  { id: 'rec_01', at: '2026-09-07 14:00', gateway: 'bKash Direct (PGW)', trxId: 'BKG9X22190', amountBdt: 1200, matchedPaymentId: 'PAY-2026-0901', status: 'matched' },
+  { id: 'rec_02', at: '2026-09-07 13:40', gateway: 'Nagad Online', trxId: 'NGD8821044', amountBdt: 800, matchedPaymentId: null, status: 'unmatched' },
+  { id: 'rec_03', at: '2026-09-07 12:10', gateway: 'SSLCommerz Gateway', trxId: 'SSL9914482', amountBdt: 18500, matchedPaymentId: 'PAY-2026-0899', status: 'duplicate' },
+  { id: 'rec_04', at: '2026-09-07 11:15', gateway: 'bKash Merchant (QR)', trxId: 'BKQR771120', amountBdt: 1500, matchedPaymentId: 'PAY-2026-0904', status: 'matched' },
+  { id: 'rec_05', at: '2026-09-07 09:30', gateway: 'Rocket DBBL', trxId: 'RKT5521990', amountBdt: 2200, matchedPaymentId: null, status: 'unmatched' },
+  { id: 'rec_06', at: '2026-09-06 18:20', gateway: 'City Bank CityTouch', trxId: 'CBL-EFT-9912', amountBdt: 8500, matchedPaymentId: 'PAY-2026-0870', status: 'matched' },
 ];
 
 export const inactiveCustomers: InactiveCustomer[] = [
@@ -560,26 +790,263 @@ export const ipNatLogs: IpNatLog[] = [
 ];
 
 export const billingPolicies: BillingPolicy[] = [
-  { id: 'pol_01', name: 'Prepaid default', mode: 'prepaid', graceDays: 0, fupGb: 500, autoSuspend: true },
-  { id: 'pol_02', name: 'Postpaid corporate', mode: 'postpaid', graceDays: 7, fupGb: null, autoSuspend: false },
-  { id: 'pol_03', name: 'Hybrid home', mode: 'hybrid', graceDays: 3, fupGb: 800, autoSuspend: true },
+  {
+    id: 'pol_01',
+    name: 'Prepaid Standard Policy',
+    mode: 'prepaid',
+    graceDays: 0,
+    fupGb: 500,
+    throttleSpeedMbps: 5,
+    autoSuspend: true,
+    customersCount: 3420,
+    description: 'Pay-first billing. Automatic disconnection on expiration date without grace.',
+  },
+  {
+    id: 'pol_02',
+    name: 'Postpaid Corporate Premium',
+    mode: 'postpaid',
+    graceDays: 7,
+    fupGb: null,
+    throttleSpeedMbps: 20,
+    autoSuspend: false,
+    customersCount: 180,
+    description: 'Net 7 days corporate invoice billing with dedicated account manager grace.',
+  },
+  {
+    id: 'pol_03',
+    name: 'Hybrid Home Broadband',
+    mode: 'hybrid',
+    graceDays: 3,
+    fupGb: 800,
+    throttleSpeedMbps: 10,
+    autoSuspend: true,
+    customersCount: 890,
+    description: 'Prepaid cycle with 72-hour grace period and WhatsApp reminder.',
+  },
+  {
+    id: 'pol_04',
+    name: 'Dedicated Enterprise SLA',
+    mode: 'postpaid',
+    graceDays: 15,
+    fupGb: null,
+    throttleSpeedMbps: 50,
+    autoSuspend: false,
+    customersCount: 45,
+    description: 'Net 15 days SLA contract billing for corporate banking and IT enterprises.',
+  },
 ];
 
 export const taxSettings: TaxSetting[] = [
-  { id: 'tax_01', name: 'VAT 15%', ratePct: 15, inclusive: false, applyTo: 'invoice', active: true },
-  { id: 'tax_02', name: 'OTC service tax', ratePct: 5, inclusive: true, applyTo: 'otc', active: true },
+  {
+    id: 'tax_01',
+    name: 'Broadband Internet VAT (NBR 15%)',
+    ratePct: 15,
+    inclusive: false,
+    applyTo: 'invoice',
+    code: 'VAT-15-ISP',
+    nbrCode: 'Mushak-6.3-9901',
+    description: 'Standard 15% value added tax for monthly ISP subscription fees.',
+    collectedThisMonthBdt: 42500,
+    active: true,
+  },
+  {
+    id: 'tax_02',
+    name: 'One-Time Connection (OTC) Service Tax',
+    ratePct: 5,
+    inclusive: true,
+    applyTo: 'otc',
+    code: 'TAX-OTC-5',
+    nbrCode: 'Mushak-6.3-8812',
+    description: '5% inclusive service levy on fiber optical installation & drop-wire charge.',
+    collectedThisMonthBdt: 8400,
+    active: true,
+  },
+  {
+    id: 'tax_03',
+    name: 'Advance Income Tax (AIT Deduction)',
+    ratePct: 3,
+    inclusive: false,
+    applyTo: 'invoice',
+    code: 'AIT-3-CORP',
+    nbrCode: 'AIT-SEC-52',
+    description: '3% corporate withholding tax deducted by corporate & educational institutions.',
+    collectedThisMonthBdt: 15800,
+    active: true,
+  },
+  {
+    id: 'tax_04',
+    name: 'Hardware & ONU Equipment Sales Tax',
+    ratePct: 7.5,
+    inclusive: true,
+    applyTo: 'both',
+    code: 'HW-TAX-7.5',
+    nbrCode: 'Mushak-6.3-7740',
+    description: 'Applicable when selling dual-band WiFi routers or replacement GPON ONUs.',
+    collectedThisMonthBdt: 3200,
+    active: false,
+  },
 ];
 
 export const reminders: ReminderRow[] = [
-  { id: 'rem_01', customerName: 'Fatima Begum', channel: 'sms', template: 'due_day_3', scheduledAt: '2026-09-08T09:00:00', status: 'queued', dueBdt: 920 },
-  { id: 'rem_02', customerName: 'Sajjad Ali', channel: 'whatsapp', template: 'due_day_7', scheduledAt: '2026-09-07T10:00:00', status: 'sent', dueBdt: 1500 },
-  { id: 'rem_03', customerName: 'Imran Kabir', channel: 'voice', template: 'final_notice', scheduledAt: '2026-09-06T16:00:00', status: 'failed', dueBdt: 4200 },
+  {
+    id: 'rem_01',
+    reminderNo: 'REM-2026-0901',
+    customerName: 'Fatima Begum',
+    customerId: 'cust_002',
+    customerPhone: '+880 1712-334455',
+    area: 'Gulshan-1, Dhaka',
+    channel: 'sms',
+    template: 'Friendly Due Warning (Day -3)',
+    messagePreview: 'Dear Fatima Begum, your ISP internet bill ৳920 is due on 10-Sep-2026. Pay via bKash to avoid suspension.',
+    scheduledAt: '2026-09-08 09:00',
+    sentAt: '2026-09-08 09:01',
+    status: 'delivered',
+    dueBdt: 920,
+    deliveryResponse: 'SMS Gateway Success (ID: SM9921)',
+  },
+  {
+    id: 'rem_02',
+    reminderNo: 'REM-2026-0902',
+    customerName: 'Sajjad Ali',
+    customerId: 'cust_005',
+    customerPhone: '+880 1819-776655',
+    area: 'Mirpur-2, Dhaka',
+    channel: 'whatsapp',
+    template: 'Due Date Alert (Day 0)',
+    messagePreview: 'Assalamu Alaikum Sajjad Ali, your bill ৳1,500 is due TODAY. Click to pay instantly: https://pay.isppaybd.com/i/905',
+    scheduledAt: '2026-09-07 10:00',
+    sentAt: '2026-09-07 10:00',
+    status: 'sent',
+    dueBdt: 1500,
+    deliveryResponse: 'WhatsApp Read Receipt (Double Blue Tick)',
+  },
+  {
+    id: 'rem_03',
+    reminderNo: 'REM-2026-0903',
+    customerName: 'Imran Kabir',
+    customerId: 'cust_020',
+    customerPhone: '+880 1911-223344',
+    area: 'Dhanmondi, Dhaka',
+    channel: 'voice',
+    template: 'IVR Voice Reminder (Day +3)',
+    messagePreview: 'Automated Bengali IVR call informing customer of overdue balance and immediate auto-cutoff policy.',
+    scheduledAt: '2026-09-06 16:00',
+    status: 'failed',
+    dueBdt: 4200,
+    deliveryResponse: 'Subscriber Unreachable / Busy',
+  },
+  {
+    id: 'rem_04',
+    reminderNo: 'REM-2026-0904',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    customerId: 'cust_012',
+    customerPhone: '+880 1755-112233',
+    area: 'Banani Block C, Dhaka',
+    channel: 'email',
+    template: 'Corporate Formal Mushak Invoice (Day -5)',
+    messagePreview: 'Official NBR Mushak 6.3 PDF attached for Monthly Dedicated Bandwidth invoice ৳14,375.',
+    scheduledAt: '2026-09-08 11:30',
+    status: 'queued',
+    dueBdt: 14375,
+    deliveryResponse: 'Queued in Mail Relay',
+  },
+  {
+    id: 'rem_05',
+    reminderNo: 'REM-2026-0905',
+    customerName: 'Tanvir Hossain',
+    customerId: 'cust_008',
+    customerPhone: '+880 1622-334455',
+    area: 'Uttara Sector 13, Dhaka',
+    channel: 'sms',
+    template: 'Pre-Cutoff Notice (Day +5)',
+    messagePreview: 'Final Notice: Line suspension scheduled in 24 hours. Pay bill ৳1,200 immediately.',
+    scheduledAt: '2026-09-08 12:00',
+    status: 'queued',
+    dueBdt: 1200,
+    deliveryResponse: 'Pending scheduler run',
+  },
 ];
 
 export const cashbookEntries: CashbookEntry[] = [
-  { id: 'cb_01', at: '2026-09-07T11:20:00', collector: 'Rafiq Field', customerName: 'Rahim Uddin', amountBdt: 1200, method: 'cash', note: 'Door collection' },
-  { id: 'cb_02', at: '2026-09-07T12:05:00', collector: 'Rafiq Field', customerName: 'Karim Hossain', amountBdt: 1500, method: 'bkash', note: 'Personal bKash' },
-  { id: 'cb_03', at: '2026-09-06T17:40:00', collector: 'Salma Desk', customerName: 'Nusrat Jahan', amountBdt: 800, method: 'nagad', note: 'Counter' },
+  {
+    id: 'cb_01',
+    receiptNo: 'REC-2026-0901',
+    at: '2026-09-07 11:20',
+    collector: 'Rafiq Field (Lineman)',
+    collectorPhone: '+880 1711-998877',
+    customerName: 'Rahim Uddin',
+    customerId: 'cust_001',
+    customerArea: 'Gulshan-2, Road 45',
+    amountBdt: 1200,
+    method: 'cash',
+    note: 'Door-to-door monthly collection. Cash handed with paper receipt #8812.',
+    verifiedByAccounts: true,
+    depositSlipNo: 'SLIP-CBL-0901',
+    status: 'verified',
+  },
+  {
+    id: 'cb_02',
+    receiptNo: 'REC-2026-0902',
+    at: '2026-09-07 12:05',
+    collector: 'Rafiq Field (Lineman)',
+    collectorPhone: '+880 1711-998877',
+    customerName: 'Karim Hossain',
+    customerId: 'cust_003',
+    customerArea: 'Banani Block B',
+    amountBdt: 1500,
+    method: 'bkash',
+    note: 'Collected via Agent Personal bKash in field. TrxID: BK771290.',
+    verifiedByAccounts: true,
+    depositSlipNo: 'BK-TRF-0091',
+    status: 'deposited',
+  },
+  {
+    id: 'cb_03',
+    receiptNo: 'REC-2026-0903',
+    at: '2026-09-06 17:40',
+    collector: 'Salma Desk (Accounts Desk)',
+    collectorPhone: '+880 1812-445566',
+    customerName: 'Nusrat Jahan',
+    customerId: 'cust_006',
+    customerArea: 'Uttara Sector 11',
+    amountBdt: 800,
+    method: 'cash',
+    note: 'Head office front counter walk-in payment.',
+    verifiedByAccounts: false,
+    status: 'collected',
+  },
+  {
+    id: 'cb_04',
+    receiptNo: 'REC-2026-0904',
+    at: '2026-09-06 15:10',
+    collector: 'Imtiaz Tech',
+    collectorPhone: '+880 1912-334411',
+    customerName: 'Sajjad Ali',
+    customerId: 'cust_005',
+    customerArea: 'Mirpur-2',
+    amountBdt: 2000,
+    method: 'cash',
+    note: 'ONU replacement deposit collected at premises during optical repair run.',
+    verifiedByAccounts: true,
+    depositSlipNo: 'SLIP-DBBL-4421',
+    status: 'verified',
+  },
+  {
+    id: 'cb_05',
+    receiptNo: 'REC-2026-0905',
+    at: '2026-09-05 16:30',
+    collector: 'Kamal Lineman',
+    collectorPhone: '+880 1622-990011',
+    customerName: 'Mirpur Biz Link Headquarters',
+    customerId: 'cust_010',
+    customerArea: 'Mirpur Section 10',
+    amountBdt: 18500,
+    method: 'bank',
+    note: 'Cheque collected from corporate office, deposited to City Bank A/C.',
+    verifiedByAccounts: true,
+    depositSlipNo: 'CHQ-CBL-88120',
+    status: 'verified',
+  },
 ];
 
 export const oltOnus: OltOnu[] = [
@@ -648,47 +1115,525 @@ export const outages: OutageRow[] = [
 ];
 
 export const dunningSteps: DunningStep[] = [
-  { id: 'dun_01', dayOffset: -3, action: 'Friendly reminder', channel: 'SMS', enabled: true },
-  { id: 'dun_02', dayOffset: 0, action: 'Due day notice', channel: 'WhatsApp', enabled: true },
-  { id: 'dun_03', dayOffset: 3, action: 'Grace warning', channel: 'Voice', enabled: true },
-  { id: 'dun_04', dayOffset: 7, action: 'Suspend + CoA', channel: 'System', enabled: true },
+  {
+    id: 'dun_01',
+    dayOffset: -3,
+    action: 'Friendly Expiration Warning',
+    channel: 'SMS',
+    templateName: 'due_reminder_3d_advance',
+    messagePreview: 'Dear {name}, your broadband subscription for {package} will expire in 3 days. Pay {amount} BDT via bKash/Nagad.',
+    targetAudience: 'Prepaid & Hybrid Customers',
+    enabled: true,
+  },
+  {
+    id: 'dun_02',
+    dayOffset: 0,
+    action: 'Due Day Final Notice',
+    channel: 'WhatsApp',
+    templateName: 'due_day_urgent_whatsapp',
+    messagePreview: 'Urgent: Today is the renewal date for your ISP Pay BD connection. Click here to pay instantly: pay.isppaybd.com/{id}',
+    targetAudience: 'All Active Subscribers',
+    enabled: true,
+  },
+  {
+    id: 'dun_03',
+    dayOffset: 3,
+    action: 'Grace Period Expiration Warning',
+    channel: 'Voice',
+    templateName: 'grace_warning_ivr',
+    messagePreview: 'Automated IVR call: 24 hours remaining in grace period. Line will be suspended tomorrow at 12:00 AM.',
+    targetAudience: 'Postpaid & Corporate Accounts',
+    enabled: true,
+  },
+  {
+    id: 'dun_04',
+    dayOffset: 7,
+    action: 'Line Suspension & RADIUS CoA Disconnect',
+    channel: 'System',
+    templateName: 'auto_suspend_trigger',
+    messagePreview: 'Automated MikroTik RADIUS CoA packet sent: Change user profile to SUSPENDED_WALLED_GARDEN.',
+    targetAudience: 'Overdue Customers (>7 days)',
+    enabled: true,
+  },
+  {
+    id: 'dun_05',
+    dayOffset: 15,
+    action: 'Legal / Final Recovery SMS',
+    channel: 'SMS',
+    templateName: 'final_recovery_notice',
+    messagePreview: 'Final Notice: Outstanding balance of {amount} BDT pending. Optical drop line will be uninstalled next week.',
+    targetAudience: 'Suspended Corporate Accounts',
+    enabled: true,
+  },
 ];
 
 export const prorationExamples: ProrationExample[] = [
-  { id: 'pro_01', fromPackage: 'Home 20', toPackage: 'Home 40', daysUsed: 10, creditBdt: 267, chargeBdt: 400, netBdt: 133 },
-  { id: 'pro_02', fromPackage: 'Biz 100', toPackage: 'Biz 200', daysUsed: 5, creditBdt: 1417, chargeBdt: 3083, netBdt: 1666 },
+  {
+    id: 'pro_01',
+    customerName: 'Rahim Uddin',
+    fromPackage: 'Home Basic 20 Mbps',
+    fromPriceBdt: 800,
+    toPackage: 'Home Ultra 40 Mbps',
+    toPriceBdt: 1200,
+    daysUsed: 10,
+    cycleDays: 30,
+    creditBdt: 533,
+    chargeBdt: 800,
+    netBdt: 267,
+    actionType: 'upgrade',
+  },
+  {
+    id: 'pro_02',
+    customerName: 'Mirpur Biz Link Headquarters',
+    fromPackage: 'Corporate Standard 100 Mbps',
+    fromPriceBdt: 8500,
+    toPackage: 'Corporate Dedicated 200 Mbps',
+    toPriceBdt: 18500,
+    daysUsed: 5,
+    cycleDays: 30,
+    creditBdt: 7083,
+    chargeBdt: 15417,
+    netBdt: 8334,
+    actionType: 'upgrade',
+  },
+  {
+    id: 'pro_03',
+    customerName: 'Fatima Begum',
+    fromPackage: 'Home Turbo 50 Mbps',
+    fromPriceBdt: 1500,
+    toPackage: 'Home Basic 20 Mbps',
+    toPriceBdt: 800,
+    daysUsed: 15,
+    cycleDays: 30,
+    creditBdt: 750,
+    chargeBdt: 400,
+    netBdt: -350,
+    actionType: 'downgrade',
+  },
+  {
+    id: 'pro_04',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    fromPackage: 'Dedicated 50 Mbps',
+    fromPriceBdt: 6000,
+    toPackage: 'Dedicated 100 Mbps',
+    toPriceBdt: 12500,
+    daysUsed: 12,
+    cycleDays: 30,
+    creditBdt: 3600,
+    chargeBdt: 7500,
+    netBdt: 3900,
+    actionType: 'upgrade',
+  },
 ];
 
 export const creditNotes: CreditNote[] = [
-  { id: 'cr_01', number: 'CN-2026-014', customerName: 'Rahim Uddin', amountBdt: 200, reason: 'Outage goodwill', at: '2026-09-05', status: 'applied' },
-  { id: 'cr_02', number: 'CN-2026-015', customerName: 'Mirpur Biz Link', amountBdt: 1500, reason: 'Billing error', at: '2026-09-06', status: 'open' },
+  {
+    id: 'cr_01',
+    number: 'CN-2026-014',
+    customerName: 'Rahim Uddin',
+    customerId: 'cust_001',
+    customerPhone: '+880 1711-234567',
+    area: 'Gulshan-2, Dhaka',
+    amountBdt: 200,
+    reason: 'Core optical fiber cut SLA outage goodwill compensation',
+    invoiceNo: 'INV-2026-0901',
+    approvedBy: 'Admin (System)',
+    at: '2026-09-05',
+    status: 'applied',
+  },
+  {
+    id: 'cr_02',
+    number: 'CN-2026-015',
+    customerName: 'Mirpur Biz Link Headquarters',
+    customerId: 'cust_010',
+    customerPhone: '+880 1711-889900',
+    area: 'Mirpur Section 10, Dhaka',
+    amountBdt: 1500,
+    reason: 'Billing cycle plan change proration adjustment credit',
+    invoiceNo: 'INV-2026-0903',
+    approvedBy: 'Salma Accounts Head',
+    at: '2026-09-06',
+    status: 'open',
+  },
+  {
+    id: 'cr_03',
+    number: 'CN-2026-016',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    customerId: 'cust_012',
+    customerPhone: '+880 1755-112233',
+    area: 'Banani Block C, Dhaka',
+    amountBdt: 3000,
+    reason: 'Upstream NTTN link degradation credit rebate',
+    invoiceNo: 'INV-2026-0830',
+    approvedBy: 'Nawaz Corporate Lead',
+    at: '2026-09-02',
+    status: 'applied',
+  },
+  {
+    id: 'cr_04',
+    number: 'CN-2026-017',
+    customerName: 'Fatima Begum',
+    customerId: 'cust_002',
+    customerPhone: '+880 1712-334455',
+    area: 'Gulshan-1, Dhaka',
+    amountBdt: 150,
+    reason: 'Duplicate payment via bKash refund adjustment',
+    invoiceNo: 'INV-2026-0902',
+    approvedBy: 'Salma Accounts Head',
+    at: '2026-09-07',
+    status: 'open',
+  },
 ];
 
 export const deposits: DepositRow[] = [
-  { id: 'dep_01', customerName: 'Karim Hossain', type: 'deposit', amountBdt: 2000, at: '2026-04-01', refundable: true },
-  { id: 'dep_02', customerName: 'Mirpur Biz Link', type: 'otc', amountBdt: 5000, at: '2026-03-15', refundable: false },
+  {
+    id: 'dep_01',
+    customerName: 'Rahim Uddin',
+    customerId: 'cust_001',
+    type: 'deposit',
+    itemDescription: 'GPON ONU Dual-Band Security Deposit (Refundable)',
+    amountBdt: 2000,
+    at: '2026-04-01',
+    refundable: true,
+    status: 'active',
+    paymentMethod: 'cash',
+    voucherNo: 'VCH-DEP-2026-010',
+  },
+  {
+    id: 'dep_02',
+    customerName: 'Mirpur Biz Link Headquarters',
+    customerId: 'cust_010',
+    type: 'otc',
+    itemDescription: 'Primary Optical Fiber Drop Cable & Splicing OTC (Non-Refundable)',
+    amountBdt: 5000,
+    at: '2026-03-15',
+    refundable: false,
+    status: 'active',
+    paymentMethod: 'bank',
+    voucherNo: 'VCH-OTC-2026-088',
+  },
+  {
+    id: 'dep_03',
+    customerName: 'Karim Hossain',
+    customerId: 'cust_003',
+    type: 'deposit',
+    itemDescription: 'Optical Receiver ONU HWTC Security Deposit',
+    amountBdt: 1500,
+    at: '2026-05-10',
+    refundable: true,
+    status: 'active',
+    paymentMethod: 'bkash',
+    voucherNo: 'VCH-DEP-2026-044',
+  },
+  {
+    id: 'dep_04',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    customerId: 'cust_012',
+    type: 'router_deposit',
+    itemDescription: 'MikroTik CCR2004 Core Router Equipment Bond',
+    amountBdt: 15000,
+    at: '2026-02-20',
+    refundable: true,
+    status: 'active',
+    paymentMethod: 'bank',
+    voucherNo: 'VCH-EQP-2026-002',
+  },
+  {
+    id: 'dep_05',
+    customerName: 'Sajjad Ali',
+    customerId: 'cust_005',
+    type: 'installation',
+    itemDescription: 'Overhead Fiber Installation & Wall Mounting Kit',
+    amountBdt: 1200,
+    at: '2026-06-12',
+    refundable: false,
+    status: 'active',
+    paymentMethod: 'nagad',
+    voucherNo: 'VCH-OTC-2026-112',
+  },
+  {
+    id: 'dep_06',
+    customerName: 'Imran Kabir',
+    customerId: 'cust_020',
+    type: 'deposit',
+    itemDescription: 'Refunded GPON Terminal (Disconnection Settled)',
+    amountBdt: 2000,
+    at: '2026-08-28',
+    refundable: true,
+    status: 'refunded',
+    paymentMethod: 'bkash',
+    voucherNo: 'VCH-REF-2026-005',
+  },
 ];
 
 export const popCommissions: PopCommission[] = [
-  { id: 'pc_01', popName: 'Mirpur POP', period: '2026-08', collectedBdt: 220000, ratePct: 8, commissionBdt: 17600, status: 'paid' },
-  { id: 'pc_02', popName: 'Uttara POP', period: '2026-08', collectedBdt: 145000, ratePct: 7, commissionBdt: 10150, status: 'pending' },
+  { id: 'pc_01', popName: 'FastNet POP Uttara Hub', period: '2026-08', collectedBdt: 420000, ratePct: 8.5, commissionBdt: 35700, status: 'paid' },
+  { id: 'pc_02', popName: 'SpeedLink POP Mirpur-10', period: '2026-08', collectedBdt: 315000, ratePct: 8.0, commissionBdt: 25200, status: 'paid' },
+  { id: 'pc_03', popName: 'PortCity POP Agrabad', period: '2026-08', collectedBdt: 510000, ratePct: 9.0, commissionBdt: 45900, status: 'pending' },
+  { id: 'pc_04', popName: 'MetroWave POP Dhanmondi', period: '2026-08', collectedBdt: 210000, ratePct: 7.5, commissionBdt: 15750, status: 'paid' },
+  { id: 'pc_05', popName: 'Surma POP Zindabazar', period: '2026-08', collectedBdt: 165000, ratePct: 7.0, commissionBdt: 11550, status: 'pending' },
+  { id: 'pc_06', popName: 'Bhairab POP Shibbari', period: '2026-08', collectedBdt: 105000, ratePct: 7.0, commissionBdt: 7350, status: 'paid' },
 ];
 
 export const packageProfitRows: PackageProfitRow[] = [
-  { id: 'pp_01', popName: 'Mirpur POP', packageName: 'Home 40', customers: 180, revenueBdt: 216000, costBdt: 90000, profitBdt: 126000 },
-  { id: 'pp_02', popName: 'Uttara POP', packageName: 'Home 20', customers: 220, revenueBdt: 176000, costBdt: 88000, profitBdt: 88000 },
+  { id: 'pp_01', popName: 'FastNet POP Uttara Hub', packageName: 'FTTH Ultra 50 Mbps', customers: 240, revenueBdt: 288000, costBdt: 115000, profitBdt: 173000 },
+  { id: 'pp_02', popName: 'FastNet POP Uttara Hub', packageName: 'Home Starter 20 Mbps', customers: 180, revenueBdt: 144000, costBdt: 68000, profitBdt: 76000 },
+  { id: 'pp_03', popName: 'SpeedLink POP Mirpur-10', packageName: 'Gamer Pro 60 Mbps', customers: 150, revenueBdt: 225000, costBdt: 95000, profitBdt: 130000 },
+  { id: 'pp_04', popName: 'SpeedLink POP Mirpur-10', packageName: 'Home Basic 25 Mbps', customers: 210, revenueBdt: 168000, costBdt: 75000, profitBdt: 93000 },
+  { id: 'pp_05', popName: 'PortCity POP Agrabad', packageName: 'SME Commercial 40 Mbps', customers: 120, revenueBdt: 240000, costBdt: 85000, profitBdt: 155000 },
+  { id: 'pp_06', popName: 'PortCity POP Agrabad', packageName: 'Retail Fiber 30 Mbps', customers: 340, revenueBdt: 306000, costBdt: 130000, profitBdt: 176000 },
+  { id: 'pp_07', popName: 'MetroWave POP Dhanmondi', packageName: 'Dedicated Leased 100 Mbps', customers: 18, revenueBdt: 180000, costBdt: 60000, profitBdt: 120000 },
+  { id: 'pp_08', popName: 'Surma POP Zindabazar', packageName: 'Home Connect 30 Mbps', customers: 190, revenueBdt: 152000, costBdt: 72000, profitBdt: 80000 },
 ];
 
 export const workOrders: WorkOrder[] = [
-  { id: 'job_01', title: 'New install — Banani', customerName: 'Lead: Rina', type: 'install', assignee: 'Rafiq Field', status: 'open', dueAt: '2026-09-08' },
-  { id: 'job_02', title: 'LOS repair', customerName: 'Sajjad Ali', type: 'repair', assignee: 'Imtiaz Tech', status: 'in_progress', dueAt: '2026-09-07' },
-  { id: 'job_03', title: 'Cash collection route', customerName: 'Multiple', type: 'collect', assignee: 'Salma Desk', status: 'done', dueAt: '2026-09-06' },
+  {
+    id: 'job_01',
+    orderNo: 'WO-2026-0891',
+    title: 'New Optical Fiber FTTH Installation',
+    customerName: 'Rina Akter',
+    customerId: 'lead_01',
+    phone: '+880 1711-238899',
+    area: 'Banani Block C, Dhaka',
+    address: 'House 14/B, Road 11, Apt 4A',
+    type: 'install',
+    priority: 'high',
+    assignee: 'Rafiq Field (Lead Technician)',
+    assigneePhone: '+880 1700-112233',
+    team: 'North Field Team-2',
+    status: 'open',
+    dueAt: '2026-09-08 14:00',
+    createdAt: '2026-09-07 09:30',
+    estimatedMinutes: 90,
+    materialsUsed: 'ONU HWTC, 85m Drop Cable, SC/APC Fast Connector',
+    notes: 'Subscriber requested router wall mounting in living room.',
+  },
+  {
+    id: 'job_02',
+    orderNo: 'WO-2026-0892',
+    title: 'LOS Optical Red Light & Fiber Cut Repair',
+    customerName: 'Sajjad Ali',
+    customerId: 'cust_005',
+    phone: '+880 1819-776655',
+    area: 'Mirpur-2, Dhaka',
+    address: 'Plot 42, Avenue 3, Section 2',
+    type: 'repair',
+    priority: 'critical',
+    assignee: 'Imtiaz Tech',
+    assigneePhone: '+880 1800-445566',
+    team: 'Mirpur Emergency Crew',
+    status: 'in_progress',
+    dueAt: '2026-09-07 18:30',
+    createdAt: '2026-09-07 15:10',
+    estimatedMinutes: 45,
+    materialsUsed: 'Fiber Fusion Splicing Sleeve (1x)',
+    notes: 'Optical power showing -34 dBm at PON terminal. Splicing drop joint.',
+  },
+  {
+    id: 'job_03',
+    orderNo: 'WO-2026-0893',
+    title: 'Physical Address Shift & Core Relocation',
+    customerName: 'Mirpur Biz Link Headquarters',
+    customerId: 'cust_010',
+    phone: '+880 1822-998877',
+    area: 'Mirpur-10 → Mirpur DOHS',
+    address: 'Relocating to DOHS Gate 2, Building 8',
+    type: 'shift',
+    priority: 'high',
+    assignee: 'Rafiq Field (Lead Technician)',
+    assigneePhone: '+880 1700-112233',
+    team: 'North Field Team-2',
+    status: 'open',
+    dueAt: '2026-09-09 11:00',
+    createdAt: '2026-09-06 14:00',
+    estimatedMinutes: 120,
+    materialsUsed: 'New 150m Core Drop Cable, Patch Cord',
+    notes: 'Corporate fiber line shift. Schedule with building security.',
+  },
+  {
+    id: 'job_04',
+    orderNo: 'WO-2026-0894',
+    title: 'Field Door Cash Collection Route',
+    customerName: 'Multiple Residential Subscribers',
+    customerId: 'bulk_04',
+    phone: '+880 1711-000111',
+    area: 'Banani Area Sector 4',
+    address: 'Road 5, 7, 9 Combined Route',
+    type: 'collect',
+    priority: 'medium',
+    assignee: 'Salma Desk',
+    assigneePhone: '+880 1600-778899',
+    team: 'Accounts Field Recovery',
+    status: 'done',
+    dueAt: '2026-09-06 17:00',
+    createdAt: '2026-09-06 10:00',
+    estimatedMinutes: 180,
+    notes: 'Collected ৳18,400 from 12 door steps. Cash deposited to counter.',
+  },
+  {
+    id: 'job_05',
+    orderNo: 'WO-2026-0895',
+    title: 'Corporate Bandwidth & GPON Terminal Upgrade',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    customerId: 'cust_012',
+    phone: '+880 1755-112233',
+    area: 'Banani Block C, Dhaka',
+    address: 'Road 11, Tower 8, Level 6',
+    type: 'upgrade',
+    priority: 'medium',
+    assignee: 'Imtiaz Tech',
+    assigneePhone: '+880 1800-445566',
+    team: 'Corporate NOC Field',
+    status: 'done',
+    dueAt: '2026-09-05 16:00',
+    createdAt: '2026-09-05 11:00',
+    estimatedMinutes: 60,
+    materialsUsed: 'MikroTik Gigabit Router, 10G Patch Cord',
+    notes: 'Replaced Fast Ethernet ONU with Dual-Band Gigabit ONT.',
+  },
+  {
+    id: 'job_06',
+    orderNo: 'WO-2026-0896',
+    title: 'Overhead Distribution Box Maintenance',
+    customerName: 'Gulshan Distribution Splitter Box #4',
+    customerId: 'pop_box_04',
+    phone: '+880 1700-112233',
+    area: 'Gulshan-2, Dhaka',
+    address: 'Pole 18, Road 45 Corner',
+    type: 'maintenance',
+    priority: 'low',
+    assignee: 'Kamal Lineman',
+    assigneePhone: '+880 1900-334455',
+    team: 'Lineman Division',
+    status: 'open',
+    dueAt: '2026-09-10 12:00',
+    createdAt: '2026-09-07 08:00',
+    estimatedMinutes: 90,
+    notes: 'Routine cable tidying and enclosure weatherproofing.',
+  },
 ];
 
 export const leads: LeadRow[] = [
-  { id: 'lead_01', name: 'Rina Akter', phone: '01711xxxxxx', area: 'Banani', packageInterest: 'Home 40', stage: 'survey', owner: 'Sales-1' },
-  { id: 'lead_02', name: 'TechPark Ltd', phone: '01822xxxxxx', area: 'Motijheel', packageInterest: 'Biz 200', stage: 'contacted', owner: 'Sales-2' },
-  { id: 'lead_03', name: 'Hasan Mia', phone: '01933xxxxxx', area: 'Keraniganj', packageInterest: 'Home 20', stage: 'new', owner: 'Sales-1' },
+  {
+    id: 'lead_01',
+    leadNo: 'LD-2026-0412',
+    name: 'Rina Akter',
+    organization: 'Self-Employed Freelancer',
+    phone: '+880 1711-238899',
+    email: 'rina.design@gmail.com',
+    area: 'Banani, Dhaka',
+    address: 'House 14/B, Road 11',
+    packageInterest: 'Home Ultra 40 Mbps (৳ 1,200/mo)',
+    estimatedMonthlyBdt: 1200,
+    otcQuoteBdt: 1500,
+    stage: 'won',
+    owner: 'Tariq Sales (Direct)',
+    source: 'website',
+    surveyFeasible: true,
+    notes: 'Fiber port available on Splitter-3. Work order WO-2026-0891 assigned.',
+    createdAt: '2026-09-06',
+    lastContactedAt: '2026-09-07 11:30',
+  },
+  {
+    id: 'lead_02',
+    leadNo: 'LD-2026-0413',
+    name: 'TechPark Enterprise Solutions Ltd',
+    organization: 'TechPark Software HQ',
+    phone: '+880 1822-445566',
+    email: 'procurement@techparkbd.com',
+    area: 'Motijheel C/A, Dhaka',
+    address: 'City Center Tower, Level 14',
+    packageInterest: 'Corporate Dedicated 200 Mbps (৳ 18,500/mo)',
+    estimatedMonthlyBdt: 18500,
+    otcQuoteBdt: 10000,
+    stage: 'negotiation',
+    owner: 'Nawaz Corporate Lead',
+    source: 'inbound_call',
+    surveyFeasible: true,
+    notes: 'Requires dual-path backup link and 99.95% uptime SLA agreement.',
+    createdAt: '2026-09-04',
+    lastContactedAt: '2026-09-07 14:20',
+  },
+  {
+    id: 'lead_03',
+    leadNo: 'LD-2026-0414',
+    name: 'Hasan Mia',
+    organization: 'Hasan Grocery & Departmental',
+    phone: '+880 1933-778899',
+    email: 'hasan.mia@gmail.com',
+    area: 'Keraniganj, Dhaka',
+    address: 'Babu Bazar Bridge East Side',
+    packageInterest: 'Home Basic 20 Mbps (৳ 800/mo)',
+    estimatedMonthlyBdt: 800,
+    otcQuoteBdt: 2000,
+    stage: 'survey',
+    owner: 'Tariq Sales (Direct)',
+    source: 'field_agent',
+    surveyFeasible: true,
+    notes: 'Fiber distance ~180 meters from nearest DP box. Line survey scheduled.',
+    createdAt: '2026-09-05',
+    lastContactedAt: '2026-09-06 17:00',
+  },
+  {
+    id: 'lead_04',
+    leadNo: 'LD-2026-0415',
+    name: 'Dr. Mahbubur Rahman',
+    organization: 'Al-Shifa Diagnostic Center',
+    phone: '+880 1712-990011',
+    email: 'info@alshifadiag.com',
+    area: 'Dhanmondi, Dhaka',
+    address: 'Road 7, House 22',
+    packageInterest: 'Biz High-Speed 100 Mbps (৳ 8,500/mo)',
+    estimatedMonthlyBdt: 8500,
+    otcQuoteBdt: 5000,
+    stage: 'contacted',
+    owner: 'Nawaz Corporate Lead',
+    source: 'referral',
+    surveyFeasible: true,
+    notes: 'Looking to connect PACS radiology server with online cloud sync.',
+    createdAt: '2026-09-07',
+    lastContactedAt: '2026-09-07 10:15',
+  },
+  {
+    id: 'lead_05',
+    leadNo: 'LD-2026-0416',
+    name: 'Tanvir Hossain',
+    organization: 'Residential User',
+    phone: '+880 1622-334455',
+    email: 'tanvir.gamer@outlook.com',
+    area: 'Uttara Sector 13, Dhaka',
+    address: 'Road 18, House 5',
+    packageInterest: 'Home Gamer 35 Mbps (৳ 1,000/mo)',
+    estimatedMonthlyBdt: 1000,
+    otcQuoteBdt: 1200,
+    stage: 'new',
+    owner: 'Tariq Sales (Direct)',
+    source: 'social',
+    surveyFeasible: false,
+    notes: 'Submitted inquiry via Facebook ad campaign. Needs low latency to Singapore servers.',
+    createdAt: '2026-09-07',
+    lastContactedAt: '2026-09-07 09:00',
+  },
+  {
+    id: 'lead_06',
+    leadNo: 'LD-2026-0417',
+    name: 'Shahidul Alam',
+    organization: 'Alam Garments Buying House',
+    phone: '+880 1819-001122',
+    email: 's.alam@alamgarments.com',
+    area: 'Uttara Sector 3, Dhaka',
+    address: 'Rabindra Sarani, Plot 10',
+    packageInterest: 'Corporate Dedicated 50 Mbps (৳ 6,000/mo)',
+    estimatedMonthlyBdt: 6000,
+    otcQuoteBdt: 4000,
+    stage: 'lost',
+    owner: 'Nawaz Corporate Lead',
+    source: 'website',
+    surveyFeasible: true,
+    notes: 'Lost to competitor due to existing 1-year lock-in contract with previous ISP.',
+    createdAt: '2026-08-28',
+    lastContactedAt: '2026-09-01 12:00',
+  },
 ];
 
 export const customerGroups: CustomerGroup[] = [
@@ -718,15 +1663,27 @@ export const referralAnalytics: ReferralAnalyticsRow[] = [
 ];
 
 export const addons: AddonRow[] = [
-  { id: 'add_01', name: 'Bongo OTT', category: 'ott', priceBdt: 199, active: true },
-  { id: 'add_02', name: 'IPTV Basic', category: 'iptv', priceBdt: 150, active: true },
-  { id: 'add_03', name: 'Public Static IP', category: 'static_ip', priceBdt: 500, active: true },
+  { id: 'add_01', name: 'Bongo OTT Premium Pass', category: 'ott', priceBdt: 199, active: true },
+  { id: 'add_02', name: 'Chorki Cinema Pass (HD)', category: 'ott', priceBdt: 249, active: true },
+  { id: 'add_03', name: 'Toffee Pro Live Sports', category: 'ott', priceBdt: 120, active: true },
+  { id: 'add_04', name: 'Hoichoi Unlimited (Annual Sub)', category: 'ott', priceBdt: 899, active: true },
+  { id: 'add_05', name: 'IPTV HD Full Bouquet (180+ Ch)', category: 'iptv', priceBdt: 250, active: true },
+  { id: 'add_06', name: 'IPTV Smart STB Device Lease', category: 'iptv', priceBdt: 150, active: true },
+  { id: 'add_07', name: 'Public IPv4 Static /32 Routing', category: 'static_ip', priceBdt: 500, active: true },
+  { id: 'add_08', name: 'Public IPv4 Dedicated Block /29 (5 IPs)', category: 'static_ip', priceBdt: 2000, active: true },
+  { id: 'add_09', name: 'Gaming Ping Booster & Low Latency Route', category: 'other', priceBdt: 300, active: true },
+  { id: 'add_10', name: 'Dual-Band Wi-Fi 6 Mesh Pod Router', category: 'other', priceBdt: 350, active: true },
+  { id: 'add_11', name: 'Corporate Dedicated IP Block /28 (13 IPs)', category: 'static_ip', priceBdt: 4500, active: false },
+  { id: 'add_12', name: 'SonyLIV Cricket & UEFA Pass', category: 'ott', priceBdt: 299, active: true },
 ];
 
 export const serviceTypes: ServiceType[] = [
-  { id: 'svc_01', name: 'Home Broadband', code: 'HOME', customers: 4200 },
-  { id: 'svc_02', name: 'Corporate', code: 'CORP', customers: 180 },
-  { id: 'svc_03', name: 'Hotspot', code: 'HOT', customers: 0 },
+  { id: 'svc_01', name: 'Retail Home Fiber FTTH', code: 'HOME_FTTH', customers: 4200 },
+  { id: 'svc_02', name: 'SME / Commercial Broadband', code: 'SME_CORP', customers: 640 },
+  { id: 'svc_03', name: 'Corporate Dedicated Leased Line (DIA)', code: 'CORP_DIA', customers: 180 },
+  { id: 'svc_04', name: 'Public Wi-Fi Hotspot Zones', code: 'HOTSPOT', customers: 85 },
+  { id: 'svc_05', name: 'Sub-ISP / Reseller L2 VLAN Transit', code: 'RESELLER_L2', customers: 34 },
+  { id: 'svc_06', name: 'Campus & High-Density Student Network', code: 'CAMPUS_NET', customers: 210 },
 ];
 
 export const apiKeys: ApiKeyRow[] = [
@@ -818,8 +1775,182 @@ export const acsDevices: AcsDevice[] = [
 ];
 
 export const netflowTopTalkers: NetflowTalker[] = [
-  { id: 'nf_01', ip: '10.20.1.12', username: 'corp.mirpur', rxGb: 120.4, txGb: 40.2, apps: 'HTTPS, Zoom' },
-  { id: 'nf_02', ip: '10.20.1.44', username: 'user.rahim', rxGb: 28.1, txGb: 3.2, apps: 'YouTube, Gaming' },
+  {
+    id: 'nf_01',
+    ip: '10.20.1.12',
+    username: 'corp.mirpur',
+    customerName: 'Mirpur Biz Link Headquarters',
+    mac: 'E4:8D:8C:3B:11:42',
+    router: 'MK-Mirpur-POP',
+    interfaceName: 'sfp-sfpplus1 (10G Fiber)',
+    rxGb: 120.4,
+    txGb: 40.2,
+    currentRxMbps: 94.6,
+    currentTxMbps: 38.2,
+    packetsPerSec: 14200,
+    activeFlows: 642,
+    tcpFlows: 580,
+    udpFlows: 62,
+    apps: 'HTTPS, Zoom, GitHub, Teams',
+    topDestination: '142.250.190.46 (Google/Zoom CDN)',
+    status: 'bursting',
+    lastSeen: 'Just now',
+    fupLimitGb: 500,
+  },
+  {
+    id: 'nf_02',
+    ip: '10.20.1.44',
+    username: 'user.rahim',
+    customerName: 'Rahim Uddin',
+    mac: '3C:52:82:7A:99:10',
+    router: 'MK-Gulshan-Core',
+    interfaceName: 'vlan100-fiber-01',
+    rxGb: 88.5,
+    txGb: 14.8,
+    currentRxMbps: 46.2,
+    currentTxMbps: 4.8,
+    packetsPerSec: 6800,
+    activeFlows: 310,
+    tcpFlows: 240,
+    udpFlows: 70,
+    apps: 'YouTube 4K, Steam Gaming, Discord',
+    topDestination: '172.217.16.206 (YouTube Cache BDIX)',
+    status: 'active',
+    lastSeen: '12s ago',
+    fupLimitGb: 200,
+  },
+  {
+    id: 'nf_03',
+    ip: '10.21.3.88',
+    username: 'user.fatima',
+    customerName: 'Fatima Begum',
+    mac: '70:85:C2:55:01:8A',
+    router: 'MK-Dhanmondi-Edge',
+    interfaceName: 'ether2-agg-dhn',
+    rxGb: 64.2,
+    txGb: 9.1,
+    currentRxMbps: 32.4,
+    currentTxMbps: 2.9,
+    packetsPerSec: 4200,
+    activeFlows: 184,
+    tcpFlows: 152,
+    udpFlows: 32,
+    apps: 'Netflix 4K, Facebook Video, Spotify',
+    topDestination: '198.38.118.140 (Netflix CDN Edge)',
+    status: 'active',
+    lastSeen: '45s ago',
+    fupLimitGb: 150,
+  },
+  {
+    id: 'nf_04',
+    ip: '10.20.1.91',
+    username: 'corp.banani.tech',
+    customerName: 'Banani Cyber Dynamics Ltd',
+    mac: '00:1A:2B:6C:9D:44',
+    router: 'MK-Gulshan-Core',
+    interfaceName: 'sfp-sfpplus2 (Direct Trunk)',
+    rxGb: 245.8,
+    txGb: 182.4,
+    currentRxMbps: 185.0,
+    currentTxMbps: 142.5,
+    packetsPerSec: 28900,
+    activeFlows: 1250,
+    tcpFlows: 1100,
+    udpFlows: 150,
+    apps: 'AWS S3, Docker Hub, BitTorrent Sync, HTTPS',
+    topDestination: '52.95.120.1 (AWS CloudFront AP-South)',
+    status: 'bursting',
+    lastSeen: 'Just now',
+    fupLimitGb: 1000,
+  },
+  {
+    id: 'nf_05',
+    ip: '10.20.2.105',
+    username: 'user.sajjad',
+    customerName: 'Sajjad Ali',
+    mac: 'BC:A9:93:14:F2:01',
+    router: 'MK-Mirpur-POP',
+    interfaceName: 'vlan102-pon3',
+    rxGb: 52.0,
+    txGb: 6.7,
+    currentRxMbps: 22.8,
+    currentTxMbps: 1.8,
+    packetsPerSec: 3100,
+    activeFlows: 120,
+    tcpFlows: 98,
+    udpFlows: 22,
+    apps: 'Valorant, Twitch Stream, Discord',
+    topDestination: '162.249.72.1 (Riot Games SG Server)',
+    status: 'active',
+    lastSeen: '1m ago',
+    fupLimitGb: 150,
+  },
+  {
+    id: 'nf_06',
+    ip: '10.22.0.45',
+    username: 'user.nusrat',
+    customerName: 'Nusrat Jahan',
+    mac: '84:D8:1B:32:00:CD',
+    router: 'MK-Dhanmondi-Edge',
+    interfaceName: 'vlan105-pon1',
+    rxGb: 38.4,
+    txGb: 4.2,
+    currentRxMbps: 18.2,
+    currentTxMbps: 1.1,
+    packetsPerSec: 2200,
+    activeFlows: 85,
+    tcpFlows: 72,
+    udpFlows: 13,
+    apps: 'TikTok, Instagram Reels, HTTPS',
+    topDestination: '104.16.120.5 (Cloudflare Cache)',
+    status: 'idle',
+    lastSeen: '3m ago',
+    fupLimitGb: 100,
+  },
+  {
+    id: 'nf_07',
+    ip: '10.20.1.18',
+    username: 'corp.fintech.bd',
+    customerName: 'FinTech Secure Gateway Hub',
+    mac: '50:65:F3:11:AB:89',
+    router: 'MK-Gulshan-Core',
+    interfaceName: 'sfp-sfpplus1 (Primary Link)',
+    rxGb: 165.2,
+    txGb: 130.0,
+    currentRxMbps: 120.4,
+    currentTxMbps: 98.0,
+    packetsPerSec: 19400,
+    activeFlows: 890,
+    tcpFlows: 860,
+    udpFlows: 30,
+    apps: 'IPSec VPN, PostgreSQL Remote, HTTPS',
+    topDestination: '103.112.10.1 (National Switch)',
+    status: 'bursting',
+    lastSeen: 'Just now',
+    fupLimitGb: 800,
+  },
+  {
+    id: 'nf_08',
+    ip: '10.20.3.50',
+    username: 'user.karim',
+    customerName: 'Karim Hossain',
+    mac: '44:6D:57:99:41:22',
+    router: 'MK-Mirpur-POP',
+    interfaceName: 'vlan101-pon4',
+    rxGb: 41.5,
+    txGb: 5.3,
+    currentRxMbps: 15.6,
+    currentTxMbps: 1.4,
+    packetsPerSec: 1950,
+    activeFlows: 74,
+    tcpFlows: 60,
+    udpFlows: 14,
+    apps: 'YouTube, Web Browsing, WhatsApp Video',
+    topDestination: '142.250.191.14 (Google Global Cache)',
+    status: 'idle',
+    lastSeen: '2m ago',
+    fupLimitGb: 120,
+  },
 ];
 
 export const nocHooks: NocHook[] = [
@@ -849,8 +1980,13 @@ export const bandwidthSla: BandwidthSlaRow[] = [
 ];
 
 export const mobilePlans: MobilePlan[] = [
-  { id: 'mob_01', name: 'LTE 30GB', dataGb: 30, validityDays: 30, priceBdt: 499, active: true },
-  { id: 'mob_02', name: 'LTE Unlimited Night', dataGb: 100, validityDays: 30, priceBdt: 699, active: true },
+  { id: 'mob_01', name: 'LTE 30GB High-Speed Backup', dataGb: 30, validityDays: 30, priceBdt: 499, active: true },
+  { id: 'mob_02', name: 'LTE 60GB Hybrid Failover Plan', dataGb: 60, validityDays: 30, priceBdt: 799, active: true },
+  { id: 'mob_03', name: 'LTE Unlimited Night Gamer Pack (100GB)', dataGb: 100, validityDays: 30, priceBdt: 999, active: true },
+  { id: 'mob_04', name: 'Field Executive 15GB Mobile SIM', dataGb: 15, validityDays: 30, priceBdt: 299, active: true },
+  { id: 'mob_05', name: 'Corporate Multi-SIM Pool 200GB', dataGb: 200, validityDays: 60, priceBdt: 2499, active: true },
+  { id: 'mob_06', name: 'POP Emergency Uplink 500GB Redundancy', dataGb: 500, validityDays: 90, priceBdt: 5999, active: true },
+  { id: 'mob_07', name: 'Legacy LTE 10GB Starter', dataGb: 10, validityDays: 15, priceBdt: 199, active: false },
 ];
 
 export const collectionPoints: CollectionPoint[] = [

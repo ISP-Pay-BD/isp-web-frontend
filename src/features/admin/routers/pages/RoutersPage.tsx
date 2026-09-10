@@ -288,14 +288,51 @@ export function RoutersPage() {
         }
       />
 
-      <OpsSummaryStrip
-        items={[
-          { value: totalRouters, label: 'routers' },
-          { value: onlineRouters, label: 'online' },
-          { value: totalUsers, label: 'active sessions' },
-          { value: '4.2 ms', label: 'avg API latency' },
-        ]}
-      />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Configured Gateways</span>
+            <Router className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground tabular-nums">{totalRouters}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">RouterOS core & edge devices</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Online Gateways</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{onlineRouters} / {totalRouters}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">API port 8728 responding</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Active PPPoE Sessions</span>
+            <Users className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{totalUsers.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Authenticated subscribers</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>API Latency</span>
+            <Zap className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">4.2 ms</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Sub-second queue sync</p>
+          </div>
+        </div>
+      </div>
 
       <DataTable
         columns={columns}

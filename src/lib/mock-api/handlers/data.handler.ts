@@ -267,6 +267,7 @@ export async function createPopFunding(payload: { popId: string; amountBdt: numb
     amountBdt: payload.amountBdt,
     date: new Date().toISOString().slice(0, 10),
     note: payload.note || 'Admin funding credit',
+    method: 'Bank Transfer',
   };
   adminPopTransactions = [tx, ...adminPopTransactions];
   return { success: true, transaction: tx };

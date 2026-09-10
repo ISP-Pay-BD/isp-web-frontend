@@ -13,6 +13,10 @@ import {
   Smartphone,
   FileText,
   Printer,
+  CreditCard,
+  Building,
+  Banknote,
+  Sparkles,
 } from 'lucide-react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { useCustomerPayments } from '../hooks/use-customer-payments';
@@ -24,7 +28,6 @@ import { Can } from '@/components/shared/Can';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +50,7 @@ const paymentSearchFilter = (
   const p = row.original;
   return (
     p.customerName.toLowerCase().includes(q) ||
+    p.customerId.toLowerCase().includes(q) ||
     p.invoiceNo.toLowerCase().includes(q) ||
     (p.note ?? '').toLowerCase().includes(q)
   );
@@ -70,6 +74,13 @@ export function CustomerPaymentsPage() {
     () =>
       items
         .filter((p) => p.method === 'bkash' || p.method === 'nagad')
+        .reduce((s, p) => s + p.amountBdt, 0),
+    [items],
+  );
+  const bankVolume = useMemo(
+    () =>
+      items
+        .filter((p) => p.method === 'bank' || p.method === 'sslcommerz')
         .reduce((s, p) => s + p.amountBdt, 0),
     [items],
   );
@@ -120,23 +131,25 @@ export function CustomerPaymentsPage() {
     () => [
       {
         accessorKey: 'invoiceNo',
-        header: 'Invoice #',
-        size: 200,
+        header: 'Invoice & Voucher #',
+        size: 210,
         enableHiding: false,
         cell: ({ row }) => {
           const payment = row.original;
           return (
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                <Receipt className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 shadow-2xs">
+                <Receipt className="h-4 w-4" />
               </div>
               <div>
                 <div className="font-mono font-bold text-foreground flex items-center gap-1.5">
-                  <span>{payment.invoiceNo}</span>
+                  <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => setSelectedPayment(payment)}>
+                    {payment.invoiceNo}
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleCopy(payment.invoiceNo, 'Invoice')}
-                    className="hover:text-primary transition-colors"
+                    className="hover:text-primary transition-colors text-muted-foreground"
                     title="Copy invoice number"
                   >
                     <Copy className="h-3 w-3" />
@@ -152,31 +165,34 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'customerName',
-        header: 'Subscriber',
-        size: 160,
+        header: 'Subscriber Account',
+        size: 180,
         cell: ({ row }) => (
           <div>
-            <div className="font-bold text-foreground">{row.original.customerName}</div>
+            <div className="font-bold text-sm text-foreground">{row.original.customerName}</div>
             <div className="text-[11px] text-muted-foreground font-mono">
-              {row.original.customerId}
+              ID: {row.original.customerId}
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'amountBdt',
-        header: 'Amount',
-        size: 110,
+        header: 'Collected Amount',
+        size: 130,
         cell: ({ row }) => (
-          <div className="font-mono font-bold text-sm text-foreground">
-            <CurrencyDisplay amount={row.original.amountBdt} />
+          <div>
+            <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+              <CurrencyDisplay amount={row.original.amountBdt} />
+            </div>
+            <div className="text-[10px] text-muted-foreground font-mono">BDT net</div>
           </div>
         ),
       },
       {
         accessorKey: 'method',
-        header: 'Payment Method',
-        size: 130,
+        header: 'Gateway / Method',
+        size: 140,
         cell: ({ row }) => {
           const method = row.original.method;
           const isBkash = method === 'bkash';
@@ -187,7 +203,7 @@ export function CustomerPaymentsPage() {
           return (
             <span
               className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-semibold text-[11px] border',
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-[11px] border shadow-2xs',
                 isBkash && 'bg-[#e2136e]/10 text-[#e2136e] border-[#e2136e]/20',
                 isNagad && 'bg-[#f7941d]/10 text-[#f7941d] border-[#f7941d]/20',
                 isCash &&
@@ -217,13 +233,13 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'status',
-        header: 'Status',
-        size: 110,
+        header: 'Clearance Status',
+        size: 120,
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'note',
-        header: 'Transaction / Note',
+        header: 'TrxID / Reference',
         size: 180,
         cell: ({ row }) => (
           <span className="font-mono text-muted-foreground text-[11px] truncate max-w-[200px] block">
@@ -233,20 +249,18 @@ export function CustomerPaymentsPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Receipt</span>,
-        size: 100,
-        enableSorting: false,
-        enableHiding: false,
+        header: '',
+        size: 90,
         cell: ({ row }) => (
           <div className="flex justify-end">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setSelectedPayment(row.original)}
-              className="h-7 text-xs text-primary hover:bg-primary/10"
+              className="h-7 text-xs text-primary hover:bg-primary/10 gap-1"
             >
-              <FileText className="mr-1 h-3.5 w-3.5" />
-              View
+              <FileText className="h-3.5 w-3.5" />
+              Receipt
             </Button>
           </div>
         ),
@@ -271,9 +285,10 @@ export function CustomerPaymentsPage() {
     <div className="w-full space-y-6 pb-12">
       <PageHeader
         title="Customer Payments"
-        subtitle="Broadband subscriber collection ledger — bKash, Nagad, cash handovers, and bank deposits"
+        subtitle="Downstream broadband subscriber collection ledger — bKash, Nagad, cash handovers, and bank deposits"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
+          { label: 'POP Suite' },
           { label: 'Customer Payments' },
         ]}
         actions={
@@ -290,9 +305,9 @@ export function CustomerPaymentsPage() {
               <Link href="/admin/customer-payments/new">
                 <Button
                   size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
                 >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" /> Record Payment
+                  <Plus className="h-3.5 w-3.5" /> Record Payment
                 </Button>
               </Link>
             </Can>
@@ -300,57 +315,60 @@ export function CustomerPaymentsPage() {
         }
       />
 
+      {/* KPI Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums">
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
             <CurrencyDisplay amount={totalCollected} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">collections · {items.length} receipts</span>
+          <span className="text-muted-foreground">total collections ({items.length} receipts)</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">
+          <span className="font-semibold tabular-nums text-foreground">
             <CurrencyDisplay amount={mfsVolume} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">MFS gateway</span>
+          <span className="text-muted-foreground">MFS gateways (bKash & Nagad)</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-blue-500">
+            <CurrencyDisplay amount={bankVolume} className="inline font-semibold" />
+          </span>{' '}
+          <span className="text-muted-foreground">bank / card gateway</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{pendingCount}</span>{' '}
-          <span className="text-muted-foreground">pending clearances</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">
-            ৳{items.length ? Math.round(totalCollected / items.length).toLocaleString() : '0'}
-          </span>{' '}
-          <span className="text-muted-foreground">avg / receipt</span>
+          <span className="text-muted-foreground">pending reconciliations</span>
         </p>
       </div>
 
+      {/* Main Table */}
       <DataTable
         columns={columns}
         data={items}
         getRowId={(row) => row.id}
         searchKey="invoiceNo"
-        searchPlaceholder="Search by invoice #, customer name, or TrxID..."
+        searchPlaceholder="Search invoice #, customer name, subscriber ID, or TrxID..."
         searchFilterFn={paymentSearchFilter}
         facetFilters={[
           { columnId: 'status', title: 'Status' },
-          { columnId: 'method', title: 'Method' },
+          { columnId: 'method', title: 'Payment Method' },
         ]}
-        emptyTitle="No payment records"
-        emptyDescription="No payment records found matching your filters."
+        emptyTitle="No payment records found"
+        emptyDescription="No payment transactions match your query or filter parameters."
       />
 
+      {/* Receipt Modal */}
       <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
         <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div>
                   <DialogTitle className="text-base font-bold">Payment Receipt</DialogTitle>
-                  <DialogDescription className="text-xs font-mono">
+                  <DialogDescription className="text-xs font-mono text-muted-foreground">
                     {selectedPayment?.invoiceNo}
                   </DialogDescription>
                 </div>
@@ -361,48 +379,48 @@ export function CustomerPaymentsPage() {
 
           {selectedPayment && (
             <div className="space-y-4 pt-2 text-xs">
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/50 space-y-1.5">
-                <div className="flex justify-between">
+              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
+                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
                   <span className="text-muted-foreground">Subscriber:</span>
                   <span className="font-bold text-foreground">{selectedPayment.customerName}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
                   <span className="text-muted-foreground">Subscriber ID:</span>
                   <span className="font-mono text-foreground">{selectedPayment.customerId}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
                   <span className="text-muted-foreground">Payment Date:</span>
                   <span className="font-semibold text-foreground">
                     {formatDateTime(selectedPayment.paidAt)}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Method:</span>
-                  <span className="font-semibold uppercase">{selectedPayment.method}</span>
+                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
+                  <span className="text-muted-foreground">Payment Method:</span>
+                  <span className="font-bold uppercase text-primary">{selectedPayment.method}</span>
                 </div>
                 {selectedPayment.note && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Reference / TrxID:</span>
+                  <div className="flex justify-between items-center py-0.5">
+                    <span className="text-muted-foreground">TrxID / Reference:</span>
                     <span className="font-mono font-bold text-foreground">{selectedPayment.note}</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-between items-center p-3 rounded-xl bg-primary/10 border border-primary/20 text-sm font-bold">
-                <span>Amount Paid:</span>
-                <span className="font-mono text-primary text-base">
+              <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm font-bold">
+                <span className="text-foreground">Total Amount Received:</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-base">
                   ৳{selectedPayment.amountBdt.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="text-xs">
-                  <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                  <Printer className="mr-1.5 h-3.5 w-3.5" /> Print Voucher
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => {
-                    toast.success(`Receipt for ${selectedPayment.invoiceNo} downloaded`);
+                    toast.success(`PDF receipt for ${selectedPayment.invoiceNo} generated`);
                     setSelectedPayment(null);
                   }}
                   className="text-xs font-semibold"

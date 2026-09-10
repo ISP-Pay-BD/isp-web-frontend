@@ -94,6 +94,14 @@ export interface Package {
   validityDays: number;
   type: 'home' | 'corporate' | 'hotspot';
   visible: boolean;
+  mikrotikProfile?: string;
+  burstSpeedMbps?: number;
+  fupQuotaGb?: number;
+  fupThrottleMbps?: number;
+  activeSubscribers?: number;
+  poolName?: string;
+  staticIpIncluded?: boolean;
+  slaUptime?: string;
 }
 
 export interface Payment {

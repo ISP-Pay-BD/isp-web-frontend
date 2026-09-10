@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import { PageHeader } from '@/features/admin/shared';
+import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { useBandwidthData } from '../hooks/useBandwidthData';
 import type { BandwidthCategoryItem } from '@/data/admin/bandwidth.data';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -10,10 +10,18 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Tags, Trash2 } from 'lucide-react';
+import { Plus, Download, Tags, Layers, Trash2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 const categorySearchFilter = (
@@ -35,7 +43,7 @@ export function BandwidthCategoriesPage() {
   const [categories, setCategories] = useState<BandwidthCategoryItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
-  const [price, setPrice] = useState(300);
+  const [price, setPrice] = useState(350);
   const [area, setArea] = useState('All Zones');
 
   const initial = data?.categories ?? [];
@@ -53,67 +61,103 @@ export function BandwidthCategoriesPage() {
       name,
       priceBdt: price,
       area,
-      subcategoriesCount: 0,
+      subcategoriesCount: 1,
       itemsCount: 0,
     };
     setCategories((prev) => [newCat, ...prev]);
-    toast.success('Category created.');
+    toast.success('Bandwidth category created.');
     setModalOpen(false);
     setName('');
+  };
+
+  const handleExportCsv = () => {
+    const headers = ['ID', 'Category Name', 'Coverage Area', 'Base Rate / Mbps (BDT)', 'Active Products'];
+    const rows = list.map((c) => [
+      c.id,
+      c.name,
+      c.area,
+      c.priceBdt,
+      c.itemsCount,
+    ]);
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `bandwidth_categories_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Bandwidth categories exported to CSV');
   };
 
   const columns = useMemo<LegacyColumnDef<BandwidthCategoryItem, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Category Name',
+        header: 'Category Classification',
         enableHiding: false,
+        size: 260,
         cell: ({ row }) => (
-          <span className="font-semibold text-foreground inline-flex items-center gap-2">
-            <Tags className="h-4 w-4 text-primary" />
-            {row.original.name}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0">
+              <Tags className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="font-bold text-sm text-foreground">{row.original.name}</div>
+              <div className="text-[10px] text-muted-foreground font-mono">{row.original.id}</div>
+            </div>
+          </div>
         ),
       },
       {
         accessorKey: 'area',
-        header: 'Service Area',
+        header: 'Coverage Territory',
+        size: 180,
         cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground">{row.original.area}</span>
+          <div className="flex items-center gap-1.5 text-xs text-foreground">
+            <MapPin className="h-3 w-3 text-primary shrink-0" />
+            <span>{row.original.area}</span>
+          </div>
         ),
       },
       {
         accessorKey: 'priceBdt',
-        header: 'Base Rate / Mbps',
+        header: 'Benchmark Base Rate',
+        size: 160,
         cell: ({ row }) => (
-          <span className="font-mono text-sm font-semibold">
+          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
             {formatBdtWithSymbol(row.original.priceBdt)} / Mbps
           </span>
         ),
       },
       {
         accessorKey: 'itemsCount',
-        header: 'Items Count',
+        header: 'Catalog Products',
+        size: 150,
         cell: ({ row }) => (
-          <span className="text-xs font-mono">{row.original.itemsCount} catalog products</span>
+          <Badge variant="secondary" className="font-mono text-xs">
+            {row.original.itemsCount} SKUs Linked
+          </Badge>
         ),
       },
       {
         id: 'actions',
-        header: () => <span className="block text-right">Action</span>,
-        enableSorting: false,
-        enableHiding: false,
+        header: '',
+        size: 80,
         cell: ({ row }) => (
           <div className="text-right">
             <Button
               variant="ghost"
               size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               onClick={() => {
                 setCategories((prev) => prev.filter((c) => c.id !== row.original.id));
-                toast.success('Category removed.');
+                toast.success('Category classification removed.');
               }}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
@@ -122,7 +166,7 @@ export function BandwidthCategoriesPage() {
     [],
   );
 
-    if (isLoading && categories.length === 0) return <PageSkeleton variant="table" rows={4} />;
+  if (isLoading && categories.length === 0) return <PageSkeleton variant="table" rows={4} />;
   if (isError && categories.length === 0) {
     return (
       <div className="p-6">
@@ -137,63 +181,119 @@ export function BandwidthCategoriesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Bandwidth Item Categories"
-        subtitle="Upstream category groups, pricing guidelines, and coverage areas"
+        subtitle="Upstream category groups, benchmark rate rules, and coverage area definitions"
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Bandwidth Buy' },
+          { label: 'Admin', url: '/admin/dashboard' },
+          { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
           { label: 'Categories' },
         ]}
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Category
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              className="text-xs border-border/80 hover:bg-accent"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Categories
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setModalOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Category
+            </Button>
+          </div>
         }
       />
 
+      {/* KPI Stats Ribbon */}
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <p>
+          <span className="font-semibold tabular-nums text-foreground">{list.length}</span>{' '}
+          <span className="text-muted-foreground">category classifications</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-primary">{list.reduce((s, c) => s + c.itemsCount, 0)}</span>{' '}
+          <span className="text-muted-foreground">active catalog SKUs mapped</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+            ৳{list.length ? Math.round(list.reduce((s, c) => s + c.priceBdt, 0) / list.length) : 0} / Mbps
+          </span>{' '}
+          <span className="text-muted-foreground">avg benchmark base rate</span>
+        </p>
+      </div>
+
+      {/* Main Table */}
       <DataTable
         columns={columns}
         data={list}
         getRowId={(row) => row.id}
         searchKey="name"
-        searchPlaceholder="Search categories by name or area..."
+        searchPlaceholder="Search categories by name or territory..."
         searchFilterFn={categorySearchFilter}
-        facetFilters={[{ columnId: 'area', title: 'Area' }]}
-        emptyTitle="No categories"
+        facetFilters={[{ columnId: 'area', title: 'Coverage Territory' }]}
+        emptyTitle="No categories found"
         emptyDescription="Create a bandwidth category to group catalog items."
       />
 
+      {/* Add Category Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader>
-            <DialogTitle>Add Bandwidth Category</DialogTitle>
-            <DialogDescription>Group products into DIA, Peering, Submarine, or Cache categories.</DialogDescription>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Tags className="h-4 w-4 text-primary" /> Add Bandwidth Category
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Group products into DIA, Peering, Submarine, or Content Cache categories.
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAdd} className="space-y-4 py-2">
+          <form onSubmit={handleAdd} className="space-y-3.5 pt-2">
             <div className="space-y-1.5">
-              <Label htmlFor="catName">Category Name *</Label>
-              <Input id="catName" placeholder="e.g. Dedicated Internet (DIA)" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Label className="text-xs font-semibold">Category Name *</Label>
+              <Input
+                placeholder="e.g. Submarine Cable (SEA-ME-WE-5)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="text-xs h-9"
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="catPrice">Base Rate / Mbps (BDT)</Label>
-                <Input id="catPrice" type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))} />
+                <Label className="text-xs font-semibold">Base Rate / Mbps (BDT)</Label>
+                <Input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                  className="text-xs h-9 font-mono"
+                />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="catArea">Coverage Area</Label>
-                <Input id="catArea" value={area} onChange={(e) => setArea(e.target.value)} />
+                <Label className="text-xs font-semibold">Coverage Territory</Label>
+                <Input
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  className="text-xs h-9"
+                />
               </div>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Category</Button>
-            </DialogFooter>
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="text-xs">
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" className="text-xs font-semibold">
+                Save Category
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

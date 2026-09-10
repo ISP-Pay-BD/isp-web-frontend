@@ -710,17 +710,24 @@ export const walletData = {
 };
 
 export const popResellers = [
-  { id: 'pop_uttara', name: 'Demo POP Uttara', balanceBdt: 85000, customers: 320, status: 'active', contact: '01711000001', area: 'Uttara' },
-  { id: 'pop_mirpur', name: 'Demo POP Mirpur', balanceBdt: 42000, customers: 180, status: 'active', contact: '01711000002', area: 'Mirpur' },
-  { id: 'pop_dhanmondi', name: 'Demo POP Dhanmondi', balanceBdt: 28000, customers: 95, status: 'active', contact: '01711000003', area: 'Dhanmondi' },
-  { id: 'pop_chittagong', name: 'Demo POP Chittagong', balanceBdt: 65000, customers: 210, status: 'active', contact: '01711000004', area: 'Chittagong' },
+  { id: 'pop_uttara', name: 'FastNet POP Uttara Hub', balanceBdt: 185000, customers: 480, status: 'active', contact: '+880 1711-889901', area: 'Uttara Sector 3 & 7', manager: 'Tanvir Hossain', bandwidthAllocationMbps: 2500 },
+  { id: 'pop_mirpur', name: 'SpeedLink POP Mirpur-10', balanceBdt: 142000, customers: 360, status: 'active', contact: '+880 1819-772211', area: 'Mirpur 10, 11 & Kazipara', manager: 'Mahmudur Rahman', bandwidthAllocationMbps: 2000 },
+  { id: 'pop_dhanmondi', name: 'MetroWave POP Dhanmondi', balanceBdt: 98000, customers: 240, status: 'active', contact: '+880 1912-334455', area: 'Dhanmondi & Kalabagan', manager: 'Zubair Ahmed', bandwidthAllocationMbps: 1500 },
+  { id: 'pop_chittagong', name: 'PortCity POP Agrabad', balanceBdt: 265000, customers: 580, status: 'active', contact: '+880 1811-998877', area: 'Agrabad C/A & GEC Circle', manager: 'Khorshed Alam', bandwidthAllocationMbps: 3500 },
+  { id: 'pop_sylhet', name: 'Surma POP Zindabazar', balanceBdt: 75000, customers: 190, status: 'active', contact: '+880 1715-443322', area: 'Zindabazar & Shibganj', manager: 'Foyez Chowdhury', bandwidthAllocationMbps: 1000 },
+  { id: 'pop_khulna', name: 'Bhairab POP Shibbari', balanceBdt: 45000, customers: 120, status: 'active', contact: '+880 1914-556677', area: 'Shibbari More & Boyra', manager: 'Al-Amin Sheikh', bandwidthAllocationMbps: 800 },
+  { id: 'pop_gazipur', name: 'Bhawal POP Chowrasta', balanceBdt: 0, customers: 45, status: 'suspended', contact: '+880 1611-223344', area: 'Chowrasta & Board Bazar', manager: 'Nazmul Islam', bandwidthAllocationMbps: 400 },
 ];
 
 export const popTransactions = [
-  { id: 'ptx_1', popId: 'pop_uttara', popName: 'Demo POP Uttara', type: 'credit', amountBdt: 50000, date: '2026-09-01', note: 'Funding from admin' },
-  { id: 'ptx_2', popId: 'pop_uttara', popName: 'Demo POP Uttara', type: 'debit', amountBdt: -12000, date: '2026-09-02', note: 'Customer collections remitted' },
-  { id: 'ptx_3', popId: 'pop_mirpur', popName: 'Demo POP Mirpur', type: 'credit', amountBdt: 30000, date: '2026-08-28', note: 'Funding' },
-  { id: 'ptx_4', popId: 'pop_chittagong', popName: 'Demo POP Chittagong', type: 'debit', amountBdt: -8500, date: '2026-09-01', note: 'Package purchase' },
+  { id: 'ptx_101', popId: 'pop_uttara', popName: 'FastNet POP Uttara Hub', type: 'credit', amountBdt: 85000, date: '2026-09-08', note: 'Monthly wallet top-up via City Bank deposit', method: 'Bank Transfer' },
+  { id: 'ptx_102', popId: 'pop_uttara', popName: 'FastNet POP Uttara Hub', type: 'debit', amountBdt: -28400, date: '2026-09-07', note: 'Bulk subscriber package renewal settlement (42 users)', method: 'System Auto' },
+  { id: 'ptx_103', popId: 'pop_mirpur', popName: 'SpeedLink POP Mirpur-10', type: 'credit', amountBdt: 60000, date: '2026-09-06', note: 'bKash merchant wallet allocation funding', method: 'bKash' },
+  { id: 'ptx_104', popId: 'pop_mirpur', popName: 'SpeedLink POP Mirpur-10', type: 'debit', amountBdt: -19500, date: '2026-09-05', note: 'Hardware lease & ONU inventory requisition', method: 'Debit Slip' },
+  { id: 'ptx_105', popId: 'pop_chittagong', popName: 'PortCity POP Agrabad', type: 'credit', amountBdt: 120000, date: '2026-09-04', note: 'Direct cash deposit at Agrabad billing counter', method: 'Cash Counter' },
+  { id: 'ptx_106', popId: 'pop_chittagong', popName: 'PortCity POP Agrabad', type: 'debit', amountBdt: -45000, date: '2026-09-03', note: 'Upstream 1Gbps sub-VLAN transit lease fee', method: 'System Auto' },
+  { id: 'ptx_107', popId: 'pop_dhanmondi', popName: 'MetroWave POP Dhanmondi', type: 'credit', amountBdt: 40000, date: '2026-09-02', note: 'Nagad corporate wallet funding', method: 'Nagad' },
+  { id: 'ptx_108', popId: 'pop_sylhet', popName: 'Surma POP Zindabazar', type: 'credit', amountBdt: 35000, date: '2026-09-01', note: 'Opening balance allocation September', method: 'Bank Transfer' },
 ];
 
 export const inventoryItems = [

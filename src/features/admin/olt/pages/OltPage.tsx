@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import { PageHeader } from '@/features/admin/shared';
+import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { useOltDevices } from '../hooks/useOltDevices';
 import type { OltDeviceItem } from '@/data/admin/network-ops.data';
 import { OltModal } from '../components/OltModal';
@@ -20,6 +21,12 @@ import {
   Trash2,
   Zap,
   RotateCw,
+  Download,
+  Server,
+  Activity,
+  AlertTriangle,
+  Radio,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -90,6 +97,34 @@ export function OltPage() {
     });
   };
 
+  const handleExportCsv = () => {
+    const headers = ['OLT Name', 'Vendor Brand', 'IP Address', 'Port', 'Protocol', 'PON Ports', 'Online ONUs', 'Total ONUs', 'Area', 'Status'];
+    const rows = list.map((o) => [
+      `"${o.name.replace(/"/g, '""')}"`,
+      o.brand,
+      o.ip,
+      o.port,
+      o.protocol,
+      o.ponPortsCount,
+      o.onuOnline,
+      o.onuTotal,
+      `"${o.area}"`,
+      o.status,
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `olt_nodes_directory_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('OLT nodes exported to CSV');
+  };
+
   const handleSaveOlt = (values: {
     name: string;
     brand: OltDeviceItem['brand'];
@@ -129,8 +164,9 @@ export function OltPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'OLT Node',
+        header: 'OLT Node & Coverage Area',
         enableHiding: false,
+        size: 240,
         cell: ({ row }) => {
           const olt = row.original;
           const onlinePct =
@@ -162,6 +198,7 @@ export function OltPage() {
       {
         accessorKey: 'brand',
         header: 'Vendor',
+        size: 130,
         cell: ({ row }) => (
           <Badge variant="outline" className="font-medium bg-muted/30 text-[11px] px-2 py-0.5">
             {row.original.brand}
@@ -171,6 +208,7 @@ export function OltPage() {
       {
         accessorKey: 'ip',
         header: 'Host IP & Port',
+        size: 170,
         cell: ({ row }) => (
           <div>
             <div className="font-mono text-[12px] font-medium text-foreground">
@@ -186,6 +224,7 @@ export function OltPage() {
       {
         accessorKey: 'protocol',
         header: 'Protocol',
+        size: 110,
         cell: ({ row }) => (
           <Badge
             variant="secondary"
@@ -198,6 +237,7 @@ export function OltPage() {
       {
         accessorKey: 'ponPortsCount',
         header: 'PON Ports',
+        size: 110,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-xs font-semibold text-foreground">
@@ -211,13 +251,22 @@ export function OltPage() {
         id: 'onus',
         accessorKey: 'onuOnline',
         header: 'Connected ONUs',
+        size: 180,
         cell: ({ row }) => (
           <div className="space-y-1.5">
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {row.original.onuOnline}
-              </span>
-              <span className="text-[11px] text-muted-foreground">/ {row.original.onuTotal}</span>
+            <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {row.original.onuOnline}
+                </span>
+                <span className="text-[11px] text-muted-foreground">/ {row.original.onuTotal}</span>
+              </div>
+              <Link
+                href={`/admin/olt/${row.original.id}/onus`}
+                className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+              >
+                ONUs <ExternalLink className="h-2.5 w-2.5" />
+              </Link>
             </div>
             <OltHealthBar online={row.original.onuOnline} total={row.original.onuTotal} />
           </div>
@@ -226,15 +275,15 @@ export function OltPage() {
       {
         accessorKey: 'status',
         header: 'Status',
+        size: 110,
         cell: ({ row }) => (
           <StatusBadge status={row.original.status === 'active' ? 'active' : 'disabled'} />
         ),
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
-        enableSorting: false,
-        enableHiding: false,
+        header: '',
+        size: 140,
         cell: ({ row }) => {
           const olt = row.original;
           return (
@@ -242,8 +291,8 @@ export function OltPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-amber-500/10"
-                title="Diagnostics"
+                className="h-8 w-8 hover:bg-amber-500/10"
+                title="Optical Power Diagnostics"
                 onClick={() => setDiagnosticsOlt(olt)}
               >
                 <Zap className="h-3.5 w-3.5 text-amber-500" />
@@ -251,7 +300,7 @@ export function OltPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-orange-500/10"
+                className="h-8 w-8 hover:bg-orange-500/10"
                 title="Reboot / Refresh Line"
                 onClick={() => handleReboot(olt)}
               >
@@ -261,7 +310,7 @@ export function OltPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-muted"
+                className="h-8 w-8 hover:bg-muted"
                 title="Edit OLT"
                 onClick={() => {
                   setSelectedOlt(olt);
@@ -273,7 +322,7 @@ export function OltPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-destructive/10"
+                className="h-8 w-8 hover:bg-destructive/10"
                 title="Delete OLT"
                 onClick={() => setDeleteId(olt.id)}
               >
@@ -308,44 +357,78 @@ export function OltPage() {
     <div className="space-y-6">
       <PageHeader
         title="OLT Nodes (GPON / EPON)"
-        subtitle="Manage fiber terminal headends, optical power telemetry, and connected ONUs"
+        subtitle="Manage fiber terminal headends, optical power telemetry, PON ports, and connected ONUs."
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Network Ops' },
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Network Ops', href: '/admin/olt' },
           { label: 'OLT Nodes' },
         ]}
         actions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedOlt(null);
-              setModalOpen(true);
-            }}
-            className="transition-all duration-200 hover:shadow-md"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Onboard New OLT
-          </Button>
+          <div className="flex items-center gap-2.5">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
+              <Download className="mr-2 h-4 w-4" />
+              Export Directory
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedOlt(null);
+                setModalOpen(true);
+              }}
+              className="h-9"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Onboard New OLT
+            </Button>
+          </div>
         }
       />
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{totalOlts}</span>{' '}
-          <span className="text-muted-foreground">OLT nodes</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{totalOnus}</span>{' '}
-          <span className="text-muted-foreground">ONUs</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{onlineOnus}</span>{' '}
-          <span className="text-muted-foreground">online ({healthPct}%)</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-destructive">{offlineOnus}</span>{' '}
-          <span className="text-muted-foreground">offline / LOS</span>
-        </p>
+      {/* KPI Ribbon */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-medium uppercase tracking-wider">OLT Nodes</span>
+            <Server className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {totalOlts}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Active headends</p>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-medium uppercase tracking-wider">Total ONUs</span>
+            <Radio className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {totalOnus}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Customer terminals mapped</p>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-medium uppercase tracking-wider">Online Optical</span>
+            <Activity className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {onlineOnus}
+          </div>
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{healthPct}% link efficiency</p>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-medium uppercase tracking-wider">Offline / LOS</span>
+            <AlertTriangle className="h-4 w-4 text-rose-500" />
+          </div>
+          <div className="mt-2 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
+            {offlineOnus}
+          </div>
+          <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">Loss of optical signal</p>
+        </div>
       </div>
 
       <DataTable
@@ -362,18 +445,6 @@ export function OltPage() {
         ]}
         emptyTitle="No OLT nodes found"
         emptyDescription="Onboard a Huawei, ZTE, BDCOM, or V-Sol OLT node to start monitoring optical power."
-        toolbarActions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedOlt(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Onboard New OLT
-          </Button>
-        }
       />
 
       <OltModal

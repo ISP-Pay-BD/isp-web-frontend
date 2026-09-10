@@ -6,6 +6,12 @@ export interface AccountingReportItem {
   name: string;
   period: string;
   netBdt: number;
+  grossRevenueBdt?: number;
+  totalExpensesBdt?: number;
+  marginPct?: number;
+  type?: string;
+  activePops?: number;
+  topPerformer?: string;
 }
 
 export function useAccountingReports() {

@@ -227,23 +227,52 @@ export function IpPoolsPage() {
         }
       />
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{totalPools}</span>{' '}
-          <span className="text-muted-foreground">total subnets / pools</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{totalIps}</span>{' '}
-          <span className="text-muted-foreground">total managed ips</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{totalUsedIps}</span>{' '}
-          <span className="text-muted-foreground">assigned / in-use</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{publicIpsCount}</span>{' '}
-          <span className="text-muted-foreground">public real ips</span>
-        </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Configured Pools</span>
+            <Globe2 className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground tabular-nums">{totalPools}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Subnets & address pools</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Total Managed IPs</span>
+            <Layers className="h-4 w-4 text-blue-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{totalIps.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">{publicIpsCount} public routable IPs</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Allocated / In Use</span>
+            <ShieldCheck className="h-4 w-4 text-amber-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-foreground tabular-nums">{totalUsedIps.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Active PPPoE & Hotspot leases</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Overall Utilization</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="mt-2">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {totalIps > 0 ? `${Math.round((totalUsedIps / totalIps) * 100)}%` : '0%'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Pool capacity assigned</p>
+          </div>
+        </div>
       </div>
 
       <DataTable
