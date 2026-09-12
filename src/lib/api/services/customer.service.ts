@@ -35,29 +35,29 @@ export interface CustomerProfileResult {
 
 export const customerService = {
   getDashboard: async (): Promise<CustomerDashboardData> => {
-    try {
-      const raw = await http.get<Record<string, unknown>>('/v1/customer/dashboard');
-      return transformBackendCustomerDashboard(raw);
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('customer.dashboard')) as CustomerDashboardData;
     }
+    const raw = await http.get<Record<string, unknown>>('/v1/customer/dashboard');
+    return transformBackendCustomerDashboard(raw);
   },
 
   getSubscription: async (): Promise<CustomerSubscriptionData> => {
-    try {
-      const raw = await http.get<Record<string, unknown>>('/v1/customer/subscription/index');
-      return transformBackendCustomerSubscription(raw);
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('customer.subscription')) as CustomerSubscriptionData;
     }
+    const raw = await http.get<Record<string, unknown>>('/v1/customer/subscription/index');
+    return transformBackendCustomerSubscription(raw);
   },
 
   renewSubscription: async (packageId?: string) => {
-    try {
-      return await http.post('/v1/customer/subscription/renew', { package_id: packageId });
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return await mockFetch('customer.subscription.renew', packageId);
     }
+    return await http.post('/v1/customer/subscription/renew', { package_id: packageId });
   },
 
   getPackages: async () => {

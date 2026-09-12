@@ -37,22 +37,8 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
       login: async (email, password = '') => {
-        try {
-          // Attempt real API login first
-          const response = await authService.login({ email, password });
-          set({
-            user: response.user,
-            token: response.token,
-            isAuthenticated: true,
-          });
-          setAuthCookie({
-            userId: response.user.id,
-            role: response.user.role,
-            status: response.user.status,
-          });
-          return response.user;
-        } catch {
-          // Fallback to mock login if offline / demo mode
+        const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+        if (useMock) {
           const session = await mockFetch('auth.login', { email, password });
           set({
             user: session.user,
@@ -66,6 +52,20 @@ export const useAuthStore = create<AuthState>()(
           });
           return session.user;
         }
+
+        // Live Backend API Mode (No mock fallback)
+        const response = await authService.login({ email, password });
+        set({
+          user: response.user,
+          token: response.token,
+          isAuthenticated: true,
+        });
+        setAuthCookie({
+          userId: response.user.id,
+          role: response.user.role,
+          status: response.user.status,
+        });
+        return response.user;
       },
 
       logout: () => {

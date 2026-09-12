@@ -70,14 +70,105 @@ export function transformBackendCustomersList(raw: unknown): Customer[] {
 }
 
 export function transformBackendDashboardStats(raw: Record<string, unknown>): AdminDashboardResult {
+  const totalCustomers = Number(raw.total_customers ?? raw.totalCustomers ?? 0);
+  const activeCustomers = Number(raw.active_customers ?? raw.users_active ?? raw.activeCustomers ?? 0);
+  const expiredCustomers = Number(raw.expired_customers ?? raw.expired_inactive ?? raw.users_expired ?? 0);
+  const inactiveCustomers = Number(raw.inactive_customers ?? raw.users_inactive ?? 0);
+  const newCustomers = Number(raw.new_users ?? raw.users_new ?? raw.newCustomers ?? 0);
+
+  const monthlyCollectionBdt = Number(raw.customers_payment_received ?? raw.monthly_collection ?? raw.monthlyCollectionBdt ?? 0);
+  const customersPaymentTotal = Number(raw.customers_payment_total ?? raw.customer_payment_total ?? 0);
+  const customersExpaymentTotal = Number(raw.customers_Expayment_total ?? raw.customers_payment_due ?? raw.customer_payment_due ?? 0);
+  const customersExpaymentCount = Number(raw.customers_Expayment_count ?? raw.customers_expayment_count ?? 0);
+  const customersPaymentReceivedCount = Number(raw.customers_payment_received_count ?? 0);
+  const customersPaymentPending = Number(raw.customers_payment_pending ?? 0);
+  const todayCollectionBdt = Number(raw.today_collection ?? raw.todayCollectionBdt ?? Math.round(monthlyCollectionBdt / 30));
+
+  const employeeActive = Number(raw.employee_active ?? 0);
+  const employeeInactive = Number(raw.employee_inactive ?? 0);
+  const employeePaymentReceived = Number(raw.employee_payment_received ?? 0);
+  const employeePaymentPending = Number(raw.employees_payment_pending ?? 0);
+
+  const totalPackages = Number(raw.total_packages ?? 0);
+  const totalAreas = Number(raw.total_area ?? raw.service_area_total_count ?? 0);
+
+  const routerActive = Number(raw.router_active ?? 0);
+  const routerInactive = Number(raw.router_inactive ?? 0);
+  const onlineUsers = Number(raw.pop_online ?? raw.online_users ?? raw.onlineUsers ?? activeCustomers);
+
+  // Transform monthly payment statistics from backend if provided
+  const paymentStats = raw.customer_payment_statistics as
+    | {
+        months?: string[];
+        successful?: number[];
+        pending?: number[];
+        failed?: number[];
+      }
+    | undefined;
+
+  let monthlyTrend = adminDashboardStats.monthlyTrend;
+  if (paymentStats && Array.isArray(paymentStats.months) && Array.isArray(paymentStats.successful) && paymentStats.months.length > 0) {
+    monthlyTrend = paymentStats.months.map((month, idx) => {
+      const collection = Number(paymentStats.successful?.[idx] ?? 0);
+      const pending = Number(paymentStats.pending?.[idx] ?? 0);
+      const target = collection + pending > 0 ? collection + pending : collection * 1.1 || 50000;
+      return {
+        month,
+        collection,
+        target: Math.round(target),
+      };
+    });
+  }
+
+  // Transform routers if provided
+  const rawRouters = Array.isArray(raw.routers) ? (raw.routers as Record<string, unknown>[]) : [];
+  const routers = rawRouters.length > 0
+    ? rawRouters.map((r, idx) => ({
+        id: Number(r.id || idx + 1),
+        name: String(r.name || `POP Router ${idx + 1}`),
+        host: String(r.host || r.ip || '10.10.10.1'),
+        status: (String(r.status || 'online').toLowerCase() === 'active' || String(r.status) === 'online' ? 'online' : 'offline') as 'online' | 'offline',
+        totalUsers: Number(r.totalUsers || r.users_total || 0),
+        activeUsers: Number(r.activeUsers || r.users_online || 0),
+        inactiveUsers: Number(r.inactiveUsers || r.users_offline || 0),
+        lastUpdated: String(r.lastUpdated || r.updated_at || 'Live sync'),
+      }))
+    : adminDashboardStats.routers;
+
+  const quotaLimit = Math.max(500, totalCustomers * 2);
+  const quotaPercent = quotaLimit > 0 ? Number(((totalCustomers / quotaLimit) * 100).toFixed(1)) : 0;
+
   return {
     ...adminDashboardStats,
-    totalCustomers: Number(raw.total_customers || raw.totalCustomers || adminDashboardStats.totalCustomers),
-    activeCustomers: Number(raw.active_customers || raw.activeCustomers || adminDashboardStats.activeCustomers),
-    expiredCustomers: Number(raw.expired_customers || raw.expiredCustomers || adminDashboardStats.expiredCustomers),
-    todayCollectionBdt: Number(raw.today_collection || raw.todayCollectionBdt || adminDashboardStats.todayCollectionBdt),
-    monthlyCollectionBdt: Number(raw.monthly_collection || raw.monthlyCollectionBdt || adminDashboardStats.monthlyCollectionBdt),
-    onlineUsers: Number(raw.online_users || raw.onlineUsers || adminDashboardStats.onlineUsers),
+    totalCustomers,
+    activeCustomers,
+    expiredCustomers,
+    inactiveCustomers,
+    newCustomers,
+    newCustomersThisMonth: newCustomers,
+    todayCollectionBdt,
+    monthlyCollectionBdt,
+    customersPaymentReceivedCount,
+    customersExpaymentTotal,
+    customersExpaymentCount,
+    customersPaymentTotal,
+    customersPaymentPending,
+    onlineUsers,
+    totalPackages,
+    totalAreas,
+    employeeActive,
+    employeeInactive,
+    employeePaymentReceived,
+    employeePaymentPending,
+    routerActive,
+    routerInactive,
+    customerQuota: {
+      used: totalCustomers,
+      limit: quotaLimit,
+      percent: quotaPercent,
+    },
+    monthlyTrend,
+    routers,
   };
 }
 

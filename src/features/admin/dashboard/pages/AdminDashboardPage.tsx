@@ -87,7 +87,7 @@ export function AdminDashboardPage() {
     return (
       <EmptyState
         title="Failed to load dashboard"
-        description="Could not connect to mock server. Click retry to reload."
+        description="Could not connect to backend server. Click retry to reload."
         actionLabel="Retry"
         onAction={() => refetch()}
       />

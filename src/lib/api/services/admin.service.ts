@@ -45,52 +45,64 @@ export interface CustomerDetailResult {
 
 export const adminService = {
   getDashboardStats: async (resellerId?: string | number): Promise<AdminDashboardResult> => {
-    try {
-      const id = resellerId || 2;
-      const raw = await http.get<Record<string, unknown>>(`/v1/reseller/dashboard/${id}`);
-      return transformBackendDashboardStats(raw);
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('admin.dashboard')) as AdminDashboardResult;
     }
+    let id = resellerId;
+    if (!id && typeof window !== 'undefined') {
+      const storedAuth = localStorage.getItem('isp-auth-storage');
+      if (storedAuth) {
+        try {
+          const parsed = JSON.parse(storedAuth);
+          id = parsed?.state?.user?.id || parsed?.state?.user?.tenantId;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    const finalId = id || 369;
+    const raw = await http.get<Record<string, unknown>>(`/v1/reseller/dashboard/${finalId}`);
+    return transformBackendDashboardStats(raw);
   },
 
   getCustomers: async (params?: CustomerListParams): Promise<CustomersListResult> => {
-    try {
-      const resellerId = params?.resellerId || 2;
-      const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}`, params as Record<string, unknown>);
-      const list = transformBackendCustomersList(raw);
-      return {
-        items: list.length > 0 ? list : customers,
-        total: list.length > 0 ? list.length : customers.length,
-      };
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('admin.customers.list')) as CustomersListResult;
     }
+    const resellerId = params?.resellerId || 2;
+    const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}`, params as Record<string, unknown>);
+    const list = transformBackendCustomersList(raw);
+    return {
+      items: list,
+      total: list.length,
+    };
   },
 
   getExpiredCustomers: async (): Promise<CustomersListResult> => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/customers?status=expired');
-      const list = transformBackendCustomersList(raw);
-      const expired = list.filter((c) => c.status === 'expired');
-      return {
-        items: expired.length > 0 ? expired : customers.filter((c) => c.status === 'expired'),
-        total: expired.length > 0 ? expired.length : customers.filter((c) => c.status === 'expired').length,
-      };
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('admin.customers.expired')) as CustomersListResult;
     }
+    const raw = await http.get<unknown>('/v1/admin/customers?status=expired');
+    const list = transformBackendCustomersList(raw);
+    const expired = list.filter((c) => c.status === 'expired');
+    return {
+      items: expired,
+      total: expired.length,
+    };
   },
 
   getCustomerById: async (id: string): Promise<CustomerDetailResult | null> => {
-    try {
-      const raw = await http.get<Record<string, unknown>>(`/v1/admin/customers/${id}`);
-      const customer = transformBackendCustomer(raw);
-      const payments = getPaymentsByCustomerId(customer.id);
-      return { customer, payments };
-    } catch {
+    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
+    if (useMock) {
       return (await mockFetch('admin.customers.get', id)) as CustomerDetailResult | null;
     }
+    const raw = await http.get<Record<string, unknown>>(`/v1/admin/customers/${id}`);
+    const customer = transformBackendCustomer(raw);
+    const payments = getPaymentsByCustomerId(customer.id);
+    return { customer, payments };
   },
 
   createCustomer: async (data: Partial<Customer>): Promise<Customer> => {
