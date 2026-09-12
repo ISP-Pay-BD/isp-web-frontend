@@ -141,6 +141,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandItem>
 
           <CommandItem
+            value="BTRC compliance reports subscriber export"
+            onSelect={() => navigate('/admin/reports')}
+            onClick={() => navigate('/admin/reports')}
+            className="cursor-pointer"
+          >
+            <Send className="mr-2 h-4 w-4 text-emerald-500" />
+            <span className="font-medium">Generate BTRC Compliance Reports</span>
+            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/reports</span>
+          </CommandItem>
+
+          <CommandItem
             value="Send SMS due reminders broadcast templates"
             onSelect={() => navigate('/admin/sms')}
             onClick={() => navigate('/admin/sms')}

@@ -238,7 +238,15 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                     ))}
                   </div>
                 ) : (
-                  <CustomAccessTable records={customAccess} />
+                  <CustomAccessTable 
+                    records={customAccess} 
+                    sections={sections}
+                    onUpdateRecord={(updated) => {
+                      setCustomAccess((prev) =>
+                        prev.map((r) => (r.id === updated.id ? updated : r))
+                      );
+                    }}
+                  />
                 )}
               </CardContent>
             </Card>

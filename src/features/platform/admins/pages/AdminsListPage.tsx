@@ -10,6 +10,7 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/features/shared/data-table';
 import type { PlatformAdminUser } from '@/data/platform/contacts.data';
 import { toast } from 'sonner';

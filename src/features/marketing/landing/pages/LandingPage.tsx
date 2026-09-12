@@ -67,7 +67,7 @@ export function LandingPage() {
 
       {/* Interactive Product Preview & Modules Showcase */}
       <Reveal>
-        <ProductPreview tabs={data.productPreview} />
+        <ProductPreview />
       </Reveal>
 
       {/* Full 12-Module Features Grid */}

@@ -9,15 +9,18 @@ interface RoiSectionProps {
 }
 
 export function RoiSection({ roi }: RoiSectionProps) {
-  const [subscribers, setSubscribers] = useState(2500);
-  const [currentCost, setCurrentCost] = useState(5000);
+  const [subscribers, setSubscribers] = useState<number | ''>(2500);
+  const [currentCost, setCurrentCost] = useState<number | ''>(5000);
+
+  const activeSubscribers = typeof subscribers === 'number' ? subscribers : 0;
+  const activeCurrentCost = typeof currentCost === 'number' ? currentCost : 0;
 
   // Dynamic savings calculations
   // ISP Pay BD costs 500 base + 1.5 per sub on PAYG, or flat tier standard
-  const estimatedIspPayBdMonthly = 500 + subscribers * 1.5;
-  const hoursSavedMonthly = Math.round((subscribers / 1000) * roi.hoursSavedPerDay * 30);
+  const estimatedIspPayBdMonthly = activeSubscribers > 0 ? 500 + activeSubscribers * 1.5 : 0;
+  const hoursSavedMonthly = Math.round((activeSubscribers / 1000) * (roi?.hoursSavedPerDay || 2.5) * 30);
   const monthlyLaborSavings = hoursSavedMonthly * 250; // estimated 250 BDT/hr staff cost
-  const directSoftwareSavings = Math.max(0, currentCost - estimatedIspPayBdMonthly);
+  const directSoftwareSavings = Math.max(0, activeCurrentCost - estimatedIspPayBdMonthly);
   const netMonthlySavings = directSoftwareSavings + monthlyLaborSavings;
   const annualSavings = netMonthlySavings * 12;
 
@@ -45,24 +48,35 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   <label htmlFor="subs-slider" className="font-semibold text-white">
                     Active Subscribers
                   </label>
-                  <span className="font-mono text-base font-bold text-landing-accent">
-                    {subscribers.toLocaleString()} lines
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100000"
+                      value={subscribers}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSubscribers(val === '' ? '' : Math.max(0, Number(val)));
+                      }}
+                      className="w-24 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-right font-mono text-sm font-bold text-landing-accent focus:border-landing-cta focus:outline-none"
+                    />
+                    <span className="text-xs text-white/50 font-medium">lines</span>
+                  </div>
                 </div>
                 <input
                   id="subs-slider"
                   type="range"
-                  min="200"
+                  min="100"
                   max="10000"
-                  step="100"
-                  value={subscribers}
+                  step="50"
+                  value={activeSubscribers || 100}
                   onChange={(e) => setSubscribers(Number(e.target.value))}
                   className="w-full accent-landing-cta cursor-pointer"
                 />
                 <div className="flex justify-between text-[11px] text-white/40 mt-1 font-mono">
-                  <span>200</span>
+                  <span>100</span>
                   <span>5,000</span>
-                  <span>10,000</span>
+                  <span>10,000+</span>
                 </div>
               </div>
 
@@ -74,10 +88,14 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   <input
                     id="current-cost"
                     type="number"
-                    min="1000"
+                    min="0"
                     step="500"
                     value={currentCost}
-                    onChange={(e) => setCurrentCost(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCurrentCost(val === '' ? '' : Math.max(0, Number(val)));
+                    }}
+                    placeholder="e.g. 5000"
                     className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white focus:border-landing-cta focus:outline-none"
                   />
                   <span className="absolute right-4 top-3 font-mono text-sm text-white/40">BDT</span>
