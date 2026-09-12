@@ -7,23 +7,18 @@ import {
   Shield, 
   FileText, 
   Clock, 
-  Eye, 
   Search, 
   Filter, 
   Plus, 
-  CheckCircle2, 
-  SlidersHorizontal,
+  CheckSquare,
+  Square,
   X,
-  Sparkles,
-  ChevronRight,
-  ChevronDown,
   Trash2,
   RotateCcw,
   Layers,
   UserPlus,
-  Lock,
-  AlertCircle,
-  XCircle
+  Edit,
+  Eye
 } from 'lucide-react';
 import type { CustomUserAccessRecord, PermissionSectionDef } from '@/data/users';
 import {
@@ -86,12 +81,36 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, Record<string, string[]>> = {
   user: customerPermissions,
 };
 
-// Candidates for adding new custom access
+const ACTION_PRETTY_LABELS: Record<string, string> = {
+  read: 'View',
+  create: 'Create',
+  update: 'Edit',
+  delete: 'Delete',
+  update_subscription: 'Update Subscription',
+  update_conn: 'Update Connection',
+  free_customer_create: 'Free User Create',
+  self_recharge: 'Self Recharge',
+  daily_payment_generate: 'Daily Bill Generate',
+  invoice: 'Invoice Download',
+  send_msg: 'Send Message',
+  restore: 'Restore',
+  delete_forever: 'Delete Forever',
+  empty: 'Empty Trash',
+  sync: 'Sync Users',
+  payment: 'Online Payment',
+  renew: 'Renew Subscription',
+  chat: 'Access AI',
+  ai: 'AI Auto-reply',
+  utility: 'Utility Templates',
+  authentication: 'Auth OTP',
+  marketing: 'Marketing Campaigns',
+};
+
 const CANDIDATE_USERS = [
-  { id: 'usr_101', name: 'Zubair Hossain', email: 'zubair.pop@demo.isppaybd.com', role: 'resellerAdmin' },
+  { id: 'usr_101', name: 'Zubair Hossain (POP)', email: 'zubair.pop@demo.isppaybd.com', role: 'resellerAdmin' },
   { id: 'usr_102', name: 'Tariqul Islam (NOC)', email: 'tariqul.noc@demo.isppaybd.com', role: 'employee' },
-  { id: 'usr_103', name: 'Nusrat Jahan (Accounts)', email: 'nusrat.acc@demo.isppaybd.com', role: 'employee' },
-  { id: 'usr_104', name: 'Green Valley ISP (Sub-POP)', email: 'greenvalley@demo.isppaybd.com', role: 'resellerAdmin' },
+  { id: 'usr_103', name: 'Nusrat Jahan (Billing)', email: 'nusrat.acc@demo.isppaybd.com', role: 'employee' },
+  { id: 'usr_104', name: 'Green Valley ISP', email: 'greenvalley@demo.isppaybd.com', role: 'resellerAdmin' },
   { id: 'usr_105', name: 'VIP Enterprise Client', email: 'vip.corp@demo.isppaybd.com', role: 'user' },
 ];
 
@@ -109,6 +128,16 @@ export function CustomAccessTable({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
+  // Active editing permissions in dialog
+  const [editingPermissions, setEditingPermissions] = useState<Record<string, string[]>>({});
+  const [dialogSearch, setDialogSearch] = useState('');
+  const [dialogCategory, setDialogCategory] = useState('all');
+
+  // Add Dialog State
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'resellerAdmin' | 'employee' | 'user'>('employee');
+
   // Filter records based on search query and role filter
   const filteredRecords = useMemo(() => {
     return records.filter((r) => {
@@ -123,23 +152,11 @@ export function CustomAccessTable({
     });
   }, [records, searchQuery, roleFilter]);
 
-  // Active editing permissions in dialog
-  const [editingPermissions, setEditingPermissions] = useState<Record<string, string[]>>({});
-  const [dialogSearch, setDialogSearch] = useState('');
-  const [dialogCategory, setDialogCategory] = useState('all');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-
-  // Add Dialog State
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'resellerAdmin' | 'employee' | 'user'>('employee');
-
   const handleOpenDetails = (record: CustomUserAccessRecord) => {
     setSelectedRecord(record);
     setEditingPermissions(JSON.parse(JSON.stringify(record.permissions || {})));
     setDialogSearch('');
     setDialogCategory('all');
-    setCollapsedSections({});
     setIsEditDialogOpen(true);
     onView?.(record);
   };
@@ -177,7 +194,7 @@ export function CustomAccessTable({
     if (!selectedRecord) return;
     const defaults = ROLE_DEFAULT_PERMISSIONS[selectedRecord.role] || {};
     setEditingPermissions(JSON.parse(JSON.stringify(defaults)));
-    toast.info(`Reset permissions to ${ROLE_LABELS[selectedRecord.role]} defaults.`);
+    toast.info(`Reset permissions to ${ROLE_LABELS[selectedRecord.role]} defaults`);
   };
 
   const handleGrantAllDialog = () => {
@@ -186,12 +203,26 @@ export function CustomAccessTable({
       next[s.key] = Object.keys(s.actions);
     });
     setEditingPermissions(next);
-    toast.success('Granted all system permissions for this user.');
+    toast.success('Selected all permissions for this user');
+  };
+
+  const handleSetReadOnlyDialog = () => {
+    const next: Record<string, string[]> = {};
+    sections.forEach((s) => {
+      const readActions = Object.keys(s.actions).filter((a) => a === 'read' || a.includes('view'));
+      if (readActions.length > 0) {
+        next[s.key] = readActions;
+      } else if (Object.keys(s.actions).length > 0) {
+        next[s.key] = [Object.keys(s.actions)[0]];
+      }
+    });
+    setEditingPermissions(next);
+    toast.success('Applied View-Only permissions');
   };
 
   const handleClearAllDialog = () => {
     setEditingPermissions({});
-    toast.info('Revoked all custom permissions.');
+    toast.info('Cleared all permissions');
   };
 
   const handleSaveCustomPermissions = () => {
@@ -205,21 +236,21 @@ export function CustomAccessTable({
     };
 
     onUpdateRecord?.(updatedRecord);
-    toast.success(`Custom permissions for "${selectedRecord.name}" updated (${ruleCount} rules applied)!`);
+    toast.success(`Permissions updated for ${selectedRecord.name}`);
     setIsEditDialogOpen(false);
   };
 
   const handleDeleteOverride = () => {
     if (!selectedRecord) return;
     onDeleteRecord?.(selectedRecord.id);
-    toast.success(`Custom override removed for "${selectedRecord.name}". Reverted to default role.`);
+    toast.success(`Custom override removed for ${selectedRecord.name}`);
     setIsEditDialogOpen(false);
   };
 
   const handleCreateNewOverride = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserName.trim() || !newUserEmail.trim()) {
-      toast.error('Please provide a valid user name and email address.');
+      toast.error('Please enter name and email');
       return;
     }
 
@@ -239,22 +270,13 @@ export function CustomAccessTable({
     };
 
     onAddRecord?.(newRecord);
-    toast.success(`Custom access override added for ${newRecord.name}!`);
+    toast.success(`Custom access added for ${newRecord.name}`);
     setIsAddDialogOpen(false);
     setNewUserName('');
     setNewUserEmail('');
-
-    // Open editor directly for immediate customization
     handleOpenDetails(newRecord);
   };
 
-  const handleSelectCandidate = (candidate: typeof CANDIDATE_USERS[0]) => {
-    setNewUserName(candidate.name);
-    setNewUserEmail(candidate.email);
-    setNewUserRole(candidate.role as any);
-  };
-
-  // Filter sections inside the dialog by category and search
   const filteredDialogSections = useMemo(() => {
     return sections.filter((s) => {
       if (dialogCategory !== 'all') {
@@ -267,7 +289,11 @@ export function CustomAccessTable({
       if (dialogSearch.trim()) {
         const q = dialogSearch.toLowerCase();
         const matchesName = s.label.toLowerCase().includes(q) || s.key.toLowerCase().includes(q);
-        const matchesAction = Object.values(s.actions).some((act) => act.toLowerCase().includes(q));
+        const matchesAction = Object.entries(s.actions).some(
+          ([key, label]) =>
+            label.toLowerCase().includes(q) ||
+            (ACTION_PRETTY_LABELS[key] && ACTION_PRETTY_LABELS[key].toLowerCase().includes(q))
+        );
         return matchesName || matchesAction;
       }
 
@@ -282,16 +308,16 @@ export function CustomAccessTable({
 
   return (
     <div className="space-y-4">
-      {/* Search & Custom Filter Bar */}
+      {/* Search & Filter Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search custom user by name, email or ID..."
+            placeholder="Search custom user by name or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 bg-muted/20 border-border/60 text-xs focus:border-primary"
+            className="pl-9 h-8.5 bg-muted/20 border-border/60 text-xs"
           />
           {searchQuery && (
             <button
@@ -316,7 +342,7 @@ export function CustomAccessTable({
                   key={key}
                   type="button"
                   onClick={() => setRoleFilter(key)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 border ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
                     active
                       ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                       : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
@@ -328,126 +354,99 @@ export function CustomAccessTable({
             })}
           </div>
 
-          {/* Add Custom User Button */}
           <Button
             onClick={() => setIsAddDialogOpen(true)}
             size="sm"
-            className="h-8 gap-1.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs shrink-0"
+            className="h-8 gap-1.5 text-xs font-semibold bg-primary text-primary-foreground shadow-xs shrink-0"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            Add Custom Override
+            Add Custom Access
           </Button>
         </div>
       </div>
 
-      {/* Table Surface */}
+      {/* Main Table */}
       {filteredRecords.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-14 text-center rounded-xl border border-dashed border-border/70 bg-card/40">
-          <div className="p-3.5 rounded-2xl bg-muted/40 mb-3 border border-border/50">
-            <Search className="h-6 w-6 text-muted-foreground/60" />
-          </div>
-          <p className="text-foreground text-sm font-semibold">No matching custom access users</p>
-          <p className="text-muted-foreground text-xs mt-1 max-w-sm">
-            {searchQuery
-              ? `No users match "${searchQuery}". Try adjusting your search query.`
-              : 'No custom overrides configured for this role filter.'}
+        <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-border bg-card/40">
+          <p className="text-foreground text-sm font-semibold">No custom access users found</p>
+          <p className="text-muted-foreground text-xs mt-1">
+            {searchQuery ? `No matches for "${searchQuery}"` : 'No users have custom overrides configured.'}
           </p>
-          <div className="flex items-center gap-2 mt-4">
-            {(searchQuery || roleFilter !== 'all') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery('');
-                  setRoleFilter('all');
-                }}
-                className="text-xs h-8"
-              >
-                Reset Filters
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => setIsAddDialogOpen(true)}
-              className="text-xs h-8 gap-1.5 bg-primary text-primary-foreground"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              Add User Override
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAddDialogOpen(true)}
+            className="mt-3 text-xs h-8 gap-1.5"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Add User Override
+          </Button>
         </div>
       ) : (
-        <div className="rounded-xl border border-border/60 bg-card/60 overflow-hidden shadow-2xs backdrop-blur-xs">
+        <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
           <Table>
             <TableHeader className="bg-muted/40 border-b border-border/50">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">User Profile</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">User</TableHead>
                 <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Role</TableHead>
                 <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Active Overrides</TableHead>
                 <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Status</TableHead>
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Last Audit</TableHead>
-                <TableHead className="py-3 text-right font-semibold text-xs text-muted-foreground">Action</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Last Updated</TableHead>
+                <TableHead className="py-3 text-right font-semibold text-xs text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRecords.map((record) => (
                 <TableRow
                   key={record.id}
-                  className="group border-b border-border/40 hover:bg-muted/30 transition-colors"
+                  className="border-b border-border/40 hover:bg-muted/30 transition-colors"
                 >
-                  <TableCell className="py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary shadow-xs">
+                  <TableCell className="py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xs text-primary">
                         {record.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                        <div className="text-sm font-semibold text-foreground">
                           {record.name}
                         </div>
                         <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
-                          <Mail className="h-3 w-3 opacity-60" />
                           {record.email}
                         </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3.5">
+                  <TableCell className="py-3">
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-semibold gap-1 ${ROLE_COLORS[record.role] ?? 'bg-muted/50 text-muted-foreground border-border/50'}`}
+                      className={`text-[10px] font-medium gap-1 ${ROLE_COLORS[record.role] ?? 'bg-muted/50 text-muted-foreground'}`}
                     >
-                      <Shield className="h-2.5 w-2.5" />
                       {ROLE_LABELS[record.role] || record.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-3.5">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/5 border border-primary/15">
-                      <FileText className="h-3.5 w-3.5 text-primary" />
-                      <span className="font-mono text-xs font-bold text-primary">{record.customRulesCount}</span>
-                      <span className="text-[10px] text-muted-foreground">active rules</span>
-                    </div>
+                  <TableCell className="py-3">
+                    <span className="font-mono text-xs font-semibold text-primary">
+                      {record.customRulesCount} rules enabled
+                    </span>
                   </TableCell>
-                  <TableCell className="py-3.5">
+                  <TableCell className="py-3">
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-500 font-medium">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Active
                     </span>
                   </TableCell>
-                  <TableCell className="py-3.5">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3 opacity-60" />
-                      <span className="font-mono text-[11px]">{record.updatedAt}</span>
-                    </div>
+                  <TableCell className="py-3">
+                    <span className="font-mono text-xs text-muted-foreground">{record.updatedAt}</span>
                   </TableCell>
-                  <TableCell className="py-3.5 text-right">
+                  <TableCell className="py-3 text-right">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleOpenDetails(record)}
-                      className="h-8 gap-1.5 text-xs font-semibold hover:border-primary hover:text-primary transition-all shadow-2xs"
+                      className="h-7.5 gap-1.5 text-xs hover:border-primary hover:text-primary"
                     >
-                      <Eye className="h-3.5 w-3.5" />
-                      Manage &amp; Edit Permissions
+                      <Edit className="h-3 w-3" />
+                      Edit Permissions
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -457,74 +456,62 @@ export function CustomAccessTable({
         </div>
       )}
 
-      {/* Interactive Custom Permission Matrix Modal */}
+      {/* Clean Custom Permission Matrix Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[96vw] sm:max-w-4xl md:max-w-5xl lg:max-w-6xl bg-card border-border/80 p-5 sm:p-6 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+        <DialogContent className="w-[96vw] sm:max-w-4xl md:max-w-5xl bg-card border-border p-5 sm:p-6 shadow-xl max-h-[92vh] flex flex-col">
           {selectedRecord && (
             <>
-              {/* Modal Header */}
+              {/* Header */}
               <DialogHeader className="pb-3 border-b border-border/40">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-base text-primary shadow-xs">
-                      {selectedRecord.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                        {selectedRecord.name}
-                        <Badge variant="outline" className={`text-xs font-semibold px-2 py-0.5 ${ROLE_COLORS[selectedRecord.role]}`}>
-                          {ROLE_LABELS[selectedRecord.role]}
-                        </Badge>
-                      </DialogTitle>
-                      <DialogDescription className="text-xs font-mono mt-0.5 text-muted-foreground flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5" />
-                        {selectedRecord.email} · <span className="text-foreground/80">User ID: {selectedRecord.userId}</span>
-                      </DialogDescription>
-                    </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                      <span>{selectedRecord.name}</span>
+                      <Badge variant="outline" className={`text-xs ${ROLE_COLORS[selectedRecord.role]}`}>
+                        {ROLE_LABELS[selectedRecord.role]}
+                      </Badge>
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                      {selectedRecord.email} · ID: {selectedRecord.userId}
+                    </DialogDescription>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-mono font-bold text-primary shadow-xs">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      {totalActiveCustomRules} Active Overrides
-                    </span>
-                  </div>
+                  <Badge variant="secondary" className="text-xs font-mono font-semibold self-start sm:self-auto">
+                    {totalActiveCustomRules} Permissions Enabled
+                  </Badge>
                 </div>
               </DialogHeader>
 
-              {/* Presets and Filters Toolbar */}
-              <div className="py-2.5 space-y-2.5 border-b border-border/40">
+              {/* Toolbar */}
+              <div className="py-2.5 space-y-2 border-b border-border/40">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="relative flex-1 max-w-md">
+                  <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
                       type="text"
-                      placeholder="Search permission modules or actions (e.g. 'Customer', 'MikroTik', 'Invoice')..."
+                      placeholder="Search permissions..."
                       value={dialogSearch}
                       onChange={(e) => setDialogSearch(e.target.value)}
-                      className="pl-8 h-8.5 text-xs bg-muted/20 border-border/60 focus:border-primary"
+                      className="pl-8 h-8 text-xs bg-muted/20 border-border/60"
                     />
                     {dialogSearch && (
                       <button
                         onClick={() => setDialogSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3 w-3" />
                       </button>
                     )}
                   </div>
 
-                  {/* Preset Action Buttons */}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={handleResetToRoleDefault}
-                      className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground border-border/60"
-                      title="Reset to default permissions for this role"
+                      className="h-7.5 px-2 text-xs text-muted-foreground hover:text-foreground"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
+                      <RotateCcw className="h-3 w-3 mr-1" />
                       Role Defaults
                     </Button>
                     <Button
@@ -532,20 +519,30 @@ export function CustomAccessTable({
                       variant="outline"
                       size="sm"
                       onClick={handleGrantAllDialog}
-                      className="h-8 px-2.5 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10"
+                      className="h-7.5 px-2 text-xs text-primary"
                     >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Grant All
+                      <CheckSquare className="h-3 w-3 mr-1" />
+                      Select All
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={handleClearAllDialog}
-                      className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/30"
+                      onClick={handleSetReadOnlyDialog}
+                      className="h-7.5 px-2 text-xs"
                     >
-                      <XCircle className="h-3.5 w-3.5" />
-                      Revoke All
+                      <Eye className="h-3 w-3 mr-1" />
+                      View Only
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearAllDialog}
+                      className="h-7.5 px-2 text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      <Square className="h-3 w-3 mr-1" />
+                      Clear
                     </Button>
                   </div>
                 </div>
@@ -562,9 +559,9 @@ export function CustomAccessTable({
                         key={cat.id}
                         type="button"
                         onClick={() => setDialogCategory(cat.id)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap border ${
+                        className={`px-2.5 py-0.5 rounded-md text-xs font-medium transition-colors border ${
                           active
-                            ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
+                            ? 'bg-primary text-primary-foreground border-primary'
                             : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
                         }`}
                       >
@@ -575,148 +572,110 @@ export function CustomAccessTable({
                 </div>
               </div>
 
-              {/* Interactive Module Checklist Body - 2 Column Grid */}
-              <div className="flex-1 overflow-y-auto pr-1 py-3 min-h-[320px]">
+              {/* Clean Table Body */}
+              <div className="flex-1 overflow-y-auto py-2 min-h-[300px]">
                 {filteredDialogSections.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-14 text-center">
-                    <Search className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                    <p className="text-sm font-semibold text-foreground">No modules found for current filters</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Try clearing the search query or switching to &ldquo;All Modules&rdquo;.
-                    </p>
+                  <div className="py-12 text-center text-xs text-muted-foreground">
+                    No matching permission modules.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredDialogSections.map((section) => {
-                      const sectionActions = Object.keys(section.actions);
-                      const activeSectionActs = editingPermissions[section.key] || [];
-                      const isAllEnabled =
-                        sectionActions.length > 0 && activeSectionActs.length === sectionActions.length;
-                      const isSomeEnabled = activeSectionActs.length > 0 && !isAllEnabled;
-                      const isCollapsed = collapsedSections[section.key];
+                  <div className="rounded-lg border border-border/60 overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-muted/40 border-b border-border/50 text-muted-foreground font-semibold">
+                        <tr>
+                          <th className="py-2.5 px-3 w-[220px]">Module</th>
+                          <th className="py-2.5 px-3">Allowed Actions</th>
+                          <th className="py-2.5 px-3 text-right w-[100px]">Toggle</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/40">
+                        {filteredDialogSections.map((section) => {
+                          const sectionActions = editingPermissions[section.key] || [];
+                          const allKeys = Object.keys(section.actions);
+                          const isAll = allKeys.length > 0 && sectionActions.length === allKeys.length;
 
-                      return (
-                        <div
-                          key={section.key}
-                          className={`rounded-xl border transition-all shadow-2xs p-3.5 flex flex-col justify-between ${
-                            activeSectionActs.length > 0
-                              ? 'border-border/80 bg-card/90 ring-1 ring-primary/10'
-                              : 'border-border/50 bg-card/40'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center justify-between pb-2 border-b border-border/30">
-                              <div
-                                className="flex items-center gap-2 cursor-pointer select-none"
-                                onClick={() =>
-                                  setCollapsedSections((prev) => ({
-                                    ...prev,
-                                    [section.key]: !prev[section.key],
-                                  }))
-                                }
-                              >
-                                <button
-                                  type="button"
-                                  className="p-0.5 text-muted-foreground hover:text-foreground"
-                                >
-                                  {isCollapsed ? (
-                                    <ChevronRight className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronDown className="h-4 w-4" />
-                                  )}
-                                </button>
-                                <CheckCircle2
-                                  className={`h-4 w-4 ${
-                                    activeSectionActs.length > 0 ? 'text-primary' : 'text-muted-foreground/30'
-                                  }`}
-                                />
-                                <span className="text-xs font-bold tracking-wider uppercase text-foreground">
+                          return (
+                            <tr
+                              key={section.key}
+                              className={`hover:bg-muted/20 transition-colors ${
+                                sectionActions.length > 0 ? 'bg-primary/[0.02]' : ''
+                              }`}
+                            >
+                              <td className="py-2.5 px-3 align-top">
+                                <div className="font-semibold text-foreground text-xs">
                                   {section.label}
-                                </span>
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] font-mono h-5 px-1.5 font-bold ${
-                                    isAllEnabled
-                                      ? 'bg-primary/10 text-primary border-primary/30'
-                                      : isSomeEnabled
-                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                      : 'bg-muted/40 text-muted-foreground border-border/50'
-                                  }`}
-                                >
-                                  {activeSectionActs.length} / {sectionActions.length}
-                                </Badge>
-                              </div>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                                  {sectionActions.length} of {allKeys.length} enabled
+                                </div>
+                              </td>
 
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleToggleAllSection(section.key, sectionActions, !isAllEnabled)
-                                }
-                                className="h-6 px-2 text-[11px] font-semibold text-primary hover:bg-primary/10"
-                              >
-                                {isAllEnabled ? 'Deselect' : 'Select All'}
-                              </Button>
-                            </div>
+                              <td className="py-2.5 px-3 align-middle">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                  {Object.entries(section.actions).map(([actKey, defaultLabel]) => {
+                                    const isChecked = sectionActions.includes(actKey);
+                                    const labelText = ACTION_PRETTY_LABELS[actKey] || defaultLabel;
+                                    const id = `dialog-${section.key}-${actKey}`;
 
-                            {/* Action Buttons */}
-                            {!isCollapsed && (
-                              <div className="flex flex-wrap gap-1.5 pt-2.5">
-                                {Object.entries(section.actions).map(([actKey, actLabel]) => {
-                                  const isChecked = activeSectionActs.includes(actKey);
-                                  return (
-                                    <button
-                                      key={actKey}
-                                      type="button"
-                                      onClick={() =>
-                                        handleTogglePermission(section.key, actKey, !isChecked)
-                                      }
-                                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 select-none ${
-                                        isChecked
-                                          ? 'bg-primary/15 border-primary/40 text-primary font-semibold shadow-xs ring-1 ring-primary/20'
-                                          : 'bg-muted/20 border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
-                                      }`}
-                                    >
-                                      <span
-                                        className={`h-2 w-2 rounded-full ${
-                                          isChecked ? 'bg-primary' : 'bg-muted-foreground/30'
+                                    return (
+                                      <label
+                                        key={actKey}
+                                        htmlFor={id}
+                                        className={`inline-flex items-center gap-1.5 cursor-pointer select-none py-0.5 px-1.5 rounded transition-colors ${
+                                          isChecked
+                                            ? 'bg-primary/10 text-foreground font-medium'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
                                         }`}
-                                      />
-                                      <span>{actLabel}</span>
-                                      <span className="text-[10px] font-mono opacity-50 uppercase">
-                                        ({actKey})
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                      >
+                                        <Checkbox
+                                          id={id}
+                                          checked={isChecked}
+                                          onCheckedChange={(val) =>
+                                            handleTogglePermission(section.key, actKey, val === true)
+                                          }
+                                          className="h-3.5 w-3.5"
+                                        />
+                                        <span className="text-xs">{labelText}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+
+                              <td className="py-2.5 px-3 align-middle text-right">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleToggleAllSection(section.key, allKeys, !isAll)
+                                  }
+                                  className="h-6 px-2 text-[11px] text-primary hover:bg-primary/10 font-medium"
+                                >
+                                  {isAll ? 'Deselect' : 'Select All'}
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
 
-              {/* Modal Footer Controls */}
-              <div className="pt-3.5 border-t border-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDeleteOverride}
-                    className="text-xs h-8 text-destructive hover:bg-destructive/10 hover:text-destructive gap-1 px-2.5"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete Override
-                  </Button>
-                  <span className="text-[11px] text-muted-foreground font-mono hidden sm:inline">
-                    · Last updated: {selectedRecord.updatedAt}
-                  </span>
-                </div>
+              {/* Modal Footer */}
+              <div className="pt-3 border-t border-border/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteOverride}
+                  className="text-xs h-8 text-destructive hover:bg-destructive/10 hover:text-destructive gap-1 px-2 self-start sm:self-auto"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Custom Override
+                </Button>
 
                 <div className="flex items-center justify-end gap-2">
                   <Button
@@ -724,7 +683,7 @@ export function CustomAccessTable({
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditDialogOpen(false)}
-                    className="text-xs h-9 px-3"
+                    className="text-xs h-8 px-3"
                   >
                     Cancel
                   </Button>
@@ -732,10 +691,9 @@ export function CustomAccessTable({
                     type="button"
                     size="sm"
                     onClick={handleSaveCustomPermissions}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-9 px-4 gap-1.5 shadow-md shadow-primary/20"
+                    className="bg-primary text-primary-foreground text-xs font-semibold h-8 px-4 shadow-sm"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Save &amp; Apply Overrides
+                    Save Changes
                   </Button>
                 </div>
               </div>
@@ -746,28 +704,31 @@ export function CustomAccessTable({
 
       {/* Add Custom User Override Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-lg bg-card border-border/80 p-6 shadow-2xl">
+        <DialogContent className="max-w-md bg-card border-border p-5 shadow-xl">
           <DialogHeader className="pb-3 border-b border-border/40">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-primary" />
-              Add Custom User Override
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-primary" />
+              Add Custom User Access
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Configure fine-grained custom access rules for a specific staff, reseller, or subscriber.
+              Select or enter a user to set specific permission overrides.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleCreateNewOverride} className="space-y-4 pt-2">
-            {/* Quick Candidate Presets */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground font-medium">Quick Pick Existing User</Label>
+          <form onSubmit={handleCreateNewOverride} className="space-y-3.5 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Quick Pick User</Label>
               <div className="flex flex-wrap gap-1.5">
                 {CANDIDATE_USERS.map((cand) => (
                   <button
                     key={cand.id}
                     type="button"
-                    onClick={() => handleSelectCandidate(cand)}
-                    className="text-[11px] px-2 py-1 rounded-md border border-border/60 bg-muted/20 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors text-left"
+                    onClick={() => {
+                      setNewUserName(cand.name);
+                      setNewUserEmail(cand.email);
+                      setNewUserRole(cand.role as any);
+                    }}
+                    className="text-[11px] px-2 py-0.5 rounded border border-border/60 bg-muted/20 hover:bg-primary/10 hover:text-primary transition-colors text-left"
                   >
                     {cand.name}
                   </button>
@@ -775,34 +736,34 @@ export function CustomAccessTable({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="custName" className="text-xs font-medium">Full Name</Label>
+            <div className="space-y-1">
+              <Label htmlFor="custName" className="text-xs">Full Name</Label>
               <Input
                 id="custName"
-                placeholder="e.g. Tariqul Islam (NOC)"
+                placeholder="e.g. Tariqul Islam"
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
-                className="h-9 text-xs bg-muted/20 border-border/60"
+                className="h-8.5 text-xs bg-muted/20 border-border/60"
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="custEmail" className="text-xs font-medium">Email Address</Label>
+            <div className="space-y-1">
+              <Label htmlFor="custEmail" className="text-xs">Email Address</Label>
               <Input
                 id="custEmail"
                 type="email"
-                placeholder="e.g. tariqul.noc@demo.isppaybd.com"
+                placeholder="e.g. tariqul@demo.isppaybd.com"
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
-                className="h-9 text-xs bg-muted/20 border-border/60"
+                className="h-8.5 text-xs bg-muted/20 border-border/60"
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Base Role (Inherits Default Policy)</Label>
-              <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="space-y-1">
+              <Label className="text-xs">Base Role</Label>
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                 {(['employee', 'resellerAdmin', 'admin', 'user'] as const).map((r) => {
                   const active = newUserRole === r;
                   return (
@@ -810,14 +771,14 @@ export function CustomAccessTable({
                       key={r}
                       type="button"
                       onClick={() => setNewUserRole(r)}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all ${
+                      className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs transition-colors ${
                         active
-                          ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
+                          ? 'border-primary bg-primary/10 text-primary font-semibold'
                           : 'border-border/60 bg-muted/10 text-muted-foreground hover:bg-muted/30'
                       }`}
                     >
-                      <Shield className={`h-3.5 w-3.5 ${active ? 'text-primary' : ''}`} />
-                      <div className="text-xs">{ROLE_LABELS[r]}</div>
+                      <Shield className="h-3 w-3" />
+                      <span>{ROLE_LABELS[r]}</span>
                     </button>
                   );
                 })}
@@ -830,17 +791,16 @@ export function CustomAccessTable({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAddDialogOpen(false)}
-                className="text-xs h-9"
+                className="text-xs h-8"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 size="sm"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-9 px-4 gap-1.5 shadow-md shadow-primary/20"
+                className="bg-primary text-primary-foreground text-xs font-semibold h-8 px-4"
               >
-                <Plus className="h-3.5 w-3.5" />
-                Create &amp; Configure Rules
+                Continue to Permissions
               </Button>
             </div>
           </form>

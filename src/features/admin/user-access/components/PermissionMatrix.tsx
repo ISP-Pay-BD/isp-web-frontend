@@ -5,25 +5,19 @@ import { toast } from 'sonner';
 import { 
   Save, 
   Loader2, 
-  CheckCircle2, 
-  XCircle, 
-  ChevronDown, 
-  ChevronRight, 
   Search, 
   X, 
-  Sparkles, 
-  ShieldCheck, 
-  SlidersHorizontal,
-  Layers,
-  Eye,
-  RotateCcw
+  CheckSquare, 
+  Square, 
+  Eye, 
+  RotateCcw,
+  Shield,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import type { PermissionSectionDef } from '@/data/users';
 import type { PermissionMap } from '@/types/auth';
 
@@ -62,41 +56,35 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     id: 'system',
-    label: 'System & WhatsApp',
+    label: 'System & Messaging',
     keys: ['sms_message', 'reports', 'software_settings', 'user_access', 'profile_update', 'password_change', 'ai_chat', 'whatsapp_business', 'whatsapp_waha'],
   },
 ];
 
-const SECTION_COLORS: Record<string, string> = {
-  area: 'bg-primary/10 text-primary border-primary/20',
-  packages: 'bg-primary/10 text-primary border-primary/20',
-  customer: 'bg-primary/10 text-primary border-primary/20',
-  employee: 'bg-muted text-muted-foreground border-border/60',
-  employee_attendance: 'bg-muted text-muted-foreground border-border/60',
-  advance_salary: 'bg-muted text-muted-foreground border-border/60',
-  Resellers: 'bg-primary/10 text-primary border-primary/20',
-  customer_payment: 'bg-primary/10 text-primary border-primary/20',
-  employee_payment: 'bg-muted text-muted-foreground border-border/60',
-  inventory_purchess: 'bg-muted text-muted-foreground border-border/60',
-  network: 'bg-primary/10 text-primary border-primary/20',
-  hotspot: 'bg-primary/10 text-primary border-primary/20',
-  olt: 'bg-primary/10 text-primary border-primary/20',
-  accounting: 'bg-muted text-muted-foreground border-border/60',
-  support_ticket: 'bg-primary/10 text-primary border-primary/20',
-  referral: 'bg-muted text-muted-foreground border-border/60',
-  recycle_bin: 'bg-destructive/10 text-destructive border-destructive/20',
-  sms_message: 'bg-primary/10 text-primary border-primary/20',
-  reports: 'bg-muted text-muted-foreground border-border/60',
-  software_settings: 'bg-muted text-muted-foreground border-border/60',
-  user_access: 'bg-muted text-muted-foreground border-border/60',
-  routers: 'bg-primary/10 text-primary border-primary/20',
-  payment: 'bg-primary/10 text-primary border-primary/20',
-  subscription: 'bg-primary/10 text-primary border-primary/20',
-  profile_update: 'bg-muted text-muted-foreground border-border/60',
-  password_change: 'bg-muted text-muted-foreground border-border/60',
-  ai_chat: 'bg-muted text-muted-foreground border-border/60',
-  whatsapp_business: 'bg-primary/10 text-primary border-primary/20',
-  whatsapp_waha: 'bg-primary/10 text-primary border-primary/20',
+// Clean human-friendly action labels
+const ACTION_PRETTY_LABELS: Record<string, string> = {
+  read: 'View',
+  create: 'Create',
+  update: 'Edit',
+  delete: 'Delete',
+  update_subscription: 'Update Subscription',
+  update_conn: 'Update Connection',
+  free_customer_create: 'Free User Create',
+  self_recharge: 'Self Recharge',
+  daily_payment_generate: 'Daily Bill Generate',
+  invoice: 'Invoice Download',
+  send_msg: 'Send Message',
+  restore: 'Restore',
+  delete_forever: 'Delete Forever',
+  empty: 'Empty Trash',
+  sync: 'Sync Users',
+  payment: 'Online Payment',
+  renew: 'Renew Subscription',
+  chat: 'Access AI',
+  ai: 'AI Auto-reply',
+  utility: 'Utility Templates',
+  authentication: 'Auth OTP',
+  marketing: 'Marketing Campaigns',
 };
 
 export function PermissionMatrix({
@@ -105,13 +93,11 @@ export function PermissionMatrix({
   onChange,
   readOnly = false,
 }: PermissionMatrixProps) {
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const filteredSections = useMemo(() => {
     return sections.filter((section) => {
-      // Category match
       if (selectedCategory !== 'all') {
         const cat = PERMISSION_CATEGORIES.find((c) => c.id === selectedCategory);
         if (cat && !cat.keys.includes(section.key)) {
@@ -119,12 +105,13 @@ export function PermissionMatrix({
         }
       }
 
-      // Search match
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = section.label.toLowerCase().includes(q) || section.key.toLowerCase().includes(q);
-        const matchesAction = Object.values(section.actions).some((label) =>
-          label.toLowerCase().includes(q)
+        const matchesAction = Object.entries(section.actions).some(
+          ([key, label]) =>
+            label.toLowerCase().includes(q) ||
+            (ACTION_PRETTY_LABELS[key] && ACTION_PRETTY_LABELS[key].toLowerCase().includes(q))
         );
         return matchesName || matchesAction;
       }
@@ -141,14 +128,10 @@ export function PermissionMatrix({
     onChange({ ...permissions, [menuKey]: next });
   };
 
-  const toggleSection = (section: PermissionSectionDef, checked: boolean) => {
+  const toggleSection = (section: PermissionSectionDef, enableAll: boolean) => {
     const allActions = Object.keys(section.actions);
-    const next = checked ? allActions : [];
+    const next = enableAll ? allActions : [];
     onChange({ ...permissions, [section.key]: next });
-  };
-
-  const toggleCollapse = (key: string) => {
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleGrantAllFiltered = () => {
@@ -157,7 +140,7 @@ export function PermissionMatrix({
       next[s.key] = Object.keys(s.actions);
     });
     onChange(next);
-    toast.success('Granted all permissions for visible modules');
+    toast.success('Selected all permissions for visible modules');
   };
 
   const handleClearAllFiltered = () => {
@@ -180,249 +163,189 @@ export function PermissionMatrix({
       }
     });
     onChange(next);
-    toast.success('Applied Read-Only preset to visible modules');
+    toast.success('Applied View-Only permissions');
   };
-
-  const handleExpandAll = (expand: boolean) => {
-    const next: Record<string, boolean> = {};
-    sections.forEach((s) => {
-      next[s.key] = !expand;
-    });
-    setCollapsed(next);
-  };
-
-  const totalPossibleRules = sections.reduce(
-    (sum, s) => sum + Object.keys(s.actions).length,
-    0
-  );
-  const totalActiveRules = Object.values(permissions).reduce(
-    (sum, acts) => sum + acts.length,
-    0
-  );
 
   return (
     <div className="space-y-4">
-      {/* Search and Category Control Toolbar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/60 p-3.5 backdrop-blur-xs shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search permissions (e.g. 'Customer', 'MikroTik', 'Invoice')..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-xs bg-muted/20 border-border/60 focus:border-primary"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Quick Presets */}
-          {!readOnly && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleGrantAllFiltered}
-                className="h-8 px-2.5 text-xs gap-1 border-primary/20 text-primary hover:bg-primary/10"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Select All
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSetReadOnlyFiltered}
-                className="h-8 px-2.5 text-xs gap-1 border-border/60 text-muted-foreground hover:text-foreground"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Read Only
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleClearAllFiltered}
-                className="h-8 px-2.5 text-xs gap-1 border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/30"
-              >
-                <XCircle className="h-3.5 w-3.5" />
-                Clear
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleExpandAll(true)}
-                className="h-8 px-2 text-xs text-muted-foreground"
-                title="Expand All"
-              >
-                Expand All
-              </Button>
-            </div>
+      {/* Search & Category Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border/50">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search module (e.g. Customers, Invoices)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-8.5 text-xs bg-background border-border/60"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
 
-        {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 border-t border-border/40">
-          <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1 shrink-0">
-            <Layers className="h-3.5 w-3.5" /> Category:
-          </span>
-          {PERMISSION_CATEGORIES.map((cat) => {
-            const active = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap border ${
-                  active
-                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                    : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
-                }`}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGrantAllFiltered}
+              className="h-8 px-2.5 text-xs gap-1.5"
+            >
+              <CheckSquare className="h-3.5 w-3.5 text-primary" />
+              Select All
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSetReadOnlyFiltered}
+              className="h-8 px-2.5 text-xs gap-1.5"
+            >
+              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+              View Only
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAllFiltered}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <Square className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Permission Matrix Grid */}
-      <ScrollArea className="h-[min(65vh,560px)] rounded-xl border border-border/60 bg-muted/10">
-        <div className="space-y-2 p-3 sm:p-4">
-          {filteredSections.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Search className="h-8 w-8 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-semibold text-foreground">No matching modules found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try searching with a different term or switch category filter.
-              </p>
-            </div>
-          ) : (
-            filteredSections.map((section) => {
-              const sectionActions = permissions[section.key] ?? [];
-              const totalActions = Object.keys(section.actions).length;
-              const enabledCount = sectionActions.length;
-              const allEnabled = totalActions > 0 && enabledCount === totalActions;
-              const someEnabled = enabledCount > 0 && !allEnabled;
-              const isCollapsed = collapsed[section.key];
-              const colorClass = SECTION_COLORS[section.key] ?? 'bg-muted/50 text-muted-foreground border-border/50';
+      {/* Category Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1 shrink-0 font-medium">
+          <Layers className="h-3.5 w-3.5" /> Filter:
+        </span>
+        {PERMISSION_CATEGORIES.map((cat) => {
+          const active = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                active
+                  ? 'bg-primary text-primary-foreground border-primary font-semibold shadow-xs'
+                  : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
+              }`}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
 
-              return (
-                <div
-                  key={section.key}
-                  className="rounded-xl border border-border/60 bg-card/60 overflow-hidden shadow-2xs hover:border-border/90 transition-all duration-150"
-                >
-                  {/* Section Header */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none hover:bg-muted/25 transition-colors"
-                    onClick={() => toggleCollapse(section.key)}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleCollapse(section.key);
-                      }}
-                      className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+      {/* Clean Permission Matrix Table */}
+      <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-muted/40 border-b border-border/50 text-muted-foreground font-semibold">
+              <tr>
+                <th className="py-3 px-4 w-[240px]">Feature / Module</th>
+                <th className="py-3 px-4">Allowed Permissions</th>
+                <th className="py-3 px-4 text-right w-[110px]">Toggle All</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {filteredSections.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-12 text-center text-muted-foreground">
+                    No matching modules found.
+                  </td>
+                </tr>
+              ) : (
+                filteredSections.map((section) => {
+                  const sectionActions = permissions[section.key] ?? [];
+                  const allKeys = Object.keys(section.actions);
+                  const isAll = allKeys.length > 0 && sectionActions.length === allKeys.length;
+                  const isSome = sectionActions.length > 0 && !isAll;
+
+                  return (
+                    <tr
+                      key={section.key}
+                      className={`hover:bg-muted/20 transition-colors ${
+                        sectionActions.length > 0 ? 'bg-primary/[0.02]' : ''
+                      }`}
                     >
-                      {isCollapsed ? (
-                        <ChevronRight className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </button>
-                    
-                    <div className={`p-1.5 rounded-lg border ${colorClass}`}>
-                      <CheckCircle2 className={`h-4 w-4 ${enabledCount > 0 ? 'text-primary' : 'text-muted-foreground/40'}`} />
-                    </div>
+                      {/* Module Title */}
+                      <td className="py-3 px-4 align-top">
+                        <div className="font-semibold text-foreground text-sm flex items-center gap-2">
+                          <span className={`h-2 w-2 rounded-full ${sectionActions.length > 0 ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                          {section.label}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                          {sectionActions.length} of {allKeys.length} enabled
+                        </div>
+                      </td>
 
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-foreground tracking-wide">
-                        {section.label}
-                      </span>
-                      <span className="text-[11px] font-mono text-muted-foreground">
-                        Key: {section.key}
-                      </span>
-                    </div>
+                      {/* Clean Checkboxes */}
+                      <td className="py-3 px-4 align-middle">
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
+                          {Object.entries(section.actions).map(([actKey, defaultLabel]) => {
+                            const isChecked = sectionActions.includes(actKey);
+                            const labelText = ACTION_PRETTY_LABELS[actKey] || defaultLabel;
+                            const id = `matrix-${section.key}-${actKey}`;
 
-                    <div className="ml-auto flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                      <Badge
-                        variant="outline"
-                        className={`font-mono text-[11px] h-5.5 px-2 font-bold ${
-                          allEnabled
-                            ? 'bg-primary/10 text-primary border-primary/30'
-                            : someEnabled
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                            : 'bg-muted/40 text-muted-foreground border-border/50'
-                        }`}
-                      >
-                        {enabledCount} / {totalActions}
-                      </Badge>
+                            return (
+                              <label
+                                key={actKey}
+                                htmlFor={id}
+                                className={`inline-flex items-center gap-2 cursor-pointer select-none py-1 px-2 rounded-md transition-colors ${
+                                  isChecked
+                                    ? 'bg-primary/10 text-foreground font-medium'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                                } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                              >
+                                <Checkbox
+                                  id={id}
+                                  checked={isChecked}
+                                  disabled={readOnly}
+                                  onCheckedChange={(val) => toggle(section.key, actKey, val === true)}
+                                  className="h-4 w-4"
+                                />
+                                <span className="text-xs">{labelText}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </td>
 
-                      {!readOnly && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleSection(section, !allEnabled)}
-                          className="h-7 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10"
-                        >
-                          {allEnabled ? 'Deselect All' : 'Select All'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Section Actions Body */}
-                  {!isCollapsed && (
-                    <div className="px-4 pb-3.5 pt-2 border-t border-border/40 bg-muted/5">
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(section.actions).map(([action, label]) => {
-                          const checked = permissions[section.key]?.includes(action) ?? false;
-                          const id = `${section.key}-${action}`;
-                          return (
-                            <label
-                              key={id}
-                              htmlFor={id}
-                              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium cursor-pointer transition-all duration-150 select-none ${
-                                checked
-                                  ? 'bg-primary/10 border-primary/30 text-primary font-semibold shadow-xs ring-1 ring-primary/20'
-                                  : 'bg-card border-border/50 text-muted-foreground hover:bg-muted/30 hover:border-border hover:text-foreground'
-                              } ${readOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-                            >
-                              <Checkbox
-                                id={id}
-                                checked={checked}
-                                disabled={readOnly}
-                                onCheckedChange={(value) =>
-                                  toggle(section.key, action, value === true)
-                                }
-                                className="h-3.5 w-3.5"
-                              />
-                              <span>{label}</span>
-                              <span className="text-[10px] font-mono opacity-50 uppercase">({action})</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+                      {/* Row Toggle */}
+                      <td className="py-3 px-4 align-middle text-right">
+                        {!readOnly && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleSection(section, !isAll)}
+                            className="h-7 px-2.5 text-xs text-primary hover:bg-primary/10 font-medium"
+                          >
+                            {isAll ? 'Deselect' : 'Select All'}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
@@ -445,7 +368,7 @@ export function PermissionMatrixEditor({
     setSaving(true);
     try {
       await onSave(permissions);
-      toast.success('Role permissions updated and applied across all assigned accounts!');
+      toast.success('Permissions saved successfully');
     } catch {
       toast.error('Failed to save permissions');
     } finally {
@@ -463,18 +386,16 @@ export function PermissionMatrixEditor({
         onChange={setPermissions}
       />
       
+      {/* Clean Footer Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-border/50">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {hasChanges ? (
-            <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+            <span className="text-amber-500 font-medium flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              Unsaved modifications pending
+              You have unsaved changes
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              All changes synchronized with role policy
-            </span>
+            <span>All permissions synchronized</span>
           )}
         </div>
 
@@ -484,29 +405,29 @@ export function PermissionMatrixEditor({
             size="sm"
             onClick={() => {
               setPermissions(initialPermissions);
-              toast.info('Reset to saved role permissions');
+              toast.info('Changes discarded');
             }}
             disabled={!hasChanges || saving}
-            className="gap-1.5 text-xs h-9"
+            className="text-xs h-9 gap-1.5"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Discard Changes
+            Discard
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving}
             size="sm"
-            className="gap-1.5 font-semibold text-xs h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20"
+            className="text-xs h-9 px-4 gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm"
           >
             {saving ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Applying Policy...
+                Saving...
               </>
             ) : (
               <>
                 <Save className="h-3.5 w-3.5" />
-                Save &amp; Apply Role Policy
+                Save Permissions
               </>
             )}
           </Button>
