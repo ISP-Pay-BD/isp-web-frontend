@@ -120,6 +120,90 @@ export function transformBackendDashboardStats(raw: Record<string, unknown>): Ad
     });
   }
 
+  // Transform payment methods from backend
+  const rawMethods = Array.isArray(raw.payment_methods) ? (raw.payment_methods as Record<string, unknown>[]) : [];
+  let paymentMethods = adminDashboardStats.paymentMethods;
+  if (rawMethods.length > 0) {
+    const totalAmount = rawMethods.reduce((sum, m) => sum + Number(m.total || 0), 0);
+    const methodColors: Record<string, string> = {
+      bkash: '#E2136E',
+      nagad: '#F7941D',
+      cash: '#22C55E',
+      bank: '#3B82F6',
+      sslcommerz: '#8B5CF6',
+    };
+    paymentMethods = rawMethods.map((m) => {
+      const name = String(m.method || 'cash').toLowerCase();
+      const amount = Number(m.total || 0);
+      const percent = totalAmount > 0 ? Math.round((amount / totalAmount) * 100) : 0;
+      return {
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        amountBdt: amount,
+        percent,
+        color: methodColors[name] || '#A855F7',
+      };
+    });
+  }
+
+  // Transform package distribution from backend
+  const rawPkgDist = Array.isArray(raw.package_distribution) ? (raw.package_distribution as Record<string, unknown>[]) : [];
+  let packageDistribution = adminDashboardStats.packageDistribution;
+  if (rawPkgDist.length > 0) {
+    const totalUsersInPackages = rawPkgDist.reduce((sum, p) => sum + Number(p.count || 0), 0);
+    const pkgColors = ['#F97316', '#3B82F6', '#8B5CF6', '#10B981', '#EC4899', '#6366F1'];
+    packageDistribution = rawPkgDist.map((p, idx) => {
+      const count = Number(p.count || 0);
+      const percent = totalUsersInPackages > 0 ? Math.round((count / totalUsersInPackages) * 100) : 0;
+      return {
+        name: String(p.package_name || `Package ${idx + 1}`),
+        count,
+        percent,
+        color: pkgColors[idx % pkgColors.length],
+      };
+    });
+  }
+
+  // Transform weekly collections
+  const rawWeekly = Array.isArray(raw.weekly_collections) ? (raw.weekly_collections as Record<string, unknown>[]) : [];
+  let weeklyCollections = adminDashboardStats.weeklyCollections;
+  if (rawWeekly.length > 0) {
+    weeklyCollections = rawWeekly.map((w) => ({
+      day: String(w.day || ''),
+      amount: Number(w.amount || 0),
+    }));
+  }
+
+  // Transform ticket stats
+  let ticketStats = adminDashboardStats.ticketStats;
+  if (raw.ticket_stats && typeof raw.ticket_stats === 'object') {
+    const ts = raw.ticket_stats as Record<string, number>;
+    const open = Number(ts.open ?? 0);
+    const ongoing = Number(ts.ongoing ?? 0);
+    const solved = Number(ts.solved ?? 0);
+    const closed = Number(ts.closed ?? 0);
+    const total = open + ongoing + solved + closed;
+    const solvedRate = total > 0 ? Number(((solved / total) * 100).toFixed(1)) : 0;
+    ticketStats = {
+      open,
+      ongoing,
+      solved,
+      closed,
+      solvedRate,
+    };
+  }
+
+  // Transform geo revenue
+  const rawGeo = Array.isArray(raw.geo_revenue) ? (raw.geo_revenue as Record<string, unknown>[]) : [];
+  let geoRevenue = adminDashboardStats.geoRevenue;
+  if (rawGeo.length > 0) {
+    geoRevenue = rawGeo.map((g) => ({
+      area: String(g.area_name || g.name || 'Main Area'),
+      revenueBdt: Number(g.revenue || 0),
+      customers: Number(g.customer_count || g.customers || 0),
+      active: Number(g.active_count || g.customer_count || 0),
+    }));
+  }
+
   // Transform routers if provided
   const rawRouters = Array.isArray(raw.routers) ? (raw.routers as Record<string, unknown>[]) : [];
   const routers = rawRouters.length > 0
@@ -168,6 +252,11 @@ export function transformBackendDashboardStats(raw: Record<string, unknown>): Ad
       percent: quotaPercent,
     },
     monthlyTrend,
+    paymentMethods,
+    packageDistribution,
+    weeklyCollections,
+    ticketStats,
+    geoRevenue,
     routers,
   };
 }

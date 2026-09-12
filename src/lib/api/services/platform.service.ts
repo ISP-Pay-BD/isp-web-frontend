@@ -1,5 +1,4 @@
 import { http } from '../client';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { PlatformDashboardStats } from '@/lib/mock-api/handlers/platform.handler';
 import type { TenantPortal } from '@/data/platform/tenants.data';
 import type { PlatformSupportTicket } from '@/data/platform/contacts.data';
@@ -11,84 +10,43 @@ export interface TenantDetailResult {
 
 export const platformService = {
   getDashboard: async (): Promise<PlatformDashboardStats> => {
-    try {
-      const raw = await http.get<PlatformDashboardStats>('/v1/platform/dashboard');
-      return raw;
-    } catch {
-      return (await mockFetch('platform.dashboard')) as PlatformDashboardStats;
-    }
+    const raw = await http.get<PlatformDashboardStats>('/v1/platform/stats');
+    return raw;
   },
 
   getTenants: async (params?: { q?: string; status?: string }) => {
-    try {
-      const raw = await http.get('/v1/platform/tenants', params);
-      return raw;
-    } catch {
-      return await mockFetch('platform.tenants.list', params);
-    }
+    return await http.get('/v1/platform/tenants', params as Record<string, unknown>);
   },
 
   getTenantById: async (id: string): Promise<TenantDetailResult | null> => {
-    try {
-      return await http.get<TenantDetailResult>(`/v1/platform/tenants/${id}`);
-    } catch {
-      return (await mockFetch('platform.tenants.get', id)) as TenantDetailResult | null;
-    }
+    return await http.get<TenantDetailResult>(`/v1/platform/tenants/${id}`);
   },
 
   saveTenant: async (data: Partial<TenantPortal>) => {
-    try {
-      return await http.post('/v1/platform/tenants', data);
-    } catch {
-      return await mockFetch('platform.tenants.create', data as any);
-    }
+    return await http.post('/v1/platform/tenants', data);
   },
 
   updateTenant: async (id: string, data: Partial<TenantPortal>) => {
-    try {
-      return await http.put(`/v1/platform/tenants/${id}`, data);
-    } catch {
-      return await mockFetch('platform.tenants.update', id, data as any);
-    }
+    return await http.patch(`/v1/platform/tenants/${id}/status`, data);
   },
 
   deleteTenant: async (id: string) => {
-    try {
-      return await http.delete(`/v1/platform/tenants/${id}`);
-    } catch {
-      return await mockFetch('platform.tenants.delete', id);
-    }
+    return await http.delete(`/v1/platform/tenants/${id}`);
   },
 
   getAdmins: async () => {
-    try {
-      return await http.get('/v1/platform/admins');
-    } catch {
-      return await mockFetch('platform.admins.list');
-    }
+    return await http.get('/v1/platform/tenants');
   },
 
   getRevenue: async () => {
-    try {
-      return await http.get('/v1/platform/revenue');
-    } catch {
-      return await mockFetch('platform.revenue');
-    }
+    return await http.get('/v1/platform/subscriptions');
   },
 
   getPlugins: async () => {
-    try {
-      return await http.get('/v1/platform/plugins');
-    } catch {
-      return await mockFetch('platform.plugins');
-    }
+    return await http.get('/v1/engines/catalog');
   },
 
   getSupportTickets: async () => {
-    try {
-      return await http.get('/v1/platform/support-tickets');
-    } catch {
-      return await mockFetch('platform.support');
-    }
+    return await http.get('/v1/platform/system-health');
   },
 };

@@ -1,16 +1,21 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import { toast } from 'sonner';
 import type { Package } from '@/data/shared/types';
+import { getAuthUserId } from '@/lib/api/auth-utils';
+import { http } from '@/lib/api/client';
 
 export function usePackages() {
   return useQuery({
     queryKey: ['admin', 'domain', 'packages'],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'packages');
-      return res as { items: Package[]; popPackages: Package[] };
+      const items = await adminService.getPackages();
+      return {
+        items: items || [],
+        popPackages: items || [],
+      };
     },
   });
 }
@@ -18,7 +23,10 @@ export function usePackages() {
 export function useCreatePackage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Partial<Package>) => mockFetch('admin.packages.create', payload),
+    mutationFn: async (payload: Partial<Package>) => {
+      const resellerId = getAuthUserId();
+      return await http.post(`/v1/reseller/packages/${resellerId}`, payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
       toast.success('Package created');
@@ -30,8 +38,10 @@ export function useCreatePackage() {
 export function useUpdatePackage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<Package> }) =>
-      mockFetch('admin.packages.update', id, payload),
+    mutationFn: async ({ id, payload }: { id: string; payload: Partial<Package> }) => {
+      const resellerId = getAuthUserId();
+      return await http.put(`/v1/reseller/packages/${resellerId}/${id}`, payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
       toast.success('Package updated');
@@ -43,7 +53,10 @@ export function useUpdatePackage() {
 export function useDeletePackage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => mockFetch('admin.packages.delete', id),
+    mutationFn: async (id: string) => {
+      const resellerId = getAuthUserId();
+      return await http.delete(`/v1/reseller/packages/${resellerId}/${id}`);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
       toast.success('Package deleted');

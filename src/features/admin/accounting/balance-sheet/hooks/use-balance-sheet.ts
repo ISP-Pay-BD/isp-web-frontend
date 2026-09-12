@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
 export interface BalanceSheetData {
   asOf: string;
@@ -12,8 +12,11 @@ export function useBalanceSheet() {
   const query = useQuery({
     queryKey: ['admin', 'accounting', 'balance-sheet'],
     queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'accounting');
-      return (data as { balanceSheet: BalanceSheetData }).balanceSheet;
+      const data = await adminService.getAccountingDomain('balance-sheet');
+      if (data && typeof data === 'object' && 'balanceSheet' in data) {
+        return (data as { balanceSheet: BalanceSheetData }).balanceSheet;
+      }
+      return data as BalanceSheetData;
     },
   });
 

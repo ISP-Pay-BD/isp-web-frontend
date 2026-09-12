@@ -7,11 +7,7 @@ import {
   type AdminDashboardResult,
 } from '../adapters/admin.adapter';
 import type { Customer, Area, Package, Payment, SupportTicket } from '@/data/shared/types';
-import { mockFetch } from '@/lib/mock-api/client';
-import { customers } from '@/data/admin/customers.data';
-import { areas } from '@/data/admin/areas.data';
-import { packages } from '@/data/admin/packages.data';
-import { getPaymentsByCustomerId } from '@/data/admin/customer-payments.data';
+import { getAuthUserId } from '../auth-utils';
 
 export interface CustomerListParams {
   page?: number;
@@ -20,7 +16,7 @@ export interface CustomerListParams {
   status?: string;
   areaId?: string;
   packageId?: string;
-  resellerId?: string;
+  resellerId?: string | number;
 }
 
 export interface BulkRechargePayload {
@@ -45,33 +41,13 @@ export interface CustomerDetailResult {
 
 export const adminService = {
   getDashboardStats: async (resellerId?: string | number): Promise<AdminDashboardResult> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('admin.dashboard')) as AdminDashboardResult;
-    }
-    let id = resellerId;
-    if (!id && typeof window !== 'undefined') {
-      const storedAuth = localStorage.getItem('isp-auth-storage');
-      if (storedAuth) {
-        try {
-          const parsed = JSON.parse(storedAuth);
-          id = parsed?.state?.user?.id || parsed?.state?.user?.tenantId;
-        } catch {
-          // ignore
-        }
-      }
-    }
-    const finalId = id || 369;
+    const finalId = resellerId || getAuthUserId();
     const raw = await http.get<Record<string, unknown>>(`/v1/reseller/dashboard/${finalId}`);
     return transformBackendDashboardStats(raw);
   },
 
   getCustomers: async (params?: CustomerListParams): Promise<CustomersListResult> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('admin.customers.list')) as CustomersListResult;
-    }
-    const resellerId = params?.resellerId || 2;
+    const resellerId = params?.resellerId || getAuthUserId();
     const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}`, params as Record<string, unknown>);
     const list = transformBackendCustomersList(raw);
     return {
@@ -80,12 +56,9 @@ export const adminService = {
     };
   },
 
-  getExpiredCustomers: async (): Promise<CustomersListResult> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('admin.customers.expired')) as CustomersListResult;
-    }
-    const raw = await http.get<unknown>('/v1/admin/customers?status=expired');
+  getExpiredCustomers: async (resellerId?: string | number): Promise<CustomersListResult> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/customers/${finalId}`, { status: 'expired' });
     const list = transformBackendCustomersList(raw);
     const expired = list.filter((c) => c.status === 'expired');
     return {
@@ -94,309 +67,243 @@ export const adminService = {
     };
   },
 
-  getCustomerById: async (id: string): Promise<CustomerDetailResult | null> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('admin.customers.get', id)) as CustomerDetailResult | null;
-    }
-    const raw = await http.get<Record<string, unknown>>(`/v1/admin/customers/${id}`);
+  getCustomerById: async (id: string, resellerId?: string | number): Promise<CustomerDetailResult | null> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<Record<string, unknown>>(`/v1/reseller/customers/${finalId}/${id}`);
     const customer = transformBackendCustomer(raw);
-    const payments = getPaymentsByCustomerId(customer.id);
+    
+    // Fetch payments for this specific customer
+    let payments: Payment[] = [];
+    try {
+      const paymentsRaw = await http.get<unknown>(`/v1/reseller/customer-payments/${finalId}/user/${id}`);
+      if (Array.isArray(paymentsRaw)) {
+        payments = paymentsRaw as Payment[];
+      }
+    } catch {
+      payments = [];
+    }
+
     return { customer, payments };
   },
 
-  createCustomer: async (data: Partial<Customer>): Promise<Customer> => {
-    try {
-      const raw = await http.post<Record<string, unknown>>('/v1/admin/customers/create', data);
-      return transformBackendCustomer(raw);
-    } catch {
-      const res = (await mockFetch('admin.customers.create', data as any)) as unknown as { customer?: Customer };
-      return res.customer || (data as Customer);
-    }
+  createCustomer: async (data: Partial<Customer>, resellerId?: string | number): Promise<Customer> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.post<Record<string, unknown>>(`/v1/reseller/customers/create/${finalId}`, data);
+    return transformBackendCustomer(raw);
   },
 
-  updateCustomer: async (id: string, data: Partial<Customer>): Promise<Customer> => {
-    try {
-      const raw = await http.post<Record<string, unknown>>(`/v1/admin/customers/${id}`, data);
-      return transformBackendCustomer(raw);
-    } catch {
-      const res = (await mockFetch('admin.customers.update', id, data as any)) as unknown as { customer?: Customer };
-      return res.customer || (data as Customer);
-    }
+  updateCustomer: async (id: string, data: Partial<Customer>, resellerId?: string | number): Promise<Customer> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.post<Record<string, unknown>>(`/v1/reseller/customers/${finalId}/${id}`, data);
+    return transformBackendCustomer(raw);
   },
 
-  deleteCustomer: async (id: string): Promise<void> => {
-    try {
-      await http.delete(`/v1/admin/customers/${id}`);
-    } catch {
-      await mockFetch('admin.customers.delete', id);
-    }
+  deleteCustomer: async (id: string, resellerId?: string | number): Promise<void> => {
+    const finalId = resellerId || getAuthUserId();
+    await http.delete(`/v1/reseller/customers/${finalId}/${id}`);
   },
 
-  bulkRecharge: async (payload: BulkRechargePayload) => {
-    try {
-      return await http.post('/v1/admin/customers/bulk-recharge', payload);
-    } catch {
-      return { success: true, count: payload.customerIds.length };
-    }
+  bulkRecharge: async (payload: BulkRechargePayload, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/customers/${finalId}/bulk-recharge`, payload);
   },
 
-  bulkDelete: async (payload: BulkDeletePayload) => {
-    try {
-      return await http.post('/v1/admin/customers/bulk-delete', payload);
-    } catch {
-      return { success: true, count: payload.customerIds.length };
-    }
+  bulkDelete: async (payload: BulkDeletePayload, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/customers/${finalId}/bulk-delete`, payload);
   },
 
-  syncPppoe: async (customerId: string) => {
-    try {
-      return await http.post(`/v1/admin/customers/${customerId}/sync-pppoe`);
-    } catch {
-      return { success: true, message: 'PPPoE synchronized with MikroTik NAS.' };
-    }
+  syncPppoe: async (customerId: string, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/customers/${finalId}/sync-pppoe`, { customer_id: customerId });
   },
 
-  macBind: async (customerId: string, mac: string) => {
-    try {
-      return await http.post(`/v1/admin/customers/${customerId}/mac-bind`, { mac });
-    } catch {
-      return { success: true, message: 'MAC address locked.' };
-    }
+  macBind: async (customerId: string, mac: string, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/customers/${finalId}/${customerId}/mac-bind`, { mac });
   },
 
-  importExcel: async (formData: FormData, onProgress?: (percent: number) => void) => {
-    try {
-      return await http.upload('/v1/admin/customers/import', formData, onProgress);
-    } catch {
-      return { success: true, importedCount: 25 };
-    }
+  importExcel: async (formData: FormData, onProgress?: (percent: number) => void, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.upload(`/v1/reseller/customers/${finalId}/import-excel`, formData, onProgress);
   },
 
-  getAreas: async (): Promise<{ items: Area[] }> => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/areas');
-      if (Array.isArray(raw)) {
-        return { items: raw.map((item) => transformBackendArea(item as Record<string, unknown>)) };
-      }
-      return { items: areas };
-    } catch {
-      return { items: areas };
+  getAreas: async (resellerId?: string | number): Promise<{ items: Area[] }> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/areas/${finalId}`);
+    if (Array.isArray(raw)) {
+      return { items: raw.map((item) => transformBackendArea(item as Record<string, unknown>)) };
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { items: (raw as { data: Record<string, unknown>[] }).data.map((item) => transformBackendArea(item)) };
+    }
+    return { items: [] };
   },
 
-  createArea: async (data: { name: string; subareas?: string[] }): Promise<Area> => {
-    try {
-      const raw = await http.post<Record<string, unknown>>('/v1/admin/areas', data);
-      return transformBackendArea(raw);
-    } catch {
-      return { id: `area_${Date.now()}`, name: data.name, subareas: [] };
-    }
+  createArea: async (data: { name: string; subareas?: string[] }, resellerId?: string | number): Promise<Area> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.post<Record<string, unknown>>(`/v1/reseller/areas/${finalId}`, data);
+    return transformBackendArea(raw);
   },
 
   updateArea: async (id: string, data: { name: string }) => {
-    try {
-      return await http.put(`/v1/admin/areas/update/${id}`, data);
-    } catch {
-      return { success: true };
-    }
+    return await http.put(`/v1/reseller/areas/update/${id}`, data);
   },
 
   deleteArea: async (id: string) => {
-    try {
-      return await http.delete(`/v1/admin/areas/${id}/delete`);
-    } catch {
-      return { success: true };
-    }
+    return await http.delete(`/v1/reseller/areas/${id}/delete`);
   },
 
   addSubArea: async (areaId: string, payload: { name: string; areaCode: string }) => {
-    try {
-      return await http.post('/v1/admin/subareas', { area_id: areaId, ...payload });
-    } catch {
-      return { success: true, subarea: { id: `sub_${Date.now()}`, ...payload, status: 'active' } };
-    }
+    return await http.post('/v1/reseller/subareas', { area_id: areaId, ...payload });
   },
 
-  updateSubArea: async (areaId: string, subId: string, payload: { name: string; areaCode: string; status: 'active' | 'inactive' }) => {
-    try {
-      return await http.put(`/v1/admin/subareas/update/${subId}`, { area_id: areaId, ...payload });
-    } catch {
-      return { success: true };
-    }
+  updateSubArea: async (areaIdOrSubId: string, subIdOrPayload: any, payload?: any) => {
+    const subId = payload !== undefined ? subIdOrPayload : areaIdOrSubId;
+    const body = payload !== undefined ? payload : subIdOrPayload;
+    return await http.put(`/v1/reseller/subareas/update/${subId}`, body);
   },
 
-  deleteSubArea: async (areaId: string, subId: string) => {
-    try {
-      return await http.delete(`/v1/admin/subareas/delete?area_id=${areaId}&sub_id=${subId}`);
-    } catch {
-      return { success: true };
-    }
+  deleteSubArea: async (areaId?: string, subId?: string) => {
+    return await http.delete('/v1/reseller/subareas/delete', { area_id: areaId, sub_id: subId });
   },
 
-  getCustomerPayments: async (): Promise<{ items: Payment[] }> => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/payments');
-      if (Array.isArray(raw)) {
-        return { items: raw as Payment[] };
-      }
-      const res = (await mockFetch('admin.domain', 'payments')) as { items: Payment[] };
-      return res;
-    } catch {
-      const res = (await mockFetch('admin.domain', 'payments')) as { items: Payment[] };
-      return res;
+  getCustomerPayments: async (resellerId?: string | number): Promise<{ items: Payment[] }> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/customer-payments/${finalId}`);
+    if (Array.isArray(raw)) {
+      return { items: raw as Payment[] };
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { items: (raw as { data: Payment[] }).data };
+    }
+    return { items: [] };
   },
 
-  getEmployees: async () => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/employees');
-      if (Array.isArray(raw)) {
-        return { employees: raw };
-      }
-      return (await mockFetch('admin.domain', 'hr')) as { employees: unknown[] };
-    } catch {
-      return (await mockFetch('admin.domain', 'hr')) as { employees: unknown[] };
-    }
+  createPayment: async (data: Partial<Payment>, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/customer-payments/${finalId}`, data);
   },
 
-  createEmployee: async (data: Record<string, any>) => {
-    try {
-      return await http.post('/v1/admin/employees', data);
-    } catch {
-      return { id: `emp_${Date.now()}`, ...data, joinedAt: new Date().toISOString().split('T')[0] };
+  getEmployees: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}`);
+    if (Array.isArray(raw)) {
+      return { employees: raw };
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { employees: (raw as { data: unknown[] }).data };
+    }
+    return { employees: [] };
   },
 
-  updateEmployee: async (id: string, data: Record<string, any>) => {
-    try {
-      return await http.put(`/v1/admin/employees/${id}`, data);
-    } catch {
-      return { id, ...data };
-    }
+  createEmployee: async (data: Record<string, unknown>, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/employees/${finalId}`, data);
   },
 
-  deleteEmployee: async (id: string) => {
-    try {
-      return await http.delete(`/v1/admin/employees/${id}`);
-    } catch {
-      return { success: true };
-    }
+  updateEmployee: async (id: string, data: Record<string, unknown>, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.put(`/v1/reseller/employees/${finalId}/${id}`, data);
   },
 
-  getAdminSupportTickets: async () => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/support-tickets');
-      if (raw && typeof raw === 'object' && 'tickets' in raw) {
-        return raw as { tickets: SupportTicket[]; stats: { open: number; pending: number; closed: number; avgResponseHours: number } };
-      }
-      return (await mockFetch('admin.domain', 'support')) as {
-        tickets: SupportTicket[];
-        stats: { open: number; pending: number; closed: number; avgResponseHours: number };
-      };
-    } catch {
-      return (await mockFetch('admin.domain', 'support')) as {
-        tickets: SupportTicket[];
-        stats: { open: number; pending: number; closed: number; avgResponseHours: number };
-      };
-    }
+  deleteEmployee: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.delete(`/v1/reseller/employees/${finalId}`);
   },
 
-  getAdminSupportTicketDetail: async (id: string): Promise<SupportTicket | null> => {
-    try {
-      return await http.get<SupportTicket>(`/v1/admin/support-tickets/${id}`);
-    } catch {
-      return (await mockFetch('support.ticket', id)) as SupportTicket | null;
-    }
-  },
-
-  getSmsData: async () => {
-    try {
-      const [areasRes, customerRes] = await Promise.all([
-        adminService.getAreas(),
-        adminService.getCustomers(),
-      ]);
-      const smsRes = (await mockFetch('admin.domain', 'sms')) as {
-        templates: unknown[];
-        events: unknown[];
-        logs: unknown[];
-      };
+  getAdminSupportTickets: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/support-tickets/${finalId}`);
+    if (raw && typeof raw === 'object' && 'data' in raw) {
+      const tickets = (raw as { data: SupportTicket[] }).data || [];
+      const open = tickets.filter((t) => (t.status as string) === 'open').length;
+      const pending = tickets.filter((t) => (t.status as string) === 'pending' || (t.status as string) === 'ongoing' || (t.status as string) === 'in_progress').length;
+      const closed = tickets.filter((t) => (t.status as string) === 'closed' || (t.status as string) === 'resolved' || (t.status as string) === 'solved').length;
       return {
-        ...smsRes,
-        areas: areasRes.items,
-        packages: packages,
-        customers: customerRes.items,
+        tickets,
+        stats: { open, pending, closed, avgResponseHours: 1.5 },
       };
-    } catch {
-      const [sms, areasRes, packagesRes, customerList] = await Promise.all([
-        mockFetch('admin.domain', 'sms'),
-        mockFetch('admin.domain', 'areas'),
-        mockFetch('admin.domain', 'packages'),
-        mockFetch('admin.customers.list'),
-      ]);
+    }
+    if (Array.isArray(raw)) {
+      const tickets = raw as SupportTicket[];
       return {
-        ...(sms as Record<string, unknown>),
-        areas: (areasRes as { items?: Area[] }).items ?? [],
-        packages: (packagesRes as { items?: Package[] }).items ?? packages,
-        customers: (customerList as { items?: Customer[] }).items ?? customers,
+        tickets,
+        stats: {
+          open: tickets.filter((t) => (t.status as string) === 'open').length,
+          pending: tickets.filter((t) => (t.status as string) === 'pending' || (t.status as string) === 'ongoing' || (t.status as string) === 'in_progress').length,
+          closed: tickets.filter((t) => (t.status as string) === 'closed' || (t.status as string) === 'resolved' || (t.status as string) === 'solved').length,
+          avgResponseHours: 1.5,
+        },
       };
     }
+    return {
+      tickets: [],
+      stats: { open: 0, pending: 0, closed: 0, avgResponseHours: 0 },
+    };
   },
 
-  sendSmsBroadcast: async (payload: { recipientType: string; message: string; templateId?: string; areaId?: string }) => {
-    try {
-      return await http.post('/v1/admin/sms/broadcast', payload);
-    } catch {
-      return { success: true, count: 120, message: 'Broadcast queued.' };
-    }
+  getAdminSupportTicketDetail: async (id: string, resellerId?: string | number): Promise<SupportTicket | null> => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<SupportTicket>(`/v1/reseller/support-tickets/${finalId}/${id}`);
   },
 
-  getAccountingDomain: async (section: string) => {
-    try {
-      const raw = await http.get<unknown>(`/v1/admin/accounting/${section}`);
+  getSmsData: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const [areasRes, customerRes, smsRes] = await Promise.allSettled([
+      adminService.getAreas(finalId),
+      adminService.getCustomers({ resellerId: finalId }),
+      http.get<unknown>(`/v1/reseller/sms/${finalId}`),
+    ]);
+
+    const areas = areasRes.status === 'fulfilled' ? areasRes.value.items : [];
+    const customers = customerRes.status === 'fulfilled' ? customerRes.value.items : [];
+    const rawSms = smsRes.status === 'fulfilled' ? smsRes.value : {};
+
+    return {
+      ...(typeof rawSms === 'object' && rawSms !== null ? rawSms : {}),
+      areas,
+      customers,
+    };
+  },
+
+  sendSmsBroadcast: async (payload: { recipientType: string; message: string; templateId?: string; areaId?: string }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/sms/${finalId}/send`, payload);
+  },
+
+  getAccountingDomain: async (section: string, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const endpoint = section === 'balance-sheet' ? 'balance-sheet' : section === 'chart-of-accounts' ? 'chart-of-accounts' : 'journal-entries';
+    return await http.get<unknown>(`/v1/reseller/accounting/${finalId}/${endpoint}`);
+  },
+
+  getRouters: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/routers/${finalId}`);
+    if (Array.isArray(raw)) {
       return raw;
-    } catch {
-      return await mockFetch('admin.domain', 'accounting');
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return (raw as { data: unknown[] }).data;
+    }
+    return [];
   },
 
-  getRouters: async () => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/network/routers');
-      if (Array.isArray(raw)) {
-        return raw;
-      }
-      const res = (await mockFetch('admin.domain', 'network')) as { routers?: unknown[] };
-      return res?.routers ?? [];
-    } catch {
-      const res = (await mockFetch('admin.domain', 'network')) as { routers?: unknown[] };
-      return res?.routers ?? [];
+  getPackages: async (resellerId?: string | number): Promise<Package[]> => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/packages/${finalId}`);
+    if (Array.isArray(raw)) {
+      return raw as Package[];
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return (raw as { data: Package[] }).data;
+    }
+    return [];
   },
 
-  getRewardsData: async () => {
-    try {
-      const raw = await http.get<unknown>('/v1/admin/rewards/config');
-      return raw;
-    } catch {
-      return await mockFetch('admin.domain', 'rewards');
-    }
-  },
-
-  getPackages: async (): Promise<Package[]> => {
-    try {
-      const raw = await http.get<Package[]>('/v1/admin/packages');
-      return Array.isArray(raw) ? raw : packages;
-    } catch {
-      return packages;
-    }
-  },
-
-  createPayment: async (data: Partial<Payment>) => {
-    try {
-      return await http.post('/v1/admin/payments', data);
-    } catch {
-      return { success: true, payment: data };
-    }
+  getRewardsData: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/rewards/${finalId}/config`);
   },
 };

@@ -14,16 +14,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CustomerPageShell } from '@/features/customer/shared';
-import { changePasswordSchema, type ChangePasswordInput } from '@/features/customer/shared';
-import { mockFetch } from '@/lib/mock-api/client';
+import { CustomerPageShell, changePasswordSchema, type ChangePasswordInput } from '@/features/customer/shared';
+import { customerService } from '@/lib/api/services/customer.service';
 import { toast } from 'sonner';
 
 export function CustomerChangePasswordPage() {
   const router = useRouter();
 
   const changePasswordMutation = useMutation({
-    mutationFn: (values: ChangePasswordInput) => mockFetch('customer.password.change', values),
+    mutationFn: (values: ChangePasswordInput) => customerService.changePassword(values),
   });
 
   const {

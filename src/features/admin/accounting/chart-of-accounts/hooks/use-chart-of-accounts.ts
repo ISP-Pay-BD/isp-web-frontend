@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
 export interface ChartOfAccountItem {
   id: string;
@@ -14,8 +14,14 @@ export function useChartOfAccounts() {
   const query = useQuery({
     queryKey: ['admin', 'accounting', 'chart-of-accounts'],
     queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'accounting');
-      return (data as { chartOfAccounts: ChartOfAccountItem[] }).chartOfAccounts ?? [];
+      const data = await adminService.getAccountingDomain('chart-of-accounts');
+      if (data && typeof data === 'object' && 'chartOfAccounts' in data) {
+        return (data as { chartOfAccounts: ChartOfAccountItem[] }).chartOfAccounts ?? [];
+      }
+      if (Array.isArray(data)) {
+        return data as ChartOfAccountItem[];
+      }
+      return [];
     },
   });
 

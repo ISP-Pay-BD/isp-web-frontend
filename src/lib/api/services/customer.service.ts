@@ -15,7 +15,6 @@ import type {
   UpdateProfilePayload,
   ChangePasswordPayload,
 } from '@/lib/mock-api/handlers/customer.handler';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { SupportTicket, NewsItem } from '@/data/shared/types';
 import { customerProfile, customerNotifications } from '@/data/customer/profile.data';
 import { routerTools, connectedDevices, customerRewards } from '@/data/customer/subscription.data';
@@ -35,177 +34,106 @@ export interface CustomerProfileResult {
 
 export const customerService = {
   getDashboard: async (): Promise<CustomerDashboardData> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('customer.dashboard')) as CustomerDashboardData;
-    }
     const raw = await http.get<Record<string, unknown>>('/v1/customer/dashboard');
     return transformBackendCustomerDashboard(raw);
   },
 
   getSubscription: async (): Promise<CustomerSubscriptionData> => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return (await mockFetch('customer.subscription')) as CustomerSubscriptionData;
-    }
     const raw = await http.get<Record<string, unknown>>('/v1/customer/subscription/index');
     return transformBackendCustomerSubscription(raw);
   },
 
   renewSubscription: async (packageId?: string) => {
-    const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true';
-    if (useMock) {
-      return await mockFetch('customer.subscription.renew', packageId);
-    }
     return await http.post('/v1/customer/subscription/renew', { package_id: packageId });
   },
 
-  getPackages: async () => {
-    try {
-      return await http.get('/v1/customer/packages');
-    } catch {
-      return await mockFetch('customer.packages');
+  getPackages: async (): Promise<{ packages: any[]; currentPackageId: string }> => {
+    const raw = await http.get<unknown>('/v1/customer/packages');
+    let items: any[] = [];
+    if (Array.isArray(raw)) {
+      items = raw;
+    } else if (raw && typeof raw === 'object') {
+      const list = (raw as { packages?: unknown[]; data?: unknown[] }).packages || (raw as { data?: unknown[] }).data;
+      if (Array.isArray(list)) {
+        items = list;
+      }
     }
+    return {
+      packages: items,
+      currentPackageId: (raw as { current_package_id?: string; currentPackageId?: string })?.current_package_id || 'pkg_20',
+    };
   },
 
   getPayments: async (): Promise<CustomerPaymentsData> => {
-    try {
-      const raw = await http.get<Record<string, unknown>>('/v1/customer/payment-fetch');
-      return transformBackendCustomerPayments(raw);
-    } catch {
-      return (await mockFetch('customer.payments')) as CustomerPaymentsData;
-    }
+    const raw = await http.get<Record<string, unknown>>('/v1/customer/payment-fetch');
+    return transformBackendCustomerPayments(raw);
   },
 
   payInvoice: async (payload: PayInvoicePayload) => {
-    try {
-      return await http.post('/v1/customer/payments', payload);
-    } catch {
-      return await mockFetch('customer.payments.pay', payload);
-    }
+    return await http.post('/v1/customer/payments', payload);
   },
 
   getSupportTickets: async (): Promise<{ tickets: SupportTicket[] }> => {
-    try {
-      const raw = await http.get<Record<string, unknown>>('/v1/customer/support/fetch');
-      const list = Array.isArray(raw) ? raw : (raw.tickets as SupportTicket[]) || [];
-      return { tickets: list };
-    } catch {
-      return (await mockFetch('customer.support.list')) as { tickets: SupportTicket[] };
-    }
+    const raw = await http.get<unknown>('/v1/customer/support/fetch');
+    const list = Array.isArray(raw) ? raw : (raw as { tickets?: SupportTicket[] })?.tickets || [];
+    return { tickets: list as SupportTicket[] };
   },
 
   getTicketDetail: async (id: string): Promise<SupportTicket> => {
-    try {
-      return await http.get<SupportTicket>(`/v1/customer/support/details?ticket_id=${id}`);
-    } catch {
-      return (await mockFetch('customer.support.get', id)) as SupportTicket;
-    }
+    return await http.get<SupportTicket>(`/v1/customer/support/details?ticket_id=${id}`);
   },
 
   createTicket: async (payload: CreateTicketPayload) => {
-    try {
-      return await http.post('/v1/customer/support/create-ticket', payload);
-    } catch {
-      return await mockFetch('customer.support.create', payload);
-    }
+    return await http.post('/v1/customer/support/create-ticket', payload);
   },
 
   replyTicket: async (payload: TicketReplyPayload) => {
-    try {
-      return await http.post('/v1/customer/support/send-message', payload);
-    } catch {
-      return await mockFetch('customer.support.reply', payload);
-    }
+    return await http.post('/v1/customer/support/send-message', payload);
   },
 
   getRouterTools: async (): Promise<RouterInfoResult> => {
-    try {
-      return await http.get<RouterInfoResult>('/v1/customer/router-control/targets');
-    } catch {
-      return (await mockFetch('customer.router.tools')) as RouterInfoResult;
-    }
+    return await http.get<RouterInfoResult>('/v1/customer/router-control/targets');
   },
 
   updateWifi: async (payload: UpdateWifiPayload) => {
-    try {
-      return await http.post('/v1/customer/router-control/wifi', payload);
-    } catch {
-      return await mockFetch('customer.router.updateWifi', payload);
-    }
+    return await http.post('/v1/customer/router-control/wifi', payload);
   },
 
   quickFixPing: async (actionId = 'quick_fix') => {
-    try {
-      return await http.post<{ success: boolean; message: string; timestamp: string }>('/v1/customer/autofix/quick-fix', { action: actionId });
-    } catch {
-      return await mockFetch('customer.router.quickFix', actionId);
-    }
+    return await http.post<{ success: boolean; message: string; timestamp: string }>('/v1/customer/autofix/quick-fix', { action: actionId });
   },
 
   getConnectedDevices: async () => {
-    try {
-      return await http.get<typeof connectedDevices>('/v1/customer/device/connected');
-    } catch {
-      return connectedDevices;
-    }
+    return await http.get<typeof connectedDevices>('/v1/customer/device/connected');
   },
 
   getRewards: async () => {
-    try {
-      return await http.get<typeof customerRewards>('/v1/customer/reward/wallet');
-    } catch {
-      return (await mockFetch('customer.rewards')) as typeof customerRewards;
-    }
+    return await http.get<typeof customerRewards>('/v1/customer/reward/wallet');
   },
 
   redeemRewards: async (points: number) => {
-    try {
-      return await http.post('/v1/customer/reward/redeem-preview', { points });
-    } catch {
-      return await mockFetch('customer.rewards.redeem', points);
-    }
+    return await http.post('/v1/customer/reward/redeem-preview', { points });
   },
 
   getNews: async (): Promise<{ items: NewsItem[] }> => {
-    try {
-      const raw = await http.get<NewsItem[]>('/v1/common/news');
-      const items = Array.isArray(raw) ? raw : (raw as unknown as { items: NewsItem[] }).items || [];
-      return { items };
-    } catch {
-      return (await mockFetch('customer.news.list')) as { items: NewsItem[] };
-    }
+    const raw = await http.get<NewsItem[]>('/v1/common/news');
+    const items = Array.isArray(raw) ? raw : (raw as unknown as { items: NewsItem[] }).items || [];
+    return { items };
   },
 
   getNewsById: async (id: string): Promise<NewsItem | null> => {
-    try {
-      return await http.get<NewsItem>(`/v1/common/news/${id}`);
-    } catch {
-      return (await mockFetch('customer.news.get', id)) as NewsItem | null;
-    }
+    return await http.get<NewsItem>(`/v1/common/news/${id}`);
   },
 
   getProfile: async (): Promise<CustomerProfileResult> => {
-    try {
-      return await http.get<CustomerProfileResult>('/v1/customer/profile');
-    } catch {
-      return (await mockFetch('customer.profile.get')) as CustomerProfileResult;
-    }
+    return await http.get<CustomerProfileResult>('/v1/customer/profile');
   },
 
   updateProfile: async (payload: UpdateProfilePayload) => {
-    try {
-      return await http.post('/v1/customer/profile/update', payload);
-    } catch {
-      return await mockFetch('customer.profile.update', payload);
-    }
+    return await http.post('/v1/customer/profile/update', payload);
   },
 
   changePassword: async (payload: ChangePasswordPayload) => {
-    try {
-      return await http.post('/v1/customer/profile/change-password', payload);
-    } catch {
-      return await mockFetch('customer.password.change', payload);
-    }
+    return await http.post('/v1/customer/profile/change-password', payload);
   },
 };

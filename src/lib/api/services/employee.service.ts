@@ -1,5 +1,4 @@
 import { http } from '../client';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { AdvanceRequestFormValues } from '@/features/employee/advance-salary/schemas/advance-request.schema';
 import type { ProfileUpdateFormValues } from '@/features/employee/profile/schemas/profile.schema';
 import {
@@ -7,54 +6,44 @@ import {
   employeeSalaries,
   employeeAdvanceRequests,
 } from '@/data/employee/salaries.data';
+import { getAuthUserId } from '../auth-utils';
 
 export const employeeService = {
-  getSalaries: async () => {
-    try {
-      const raw = await http.get('/v1/employee/payslips');
-      if (raw && typeof raw === 'object' && 'items' in raw) {
-        return raw as { items: typeof employeeSalaries; total: number };
-      }
-      return { items: employeeSalaries, total: employeeSalaries.length };
-    } catch {
-      return (await mockFetch('employee.salaries.list')) as { items: typeof employeeSalaries; total: number };
+  getSalaries: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/employee-payments/${finalId}`);
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { items: (raw as { data: typeof employeeSalaries }).data, total: (raw as { data: unknown[] }).data.length };
     }
+    if (Array.isArray(raw)) {
+      return { items: raw as typeof employeeSalaries, total: raw.length };
+    }
+    return { items: [], total: 0 };
   },
 
-  getAdvanceRequests: async () => {
-    try {
-      const raw = await http.get('/v1/employee/advance-salary');
-      if (raw && typeof raw === 'object' && 'items' in raw) {
-        return raw as { items: typeof employeeAdvanceRequests; total: number };
-      }
-      return { items: employeeAdvanceRequests, total: employeeAdvanceRequests.length };
-    } catch {
-      return (await mockFetch('employee.advance.list')) as { items: typeof employeeAdvanceRequests; total: number };
+  getAdvanceRequests: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}/advance-salary`);
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { items: (raw as { data: typeof employeeAdvanceRequests }).data, total: (raw as { data: unknown[] }).data.length };
     }
+    if (Array.isArray(raw)) {
+      return { items: raw as typeof employeeAdvanceRequests, total: raw.length };
+    }
+    return { items: [], total: 0 };
   },
 
-  requestAdvanceSalary: async (payload: AdvanceRequestFormValues) => {
-    try {
-      return await http.post('/v1/employee/advance-salary', payload);
-    } catch {
-      return await mockFetch('employee.advance.request', payload);
-    }
+  requestAdvanceSalary: async (payload: AdvanceRequestFormValues, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/employees/${finalId}/advance-salary`, payload);
   },
 
   getProfile: async () => {
-    try {
-      const raw = await http.get<typeof employeeProfile>('/v1/auth/me');
-      return raw || employeeProfile;
-    } catch {
-      return (await mockFetch('employee.profile.get')) as typeof employeeProfile;
-    }
+    const raw = await http.get<typeof employeeProfile>('/v1/auth/me');
+    return raw || employeeProfile;
   },
 
   updateProfile: async (payload: ProfileUpdateFormValues) => {
-    try {
-      return await http.post('/v1/customer/profile/update', payload);
-    } catch {
-      return await mockFetch('employee.profile.update', payload);
-    }
+    return await http.post('/v1/customer/profile/update', payload);
   },
 };

@@ -15,7 +15,7 @@ export function useEmployees() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: EmployeeFormData) => {
-      const res = await adminService.createEmployee(payload);
+      const res = await adminService.createEmployee(payload as unknown as Record<string, unknown>);
       return res as EmployeeItem;
     },
     onSuccess: (newEmp) => {
