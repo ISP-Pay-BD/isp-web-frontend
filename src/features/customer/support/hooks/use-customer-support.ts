@@ -1,13 +1,13 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { customerService } from '@/lib/api/services/customer.service';
 import type { CreateTicketPayload, TicketReplyPayload } from '@/lib/mock-api/handlers/customer.handler';
 
 export function useCustomerSupportTickets() {
   return useQuery({
     queryKey: ['customer', 'support', 'list'],
-    queryFn: () => mockFetch('customer.support.list'),
+    queryFn: () => customerService.getSupportTickets(),
   });
 }
 
@@ -16,12 +16,12 @@ export function useCustomerTicketDetail(id: string) {
 
   const ticketQuery = useQuery({
     queryKey: ['customer', 'support', 'detail', id],
-    queryFn: () => mockFetch('customer.support.get', id),
+    queryFn: () => customerService.getTicketDetail(id),
     enabled: !!id,
   });
 
   const replyMutation = useMutation({
-    mutationFn: (payload: TicketReplyPayload) => mockFetch('customer.support.reply', payload),
+    mutationFn: (payload: TicketReplyPayload) => customerService.replyTicket(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'detail', id] });
       queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'list'] });
@@ -38,7 +38,7 @@ export function useCreateTicket() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateTicketPayload) => mockFetch('customer.support.create', payload),
+    mutationFn: (payload: CreateTicketPayload) => customerService.createTicket(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });

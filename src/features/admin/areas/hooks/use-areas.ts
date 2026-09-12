@@ -1,17 +1,13 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import { toast } from 'sonner';
-import type { Area } from '@/data/shared/types';
 
 export function useAreas() {
   return useQuery({
     queryKey: ['admin', 'domain', 'areas'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'areas');
-      return res as { items: Area[] };
-    },
+    queryFn: () => adminService.getAreas(),
   });
 }
 
@@ -19,7 +15,7 @@ export function useCreateArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: { name: string; subareas?: string[] }) =>
-      mockFetch('admin.areas.create', payload),
+      adminService.createArea(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Service area created');
@@ -32,7 +28,7 @@ export function useUpdateArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) =>
-      mockFetch('admin.areas.update', id, { name }),
+      adminService.updateArea(id, { name }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Area updated');
@@ -44,7 +40,7 @@ export function useUpdateArea() {
 export function useDeleteArea() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => mockFetch('admin.areas.delete', id),
+    mutationFn: (id: string) => adminService.deleteArea(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Area deleted');
@@ -57,7 +53,7 @@ export function useAddSubArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ areaId, payload }: { areaId: string; payload: { name: string; areaCode: string } }) =>
-      mockFetch('admin.areas.subarea.add', areaId, payload),
+      adminService.addSubArea(areaId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Sub-area added');
@@ -70,7 +66,7 @@ export function useUpdateSubArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ areaId, subId, payload }: { areaId: string; subId: string; payload: { name: string; areaCode: string; status: 'active' | 'inactive' } }) =>
-      mockFetch('admin.areas.subarea.update', areaId, subId, payload),
+      adminService.updateSubArea(areaId, subId, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Sub-area updated');
@@ -83,7 +79,7 @@ export function useDeleteSubArea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ areaId, subId }: { areaId: string; subId: string }) =>
-      mockFetch('admin.areas.subarea.delete', areaId, subId),
+      adminService.deleteSubArea(areaId, subId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'areas'] });
       toast.success('Sub-area deleted');

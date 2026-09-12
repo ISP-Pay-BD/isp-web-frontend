@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
-export function useAdminDashboard() {
+export function useAdminDashboard(resellerId?: string | number) {
   return useQuery({
-    queryKey: ['admin', 'dashboard'],
-    queryFn: () => mockFetch('admin.dashboard'),
+    queryKey: ['admin', 'dashboard', resellerId],
+    queryFn: () => adminService.getDashboardStats(resellerId),
   });
 }

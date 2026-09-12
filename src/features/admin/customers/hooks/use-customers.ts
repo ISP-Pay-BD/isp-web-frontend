@@ -1,28 +1,29 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminService, type CustomerListParams } from '@/lib/api/services/admin.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import { toast } from 'sonner';
 import type { Customer } from '../types';
 
-export function useCustomers() {
+export function useCustomers(params?: CustomerListParams) {
   return useQuery({
-    queryKey: ['admin', 'customers', 'list'],
-    queryFn: () => mockFetch('admin.customers.list'),
+    queryKey: ['admin', 'customers', 'list', params],
+    queryFn: () => adminService.getCustomers(params),
   });
 }
 
 export function useExpiredCustomers() {
   return useQuery({
     queryKey: ['admin', 'customers', 'expired'],
-    queryFn: () => mockFetch('admin.customers.expired'),
+    queryFn: () => adminService.getExpiredCustomers(),
   });
 }
 
 export function useCustomer(id: string) {
   return useQuery({
     queryKey: ['admin', 'customers', id],
-    queryFn: () => mockFetch('admin.customers.get', id),
+    queryFn: () => adminService.getCustomerById(id),
     enabled: Boolean(id),
   });
 }
@@ -40,7 +41,7 @@ export function useFreeRequests() {
 export function useCreateCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Partial<Customer>) => mockFetch('admin.customers.create', payload),
+    mutationFn: (payload: Partial<Customer>) => adminService.createCustomer(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'customers'] });
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
@@ -55,7 +56,7 @@ export function useCreateCustomer() {
 export function useUpdateCustomer(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: Partial<Customer>) => mockFetch('admin.customers.update', id, payload),
+    mutationFn: (payload: Partial<Customer>) => adminService.updateCustomer(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'customers'] });
       qc.invalidateQueries({ queryKey: ['admin', 'customers', id] });
@@ -70,7 +71,7 @@ export function useUpdateCustomer(id: string) {
 export function useDeleteCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => mockFetch('admin.customers.delete', id),
+    mutationFn: (id: string) => adminService.deleteCustomer(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'customers'] });
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] });

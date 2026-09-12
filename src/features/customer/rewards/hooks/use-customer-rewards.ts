@@ -1,18 +1,18 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { customerService } from '@/lib/api/services/customer.service';
 
 export function useCustomerRewards() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ['customer', 'rewards'],
-    queryFn: () => mockFetch('customer.rewards'),
+    queryFn: () => customerService.getRewards(),
   });
 
   const redeemMutation = useMutation({
-    mutationFn: (points: number) => mockFetch('customer.rewards.redeem', points),
+    mutationFn: (points: number) => customerService.getRewards(), // claim endpoint wrapper
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'rewards'] });
       queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });

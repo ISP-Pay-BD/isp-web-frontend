@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { customerService } from '@/lib/api/services/customer.service';
 
 export function useCustomerDashboard() {
   return useQuery({
     queryKey: ['customer', 'dashboard'],
-    queryFn: () => mockFetch('customer.dashboard'),
+    queryFn: () => customerService.getDashboard(),
   });
 }

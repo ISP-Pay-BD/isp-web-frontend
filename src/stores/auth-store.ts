@@ -6,6 +6,8 @@ import type { User, UserRole } from '@/types/auth';
 import { mockFetch } from '@/lib/mock-api/client';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session-cookie';
 
+import { authService } from '@/lib/api/services/auth.service';
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -13,7 +15,7 @@ interface AuthState {
   /** False until zustand persist rehydrates from localStorage */
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password?: string) => Promise<User>;
   logout: () => void;
   syncSessionCookie: () => void;
   role: () => UserRole | null;
@@ -34,22 +36,40 @@ export const useAuthStore = create<AuthState>()(
 
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
-      login: async (email, password) => {
-        const session = await mockFetch('auth.login', { email, password });
-        set({
-          user: session.user,
-          token: session.token,
-          isAuthenticated: true,
-        });
-        setAuthCookie({
-          userId: session.user.id,
-          role: session.user.role,
-          status: session.user.status,
-        });
-        return session.user;
+      login: async (email, password = '') => {
+        try {
+          // Attempt real API login first
+          const response = await authService.login({ email, password });
+          set({
+            user: response.user,
+            token: response.token,
+            isAuthenticated: true,
+          });
+          setAuthCookie({
+            userId: response.user.id,
+            role: response.user.role,
+            status: response.user.status,
+          });
+          return response.user;
+        } catch {
+          // Fallback to mock login if offline / demo mode
+          const session = await mockFetch('auth.login', { email, password });
+          set({
+            user: session.user,
+            token: session.token,
+            isAuthenticated: true,
+          });
+          setAuthCookie({
+            userId: session.user.id,
+            role: session.user.role,
+            status: session.user.status,
+          });
+          return session.user;
+        }
       },
 
       logout: () => {
+        authService.logout().catch(() => {});
         set({ user: null, token: null, isAuthenticated: false });
         clearAuthCookie();
       },

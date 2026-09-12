@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { customerService } from '@/lib/api/services/customer.service';
 import type { PayInvoicePayload } from '@/lib/mock-api/handlers/customer.handler';
 
 export function useCustomerPayments() {
@@ -9,11 +9,11 @@ export function useCustomerPayments() {
 
   const paymentsQuery = useQuery({
     queryKey: ['customer', 'payments'],
-    queryFn: () => mockFetch('customer.payments'),
+    queryFn: () => customerService.getPayments(),
   });
 
   const payMutation = useMutation({
-    mutationFn: (payload: PayInvoicePayload) => mockFetch('customer.payments.pay', payload),
+    mutationFn: (payload: PayInvoicePayload) => customerService.payInvoice(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'payments'] });
       queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });

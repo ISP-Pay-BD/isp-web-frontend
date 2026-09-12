@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import type { EmployeeItem, EmployeeFormData } from '../types';
 
 export function useEmployees() {
@@ -8,21 +8,15 @@ export function useEmployees() {
   const query = useQuery({
     queryKey: ['admin', 'hr', 'employees'],
     queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'hr');
-      const hrData = data as { employees: EmployeeItem[] };
-      return hrData.employees ?? [];
+      const data = await adminService.getEmployees();
+      return (data.employees as EmployeeItem[]) ?? [];
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (payload: EmployeeFormData) => {
-      // Simulate mock mutation delay
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return {
-        id: `emp_${Date.now()}`,
-        ...payload,
-        joinedAt: new Date().toISOString().split('T')[0]!,
-      } as EmployeeItem;
+      const res = await adminService.createEmployee(payload);
+      return res as EmployeeItem;
     },
     onSuccess: (newEmp) => {
       queryClient.setQueryData<EmployeeItem[]>(['admin', 'hr', 'employees'], (prev) => [
@@ -34,8 +28,8 @@ export function useEmployees() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<EmployeeFormData> }) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return { id, ...data };
+      const res = await adminService.updateEmployee(id, data);
+      return res as { id: string } & Partial<EmployeeFormData>;
     },
     onSuccess: (updated) => {
       queryClient.setQueryData<EmployeeItem[]>(['admin', 'hr', 'employees'], (prev) =>
@@ -46,7 +40,7 @@ export function useEmployees() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await adminService.deleteEmployee(id);
       return id;
     },
     onSuccess: (deletedId) => {

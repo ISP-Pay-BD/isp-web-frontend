@@ -31,10 +31,12 @@ import {
 } from 'recharts';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 
+import { platformService } from '@/lib/api/services/platform.service';
+
 export function PlatformDashboardPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'dashboard'],
-    queryFn: () => mockFetch('platform.dashboard'),
+    queryFn: () => platformService.getDashboard(),
   });
 
   if (isLoading) {

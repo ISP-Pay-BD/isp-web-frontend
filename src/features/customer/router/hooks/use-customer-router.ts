@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { customerService } from '@/lib/api/services/customer.service';
 import type { UpdateWifiPayload } from '@/lib/mock-api/handlers/customer.handler';
 
 export function useCustomerRouter() {
@@ -9,18 +9,18 @@ export function useCustomerRouter() {
 
   const query = useQuery({
     queryKey: ['customer', 'router', 'tools'],
-    queryFn: () => mockFetch('customer.router.tools'),
+    queryFn: () => customerService.getRouterTools(),
   });
 
   const quickFixMutation = useMutation({
-    mutationFn: (actionId: string) => mockFetch('customer.router.quickFix', actionId),
+    mutationFn: (actionId?: string) => customerService.quickFixPing(actionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'router', 'tools'] });
     },
   });
 
   const updateWifiMutation = useMutation({
-    mutationFn: (payload: UpdateWifiPayload) => mockFetch('customer.router.updateWifi', payload),
+    mutationFn: (payload: UpdateWifiPayload) => customerService.updateWifi(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', 'router', 'tools'] });
     },
