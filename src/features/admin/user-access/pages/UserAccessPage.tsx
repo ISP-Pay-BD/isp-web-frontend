@@ -246,6 +246,12 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                         prev.map((r) => (r.id === updated.id ? updated : r))
                       );
                     }}
+                    onDeleteRecord={(deletedId) => {
+                      setCustomAccess((prev) => prev.filter((r) => r.id !== deletedId));
+                    }}
+                    onAddRecord={(newRecord) => {
+                      setCustomAccess((prev) => [newRecord, ...prev]);
+                    }}
                   />
                 )}
               </CardContent>
