@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { http } from '@/lib/api/client';
 import { PageHeader } from '@/features/admin/shared';
+
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,10 +41,19 @@ export function AiChatPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'aiChat'],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'aiChat');
-      return res as { messages: AiChatMessage[] };
+      return {
+        messages: [
+          {
+            id: '1',
+            role: 'assistant' as const,
+            content: 'Hello! I am your AI Operations Assistant. I can help diagnose MikroTik routers, check OLT optical power, analyze expiring subscribers, and generate scripts.',
+            at: new Date().toISOString(),
+          },
+        ],
+      };
     },
   });
+
   const [messages, setMessages] = useState<AiChatMessage[] | null>(null);
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
