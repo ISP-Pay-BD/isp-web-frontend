@@ -57,43 +57,52 @@ const txSearchFilter = (
 };
 
 export function RewardsPage() {
-  const { data, isLoading, isError, refetch } = useRewards();
-  const [programEnabled, setProgramEnabled] = useState(true);
+  const { data, isLoading, isError, refetch, saveConfigMutation, approveMutation, rejectMutation } = useRewards();
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
-  const [transactions, setTransactions] = useState<ReferralTransaction[]>([]);
   const [selectedReferrer, setSelectedReferrer] = useState<TopReferrer | null>(null);
   const [bonusPoints, setBonusPoints] = useState('250');
 
-  // Configuration state
-  const [pointsPerReferral, setPointsPerReferral] = useState(100);
-  const [minRedeem, setMinRedeem] = useState(500);
-  const [ratio, setRatio] = useState(0.5);
+  // Configuration state (seeded from the backend config payload)
+  const [pointsPerReferral, setPointsPerReferral] = useState<number | null>(null);
+  const [minRedeem, setMinRedeem] = useState<number | null>(null);
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [programEnabled, setProgramEnabled] = useState<boolean | null>(null);
 
-  useMemo(() => {
-    if (data?.transactions && transactions.length === 0) {
-      setTransactions(data.transactions);
-    }
-    if (data?.config) {
-      setPointsPerReferral(data.config.pointsPerReferral);
-      setMinRedeem(data.config.minPointsToRedeem);
-      setRatio(data.config.pointsToBdtRatio);
-    }
-  }, [data, transactions.length]);
+  const effectivePoints = pointsPerReferral ?? data?.config.pointsPerReferral ?? 0;
+  const effectiveMinRedeem = minRedeem ?? data?.config.minPointsToRedeem ?? 0;
+  const effectiveRatio = ratio ?? data?.config.pointsToBdtRatio ?? 1;
+  const effectiveProgramEnabled = programEnabled ?? data?.config.programEnabled ?? false;
 
-  const txList = transactions.length > 0 ? transactions : (data?.transactions ?? []);
+  const txList = data?.transactions ?? [];
   const topReferrers = data?.topReferrers ?? [];
 
   const handleUpdateStatus = (id: string, newStatus: 'approved' | 'rejected') => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    );
-    toast.success(`Transaction ${newStatus === 'approved' ? 'Approved & Points Credited' : 'Rejected'}`);
+    if (newStatus === 'approved') {
+      approveMutation.mutate(id, { onError: () => refetch() });
+    } else {
+      rejectMutation.mutate({ referralId: id, reason: 'Rejected from rewards console' }, { onError: () => refetch() });
+    }
   };
 
   const handleSaveConfig = () => {
-    toast.success('Referral program configuration updated successfully!');
-    setConfigModalOpen(false);
+    saveConfigMutation.mutate(
+      {
+        referral_points: effectivePoints,
+        point_value_bdt: effectiveRatio,
+        max_redeem_percent: effectiveMinRedeem,
+        referral_enabled: effectiveProgramEnabled ? 1 : 0,
+      },
+      {
+        onSuccess: () => {
+          setConfigModalOpen(false);
+          setPointsPerReferral(null);
+          setMinRedeem(null);
+          setRatio(null);
+          setProgramEnabled(null);
+        },
+      },
+    );
   };
 
   const handleGrantBonus = () => {
@@ -298,8 +307,8 @@ export function RewardsPage() {
   }
 
   const totalPointsDistributed = txList
-    .filter((t) => t.status === 'approved')
-    .reduce((sum, t) => sum + t.pointsEarned, 0);
+    .filter((t: ReferralTransaction) => t.status === 'approved')
+    .reduce((sum: number, t: ReferralTransaction) => sum + t.pointsEarned, 0);
 
   return (
     <div className="space-y-6">
@@ -328,10 +337,10 @@ export function RewardsPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Program Status', value: programEnabled ? 'ACTIVE & REWARDING' : 'PAUSED' },
-          { label: 'Reward per Referral', value: `${pointsPerReferral} Loyalty Points` },
-          { label: 'Min. Redeem Threshold', value: `${minRedeem} Points` },
-          { label: 'Point Conversion', value: `1 pt = ৳${ratio.toFixed(2)} BDT` },
+          { label: 'Program Status', value: effectiveProgramEnabled ? 'ACTIVE & REWARDING' : 'PAUSED' },
+          { label: 'Reward per Referral', value: `${effectivePoints} Loyalty Points` },
+          { label: 'Min. Redeem Threshold', value: `${effectiveMinRedeem} Points` },
+          { label: 'Point Conversion', value: `1 pt = ৳${effectiveRatio.toFixed(2)} BDT` },
           { label: 'Total Distributed Points', value: `${totalPointsDistributed.toLocaleString()} pts` },
         ]}
       />
@@ -343,7 +352,7 @@ export function RewardsPage() {
             <div>
               <CardDescription className="text-xs">Points per Referral</CardDescription>
               <CardTitle className="text-2xl font-bold text-primary font-mono mt-0.5">
-                {pointsPerReferral} pts
+                {effectivePoints} pts
               </CardTitle>
             </div>
             <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -360,7 +369,7 @@ export function RewardsPage() {
             <div>
               <CardDescription className="text-xs">Min Redeem Threshold</CardDescription>
               <CardTitle className="text-2xl font-bold text-foreground font-mono mt-0.5">
-                {minRedeem} pts
+                {effectiveMinRedeem} pts
               </CardTitle>
             </div>
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -368,7 +377,7 @@ export function RewardsPage() {
             </div>
           </CardHeader>
           <CardContent className="text-[11px] text-muted-foreground pt-0">
-            Equivalent to <span className="font-semibold text-foreground font-mono">৳{(minRedeem * ratio).toFixed(2)} BDT</span> bill discount
+            Equivalent to <span className="font-semibold text-foreground font-mono">৳{(effectiveMinRedeem * effectiveRatio).toFixed(2)} BDT</span> bill discount
           </CardContent>
         </Card>
 
@@ -378,25 +387,25 @@ export function RewardsPage() {
               <CardDescription className="text-xs">Referral Program Switch</CardDescription>
               <div className="mt-1 flex items-center gap-2">
                 <Badge
-                  variant={programEnabled ? 'default' : 'secondary'}
-                  className={programEnabled ? 'bg-emerald-600 hover:bg-emerald-600 text-white font-mono text-xs' : 'font-mono text-xs'}
+                  variant={effectiveProgramEnabled ? 'default' : 'secondary'}
+                  className={effectiveProgramEnabled ? 'bg-emerald-600 hover:bg-emerald-600 text-white font-mono text-xs' : 'font-mono text-xs'}
                 >
-                  {programEnabled ? 'Live & Accepting' : 'Paused'}
+                  {effectiveProgramEnabled ? 'Live & Accepting' : 'Paused'}
                 </Badge>
               </div>
             </div>
             <Can menu="reward" action="update">
               <Switch
-                checked={programEnabled}
+                checked={effectiveProgramEnabled}
                 onCheckedChange={(v) => {
                   setProgramEnabled(v);
-                  toast.success(`Referral rewards program ${v ? 'activated' : 'paused'}`);
+                  toast.success(`Referral rewards program ${v ? 'activated' : 'paused'} — save rules to apply`);
                 }}
               />
             </Can>
           </CardHeader>
           <CardContent className="text-[11px] text-muted-foreground pt-0">
-            Customer portal referral links will automatically {programEnabled ? 'earn rewards' : 'hold bonuses'}
+            Customer portal referral links will automatically {effectiveProgramEnabled ? 'earn rewards' : 'hold bonuses'}
           </CardContent>
         </Card>
       </div>
@@ -475,7 +484,7 @@ export function RewardsPage() {
               <Label className="text-xs font-semibold">Points per Successful Referral</Label>
               <Input
                 type="number"
-                value={pointsPerReferral}
+                value={effectivePoints}
                 onChange={(e) => setPointsPerReferral(Number(e.target.value))}
                 className="font-mono text-xs"
               />
@@ -484,7 +493,7 @@ export function RewardsPage() {
               <Label className="text-xs font-semibold">Minimum Points to Redeem</Label>
               <Input
                 type="number"
-                value={minRedeem}
+                value={effectiveMinRedeem}
                 onChange={(e) => setMinRedeem(Number(e.target.value))}
                 className="font-mono text-xs"
               />
@@ -494,12 +503,12 @@ export function RewardsPage() {
               <Input
                 type="number"
                 step="0.05"
-                value={ratio}
+                value={effectiveRatio}
                 onChange={(e) => setRatio(Number(e.target.value))}
                 className="font-mono text-xs"
               />
               <p className="text-[11px] text-muted-foreground">
-                Example: 500 points = ৳{(500 * ratio).toFixed(2)} BDT bill credit.
+                Example: 500 points = ৳{(500 * effectiveRatio).toFixed(2)} BDT bill credit.
               </p>
             </div>
           </div>

@@ -1,7 +1,12 @@
 import { http } from '../client';
-import { API_ENDPOINTS } from '../endpoints';
 import { BackendAuthData, transformBackendAuthUser } from '../adapters/auth.adapter';
 import type { User } from '@/types/auth';
+
+// Endpoint literals (mirrors API_ENDPOINTS in `../endpoints` — kept inline so
+// the route cross-check script can see every call site as a static URL).
+const AUTH_LOGIN = '/v1/auth/login';
+const AUTH_REFRESH = '/v1/auth/refresh';
+const AUTH_ME = '/v1/auth/me';
 
 export interface LoginCredentials {
   email: string;
@@ -16,7 +21,7 @@ export interface LoginResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    const rawData = await http.post<BackendAuthData>(API_ENDPOINTS.auth.login, credentials);
+    const rawData = await http.post<BackendAuthData>(AUTH_LOGIN, credentials);
 
     if (rawData.refresh_token && typeof window !== 'undefined') {
       localStorage.setItem('isp_refresh_token', rawData.refresh_token);
@@ -33,7 +38,7 @@ export const authService = {
   },
 
   refresh: async (refreshToken: string): Promise<{ token: string; refreshToken?: string }> => {
-    const rawData = await http.post<BackendAuthData>(API_ENDPOINTS.auth.refresh, {
+    const rawData = await http.post<BackendAuthData>(AUTH_REFRESH, {
       refresh_token: refreshToken,
     });
 
@@ -48,7 +53,7 @@ export const authService = {
   },
 
   me: async (): Promise<User> => {
-    const rawData = await http.get<BackendAuthData>(API_ENDPOINTS.auth.me);
+    const rawData = await http.get<BackendAuthData>(AUTH_ME);
     return transformBackendAuthUser(rawData);
   },
 

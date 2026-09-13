@@ -9,7 +9,8 @@ export function useAdminNews() {
     queryKey: ['admin', 'domain', 'news'],
     queryFn: async () => {
       try {
-        const res = await http.get<unknown>('/api/common/news');
+        // Backend route: `GET /api/common/news` (baseURL already ends in `/api`).
+        const res = await http.get<unknown>('/common/news');
         if (Array.isArray(res)) return { items: res as AdminNewsItem[] };
         if (res && typeof res === 'object' && 'data' in res && Array.isArray((res as { data: unknown[] }).data)) {
           return { items: (res as { data: AdminNewsItem[] }).data };

@@ -3,7 +3,54 @@
 > **Status of frontend ↔ `zapi` backend integration, verified against the real
 > route table (`php spark routes`) and the frontend source — not against intent.**
 >
-> Verification method and raw numbers: see §5. Last verified: 2026-09-13.
+> Verification method and raw numbers: see §5. Last verified: 2026-09-13
+> (extended reverse-check pass — see §6).
+
+---
+
+## 6. Reverse-check pass (2026-09-13): backend routes → frontend consumers
+
+The original verification only proved every *frontend call* resolves to a real
+backend route. This pass adds the reverse check: every backend `api/v1/*` route
+must be matched by some frontend call (prefix-aware, CodeIgniter regex params
+normalised). Tool: `scripts/api-crosscheck.mjs` (run with the dumped route
+table, see §5).
+
+### 6.1 Real call-site bugs found & fixed
+
+| Bug | Was | Now |
+|---|---|---|
+| Admin news list | `GET /api/common/news` — axios baseURL already ends in `/api`, so the request went to `/api/api/common/news` (404) | `GET /common/news` |
+| Customer reward redeem | `POST /v1/customer/reward/redeem-preview` — backend only registers **GET**; also required `package_id` which was never sent | `GET /v1/customer/reward/redeem-preview?package_id=&points=` |
+| Customer reward wallet | returned raw backend wallet; UI shape mismatch (`pointsBalance` vs `balance`) and referral code/counts never fetched | composes `reward/wallet` + `referral/overview` (`Promise.allSettled`) into the UI shape |
+| Customer autofix tools | `quickFixPing` called `/autofix/quick-fix` for every tool; backend reads `user_id` from the **query string** even on POST, and each tool has its own endpoint | per-tool mapping: `quick_fix→quick-fix`, `reset_session→reset-session`, `reconnect→reconnect`, `dns_flush→flush-dns`, with `user_id` + `issue` query params |
+| Admin rewards screen | hook cast the API payload to the *mock* shape (`data.config.pointsPerReferral` — always `undefined` on live data); approve/reject/config-save were local state only | composes `rewards/{id}/config` + `referrals/{id}` + `rewards/{id}/report`; real mutations `PUT rewards/{id}/config`, `POST referrals/{id}/{rid}/approve|reject` |
+
+### 6.2 Backend v1 routes newly wired
+
+| Domain | Routes now consumed |
+|---|---|
+| Rewards (reseller) | `GET/PUT rewards/{id}/config`, `GET rewards/{id}/report`, `GET rewards/{id}/wallets`, `GET/PUT rewards/global-config` |
+| Referrals (reseller) | `GET referrals/{id}`, `GET referrals/{id}/{rid}`, `POST referrals/{id}/{rid}/approve`, `POST referrals/{id}/{rid}/reject` |
+| Reseller billing | `GET payments/{id}`, `GET make-reseller-payment/{id}` (+ `json/` variants) |
+| Areas | `GET areas/edit/{id}`, `DELETE areas/delete` (bulk) |
+| Reports / inventory | `GET reports/export?type=`, `POST inventory/transactions` |
+| Customer extras | `GET notifications`, `POST notifications/read`, `GET subscription/quota`, `GET usage`, `GET reward/transactions`, `GET referral/history` |
+| Customer actions | `POST autofix/{reboot,reconnect,flush-dns,reset-session,quick-fix}`, `POST router-control/reboot`, `GET router-control/devices` |
+| Customer gateway | `GET make-payment/{id}`, `GET make-reseller-payment/{id}` (+ `json/` variants) |
+
+### 6.3 Remaining known-unconsumed v1 routes (accepted gaps)
+
+| Route | Why not wired |
+|---|---|
+| `POST auth/login`, `POST auth/refresh` | called via `API_ENDPOINTS` constants, not string literals — false positive |
+| `POST autofix/*` | called via dynamic `` `/v1/customer/autofix/${action}` `` — false positive |
+| `GET features`, `GET features/{id}` | feature-flag surface with no screen yet |
+| `GET/POST subscription/activate-package`, `POST subscription/update` | admin-side subscription ops; customer portal does renew only |
+| `POST router-control/onboard-tr069` | TR-069 onboarding is an installer flow, not customer self-care |
+| `GET ping-user`, `GET routers/load-traffic/{id}`, `GET users-load-traffic/{id}` | live-traffic probes not surfaced in customer UI |
+| `GET invoice-print`, `GET permission` (both portals) | print view / raw permission dump not consumed |
+| Package create/update (`POST/PUT reseller/packages/*`) | **still missing on the backend** (§4 gap — no controller method in any route generation) |
 
 ---
 

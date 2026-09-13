@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner';
 
 export function CustomerPackagesPage() {
-  const { data, isLoading, isError, refetch } = useCustomerPackages();
+  const { data, isLoading, isError, refetch, activateMutation } = useCustomerPackages();
   const [selectedPkg, setSelectedPkg] = useState<{ id: string; name: string; priceBdt: number; speedMbps: number } | null>(null);
 
   if (isLoading) {
@@ -46,9 +46,15 @@ export function CustomerPackagesPage() {
 
   const { packages, currentPackageId } = data;
 
-  const handleConfirmUpgrade = () => {
-    toast.success(`Upgrade requested for ${selectedPkg?.name}! Redirecting to checkout.`);
-    setSelectedPkg(null);
+  const handleConfirmUpgrade = async () => {
+    if (!selectedPkg) return;
+    try {
+      await activateMutation.mutateAsync(selectedPkg.id);
+    } catch {
+      // toast handled by the mutation onError
+    } finally {
+      setSelectedPkg(null);
+    }
   };
 
   return (
@@ -225,9 +231,13 @@ export function CustomerPackagesPage() {
                     Cancel
                   </Button>
                   <Link href={`/customer/payments/pay?amount=${selectedPkg.priceBdt}`}>
-                    <Button onClick={handleConfirmUpgrade} className="gap-2 font-bold">
-                      <CreditCard className="h-4 w-4" />
-                      Proceed to Pay & Upgrade
+                    <Button
+                      onClick={handleConfirmUpgrade}
+                      disabled={activateMutation.isPending}
+                      className="gap-2 font-bold"
+                    >
+                      <CreditCard className={`h-4 w-4 ${activateMutation.isPending ? 'animate-pulse' : ''}`} />
+                      {activateMutation.isPending ? 'Activating…' : 'Proceed to Pay & Upgrade'}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>

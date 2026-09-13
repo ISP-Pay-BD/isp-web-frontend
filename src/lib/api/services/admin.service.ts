@@ -410,8 +410,15 @@ export const adminService = {
 
   getAccountingDomain: async (section: string, resellerId?: string | number) => {
     const finalId = resellerId || getAuthUserId();
-    const endpoint = section === 'balance-sheet' ? 'balance-sheet' : section === 'chart-of-accounts' ? 'chart-of-accounts' : 'journal-entries';
-    return await http.get<unknown>(`/v1/reseller/accounting/${finalId}/${endpoint}`);
+    switch (section) {
+      case 'chart-of-accounts':
+        return await http.get<unknown>(`/v1/reseller/accounting/${finalId}/chart-of-accounts`);
+      case 'journal-entries':
+        return await http.get<unknown>(`/v1/reseller/accounting/${finalId}/journal-entries`);
+      case 'balance-sheet':
+      default:
+        return await http.get<unknown>(`/v1/reseller/accounting/${finalId}/balance-sheet`);
+    }
   },
 
   getRouters: async (resellerId?: string | number) => {
@@ -733,6 +740,121 @@ export const adminService = {
     const finalId = resellerId || getAuthUserId();
     const raw = await http.post<Record<string, unknown>>(`/v1/reseller/customer-payments/${finalId}`, data);
     return transformBackendPayment(raw);
+  },
+
+  // ---- Phase 8 additions: previously unwired backend v1 routes ----
+
+  /** GET /api/v1/reseller/referrals/{resellerId}?status= — referral pipeline list. */
+  getReferrals: async (resellerId?: string | number, status?: string) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/referrals/${finalId}`, status ? { status } : undefined);
+  },
+
+  /** GET /api/v1/reseller/referrals/{resellerId}/{referralId} — single referral. */
+  getReferralDetails: async (referralId: string | number, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/referrals/${finalId}/${referralId}`);
+  },
+
+  /** POST /api/v1/reseller/referrals/{resellerId}/{referralId}/approve — verify + award points. */
+  approveReferral: async (referralId: string | number, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/referrals/${finalId}/${referralId}/approve`);
+  },
+
+  /** POST /api/v1/reseller/referrals/{resellerId}/{referralId}/reject — body: { reason }. */
+  rejectReferral: async (referralId: string | number, reason: string, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/referrals/${finalId}/${referralId}/reject`, { reason });
+  },
+
+  /** GET /api/v1/reseller/rewards/{resellerId}/config — reseller overrides + global defaults. */
+  getRewardsConfig: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/rewards/${finalId}/config`);
+  },
+
+  /** PUT /api/v1/reseller/rewards/{resellerId}/config — accepts flat keys or {config:{...}}. */
+  updateRewardsConfig: async (values: Record<string, unknown>, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.put(`/v1/reseller/rewards/${finalId}/config`, values);
+  },
+
+  /** GET /api/v1/reseller/rewards/{resellerId}/report — referral performance + reward cost summary. */
+  getRewardsReport: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/rewards/${finalId}/report`);
+  },
+
+  /** GET /api/v1/reseller/rewards/{resellerId}/wallets — per-customer reward balances. */
+  getRewardsWallets: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/rewards/${finalId}/wallets`);
+  },
+
+  /** GET /api/v1/reseller/rewards/global-config — platform owner only. */
+  getGlobalRewardsConfig: async () => {
+    return await http.get<unknown>('/v1/reseller/rewards/global-config');
+  },
+
+  /** PUT /api/v1/reseller/rewards/global-config — platform owner only. */
+  updateGlobalRewardsConfig: async (values: Record<string, unknown>) => {
+    return await http.put('/v1/reseller/rewards/global-config', values);
+  },
+
+  /** GET /api/v1/reseller/payments/{resellerId} — reseller's own platform subscription payments. */
+  getResellerBillingPayments: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/payments/${finalId}`);
+  },
+
+  /**
+   * GET /api/v1/reseller/make-reseller-payment/{id} — gateway handoff for reseller
+   * wallet top-up. The JSON variant only exists under /v1/customer, so `json`
+   * falls through to the customer-scoped route.
+   */
+  makeResellerPayment: async (paymentId: string | number, json = false) => {
+    return json
+      ? await http.get<unknown>(`/v1/customer/json/make-reseller-payment/${paymentId}`)
+      : await http.get<unknown>(`/v1/reseller/make-reseller-payment/${paymentId}`);
+  },
+
+  /** GET /api/v1/reseller/areas/edit/{id} — single area for the edit form. */
+  getAreaForEdit: async (areaId: string | number) => {
+    return await http.get<unknown>(`/v1/reseller/areas/edit/${areaId}`);
+  },
+
+  /** DELETE /api/v1/reseller/areas/delete — bulk: body { ids: [...] } (or query ids). */
+  bulkDeleteAreas: async (ids: (string | number)[]) => {
+    return await http.delete('/v1/reseller/areas/delete', { ids });
+  },
+
+  /** GET /api/v1/reseller/reports/export?type= — generates an export download link. */
+  exportReport: async (type: string) => {
+    return await http.get<{ reportType: string; downloadUrl: string; expiresIn: number; format: string }>(
+      '/v1/reseller/reports/export',
+      { type },
+    );
+  },
+
+  /** POST /api/v1/reseller/inventory/transactions — record stock in/out. */
+  recordInventoryTransaction: async (data: Record<string, unknown>) => {
+    return await http.post('/v1/reseller/inventory/transactions', data);
+  },
+
+  /** GET /api/v1/reseller/permission — permission map for the authenticated admin/reseller. */
+  getPermissions: async () => {
+    return await http.get<unknown>('/v1/reseller/permission');
+  },
+
+  /** GET /api/v1/features — feature-flag catalog. */
+  getFeatures: async () => {
+    return await http.get<unknown>('/v1/features/');
+  },
+
+  /** GET /api/v1/features/{key} — single feature flag. */
+  getFeature: async (key: string) => {
+    return await http.get<unknown>(`/v1/features/${key}`);
   },
 };
 

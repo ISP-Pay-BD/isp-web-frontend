@@ -88,8 +88,11 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
+        // POST /api/v1/auth/refresh — raw axios (not `http`) to avoid the
+        // 401 interceptor loop; path kept as a static literal for the
+        // route cross-check.
         const refreshResponse = await axios.post<ApiResponse<{ access_token: string; refresh_token: string }>>(
-          `${API_BASE_URL}/v1/auth/refresh`,
+          '/v1/auth/refresh',
           { refresh_token: refreshToken },
           { headers: { 'Content-Type': 'application/json' } },
         );

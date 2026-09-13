@@ -21,11 +21,15 @@ import {
 } from '@/components/ui/dialog';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { useCustomerRewards } from '../hooks/use-customer-rewards';
+import { useCustomerPackages } from '../../packages/hooks/use-customer-packages';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { toast } from 'sonner';
 
 export function CustomerRewardsPage() {
   const { data, isLoading, isError, refetch, redeemMutation } = useCustomerRewards();
+  const packagesQuery = useCustomerPackages();
+  const currentPackageId =
+    packagesQuery.data?.currentPackageId || packagesQuery.data?.packages?.[0]?.id || '';
   const [copied, setCopied] = useState(false);
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
 
@@ -56,8 +60,14 @@ export function CustomerRewardsPage() {
 
   const handleRedeem = async (pts: number) => {
     try {
-      await redeemMutation.mutateAsync(pts);
-      toast.success(`Redeemed ${pts} points for a bill discount voucher!`);
+      // Backend endpoint is a *preview*: it computes the capped discount without
+      // committing. The response carries the real numbers for the renewal flow.
+      const preview = (await redeemMutation.mutateAsync({ packageId: currentPackageId, points: pts })) as {
+        points_applied?: number;
+        discount_amount?: number;
+      };
+      const applied = preview?.points_applied ?? pts;
+      toast.success(`${applied} points apply to your next bill (preview — discount settles at renewal).`);
       setRedeemDialogOpen(false);
     } catch {
       toast.error('Failed to redeem points. Please check balance.');
