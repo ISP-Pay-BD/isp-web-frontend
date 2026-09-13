@@ -1,10 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
 export function usePurchase() {
   const query = useQuery({
     queryKey: ['admin', 'purchase'],
-    queryFn: () => mockFetch('admin.domain', 'purchase'),
+    queryFn: async () => {
+      try {
+        const suppliers = await adminService.getInventorySuppliers();
+        return {
+          purchaseVendors: Array.isArray(suppliers) ? suppliers : [],
+          purchaseRequisitions: [],
+          purchaseBills: [],
+        };
+      } catch {
+        return {
+          purchaseVendors: [],
+          purchaseRequisitions: [],
+          purchaseBills: [],
+        };
+      }
+    },
   });
 
   const data = query.data as {
@@ -20,6 +35,7 @@ export function usePurchase() {
     bills: data?.purchaseBills ?? [],
   };
 }
+
 
 export interface PurchaseVendor {
   id: string;

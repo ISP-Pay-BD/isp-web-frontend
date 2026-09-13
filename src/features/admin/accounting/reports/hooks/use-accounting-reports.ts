@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
 export interface AccountingReportItem {
   id: string;
@@ -18,11 +18,11 @@ export function useAccountingReports() {
   const query = useQuery({
     queryKey: ['admin', 'accounting', 'reports'],
     queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'accounting');
-      const acc = data as { accountingReports: AccountingReportItem[]; otcReport: unknown[] };
+      const data = await adminService.getAccountingDomain('reports');
+      const acc = data as { accountingReports?: AccountingReportItem[]; otcReport?: unknown[] };
       return {
-        reports: acc.accountingReports ?? [],
-        otc: acc.otcReport ?? [],
+        reports: acc?.accountingReports ?? [],
+        otc: acc?.otcReport ?? [],
       };
     },
   });

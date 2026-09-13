@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import { toast } from 'sonner';
+
 
 export interface PopReseller {
   id: string;
@@ -27,18 +28,26 @@ export interface PopTransaction {
 export function usePopData() {
   return useQuery({
     queryKey: ['admin', 'domain', 'pop'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'pop');
-      return res as { resellers: PopReseller[]; transactions: PopTransaction[] };
+    queryFn: async (): Promise<{ resellers: PopReseller[]; transactions: PopTransaction[] }> => {
+      try {
+        const res = await adminService.getPopFunding();
+        if (Array.isArray(res)) {
+          return { resellers: [] as PopReseller[], transactions: res as PopTransaction[] };
+        }
+        return { resellers: [] as PopReseller[], transactions: [] as PopTransaction[] };
+      } catch {
+        return { resellers: [] as PopReseller[], transactions: [] as PopTransaction[] };
+      }
     },
   });
 }
+
 
 export function useCreatePopFunding() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: { popId: string; amountBdt: number; note?: string }) =>
-      mockFetch('admin.pop.funding.create', payload),
+      adminService.createPopFunding(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'domain', 'pop'] });
       toast.success('POP funding credited');
@@ -46,3 +55,4 @@ export function useCreatePopFunding() {
     onError: (err: Error) => toast.error(err.message || 'Failed to credit funding'),
   });
 }
+

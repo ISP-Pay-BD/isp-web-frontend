@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import type { ExpenseItem } from '../types';
 import type { ExpenseFormValues } from '../schemas';
 
@@ -9,9 +9,9 @@ export function useExpenses() {
   const query = useQuery({
     queryKey: ['admin', 'accounting', 'expenses'],
     queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'accounting');
-      const accData = data as { expenses: ExpenseItem[] };
-      return accData.expenses ?? [];
+      const data = await adminService.getAccountingDomain('expenses');
+      const accData = data as { expenses?: ExpenseItem[] };
+      return accData?.expenses ?? [];
     },
   });
 

@@ -414,4 +414,25 @@ export const adminService = {
     const finalId = resellerId || getAuthUserId();
     return await http.post<unknown>(`/v1/reseller/employees/${finalId}/attendance/location`, payload);
   },
+
+  getPopFunding: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/funding/${finalId}`);
+  },
+
+  createPopFunding: async (payload: { popId?: string; amountBdt: number; note?: string }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post<unknown>(`/v1/reseller/funding/${finalId}`, payload);
+  },
+
+  getVoiceSmsData: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/voice-sms/${finalId}/templates`);
+  },
+
+  getTenantWallet: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/transactions/${finalId}`);
+  },
 };
+
