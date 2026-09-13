@@ -27,7 +27,7 @@ export function NetworkDiagramPage() {
 
   const filtered = useMemo(() => {
     return topology.filter((item) => {
-      if (selectedOltId !== 'all' && item.oltId !== selectedOltId) return false;
+      if (selectedOltId !== 'all' && String(item.oltId) !== String(selectedOltId)) return false;
       if (selectedPonPort !== 'all' && item.ponPort !== selectedPonPort) return false;
       return true;
     });
@@ -36,7 +36,7 @@ export function NetworkDiagramPage() {
   const ponPorts = useMemo(() => {
     const set = new Set<string>();
     for (const t of topology) {
-      if (selectedOltId === 'all' || t.oltId === selectedOltId) {
+      if (selectedOltId === 'all' || String(t.oltId) === String(selectedOltId)) {
         set.add(t.ponPort);
       }
     }

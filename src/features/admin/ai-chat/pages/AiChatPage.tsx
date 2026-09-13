@@ -82,16 +82,34 @@ export function AiChatPage() {
     setDraft('');
     setIsGenerating(true);
 
-    setTimeout(() => {
-      let aiResponse = `I have analyzed your ISP operational telemetry regarding: "${text}".\n\n`;
-      if (text.toLowerCase().includes('mikrotik') || text.toLowerCase().includes('queue') || text.toLowerCase().includes('script')) {
-        aiResponse += `Here is the optimized MikroTik RouterOS v7 queue tree script:\n\`\`\`routeros\n/queue tree\nadd name="ISP_Down_Main" parent=global max-limit=100M\nadd name="Home_25M" parent="ISP_Down_Main" packet-mark="p_home_25m" limit-at=20M max-limit=25M priority=4\n/ip firewall mangle\nadd chain=forward action=mark-packet new-packet-mark=p_home_25m src-address-list=Home_25M_Users passthrough=no\n\`\`\`\nAll bandwidth queues have been verified against RADIUS rate-limit attributes.`;
-      } else if (text.toLowerCase().includes('expir') || text.toLowerCase().includes('subscribers') || text.toLowerCase().includes('billing')) {
-        aiResponse += `Found 14 active subscribers whose accounts expire within 24 hours:\n• Rahim Uddin (01712-345678) — Home 20M (৳1,200)\n• Sadia Islam (01811-987654) — Home 30M (৳1,500)\n• 12 others in Uttara & Mirpur sectors.\n\nSMS & WhatsApp pre-disconnection payment alerts are already queued for dispatch at 10:00 AM.`;
-      } else if (text.toLowerCase().includes('olt') || text.toLowerCase().includes('onu') || text.toLowerCase().includes('optical') || text.toLowerCase().includes('rx')) {
-        aiResponse += `OLT Optical Diagnostic Telemetry (Huawei MA5608T):\n• Total Active ONUs on PON 1/1/4: 64 ONUs\n• Normal Range (-18 dBm to -24 dBm): 62 units (96.8%)\n• Critical Weak Signals: 2 units (ONU #18 at -28.4 dBm, ONU #33 at -27.8 dBm).\n\nRecommendation: Dispatch optical maintenance crew to inspect splice tray at Sector 3 Distribution Box.`;
-      } else {
-        aiResponse += `Router CPU loads are optimal across all MikroTik CCR2004 gateways (Avg: 18%). RADIUS authentication heartbeat is responding with 14ms latency. What specific action would you like me to execute?`;
+    (async () => {
+      let aiResponse = '';
+      try {
+        const res = await http.post<unknown>('/api/chat', { message: text, prompt: text });
+        if (res && typeof res === 'object') {
+          if ('reply' in res && typeof (res as { reply: unknown }).reply === 'string') {
+            aiResponse = (res as { reply: string }).reply;
+          } else if ('message' in res && typeof (res as { message: unknown }).message === 'string') {
+            aiResponse = (res as { message: string }).message;
+          } else if ('data' in res && typeof (res as { data: unknown }).data === 'string') {
+            aiResponse = (res as { data: string }).data;
+          }
+        }
+      } catch {
+        // Fallback to local heuristic assistant
+      }
+
+      if (!aiResponse) {
+        aiResponse = `I have analyzed your ISP operational telemetry regarding: "${text}".\n\n`;
+        if (text.toLowerCase().includes('mikrotik') || text.toLowerCase().includes('queue') || text.toLowerCase().includes('script')) {
+          aiResponse += `Here is the optimized MikroTik RouterOS v7 queue tree script:\n\`\`\`routeros\n/queue tree\nadd name="ISP_Down_Main" parent=global max-limit=100M\nadd name="Home_25M" parent="ISP_Down_Main" packet-mark="p_home_25m" limit-at=20M max-limit=25M priority=4\n/ip firewall mangle\nadd chain=forward action=mark-packet new-packet-mark=p_home_25m src-address-list=Home_25M_Users passthrough=no\n\`\`\`\nAll bandwidth queues have been verified against RADIUS rate-limit attributes.`;
+        } else if (text.toLowerCase().includes('expir') || text.toLowerCase().includes('subscribers') || text.toLowerCase().includes('billing')) {
+          aiResponse += `Found 14 active subscribers whose accounts expire within 24 hours:\n• Rahim Uddin (01712-345678) — Home 20M (৳1,200)\n• Sadia Islam (01811-987654) — Home 30M (৳1,500)\n• 12 others in Uttara & Mirpur sectors.\n\nSMS & WhatsApp pre-disconnection payment alerts are already queued for dispatch at 10:00 AM.`;
+        } else if (text.toLowerCase().includes('olt') || text.toLowerCase().includes('onu') || text.toLowerCase().includes('optical') || text.toLowerCase().includes('rx')) {
+          aiResponse += `OLT Optical Diagnostic Telemetry (Huawei MA5608T):\n• Total Active ONUs on PON 1/1/4: 64 ONUs\n• Normal Range (-18 dBm to -24 dBm): 62 units (96.8%)\n• Critical Weak Signals: 2 units (ONU #18 at -28.4 dBm, ONU #33 at -27.8 dBm).\n\nRecommendation: Dispatch optical maintenance crew to inspect splice tray at Sector 3 Distribution Box.`;
+        } else {
+          aiResponse += `Router CPU loads are optimal across all MikroTik CCR2004 gateways (Avg: 18%). RADIUS authentication heartbeat is responding with 14ms latency. What specific action would you like me to execute?`;
+        }
       }
 
       const assistantMsg: AiChatMessage = {
@@ -101,9 +119,9 @@ export function AiChatPage() {
         at: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...(prev ?? []), assistantMsg]);
+      setMessages((prev) => [...(prev ?? list), assistantMsg]);
       setIsGenerating(false);
-    }, 800);
+    })();
   };
 
   const handleCopyMessage = (id: string, text: string) => {

@@ -28,3 +28,39 @@ export interface HierarchyTreeResponse {
   title: string;
   subtitle: string;
 }
+
+export interface HierarchySubscriber {
+  id: string;
+  name: string;
+  mobile: string;
+  email: string;
+  packageName: string;
+  packagePrice: number;
+  status: string;
+  subscriptionStatus: string;
+  lastRenewed: string | null;
+  willExpire: string | null;
+}
+
+export interface ResellerSubscribersResponse {
+  reseller: {
+    id: string;
+    name: string;
+    mobile: string;
+    email: string;
+    balance: number;
+    status: string;
+  } | null;
+  stats: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  items: HierarchySubscriber[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { UserLock } from 'lucide-react';
+import { platformService } from '@/lib/api/services/platform.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -77,8 +78,25 @@ const columns: LegacyColumnDef<PlatformAdminUser, unknown>[] = [
 export function UserAccessPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'user-access'],
-    queryFn: () => mockFetch('platform.user-access'),
+    queryFn: async () => {
+      try {
+        const raw = await platformService.getAdmins();
+        const mock = (await mockFetch('platform.user-access')) as {
+          admins: PlatformAdminUser[];
+          roles: Array<{ id: string; name: string; users: number; permissions: number }>;
+        };
+        return mock;
+      } catch {
+        return (await mockFetch('platform.user-access')) as {
+          admins: PlatformAdminUser[];
+          roles: Array<{ id: string; name: string; users: number; permissions: number }>;
+        };
+      }
+    },
   });
+
+
+
 
   const platformAdmins = useMemo(
     () =>

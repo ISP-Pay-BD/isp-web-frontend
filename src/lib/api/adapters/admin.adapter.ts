@@ -4,47 +4,79 @@ import type {
   ConnectionType,
   Area,
   SubArea,
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
 } from '@/data/shared/types';
 import { adminDashboardStats } from '@/data/admin/dashboard.data';
 
 export type AdminDashboardResult = typeof adminDashboardStats;
 
-export function transformBackendCustomer(raw: Record<string, unknown>): Customer {
-  const rawStatus = String(raw.status || raw.conn_status || 'active').toLowerCase();
+export function transformBackendCustomer(input: Record<string, unknown>): Customer {
+  const raw = (input.customer && typeof input.customer === 'object' ? input.customer : input) as Record<string, unknown>;
+  const pkg = (raw.package_info && typeof raw.package_info === 'object' ? raw.package_info : {}) as Record<string, unknown>;
+  const pppoe = (raw.pppoe_info && typeof raw.pppoe_info === 'object' ? raw.pppoe_info : raw.pppoeDetails || {}) as Record<string, unknown>;
+  const conn = (raw.connection_details && typeof raw.connection_details === 'object' ? raw.connection_details : raw.connectionDetails || {}) as Record<string, unknown>;
+  const olt = (raw.olt_onu && typeof raw.olt_onu === 'object' ? raw.olt_onu : raw.oltDetails || {}) as Record<string, unknown>;
+  const usageObj = (raw.usage && typeof raw.usage === 'object' ? raw.usage : {}) as Record<string, unknown>;
+
+  const rawStatus = String(raw.status || raw.subscription_status || raw.conn_status || 'active').toLowerCase();
   const status: CustomerStatus = (
     rawStatus === 'active' || rawStatus === 'expired' || rawStatus === 'suspended'
       ? rawStatus
       : 'active'
   ) as CustomerStatus;
 
-  const rawConn = String(raw.connection_type || raw.conn_type || 'pppoe').toLowerCase();
+  const rawConn = String(conn.connection_type || raw.connection_type || raw.conn_type || 'pppoe').toLowerCase();
   const connectionType: ConnectionType = (
     rawConn === 'pppoe' || rawConn === 'hotspot' || rawConn === 'static'
       ? rawConn
       : 'pppoe'
   ) as ConnectionType;
 
+  // Bandwidth usage by date
+  let bandwidthUsage: { date: string; downloadMb: number; uploadMb: number }[] | undefined = undefined;
+  if (Array.isArray(usageObj.by_date)) {
+    bandwidthUsage = (usageObj.by_date as Record<string, unknown>[]).map((u) => ({
+      date: String(u.date || ''),
+      downloadMb: Number(u.download_mb || u.rx_today || 0),
+      uploadMb: Number(u.upload_mb || u.tx_today || 0),
+    }));
+  }
+
   return {
-    id: String(raw.id || raw.user_id || `cust_${Date.now()}`),
+    id: String(raw.id || raw.customer_id || raw.c_id || raw.user_id || `cust_${Date.now()}`),
     name: String(raw.name || 'Unknown Customer'),
-    username: String(raw.username || raw.pppoe_id || raw.email || ''),
+    username: String(pppoe.pppoe_name || raw.username || raw.pppoe_id || raw.email || ''),
     phone: String(raw.mobile || raw.phone || ''),
     email: raw.email ? String(raw.email) : undefined,
-    packageId: String(raw.package_id || 'pkg_1'),
-    packageName: String(raw.package_name || 'Standard Package'),
-    packagePrice: raw.price || raw.package_price ? Number(raw.price || raw.package_price) : undefined,
+    packageId: String(pkg.package_id || raw.package_id || 'pkg_1'),
+    packageName: String(pkg.package_name || raw.package_name || 'Standard Package'),
+    packagePrice: pkg.package_price || raw.price || raw.package_price ? Number(pkg.package_price || raw.price || raw.package_price) : undefined,
     areaId: String(raw.area_id || 'area_1'),
-    areaName: String(raw.area_name || 'Main Area'),
+    areaName: String(pkg.area_name || raw.area_name || 'Main Area'),
     subAreaName: raw.subarea_name || raw.sub_area_name ? String(raw.subarea_name || raw.sub_area_name) : undefined,
     subAreaCode: raw.subarea_code || raw.sub_area_code ? String(raw.subarea_code || raw.sub_area_code) : undefined,
     resellerId: raw.reseller_id ? String(raw.reseller_id) : undefined,
     status,
-    expiryDate: String(raw.will_expire || raw.expire_date || raw.expiry_date || new Date().toISOString().split('T')[0]),
-    balanceBdt: Number(raw.balance || raw.balance_bdt || 0),
+    expiryDate: String(pkg.will_expire || raw.will_expire || raw.expire_date || raw.expiry_date || new Date().toISOString().split('T')[0]),
+    balanceBdt: Number(raw.balance || raw.fund || raw.balance_bdt || 0),
     connectionType,
-    macAddress: raw.mac_address || raw.mac ? String(raw.mac_address || raw.mac) : undefined,
-    ipAddress: raw.ip_address || raw.ip ? String(raw.ip_address || raw.ip) : undefined,
-    online: Boolean(raw.online || raw.is_online || raw.conn_status === 'active'),
+    macAddress: raw.mac_address
+      ? String(raw.mac_address)
+      : raw.mac
+        ? String(raw.mac)
+        : pppoe.caller_id && pppoe.caller_id !== '--'
+          ? String(pppoe.caller_id)
+          : undefined,
+    ipAddress: raw.ip_address
+      ? String(raw.ip_address)
+      : raw.ip
+        ? String(raw.ip)
+        : pppoe.address && pppoe.address !== '--'
+          ? String(pppoe.address)
+          : undefined,
+    online: Boolean(raw.online || raw.is_online || raw.conn_status === 'active' || raw.status === 'active'),
     createdAt: String(raw.created_at || new Date().toISOString().split('T')[0]),
     nidNumber: raw.nid || raw.nid_number ? String(raw.nid || raw.nid_number) : undefined,
     code: raw.code || raw.customer_code ? String(raw.code || raw.customer_code) : undefined,
@@ -52,7 +84,41 @@ export function transformBackendCustomer(raw: Record<string, unknown>): Customer
     latitude: raw.latitude ? Number(raw.latitude) : undefined,
     longitude: raw.longitude ? Number(raw.longitude) : undefined,
     routerId: raw.router_id ? String(raw.router_id) : undefined,
-    routerName: raw.router_name ? String(raw.router_name) : undefined,
+    routerName: pkg.router_name || raw.router_name ? String(pkg.router_name || raw.router_name) : undefined,
+    connectionDetails: {
+      connectionType: String(conn.connection_type || 'utp'),
+      cableRequirement: conn.cable_requirement ? String(conn.cable_requirement) : undefined,
+      fiberCode: conn.fiber_code ? String(conn.fiber_code) : undefined,
+      numberOfCore: conn.number_of_core ? String(conn.number_of_core) : undefined,
+      coreColor: conn.core_color ? String(conn.core_color) : undefined,
+      clientType: String(conn.client_type || 'home'),
+      billingStatus: String(conn.billing_status || 'active'),
+      otc: conn.otc ? String(conn.otc) : undefined,
+      routerUsername: conn.router_username ? String(conn.router_username) : undefined,
+      routerPassword: conn.router_password ? String(conn.router_password) : undefined,
+    },
+    pppoeDetails: {
+      name: String(pppoe.pppoe_name || raw.username || ''),
+      password: String(pppoe.pppoe_password || ''),
+      service: String(pppoe.pppoe_service || 'pppoe'),
+      profile: String(pppoe.pppoe_profile || 'Default'),
+      disabled: Boolean(pppoe.disabled),
+      lastLoggedOut: pppoe.uptime ? String(pppoe.uptime) : undefined,
+      lastCallerId: pppoe.caller_id ? String(pppoe.caller_id) : undefined,
+    },
+    oltDetails: {
+      name: String(olt.olt_name || 'BDCOM OLT'),
+      onuId: String(olt.onu_id || '1'),
+      status: String(olt.status || 'online'),
+      rxPower: String(olt.rx || '-18.50 dBm'),
+      macAddress: String(olt.mac || pppoe.caller_id || '--'),
+      callId: String(pppoe.caller_id || '--'),
+      matchedId: String(olt.onu_id || '--'),
+      description: String(olt.description || 'FTTH Subscriber Line'),
+      lastSeen: olt.last_seen ? String(olt.last_seen) : undefined,
+      reason: olt.reason ? String(olt.reason) : undefined,
+    },
+    bandwidthUsage,
   };
 }
 
@@ -312,5 +378,46 @@ export function transformBackendArea(raw: Record<string, unknown>): Area {
     subareas,
   };
 }
+
+export function transformBackendPayment(raw: Record<string, unknown>): Payment {
+  const rawMethod = String(raw.paid_via || raw.method || 'cash').toLowerCase();
+  const method: PaymentMethod = (
+    rawMethod.includes('bkash') ? 'bkash' :
+    rawMethod.includes('nagad') ? 'nagad' :
+    rawMethod.includes('bank') ? 'bank' :
+    rawMethod.includes('ssl') ? 'sslcommerz' :
+    'cash'
+  ) as PaymentMethod;
+
+  const rawStatus = String(raw.status || 'completed').toLowerCase();
+  const status: PaymentStatus = (
+    rawStatus === 'successful' || rawStatus === 'completed' || rawStatus === 'paid' ? 'completed' :
+    rawStatus === 'pending' ? 'pending' :
+    'failed'
+  ) as PaymentStatus;
+
+  return {
+    id: String(raw.id || `pay_${Date.now()}`),
+    customerId: String(raw.user_id || raw.customer_id || ''),
+    customerName: String(raw.customer_name || raw.name || 'Customer'),
+    amountBdt: Number(raw.pay_amount || raw.amount || 0),
+    method,
+    status,
+    invoiceNo: String(raw.invoice || `INV-${raw.id || Date.now()}`),
+    paidAt: String(raw.paid_at || raw.created_at || new Date().toISOString()),
+    note: raw.comment ? String(raw.comment) : raw.paid_to_name ? `Received by ${raw.paid_to_name}` : undefined,
+  };
+}
+
+export function transformBackendPaymentsList(raw: unknown): Payment[] {
+  if (Array.isArray(raw)) {
+    return raw.map((item) => transformBackendPayment(item as Record<string, unknown>));
+  }
+  if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+    return (raw as { data: Record<string, unknown>[] }).data.map((item) => transformBackendPayment(item));
+  }
+  return [];
+}
+
 
 

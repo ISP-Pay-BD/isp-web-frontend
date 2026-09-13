@@ -6,9 +6,9 @@ export function can(
   action?: string,
   role?: UserRole,
 ): boolean {
-  if (role === 'super_admin') return true;
+  if (role === 'super_admin' || role === 'admin' || role === 'resellerAdmin') return true;
 
-  const actions = permissions[menu];
+  const actions = permissions?.[menu];
   if (!actions?.length) return false;
   if (!action) return true;
 
@@ -20,6 +20,6 @@ export function hasAnyPermission(
   menus: string[],
   role?: UserRole,
 ): boolean {
-  if (role === 'super_admin') return true;
-  return menus.some((menu) => can(permissions, menu));
+  if (role === 'super_admin' || role === 'admin' || role === 'resellerAdmin') return true;
+  return menus.some((menu) => can(permissions, menu, undefined, role));
 }

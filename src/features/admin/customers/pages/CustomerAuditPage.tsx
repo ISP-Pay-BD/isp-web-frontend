@@ -3,6 +3,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { http } from '@/lib/api/client';
+import { getAuthUserId } from '@/lib/api/auth-utils';
 import { mockFetch } from '@/lib/mock-api/client';
 import { useCustomer } from '@/features/admin/customers/hooks/use-customers';
 import { PageHeader } from '@/features/shared/page-header';
@@ -16,12 +18,22 @@ import { buttonVariants } from '@/components/ui/button';
 export function CustomerAuditPage({ customerId }: { customerId: string }) {
   const { data: custData, isLoading: custLoading } = useCustomer(customerId);
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin', 'domain', 'customerAudit'],
+    queryKey: ['admin', 'domain', 'customerAudit', customerId],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'customerAudit');
-      return res as { items: CustomerAuditEvent[] };
+      try {
+        const resellerId = getAuthUserId();
+        const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}/${customerId}/audit-logs`);
+        if (Array.isArray(raw)) return { items: raw as CustomerAuditEvent[] };
+        if (raw && typeof raw === 'object' && 'items' in raw) return raw as { items: CustomerAuditEvent[] };
+        const res = await mockFetch('admin.domain', 'customerAudit');
+        return res as { items: CustomerAuditEvent[] };
+      } catch {
+        const res = await mockFetch('admin.domain', 'customerAudit');
+        return res as { items: CustomerAuditEvent[] };
+      }
     },
   });
+
 
   const customer = custData?.customer;
   const items = useMemo(

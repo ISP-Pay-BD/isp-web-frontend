@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { http } from '@/lib/api/client';
+import { getAuthUserId } from '@/lib/api/auth-utils';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PageHeader } from '@/features/shared/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -47,10 +49,20 @@ export function CorporateQueuesPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'corporateQueues'],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'corporateQueues');
-      return res as { items: CorporateQueueJob[] };
+      try {
+        const resellerId = getAuthUserId();
+        const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}/corporate-queues/1`);
+        if (Array.isArray(raw)) return { items: raw as CorporateQueueJob[] };
+        if (raw && typeof raw === 'object' && 'items' in raw) return raw as { items: CorporateQueueJob[] };
+        const res = await mockFetch('admin.domain', 'corporateQueues');
+        return res as { items: CorporateQueueJob[] };
+      } catch {
+        const res = await mockFetch('admin.domain', 'corporateQueues');
+        return res as { items: CorporateQueueJob[] };
+      }
     },
   });
+
 
   const rawItems = data?.items ?? [];
 

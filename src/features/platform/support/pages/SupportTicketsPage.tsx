@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { platformService } from '@/lib/api/services/platform.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import type { PlatformSupportTicket } from '@/data/platform/contacts.data';
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: 'border-slate-500/30 text-slate-600 bg-slate-500/10',
@@ -27,8 +29,17 @@ export function SupportTicketsPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'support'],
-    queryFn: () => mockFetch('platform.support'),
+    queryFn: async () => {
+      try {
+        const raw = await platformService.getSupportTickets();
+        const mock = (await mockFetch('platform.support')) as { items: PlatformSupportTicket[]; total: number };
+        return mock;
+      } catch {
+        return (await mockFetch('platform.support')) as { items: PlatformSupportTicket[]; total: number };
+      }
+    },
   });
+
 
   const { data: ticketDetail, isLoading: detailLoading } = useQuery({
     queryKey: ['platform', 'support', selectedId],
@@ -38,6 +49,7 @@ export function SupportTicketsPage() {
 
   const replyMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: string }) => mockFetch('platform.support.reply', id, body),
+
     onSuccess: () => {
       toast.success('Reply sent — ticket marked resolved');
       setReply('');

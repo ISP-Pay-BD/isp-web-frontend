@@ -144,8 +144,9 @@ export function VoiceSmsPage() {
         size: 300,
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground max-w-sm line-clamp-2 block leading-relaxed italic">
-            "{row.original.transcript}"
+            &quot;{row.original.transcript}&quot;
           </span>
+
         ),
       },
       {

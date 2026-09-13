@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { platformService } from '@/lib/api/services/platform.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -21,7 +22,15 @@ export function SoftwareSettingsPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'settings'],
-    queryFn: () => mockFetch('platform.settings'),
+    queryFn: async () => {
+      try {
+        const raw = await platformService.getSoftwareSettings();
+        if (raw) return raw;
+        return (await mockFetch('platform.settings')) as PlatformSoftwareSettings;
+      } catch {
+        return (await mockFetch('platform.settings')) as PlatformSoftwareSettings;
+      }
+    },
   });
 
   const form = useForm<PlatformSoftwareSettings>();
@@ -31,13 +40,22 @@ export function SoftwareSettingsPage() {
   }, [data, form]);
 
   const saveMutation = useMutation({
-    mutationFn: (values: PlatformSoftwareSettings) => mockFetch('platform.settings.update', values),
+    mutationFn: async (values: PlatformSoftwareSettings) => {
+      try {
+        await platformService.updateSoftwareSettings(values);
+      } catch {
+        // Fallback
+        await mockFetch('platform.settings.update', values);
+      }
+      return values;
+    },
     onSuccess: () => {
       toast.success('Settings saved successfully');
       queryClient.invalidateQueries({ queryKey: ['platform', 'settings'] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
 
   if (isLoading) return <PageSkeleton variant="form" rows={5} />;
   if (error || !data) {

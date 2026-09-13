@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import type { AttendanceItem } from '../types';
-
 import { mockDelay } from '@/lib/mock-api/delay';
 
 export function useAttendance() {
@@ -29,11 +28,28 @@ export function useAttendance() {
           };
         }
 
+        if (rawEmps.length > 0) {
+          const records: AttendanceItem[] = rawEmps.map((emp, idx) => ({
+            id: `att_${emp.id}_${idx}`,
+            employeeId: emp.id,
+            employeeName: emp.name,
+            date: new Date().toISOString().split('T')[0]!,
+            checkIn: idx % 4 === 0 ? '09:25' : '08:55',
+            checkOut: '17:30',
+            status: idx % 5 === 0 ? 'late' : (idx % 8 === 0 ? 'absent' : 'present'),
+          }));
+
+          return {
+            records,
+            employees: rawEmps,
+          };
+        }
+
         const data = await mockFetch('admin.domain', 'hr');
         const hrData = data as { attendanceRecords: AttendanceItem[]; employees: { id: string; name: string }[] };
         return {
           records: hrData.attendanceRecords ?? [],
-          employees: rawEmps.length > 0 ? rawEmps : (hrData.employees ?? []),
+          employees: hrData.employees ?? [],
         };
       } catch {
         const data = await mockFetch('admin.domain', 'hr');
@@ -45,7 +61,6 @@ export function useAttendance() {
       }
     },
   });
-
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, checkIn, checkOut }: { id: string; status: AttendanceItem['status']; checkIn: string; checkOut?: string }) => {

@@ -528,8 +528,9 @@ export function RemindersPage() {
                   <span className="text-[10px] font-mono">{selectedReminder.template}</span>
                 </div>
                 <div className="p-3 rounded-lg bg-card border border-border/50 text-xs text-foreground leading-relaxed italic">
-                  "{selectedReminder.messagePreview ?? 'Official due warning informing customer of outstanding balance.'}"
+                  &quot;{selectedReminder.messagePreview ?? 'Official due warning informing customer of outstanding balance.'}&quot;
                 </div>
+
               </div>
 
               {/* Delivery Diagnostics */}

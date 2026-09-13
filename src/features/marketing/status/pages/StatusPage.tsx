@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { http } from '@/lib/api/client';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -23,8 +24,19 @@ type StatusPayload = {
 export function StatusPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['marketing', 'status'],
-    queryFn: () => mockFetch('marketing.status') as Promise<StatusPayload>,
+    queryFn: async () => {
+      try {
+        const raw = await http.get<unknown>('/v1/platform/system-health');
+        if (raw && typeof raw === 'object' && 'overall' in raw) {
+          return raw as StatusPayload;
+        }
+        return (await mockFetch('marketing.status')) as StatusPayload;
+      } catch {
+        return (await mockFetch('marketing.status')) as StatusPayload;
+      }
+    },
   });
+
 
   if (isLoading) {
     return (

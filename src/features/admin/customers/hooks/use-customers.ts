@@ -29,6 +29,39 @@ export function useCustomer(id: string) {
   });
 }
 
+export function useCustomerOptical(id: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', id, 'optical'],
+    queryFn: () => adminService.getCustomerOptical(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCustomerSession(id: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', id, 'session'],
+    queryFn: () => adminService.getCustomerSession(id),
+    enabled: Boolean(id),
+    refetchInterval: 15000,
+  });
+}
+
+export function useCustomerUsage(id: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', id, 'usage'],
+    queryFn: () => adminService.getCustomerUsage(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCustomerPayments(id: string) {
+  return useQuery({
+    queryKey: ['admin', 'customers', id, 'payments'],
+    queryFn: () => adminService.getUserPayments(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useFreeRequests() {
   return useQuery({
     queryKey: ['admin', 'domain', 'freeRequests'],

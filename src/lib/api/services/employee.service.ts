@@ -46,4 +46,25 @@ export const employeeService = {
   updateProfile: async (payload: ProfileUpdateFormValues) => {
     return await http.post('/v1/customer/profile/update', payload);
   },
+
+  getAttendanceHistory: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/employees/${finalId}/attendance`);
+  },
+
+  punchCheckIn: async (payload?: { latitude?: number; longitude?: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/employees/${finalId}/attendance/check-in`, payload);
+  },
+
+  punchCheckOut: async (payload?: { latitude?: number; longitude?: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/employees/${finalId}/attendance/check-out`, payload);
+  },
+
+  updateLocation: async (payload: { latitude: number; longitude: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post(`/v1/reseller/employees/${finalId}/attendance/location`, payload);
+  },
 };
+

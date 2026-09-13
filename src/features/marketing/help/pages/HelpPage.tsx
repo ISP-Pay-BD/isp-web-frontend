@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { customerService } from '@/lib/api/services/customer.service';
 import { mockFetch } from '@/lib/mock-api/client';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -19,11 +20,26 @@ export function HelpPage({ portal = false }: { portal?: boolean }) {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['customer', 'domain', 'help'],
     queryFn: async () => {
-      const res = (await mockFetch('customer.domain', 'help')) as { articles: Article[] };
-      return res.articles;
+      try {
+        const news = await customerService.getNews();
+        if (Array.isArray(news) && news.length > 0) {
+          return news.map((n) => ({
+            id: String(n.id),
+            title: n.title,
+            category: 'Notice',
+            minutes: 2,
+          }));
+        }
+        const res = (await mockFetch('customer.domain', 'help')) as { articles: Article[] };
+        return res.articles;
+      } catch {
+        const res = (await mockFetch('customer.domain', 'help')) as { articles: Article[] };
+        return res.articles;
+      }
     },
     enabled: portal,
   });
+
 
   const articles = portal ? data ?? fallbackArticles : fallbackArticles;
 

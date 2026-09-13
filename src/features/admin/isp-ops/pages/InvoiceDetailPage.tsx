@@ -246,8 +246,9 @@ export function InvoiceDetailPage() {
             <div className="space-y-2 max-w-sm text-xs text-muted-foreground">
               <span className="font-bold text-foreground">Payment Instructions:</span>
               <p>
-                Pay instantly using bKash / Nagad / Rocket merchant payment. Select "Make Payment" → Enter Merchant No: <strong>01700-000000</strong> → Counter: <strong>1</strong> → Reference: <strong>{inv.number}</strong>.
+                Pay instantly using bKash / Nagad / Rocket merchant payment. Select &quot;Make Payment&quot; → Enter Merchant No: <strong>01700-000000</strong> → Counter: <strong>1</strong> → Reference: <strong>{inv.number}</strong>.
               </p>
+
               {isPaid && (
                 <div className="p-3 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 space-y-0.5 font-mono text-[11px]">
                   <p>✔ Payment Settled: ৳ {total.toLocaleString()} BDT</p>

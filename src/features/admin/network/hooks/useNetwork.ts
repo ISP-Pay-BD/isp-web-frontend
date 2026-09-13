@@ -1,33 +1,45 @@
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
 import type { NetworkTopologyItem, NetworkMapNodeItem, OltDeviceItem } from '@/data/admin/network-ops.data';
+import { networkTopologyData, oltDevices } from '@/data/admin/network-ops.data';
 
 export function useNetworkDiagram() {
   return useQuery({
     queryKey: ['admin', 'network', 'diagram'],
     queryFn: async () => {
       try {
-        const [routersRes, oltsRes] = await Promise.allSettled([
-          adminService.getRouters(),
+        const [oltsRes, topoRes] = await Promise.allSettled([
           adminService.getOltList(),
+          adminService.getNetworkTopology(),
         ]);
 
-        const rawOlts = oltsRes.status === 'fulfilled' && Array.isArray(oltsRes.value) ? (oltsRes.value as OltDeviceItem[]) : [];
-        const rawRouters = routersRes.status === 'fulfilled' && Array.isArray(routersRes.value) ? (routersRes.value as any[]) : [];
+        let rawOlts: OltDeviceItem[] = [];
+        if (oltsRes.status === 'fulfilled' && oltsRes.value) {
+          const val = oltsRes.value as any;
+          if (Array.isArray(val)) {
+            rawOlts = val;
+          } else if (Array.isArray(val?.data)) {
+            rawOlts = val.data;
+          }
+        }
 
-        const topology: NetworkTopologyItem[] = rawRouters.map((r: any, idx: number) => ({
-          oltId: String(r.id || `olt_${idx + 1}`),
-          oltName: String(r.name || r.nasname || `POP Router ${idx + 1}`),
-          ponPort: `PON 1/${(idx % 4) + 1}`,
-          splitter: `Splitter S${idx + 1} (1:8)`,
-          onuId: `ONU-${idx + 1}`,
-          customerName: String(r.name || `Client ${idx + 1}`),
-          rxPowerDbm: -19.5,
-          txPowerDbm: 2.1,
-          status: (r.status === 'online' || r.status === 'active' ? 'online' : 'offline') as 'online' | 'offline',
-          zone: String(r.area || 'Main Coverage'),
-          mac: String(r.mac || '48:57:02:11:A3:8F'),
-        }));
+        let topology: NetworkTopologyItem[] = [];
+        if (topoRes.status === 'fulfilled' && topoRes.value) {
+          const val = topoRes.value as any;
+          if (Array.isArray(val)) {
+            topology = val;
+          } else if (Array.isArray(val?.data)) {
+            topology = val.data;
+          }
+        }
+
+        // Fallback to mock data only if backend returned zero data
+        if (rawOlts.length === 0) {
+          rawOlts = oltDevices;
+        }
+        if (topology.length === 0 && rawOlts === oltDevices) {
+          topology = networkTopologyData;
+        }
 
         return {
           topology,
@@ -35,8 +47,8 @@ export function useNetworkDiagram() {
         };
       } catch {
         return {
-          topology: [],
-          olts: [],
+          topology: networkTopologyData,
+          olts: oltDevices,
         };
       }
     },
