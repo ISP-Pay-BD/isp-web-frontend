@@ -290,13 +290,28 @@ export const adminService = {
     return [];
   },
 
+  getRouterUsers: async (routerId: string | number, status = 'all', resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/router-users/${finalId}/${routerId}`, { status });
+  },
+
+  getRouterIpPools: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    const raw = await http.get<unknown>(`/v1/reseller/ip-pools/${finalId}`);
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return (raw as { data: unknown[] }).data;
+    }
+    return [];
+  },
+
   getPackages: async (resellerId?: string | number): Promise<Package[]> => {
     const finalId = resellerId || getAuthUserId();
     const raw = await http.get<unknown>(`/v1/reseller/packages/${finalId}`);
     if (Array.isArray(raw)) {
       return raw as Package[];
     }
-    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: Package[] }).data)) {
       return (raw as { data: Package[] }).data;
     }
     return [];
@@ -305,5 +320,98 @@ export const adminService = {
   getRewardsData: async (resellerId?: string | number) => {
     const finalId = resellerId || getAuthUserId();
     return await http.get<unknown>(`/v1/reseller/rewards/${finalId}/config`);
+  },
+
+  // Extended Phase 8.1 - 8.7 API Methods
+  getOltList: async () => {
+    return await http.get<unknown>('/v1/reseller/olt');
+  },
+
+  getOltDetail: async (id: string | number) => {
+    return await http.get<unknown>(`/v1/reseller/olt/${id}`);
+  },
+
+  getOltOnus: async (id: string | number) => {
+    return await http.get<unknown>(`/v1/reseller/olt/${id}/onus`);
+  },
+
+  syncOlt: async (id: string | number) => {
+    return await http.post<unknown>(`/v1/reseller/olt/${id}/sync`);
+  },
+
+  getHotspotPlans: async () => {
+    return await http.get<unknown>('/v1/reseller/hotspot/plans');
+  },
+
+  getHotspotVouchers: async () => {
+    return await http.get<unknown>('/v1/reseller/hotspot/vouchers');
+  },
+
+  generateHotspotVouchers: async (payload: { plan_id: string | number; count: number; prefix?: string }) => {
+    return await http.post<unknown>('/v1/reseller/hotspot/vouchers/generate', payload);
+  },
+
+  getHotspotActiveUsers: async () => {
+    return await http.get<unknown>('/v1/reseller/hotspot/active-users');
+  },
+
+  getInventoryItems: async () => {
+    return await http.get<unknown>('/v1/reseller/inventory/items');
+  },
+
+  getInventoryCategories: async () => {
+    return await http.get<unknown>('/v1/reseller/inventory/categories');
+  },
+
+  getInventorySuppliers: async () => {
+    return await http.get<unknown>('/v1/reseller/inventory/suppliers');
+  },
+
+  createInventoryItem: async (data: Record<string, unknown>) => {
+    return await http.post<unknown>('/v1/reseller/inventory/items', data);
+  },
+
+  getReportRevenue: async (params?: Record<string, unknown>) => {
+    return await http.get<unknown>('/v1/reseller/reports/revenue', params);
+  },
+
+  getReportCustomers: async (params?: Record<string, unknown>) => {
+    return await http.get<unknown>('/v1/reseller/reports/customers', params);
+  },
+
+  getReportBandwidth: async (params?: Record<string, unknown>) => {
+    return await http.get<unknown>('/v1/reseller/reports/bandwidth', params);
+  },
+
+  getWhatsAppSessions: async () => {
+    return await http.get<unknown>('/v1/reseller/whatsapp/sessions');
+  },
+
+  getWhatsAppTemplates: async () => {
+    return await http.get<unknown>('/v1/reseller/whatsapp/templates');
+  },
+
+  sendWhatsAppMessage: async (payload: { recipient: string; message: string; template_id?: string }) => {
+    return await http.post<unknown>('/v1/reseller/whatsapp/send', payload);
+  },
+
+  getAttendanceLogs: async (resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.get<unknown>(`/v1/reseller/employees/${finalId}/attendance`);
+  },
+
+  checkInAttendance: async (payload?: { latitude?: number; longitude?: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post<unknown>(`/v1/reseller/employees/${finalId}/attendance/check-in`, payload);
+  },
+
+  checkOutAttendance: async (payload?: { latitude?: number; longitude?: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post<unknown>(`/v1/reseller/employees/${finalId}/attendance/check-out`, payload);
+  },
+
+  updateAttendanceLocation: async (payload: { latitude: number; longitude: number }, resellerId?: string | number) => {
+    const finalId = resellerId || getAuthUserId();
+    return await http.post<unknown>(`/v1/reseller/employees/${finalId}/attendance/location`, payload);
   },
 };

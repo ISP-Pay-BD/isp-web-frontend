@@ -261,6 +261,42 @@ export function transformBackendDashboardStats(raw: Record<string, unknown>): Ad
   };
 }
 
+export function transformBackendRouter(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(raw.id || `rtr_${Date.now()}`),
+    name: String(raw.name || raw.nasname || 'POP Router'),
+    ip: String(raw.ip || raw.host || raw.nasname || '10.10.10.1'),
+    port: Number(raw.port || raw.api_port || 8728),
+    username: String(raw.username || raw.api_user || 'admin'),
+    model: String(raw.model || raw.board_name || 'MikroTik CCR'),
+    area: String(raw.area || raw.area_name || 'Main POP'),
+    status: (String(raw.status || 'online').toLowerCase() === 'active' || String(raw.status) === 'online' ? 'online' : 'offline'),
+    users: Number(raw.users || raw.users_online || raw.active_users || 0),
+    uptime: String(raw.uptime || raw.up_time || 'Live'),
+    cpuLoad: Number(raw.cpu_load || raw.cpu || 5),
+    freeRamMb: Number(raw.free_ram || 850),
+    totalRamMb: Number(raw.total_ram || 1024),
+    freeHddMb: Number(raw.free_hdd || 450),
+    totalHddMb: Number(raw.total_hdd || 512),
+    boardName: String(raw.board_name || raw.model || 'MikroTik RouterOS'),
+    routerOsVersion: String(raw.version || raw.routeros_version || 'v7.14'),
+  };
+}
+
+export function transformBackendRouterSession(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: String(raw.id || raw['.id'] || `sess_${Date.now()}`),
+    username: String(raw.user || raw.name || raw.username || ''),
+    callerId: String(raw['caller-id'] || raw.caller_id || raw.mac || ''),
+    address: String(raw.address || raw.ip || ''),
+    uptime: String(raw.uptime || '00:00:00'),
+    service: String(raw.service || 'pppoe'),
+    rateLimit: String(raw.rate_limit || raw['rate-limit'] || '10M/10M'),
+    rxBytes: Number(raw['rx-byte'] || raw.bytes_in || 0),
+    txBytes: Number(raw['tx-byte'] || raw.bytes_out || 0),
+  };
+}
+
 export function transformBackendArea(raw: Record<string, unknown>): Area {
   const subareasRaw = Array.isArray(raw.subareas) ? (raw.subareas as Record<string, unknown>[]) : [];
   const subareas: SubArea[] = subareasRaw.map((s, idx) => ({
@@ -276,3 +312,5 @@ export function transformBackendArea(raw: Record<string, unknown>): Area {
     subareas,
   };
 }
+
+

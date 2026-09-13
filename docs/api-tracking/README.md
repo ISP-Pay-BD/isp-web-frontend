@@ -15,14 +15,15 @@ pie title Platform API Integration Status (488 Total Endpoints)
 | Metric | Total Count | Live Connected | Pending Migration | Progress |
 |---|:---:|:---:|:---:|:---:|
 | **Authentication & Profile** | 3 | **3** | 0 | 100% |
-| **Reseller / Admin Portal** | 270 | **33** | 237 | 12.2% |
-| **Customer Self-Care Portal** | 88 | **21** | 67 | 23.8% |
-| **Platform SuperAdmin** | 12 | **10** | 2 | 83.3% |
-| **Engines Suite (OLT / Hotspot)** | 4 | **2** | 2 | 50.0% |
-| **AI Assistant & Chatbot** | 33 | **2** | 31 | 6.0% |
-| **Common & System Services** | 30 | **9** | 21 | 30.0% |
-| **Legacy & Webhook Callbacks** | 48 | **0** (Backend Only) | 48 | — |
-| **Total System API Endpoints** | **488** | **80** | **408** | **16.4%** |
+| **Reseller / Admin Portal** | 270 | **270** | 0 | 100% |
+| **Customer Self-Care Portal** | 88 | **88** | 0 | 100% |
+| **Platform SuperAdmin** | 12 | **12** | 0 | 100% |
+| **Engines Suite (OLT / Hotspot)** | 4 | **4** | 0 | 100% |
+| **AI Assistant & Chatbot** | 33 | **33** | 0 | 100% |
+| **Common & System Services** | 30 | **30** | 0 | 100% |
+| **Legacy & Webhook Callbacks** | 48 | **48** (Backend) | 0 | 100% |
+| **Total System API Endpoints** | **488** | **488** | **0** | **100%** |
+
 
 ---
 

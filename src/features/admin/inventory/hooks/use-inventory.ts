@@ -1,10 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 
 export function useInventory() {
   const query = useQuery({
     queryKey: ['admin', 'inventory'],
-    queryFn: () => mockFetch('admin.domain', 'inventory'),
+    queryFn: async () => {
+      try {
+        const [itemsRes, catRes, supRes] = await Promise.allSettled([
+          adminService.getInventoryItems(),
+          adminService.getInventoryCategories(),
+          adminService.getInventorySuppliers(),
+        ]);
+
+        return {
+          inventoryItems: itemsRes.status === 'fulfilled' && Array.isArray(itemsRes.value) ? itemsRes.value : [],
+          inventoryCategories: catRes.status === 'fulfilled' && Array.isArray(catRes.value) ? catRes.value : [],
+          inventorySuppliers: supRes.status === 'fulfilled' && Array.isArray(supRes.value) ? supRes.value : [],
+          inventoryUnits: [],
+          inventoryLocations: [],
+          inventoryStock: [],
+        };
+      } catch {
+        return {
+          inventoryItems: [],
+          inventoryCategories: [],
+          inventorySuppliers: [],
+          inventoryUnits: [],
+          inventoryLocations: [],
+          inventoryStock: [],
+        };
+      }
+    },
   });
 
   const data = query.data as {
@@ -24,6 +50,7 @@ export function useInventory() {
     stock: data?.inventoryStock ?? [],
   };
 }
+
 
 export interface InventoryUnit {
   id: string;
