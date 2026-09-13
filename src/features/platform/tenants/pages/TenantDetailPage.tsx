@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -18,7 +18,7 @@ interface TenantDetailPageProps {
 export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'tenants', tenantId],
-    queryFn: () => mockFetch('platform.tenants.get', tenantId),
+    queryFn: () => platformService.getTenantById(tenantId),
   });
 
   if (isLoading) return <PageSkeleton variant="detail" rows={5} />;

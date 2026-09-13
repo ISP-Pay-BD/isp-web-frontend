@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -52,11 +52,29 @@ export function TenantsListPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'tenants'],
-    queryFn: () => mockFetch('platform.tenants.list'),
+    queryFn: async () => {
+      const res = await platformService.getTenants();
+      let list: TenantPortal[] = [];
+      if (Array.isArray(res)) {
+        list = res as TenantPortal[];
+      } else if (res && typeof res === 'object' && 'items' in res) {
+        list = (res as { items: TenantPortal[] }).items;
+      }
+      return {
+        items: list,
+        stats: {
+          total: list.length,
+          active: list.filter((t) => t.status === 'active').length,
+          suspended: list.filter((t) => t.status === 'suspended').length,
+          trial: list.filter((t) => t.status === 'trial').length,
+          totalCustomers: list.reduce((acc, t) => acc + (t.customers || 0), 0),
+        },
+      };
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => mockFetch('platform.tenants.delete', id),
+    mutationFn: (id: string) => platformService.deleteTenant(id),
     onSuccess: () => {
       toast.success('Tenant portal deleted successfully');
       setDeletingId(null);
@@ -70,7 +88,7 @@ export function TenantsListPage() {
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'active' | 'suspended' }) =>
-      mockFetch('platform.tenants.update', id, { status }),
+      platformService.updateTenant(id, { status }),
     onSuccess: (_, vars) => {
       toast.success(`Tenant status updated to ${vars.status}`);
       queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });

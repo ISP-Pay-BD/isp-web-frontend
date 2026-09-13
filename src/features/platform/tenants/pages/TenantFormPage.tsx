@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { tenantFormSchema, type TenantFormValues } from '../schemas/tenant.schema';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -32,7 +32,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['platform', 'tenants', tenantId],
-    queryFn: () => mockFetch('platform.tenants.get', tenantId!),
+    queryFn: () => platformService.getTenantById(tenantId!),
     enabled: isEdit,
   });
 
@@ -44,7 +44,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
       plan: 'Starter',
       primaryColor: '#e85a1a',
       secondaryColor: '#10141a',
-      status: 'trial',
+      status: 'active',
       notes: '',
       ownerName: '',
       ownerEmail: '',
@@ -80,13 +80,14 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
         logoUrl: '/images/brand/logo.svg',
       };
       return isEdit
-        ? mockFetch('platform.tenants.update', tenantId!, payload)
-        : mockFetch('platform.tenants.create', payload);
+        ? platformService.updateTenant(tenantId!, payload)
+        : platformService.saveTenant(payload);
     },
-    onSuccess: (result) => {
+    onSuccess: (result: unknown) => {
       toast.success(isEdit ? 'Tenant portal updated' : 'Tenant portal created');
       queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
-      router.push(`/platform/tenants/${result.id}`);
+      const createdId = (result as { id?: string })?.id || tenantId;
+      router.push(createdId ? `/platform/tenants/${createdId}` : '/platform/tenants');
     },
     onError: (err: Error) => toast.error(err.message || 'Failed to save tenant'),
   });

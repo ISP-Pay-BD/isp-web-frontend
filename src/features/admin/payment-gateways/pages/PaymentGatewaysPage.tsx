@@ -17,12 +17,14 @@ import {
   Link2,
   RefreshCw,
   Plus,
+  Activity,
   ShieldCheck,
   TrendingUp,
   Sliders,
   DollarSign,
-  Activity,
 } from 'lucide-react';
+import { http } from '@/lib/api/client';
+import { getAuthUserId } from '@/lib/api/auth-utils';
 import type { PaymentGatewayDetail } from '@/data/admin/extras.data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -31,8 +33,11 @@ export function PaymentGatewaysPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'paymentGateways'],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'paymentGateways');
-      return res as { items: PaymentGatewayDetail[] };
+      const resellerId = getAuthUserId();
+      const res = await http.get<unknown>(`/v1/reseller/payment-gateways/${resellerId}`);
+      if (Array.isArray(res)) return { items: res as PaymentGatewayDetail[] };
+      if (res && typeof res === 'object' && 'items' in res) return res as { items: PaymentGatewayDetail[] };
+      return { items: [] as PaymentGatewayDetail[] };
     },
   });
   const [items, setItems] = useState<PaymentGatewayDetail[] | null>(null);

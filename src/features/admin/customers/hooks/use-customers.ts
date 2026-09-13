@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService, type CustomerListParams } from '@/lib/api/services/admin.service';
-import { mockFetch } from '@/lib/mock-api/client';
+import { http } from '@/lib/api/client';
+import { getAuthUserId } from '@/lib/api/auth-utils';
 import { toast } from 'sonner';
 import type { Customer } from '../types';
 
@@ -32,8 +33,11 @@ export function useFreeRequests() {
   return useQuery({
     queryKey: ['admin', 'domain', 'freeRequests'],
     queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'freeRequests');
-      return Array.isArray(res) ? res : [];
+      const resellerId = getAuthUserId();
+      const res = await http.get<unknown>(`/v1/reseller/customers/${resellerId}`, { status: 'free' });
+      if (Array.isArray(res)) return res;
+      if (res && typeof res === 'object' && 'data' in res) return (res as { data: unknown[] }).data;
+      return [];
     },
   });
 }
