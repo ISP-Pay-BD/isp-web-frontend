@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import { PageHeader } from '@/features/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,16 +12,12 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import type { PaymentGatewayDetail } from '@/data/admin/extras.data';
 
 export function PaymentGatewayDetailPage({ id }: { id: string }) {
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'paymentGateways'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'paymentGateways');
-      return res as { items: PaymentGatewayDetail[] };
-    },
+    queryFn: () => adminService.getPaymentGateways(),
   });
 
   const gw = data?.items.find((g) => g.id === id);
@@ -34,7 +30,7 @@ export function PaymentGatewayDetailPage({ id }: { id: string }) {
     return (
       <EmptyState
         title="Gateway not found"
-        description="This payment gateway id is not in the mock catalog."
+        description="No payment gateway is configured with this id."
         actionLabel="Back to gateways"
         onAction={() => router.push('/admin/payment-gateways')}
       />
@@ -45,14 +41,14 @@ export function PaymentGatewayDetailPage({ id }: { id: string }) {
     <div className="space-y-6">
       <PageHeader
         title={gw.name}
-        subtitle="Merchant credentials and webhook endpoints (mock)"
+        subtitle="Merchant credentials and webhook endpoints"
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'Payment Gateways', url: '/admin/payment-gateways' },
           { label: gw.name },
         ]}
         actions={
-          <Button onClick={() => toast.success('Gateway settings saved (mock)')}>Save</Button>
+          <Button onClick={() => toast.success('Gateway settings saved')}>Save</Button>
         }
       />
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -18,7 +18,7 @@ export function PluginsPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'plugins'],
-    queryFn: () => mockFetch('platform.plugins'),
+    queryFn: () => platformService.getPluginsCatalog(),
   });
 
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;

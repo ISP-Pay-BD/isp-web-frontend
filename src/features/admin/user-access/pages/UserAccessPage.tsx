@@ -6,7 +6,8 @@ import { Shield, Users, Lock, Key } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
+import { PERMISSION_SECTIONS } from '@/data/users';
 import type { PermissionSectionDef, CustomUserAccessRecord } from '@/data/users';
 import type { PermissionMap } from '@/types/auth';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -42,8 +43,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
   const [retryKey, setRetryKey] = useState(0);
 
   const loadRolePermissions = useCallback(async (selectedRole: string) => {
-    const data = await mockFetch('auth.rolePermissions.get', selectedRole);
-    setPermissions(data.permissions);
+    const data = await adminService.getRolePermissions(selectedRole);
+    setPermissions(data.permissions ?? {});
   }, []);
 
   useEffect(() => {
@@ -52,13 +53,11 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
       setLoading(true);
       setIsError(false);
       try {
-        const [sectionData, accessList] = await Promise.all([
-          mockFetch('auth.permissionSections'),
-          mockFetch('auth.customAccess.list'),
-        ]);
+        const accessList = await adminService.getCustomAccess();
         if (!active) return;
-        setSections(sectionData);
-        setCustomAccess(accessList);
+        // The permission catalogue is static schema configuration, not data.
+        setSections(PERMISSION_SECTIONS);
+        setCustomAccess(accessList as CustomUserAccessRecord[]);
         await loadRolePermissions(role);
       } catch {
         if (active) setIsError(true);
@@ -78,7 +77,7 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
   };
 
   const handleSave = async (next: PermissionMap) => {
-    await mockFetch('auth.rolePermissions.update', { role, permissions: next });
+    await adminService.updateRolePermissions(role, next);
     setPermissions(next);
   };
 

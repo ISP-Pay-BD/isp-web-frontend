@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { adminService } from '@/lib/api/services/admin.service';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,15 +29,14 @@ interface MovieServer {
   type: string;
   url: string;
   status: string;
+  rating: number | null;
+  image: string | null;
 }
 
 export function MovieServersPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'movieServers'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'movieServers');
-      return res as { items: MovieServer[] };
-    },
+    queryFn: () => adminService.getMovieServers(),
   });
 
   const list = useMemo(() => data?.items ?? [], [data?.items]);

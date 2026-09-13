@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +22,7 @@ import {
   Sliders,
   DollarSign,
 } from 'lucide-react';
-import { http } from '@/lib/api/client';
-import { getAuthUserId } from '@/lib/api/auth-utils';
+import { adminService } from '@/lib/api/services/admin.service';
 import type { PaymentGatewayDetail } from '@/data/admin/extras.data';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -32,13 +30,7 @@ import { cn } from '@/lib/utils';
 export function PaymentGatewaysPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'paymentGateways'],
-    queryFn: async () => {
-      const resellerId = getAuthUserId();
-      const res = await http.get<unknown>(`/v1/reseller/payment-gateways/${resellerId}`);
-      if (Array.isArray(res)) return { items: res as PaymentGatewayDetail[] };
-      if (res && typeof res === 'object' && 'items' in res) return res as { items: PaymentGatewayDetail[] };
-      return { items: [] as PaymentGatewayDetail[] };
-    },
+    queryFn: () => adminService.getPaymentGateways(),
   });
   const [items, setItems] = useState<PaymentGatewayDetail[] | null>(null);
   const list = items ?? data?.items ?? [];

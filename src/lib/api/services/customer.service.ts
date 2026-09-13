@@ -1,8 +1,10 @@
 import { http } from '../client';
+import { getAuthUserId } from '../auth-utils';
 import {
   transformBackendCustomerDashboard,
   transformBackendCustomerSubscription,
   transformBackendCustomerPayments,
+  transformBackendCustomerProfile,
 } from '../adapters/customer.adapter';
 import type {
   CustomerDashboardData,
@@ -16,7 +18,6 @@ import type {
   ChangePasswordPayload,
 } from '@/lib/mock-api/handlers/customer.handler';
 import type { SupportTicket, NewsItem } from '@/data/shared/types';
-import { customerProfile, customerNotifications } from '@/data/customer/profile.data';
 import { routerTools, connectedDevices, customerRewards } from '@/data/customer/subscription.data';
 
 export interface RouterInfoResult {
@@ -28,13 +29,18 @@ export interface RouterInfoResult {
 }
 
 export interface CustomerProfileResult {
-  profile: typeof customerProfile;
-  notifications: typeof customerNotifications;
+  profile: ReturnType<typeof transformBackendCustomerProfile>;
+  notifications: unknown[];
 }
 
 export const customerService = {
+  /**
+   * `GET /api/v1/customer/users/{id}` returns the full self-care payload
+   * (details, package, payment buckets, statistics, notices) — this is the
+   * backend's customer dashboard endpoint.
+   */
   getDashboard: async (): Promise<CustomerDashboardData> => {
-    const raw = await http.get<Record<string, unknown>>('/v1/customer/dashboard');
+    const raw = await http.get<Record<string, unknown>>(`/v1/customer/users/${getAuthUserId()}`);
     return transformBackendCustomerDashboard(raw);
   },
 
@@ -47,30 +53,44 @@ export const customerService = {
     return await http.post('/v1/customer/subscription/renew', { package_id: packageId });
   },
 
+  /** Backend requires `user_id` as a query parameter. */
   getPackages: async (): Promise<{ packages: any[]; currentPackageId: string }> => {
-    const raw = await http.get<unknown>('/v1/customer/packages');
+    const raw = await http.get<unknown>('/v1/customer/packages', { user_id: getAuthUserId() });
     let items: any[] = [];
     if (Array.isArray(raw)) {
       items = raw;
     } else if (raw && typeof raw === 'object') {
-      const list = (raw as { packages?: unknown[]; data?: unknown[] }).packages || (raw as { data?: unknown[] }).data;
+      const list =
+        (raw as { packages?: unknown[]; data?: unknown[] }).packages ||
+        (raw as { data?: unknown[] }).data;
       if (Array.isArray(list)) {
         items = list;
       }
     }
     return {
       packages: items,
-      currentPackageId: (raw as { current_package_id?: string; currentPackageId?: string })?.current_package_id || 'pkg_20',
+      currentPackageId:
+        (raw as { package_id?: string; currentPackageId?: string })?.package_id || 'pkg_20',
     };
   },
 
+  /** Backend requires `user_id` as a query parameter. */
   getPayments: async (): Promise<CustomerPaymentsData> => {
-    const raw = await http.get<Record<string, unknown>>('/v1/customer/payment-fetch');
+    const raw = await http.get<Record<string, unknown>>('/v1/customer/payment-fetch', {
+      user_id: getAuthUserId(),
+    });
     return transformBackendCustomerPayments(raw);
   },
 
+  /**
+   * Records a customer payment. The backend endpoint creates a *pending*
+   * payment only — settlement is performed by the payment gateway callback.
+   */
   payInvoice: async (payload: PayInvoicePayload) => {
-    return await http.post('/v1/customer/payments', payload);
+    return await http.post('/v1/customer/payments', {
+      ...payload,
+      user_id: getAuthUserId(),
+    });
   },
 
   getSupportTickets: async (): Promise<{ tickets: SupportTicket[] }> => {
@@ -100,7 +120,10 @@ export const customerService = {
   },
 
   quickFixPing: async (actionId = 'quick_fix') => {
-    return await http.post<{ success: boolean; message: string; timestamp: string }>('/v1/customer/autofix/quick-fix', { action: actionId });
+    return await http.post<{ success: boolean; message: string; timestamp: string }>(
+      '/v1/customer/autofix/quick-fix',
+      { action: actionId },
+    );
   },
 
   getConnectedDevices: async () => {
@@ -115,18 +138,25 @@ export const customerService = {
     return await http.post('/v1/customer/reward/redeem-preview', { points });
   },
 
+  /** Backend route: `GET /api/common/news` (news is not versioned under /v1). */
   getNews: async (): Promise<{ items: NewsItem[] }> => {
-    const raw = await http.get<NewsItem[]>('/v1/common/news');
-    const items = Array.isArray(raw) ? raw : (raw as unknown as { items: NewsItem[] }).items || [];
+    const raw = await http.get<NewsItem[]>('/common/news');
+    const items = Array.isArray(raw) ? raw : (raw as unknown as { items: NewsItem[] })?.items || [];
     return { items };
   },
 
+  /** Backend route: `GET /api/common/news/view/{id}`. */
   getNewsById: async (id: string): Promise<NewsItem | null> => {
-    return await http.get<NewsItem>(`/v1/common/news/${id}`);
+    return await http.get<NewsItem>(`/common/news/view/${id}`);
   },
 
+  /** Reuses the customer dashboard payload, which embeds the profile `details`. */
   getProfile: async (): Promise<CustomerProfileResult> => {
-    return await http.get<CustomerProfileResult>('/v1/customer/profile');
+    const raw = await http.get<Record<string, unknown>>(`/v1/customer/users/${getAuthUserId()}`);
+    return {
+      profile: transformBackendCustomerProfile(raw),
+      notifications: Array.isArray(raw.notifications) ? raw.notifications : [],
+    };
   },
 
   updateProfile: async (payload: UpdateProfilePayload) => {
@@ -134,6 +164,9 @@ export const customerService = {
   },
 
   changePassword: async (payload: ChangePasswordPayload) => {
-    return await http.post('/v1/customer/profile/change-password', payload);
+    return await http.post('/v1/customer/profile/change-password', {
+      current_password: payload.currentPassword,
+      new_password: payload.newPassword,
+    });
   },
 };

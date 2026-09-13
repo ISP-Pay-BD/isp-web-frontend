@@ -1,7 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { demoUserCredentials } from '@/data/users';
 import type { UserRole } from '@/types/auth';
 import { Badge } from '@/components/ui/badge';
 import { UserCheck } from 'lucide-react';
@@ -19,12 +18,11 @@ interface DemoUserPickerProps {
   disabled?: boolean;
 }
 
+/**
+ * Demo-only affordance on the login screen. These credentials are seeded demo
+ * accounts, not API data, so they are read straight from the local catalogue.
+ */
 export function DemoUserPicker({ onSelect, disabled }: DemoUserPickerProps) {
-  const { data: demoUserCredentials = [] } = useQuery({
-    queryKey: ['auth', 'demoCredentials'],
-    queryFn: () => mockFetch('auth.demoCredentials'),
-  });
-
   return (
     <div className="space-y-3 pt-2">
       <div className="flex items-center justify-between">

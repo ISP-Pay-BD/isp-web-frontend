@@ -85,7 +85,7 @@ export function AiChatPage() {
     (async () => {
       let aiResponse = '';
       try {
-        const res = await http.post<unknown>('/api/chat', { message: text, prompt: text });
+        const res = await http.post<unknown>('/v1/ai/chat', { message: text, prompt: text });
         if (res && typeof res === 'object') {
           if ('reply' in res && typeof (res as { reply: unknown }).reply === 'string') {
             aiResponse = (res as { reply: string }).reply;

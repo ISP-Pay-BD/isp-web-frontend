@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -23,7 +23,7 @@ export function RedisLogsPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'redis-logs', level],
-    queryFn: () => mockFetch('platform.redis-logs', level === 'all' ? undefined : level),
+    queryFn: () => platformService.getPlatformLogs(level),
   });
 
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;

@@ -51,7 +51,7 @@ export function CorporateQueuesPage() {
     queryFn: async () => {
       try {
         const resellerId = getAuthUserId();
-        const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}/corporate-queues/1`);
+        const raw = await http.get<unknown>(`/v1/reseller/customers/${resellerId}/corporate-queues`);
         if (Array.isArray(raw)) return { items: raw as CorporateQueueJob[] };
         if (raw && typeof raw === 'object' && 'items' in raw) return raw as { items: CorporateQueueJob[] };
         const res = await mockFetch('admin.domain', 'corporateQueues');

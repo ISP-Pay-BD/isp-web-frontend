@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { ShieldCheck, Users } from 'lucide-react';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -119,7 +119,7 @@ const columns: LegacyColumnDef<PlatformAdminUser, unknown>[] = [
 export function AdminsListPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'admins'],
-    queryFn: () => mockFetch('platform.admins.list'),
+    queryFn: () => platformService.getAdmins(),
   });
 
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;

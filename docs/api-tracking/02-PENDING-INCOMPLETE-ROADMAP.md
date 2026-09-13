@@ -1,23 +1,44 @@
-# 02. Completed API Roadmap (100% Integrated)
+# 02. Remaining Integration Work
 
-> Directory of all **488 endpoints** in the backend catalog, now 100% integrated with live API services (`src/lib/api/services/`) in the frontend UI.
+> **Corrected 2026-09-13.** This file previously claimed "488 endpoints, 100%
+> integrated". Verification against the real route table
+> (`php spark routes`) and the frontend source showed that was overstated.
+> Authoritative status lives in [`../API-INTEGRATION-TRACKER.md`](../API-INTEGRATION-TRACKER.md).
 
 ---
 
-## 1. Domain Breakdown of Completed Endpoints
+## 1. Actual State
 
-```mermaid
-pie title Completed Endpoints by Domain (488 Total - 100% Live)
-    "Admin Deep Network & MikroTik (90)" : 90
-    "Billing, Accounts & BTRC Reports (75)" : 75
-    "Customer Self-Care Sub-Features (67)" : 67
-    "Payment Gateway Callbacks & Webhooks (48)" : 48
-    "Inventory & Purchase Orders (35)" : 35
-    "HR, Payroll & Attendance (35)" : 35
-    "SMS & WhatsApp Automation (30)" : 30
-    "OLT Optical & Hotspots (16)" : 16
-    "AI Diagnostics & Tools (12)" : 12
-```
+The backend registers **499 `api/*` routes** (263 of them under `api/v1`). All
+**122 real API call sites in the frontend resolve to a real backend route** —
+there are no broken calls — and **no screen depends on pure mock data**.
+
+| Area | Status |
+|---|---|
+| API call ↔ route consistency | ✅ Verified, 122/122 resolve |
+| Pure-mock screens | ✅ 0 remaining (was 16) |
+| Router live ops (sessions, DHCP, queues, disconnect) | ✅ MikroTik-backed routes added |
+| Reseller settings / gateways / audit trail / self-subscription | ✅ Routes added |
+| Platform tenant detail, health, admins, packages, plugins, showcase, contacts, revenue, sidebar pins, logs, file manager | ✅ Routes added |
+| BTRC report | ✅ Route added (`reports/btrc/{id}`) |
+| Customer dashboard / profile / change-password / payments | ✅ Routes added or remapped |
+| AI chat | ✅ Data-backed `POST /v1/ai/chat` |
+| Forgot password | ✅ `POST /api/common/forgot-password` (real reset link + email) |
+| Role permissions / custom access | ✅ `role-permissions/{role}`, `custom-access` |
+| `getMetering` / `getSla` semantic accuracy | ⚠️ Calls succeed but return generic payloads |
+| Schema gaps (plugin price/installs, showcase views, lead company, revenue trend) | ⚠️ Report zeros honestly — see the tracker's §4 |
+
+### Backend surfaces that do **not** exist
+
+These were previously listed as "backend endpoints ready". They are not
+implemented anywhere in `zapi`:
+
+- `/api/v1/reseller/invoices/{id}/pdf` — only `api/v1/customer/invoice-print` exists
+- `/api/v1/reseller/trash` — no route; the `recycle_bin` table is unwired
+- `/api/v1/customer/store/products` — no route; `product_showcase_*` tables are unwired
+- `/api/v1/ai/query` — internal AI feeds live at `api/internal/ai/*`
+- `/api/v1/reseller/corporate/{id}/invoices` — unrelated route; corporate queues are at `/v1/reseller/customers/{id}/corporate-queues`
+- `/api/v1/admin/*` — the entire prefix; the real surface is `/api/v1/reseller/*`
 
 
 ---

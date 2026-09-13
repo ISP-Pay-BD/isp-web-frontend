@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -15,11 +15,11 @@ export function MaintenancePage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'settings'],
-    queryFn: () => mockFetch('platform.settings'),
+    queryFn: () => platformService.getSoftwareSettings(),
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => mockFetch('platform.maintenance', enabled),
+    mutationFn: (enabled: boolean) => platformService.updateSoftwareSettings({ maintenanceMode: enabled }),
     onSuccess: (_, enabled) => {
       toast.success(enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
       queryClient.invalidateQueries({ queryKey: ['platform', 'settings'] });

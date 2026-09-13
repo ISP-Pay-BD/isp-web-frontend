@@ -4,45 +4,68 @@ import type {
   CustomerPaymentsData,
 } from '@/lib/mock-api/handlers/customer.handler';
 import { customerSubscription, customerPackages } from '@/data/customer/subscription.data';
-import { supportTickets } from '@/data/customer/support.data';
 import { newsItems } from '@/data/customer/news.data';
+import { customerProfile } from '@/data/customer/profile.data';
 import type { Payment, SupportTicket, PaymentMethod, PaymentStatus } from '@/data/shared/types';
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+/**
+ * Maps the real backend payload of `GET /api/v1/customer/users/{id}`:
+ * `{ pppoe, details, package, payment_received, payment_pending, payment_failed,
+ *    payment_total, total_support_ticket, statistics, admin_details, notices }`
+ * Also tolerates the older `{ user, subscription, payments }` shape.
+ */
 export function transformBackendCustomerDashboard(raw: Record<string, unknown>): CustomerDashboardData {
-  const user = (raw.user || raw.subscriber || raw) as Record<string, unknown>;
-  const subscriptionRaw = (raw.subscription || {}) as Record<string, unknown>;
-  const paymentsRaw = (raw.payments || raw.payments_summary || {}) as Record<string, unknown>;
+  const details = asRecord(raw.details || raw.user || raw.subscriber || raw);
+  const pkg = asRecord(raw.package);
+  const legacySubscription = asRecord(raw.subscription);
+  const legacyPayments = asRecord(raw.payments || raw.payments_summary);
+  const admin = asRecord(raw.admin_details);
 
   const sub: typeof customerSubscription = {
     ...customerSubscription,
-    packageName: String(subscriptionRaw.package_name || user.package_name || customerSubscription.packageName),
-    speedMbps: Number(subscriptionRaw.speed_mbps || user.speed || customerSubscription.speedMbps),
-    priceBdt: Number(subscriptionRaw.amount || subscriptionRaw.monthly_fee || customerSubscription.priceBdt),
+    userId: String(details.id || customerSubscription.userId),
+    packageId: String(details.package_id || pkg.id || customerSubscription.packageId),
+    packageName: String(pkg.name || legacySubscription.package_name || details.package_name || customerSubscription.packageName),
+    speedMbps: Number(pkg.speed || pkg.speed_mbps || legacySubscription.speed_mbps || details.speed || customerSubscription.speedMbps),
+    priceBdt: Number(pkg.amount || pkg.price || pkg.monthly_fee || legacySubscription.amount || customerSubscription.priceBdt),
     status: 'active',
-    expiryDate: String(subscriptionRaw.expire_date || user.will_expire || customerSubscription.expiryDate),
+    expiryDate: String(details.will_expire || legacySubscription.expire_date || details.expire_date || customerSubscription.expiryDate),
   };
 
+  const recoveryPayments = Array.isArray(raw.recent_payments)
+    ? (raw.recent_payments as Payment[])
+    : ((legacyPayments.recent_payments || legacyPayments.recentPayments || []) as Payment[]);
+
   const paymentsSummary = {
-    totalPaidBdt: Number(paymentsRaw.total_paid || paymentsRaw.totalPaidBdt || 4800),
-    pendingDueBdt: Number(paymentsRaw.pending_due || paymentsRaw.pendingDueBdt || 0),
-    lastPaymentDate: String(paymentsRaw.last_payment_date || paymentsRaw.lastPaymentDate || '2026-03-01'),
-    recentPayments: (paymentsRaw.recent_payments || paymentsRaw.recentPayments || []) as Payment[],
+    totalPaidBdt: Number(
+      raw.payment_received || legacyPayments.total_paid || legacyPayments.totalPaidBdt || 0,
+    ),
+    pendingDueBdt: Number(
+      raw.payment_pending ?? legacyPayments.pending_due ?? legacyPayments.pendingDueBdt ?? 0,
+    ),
+    lastPaymentDate: String(
+      legacyPayments.last_payment_date || legacyPayments.lastPaymentDate || details.last_paid || '',
+    ),
+    recentPayments: recoveryPayments,
   };
 
   const openTickets = Array.isArray(raw.recent_tickets)
     ? (raw.recent_tickets as unknown as SupportTicket[])
-    : supportTickets;
+    : [];
 
   return {
     subscription: sub,
     paymentsSummary,
-    openTicketsCount: Number(raw.open_tickets_count || 0),
+    openTicketsCount: Number(raw.total_support_ticket ?? raw.open_tickets_count ?? 0),
     recentTickets: openTickets.slice(0, 4),
     latestNotices: Array.isArray(raw.notices) ? (raw.notices as typeof newsItems) : newsItems.slice(0, 4),
     emergencyContact: {
-      phone: String(raw.support_phone || '01700-000000'),
-      whatsapp: String(raw.support_whatsapp || '01700000000'),
-      email: String(raw.support_email || 'support@demo.isppaybd.com'),
+      phone: String(admin.phone || admin.mobile || raw.support_phone || '01700-000000'),
+      whatsapp: String(admin.whatsapp || admin.phone || raw.support_whatsapp || '01700000000'),
+      email: String(admin.email || raw.support_email || 'support@demo.isppaybd.com'),
       supportHours: '24/7 Helpline & Network NOC',
     },
     trafficData: Array.isArray(raw.traffic_data)
@@ -55,6 +78,39 @@ export function transformBackendCustomerDashboard(raw: Record<string, unknown>):
           { timestamp: '16:00', timeLabel: '4 PM', downloadMbps: 28.6, uploadMbps: 11.3 },
           { timestamp: '20:00', timeLabel: '8 PM', downloadMbps: 45.8, uploadMbps: 18.2 },
         ],
+  };
+}
+
+/**
+ * Maps the customer profile out of the `details` block returned by
+ * `GET /api/v1/customer/users/{id}` into the shape the profile page expects.
+ */
+export function transformBackendCustomerProfile(raw: Record<string, unknown>): typeof customerProfile {
+  const details = asRecord(raw.details || raw.user || raw.subscriber || raw);
+  const name = String(details.name || details.full_name || customerProfile.name);
+
+  return {
+    ...customerProfile,
+    userId: String(details.id || customerProfile.userId),
+    customerId: String(details.id || customerProfile.customerId),
+    name,
+    username: String(details.username || customerProfile.username),
+    phone: String(details.phone || details.mobile || customerProfile.phone),
+    email: String(details.email || customerProfile.email),
+    address: String(details.address || customerProfile.address),
+    addressBn: String(details.address_bn || customerProfile.addressBn),
+    nid: String(details.nid || customerProfile.nid),
+    areaName: String(details.area_name || details.area || customerProfile.areaName),
+    connectionType: 'pppoe',
+    macAddress: String(details.mac_address || customerProfile.macAddress),
+    ipAddress: String(details.static_ip || details.ip || customerProfile.ipAddress),
+    createdAt: String(details.created_at || customerProfile.createdAt),
+    avatarInitials: name
+      .split(' ')
+      .map((part) => part.charAt(0))
+      .join('')
+      .slice(0, 2)
+      .toUpperCase(),
   };
 }
 
@@ -84,9 +140,8 @@ export function transformBackendCustomerSubscription(raw: Record<string, unknown
 }
 
 export function transformBackendCustomerPayments(raw: Record<string, unknown>): CustomerPaymentsData {
-  const list = Array.isArray(raw.payments || raw.data || raw)
-    ? ((raw.payments || raw.data || raw) as Record<string, unknown>[])
-    : [];
+  const source = raw.payments || raw.data || raw;
+  const list = Array.isArray(source) ? (source as Record<string, unknown>[]) : [];
 
   const payments: Payment[] = list.map((p, idx) => {
     const rawMethod = String(p.payment_type || p.method || 'bkash').toLowerCase();
@@ -120,7 +175,7 @@ export function transformBackendCustomerPayments(raw: Record<string, unknown>): 
 
   return {
     summary: {
-      totalPaidBdt: totalPaid || 4800,
+      totalPaidBdt: totalPaid,
       pendingDueBdt: 0,
       successfulCount: payments.filter((p) => p.status === 'completed').length,
       pendingCount: payments.filter((p) => p.status === 'pending').length,

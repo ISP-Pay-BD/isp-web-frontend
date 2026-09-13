@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Reorder, motion } from 'framer-motion';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PageHeader } from '@/features/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,10 +40,7 @@ const PRESET_SUGGESTIONS = [
 export function SidebarPinsPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'sidebarPins'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'sidebarPins');
-      return res as { items: SidebarPin[] };
-    },
+    queryFn: () => platformService.getSidebarPins(),
   });
   
   const [pins, setPins] = useState<SidebarPin[] | null>(null);

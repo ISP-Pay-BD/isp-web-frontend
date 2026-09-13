@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,10 +46,7 @@ import type { ProductShowcaseItem } from '@/data/platform/contacts.data';
 export function AdminProductShowcasePage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'domain', 'productShowcase'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'productShowcase');
-      return res as { items: ProductShowcaseItem[] };
-    },
+    queryFn: () => platformService.getShowcase(),
   });
 
   const [items, setItems] = useState<ProductShowcaseItem[] | null>(null);

@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { mockFetch } from '@/lib/mock-api/client';
-import { MockApiError } from '@/lib/mock-api/errors';
+import { AxiosError } from 'axios';
+import { http } from '@/lib/api/client';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { AuthBrandPanel } from '@/features/auth/login/components/AuthBrandPanel';
@@ -37,13 +37,17 @@ export function ForgotPasswordPage() {
   const onSubmit = async (values: ForgotPasswordFormValues) => {
     setError(null);
     try {
-      const result = await mockFetch('auth.forgotPassword', { email: values.email });
-      setSuccessMessage(result.message);
+      await http.post('/common/forgot-password', { email: values.email });
+      setSuccessMessage(
+        'If that email address is registered, a password reset link has been sent to it.',
+      );
       toast.success('Reset link sent');
     } catch (err) {
-      const message =
-        err instanceof MockApiError ? err.message : 'Could not send reset link. Try again.';
-      setError(message);
+      const apiMessage =
+        err instanceof AxiosError
+          ? (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message
+          : undefined;
+      setError(apiMessage ?? 'Could not send reset link. Try again.');
     }
   };
 

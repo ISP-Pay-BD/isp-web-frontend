@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 export function AdminPackagesPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'admins', 'packages'],
-    queryFn: () => mockFetch('platform.admins.packages'),
+    queryFn: () => platformService.getAdminPackages(),
   });
 
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;

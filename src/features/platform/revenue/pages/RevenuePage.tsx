@@ -16,7 +16,7 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -58,7 +58,7 @@ const tierColumns: LegacyColumnDef<TierRow, unknown>[] = [
 export function RevenuePage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'revenue'],
-    queryFn: () => mockFetch('platform.revenue'),
+    queryFn: () => platformService.getPlatformRevenue(),
   });
 
   if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;

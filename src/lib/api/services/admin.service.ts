@@ -9,6 +9,7 @@ import {
   type AdminDashboardResult,
 } from '../adapters/admin.adapter';
 import type { Customer, Area, Package, Payment, SupportTicket, OltDetails, BandwidthUsage } from '@/data/shared/types';
+import type { PaymentGatewayDetail } from '@/data/admin/extras.data';
 import type {
   HierarchyNode,
   HierarchyScope,
@@ -585,6 +586,67 @@ export const adminService = {
       }
     }
     return await http.get<unknown>('/v1/reseller/reports/bandwidth', { reseller_id: finalId });
+  },
+
+  /**
+   * `GET /api/common/movieservers` — movie/IPTV servers are not versioned
+   * under /v1. Backend returns `{ data: [...], pagination }`.
+   */
+  getMovieServers: async () => {
+    const raw = await http.get<unknown>('/common/movieservers');
+    const rows = Array.isArray(raw)
+      ? raw
+      : (((raw as { data?: unknown[] })?.data ?? []) as unknown[]);
+
+    return {
+      items: (rows as Record<string, unknown>[]).map((row) => {
+        const url = String(row.url ?? '');
+        return {
+          id: String(row.id ?? ''),
+          name: String(row.name ?? ''),
+          type: String(
+            row.details || (url.toLowerCase().includes('bdix') ? 'BDIX' : 'HTTP'),
+          ),
+          url,
+          status: url ? 'active' : 'inactive',
+          rating: row.rating !== undefined && row.rating !== null ? Number(row.rating) : null,
+          image: row.image ? String(row.image) : null,
+        };
+      }),
+    };
+  },
+
+  /** Default permission set for a role. */
+  getRolePermissions: async (role: string) => {
+    return await http.get<{ role: string; permissions: Record<string, string[]> }>(
+      `/v1/reseller/role-permissions/${role}`,
+    );
+  },
+
+  /** Persist a role's default permission set. */
+  updateRolePermissions: async (role: string, permissions: Record<string, string[]>) => {
+    return await http.post(`/v1/reseller/role-permissions/${role}`, { permissions });
+  },
+
+  /** Per-user permission overrides. */
+  getCustomAccess: async () => {
+    return await http.get<unknown[]>('/v1/reseller/custom-access');
+  },
+
+  /**
+   * `GET /api/v1/reseller/payment-gateways/{resellerId}` — gateway config plus
+   * settlement figures derived from the payments ledger.
+   */
+  getPaymentGateways: async () => {
+    const raw = await http.get<unknown>(`/v1/reseller/payment-gateways/${getAuthUserId()}`);
+    const rows = Array.isArray(raw)
+      ? raw
+      : (((raw as { items?: unknown[] })?.items ?? []) as unknown[]);
+
+    return {
+      items: rows as PaymentGatewayDetail[],
+      total: rows.length,
+    };
   },
 
   getRouterSessions: async (routerId?: string | number, resellerId?: string | number) => {

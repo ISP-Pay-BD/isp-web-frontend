@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -22,12 +22,12 @@ export function ContactsPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'contacts'],
-    queryFn: () => mockFetch('platform.contacts'),
+    queryFn: () => platformService.getLeads(),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: PlatformContact['status'] }) =>
-      mockFetch('platform.contacts.updateStatus', id, status),
+      platformService.updateLeadStatus(id, status),
     onSuccess: () => {
       toast.success('Contact status updated');
       queryClient.invalidateQueries({ queryKey: ['platform', 'contacts'] });
