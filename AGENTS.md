@@ -6,6 +6,7 @@ Build a **high-quality, professional, modern ISP Pay BD platform** — complete 
 
 ## Start every session (in order)
 
+0. **`docs/GOAL-STATE.md`** — if a goal is ACTIVE, resume it first (skill `goal`); it never closes until its completion criteria pass
 1. **Skill `isp-pay-bd`** — `.cursor/skills/isp-pay-bd/SKILL.md` (project default)
 2. **`docs/PROJECT-MEMORY.md`** — project context
 3. **`docs/13-STRICT-AGENT-MANDATE.md`** — non-negotiable rules

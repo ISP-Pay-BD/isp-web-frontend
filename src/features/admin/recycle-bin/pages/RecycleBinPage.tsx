@@ -26,7 +26,12 @@ import {
   Sparkles
 } from 'lucide-react';
 import type { RecycleBinItem } from '@/data/admin/recycle-bin.data';
-import { useRecycleBin } from '../hooks/use-recycle-bin';
+import {
+  useRecycleBin,
+  useRestoreRecycleBinItem,
+  usePurgeRecycleBinItem,
+  useEmptyRecycleBin,
+} from '../hooks/use-recycle-bin';
 
 const entityConfig: Record<string, { icon: typeof Users; color: string; label: string }> = {
   customer: { icon: Users, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', label: 'Customers' },
@@ -54,14 +59,16 @@ const recycleSearchFilter = (
 
 export function RecycleBinPage() {
   const { data, isLoading, isError, refetch } = useRecycleBin();
-  const [items, setItems] = useState<RecycleBinItem[]>([]);
+  const restoreMutation = useRestoreRecycleBinItem();
+  const purgeMutation = usePurgeRecycleBinItem();
+  const emptyMutation = useEmptyRecycleBin();
   const [selectedType, setSelectedType] = useState<string>('all');
   const [confirmAction, setConfirmAction] = useState<{
     type: 'restore' | 'delete' | 'emptyAll';
     item?: RecycleBinItem;
   } | null>(null);
 
-  const list = items.length > 0 ? items : (data?.items ?? []);
+  const list = data ?? [];
 
   const filteredList = useMemo(() => {
     if (selectedType === 'all') return list;
@@ -89,20 +96,26 @@ export function RecycleBinPage() {
   }, [list]);
 
   const handleRestore = (item: RecycleBinItem) => {
-    setItems(list.filter((i) => i.id !== item.id));
-    toast.success(`${item.title} restored successfully`);
+    restoreMutation.mutate(item.id, {
+      onSuccess: () => toast.success(`${item.title} restored successfully`),
+      onError: () => toast.error(`Failed to restore ${item.title}`),
+    });
     setConfirmAction(null);
   };
 
   const handleDeleteForever = (item: RecycleBinItem) => {
-    setItems(list.filter((i) => i.id !== item.id));
-    toast.success(`${item.title} permanently deleted`);
+    purgeMutation.mutate(item.id, {
+      onSuccess: () => toast.success(`${item.title} permanently deleted`),
+      onError: () => toast.error(`Failed to delete ${item.title}`),
+    });
     setConfirmAction(null);
   };
 
   const handleEmptyAll = () => {
-    setItems([]);
-    toast.success('Recycle bin emptied permanently');
+    emptyMutation.mutate(list.map((i) => i.id), {
+      onSuccess: () => toast.success('Recycle bin emptied permanently'),
+      onError: () => toast.error('Failed to empty recycle bin'),
+    });
     setConfirmAction(null);
   };
 

@@ -156,11 +156,23 @@ export const platformService = {
   },
 
   getMetering: async () => {
-    return await http.get<unknown>('/v1/platform/stats', { domain: 'metering' });
+    return await http.get<unknown>('/v1/platform/metering');
   },
 
   getSla: async () => {
-    return await http.get<unknown>('/v1/platform/system-health', { domain: 'sla' });
+    return await http.get<unknown>('/v1/platform/sla');
+  },
+
+  getRecycleBin: async (entity?: string) => {
+    return await http.get<unknown>('/v1/platform/recycle-bin', entity ? { entity } : undefined);
+  },
+
+  restoreRecycleBinItem: async (id: string) => {
+    return await http.post(`/v1/platform/recycle-bin/${id}/restore`);
+  },
+
+  purgeRecycleBinItem: async (id: string) => {
+    return await http.delete(`/v1/platform/recycle-bin/${id}`);
   },
 
   getTenantHealth: async (tenantId: string) => {

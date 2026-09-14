@@ -3,10 +3,36 @@
 > **Status of frontend ↔ `zapi` backend integration, verified against the real
 > route table (`php spark routes`) and the frontend source — not against intent.**
 >
-> Verification method and raw numbers: see §5. Last verified: 2026-09-13
-> (extended reverse-check pass — see §6).
+> Verification method and raw numbers: see §5. Last verified: 2026-09-14
+> (gap-closure pass — see §4 and §7).
 
 ---
+
+## 7. Mock-fallback audit pass (2026-09-14)
+
+> **2026-09-14 gap-closure verification:** lint 0 errors (653 warnings) ·
+> typecheck clean · vitest **38/38** (4 new) · build succeeds · backend phpunit
+> **233 tests / 653 assertions OK** (PlatformCatalogApiTest: 21 tests incl.
+> metering, SLA, recycle-bin restore/purge contracts) · api-crosscheck
+> **0 unmatched** of 197 call sites · screen-coverage check **0 pure-mock**.
+> New: `GET platform/metering`, `GET platform/sla`,
+> `GET/POST/DELETE platform/recycle-bin*`.
+
+The crosscheck proves a call site *exists*; this pass proves its **response is
+actually used**. Two hooks called the API, discarded the result, and always
+returned mock data (invisible to every route-based check):
+
+| File | Was | Now |
+|---|---|---|
+| `use-marketing-pricing.ts` | `http.get('/v1/platform/subscriptions')` then unconditional `return mock` | static pricing dataset imported directly — marketing pricing is site content, not tenant data; `/v1/platform/subscriptions` returns platform-tenant billing rows (admin surface), semantically wrong for public tiers |
+| `use-marketing-plugins.ts` | `http.get('/v1/engines/catalog')` (phantom route) then unconditional `return mock` | real `GET /v1/platform/plugins` (`{items:[{id,name,category,desc,priceBdt,installs}]}`) mapped into the marketplace card shape; falls back to static marketplace content on error/shape mismatch |
+
+Verified state after the pass:
+
+- Files importing `mock-api`: **23** (down from 35 — was under-counted in §1)
+- Files where mock is the **primary** data source: **0**
+- All remaining `mockFetch` uses are inside a `catch` block (API-first,
+  static/mock fallback only on backend failure)
 
 ## 6. Reverse-check pass (2026-09-13): backend routes → frontend consumers
 
@@ -50,7 +76,7 @@ table, see §5).
 | `POST router-control/onboard-tr069` | TR-069 onboarding is an installer flow, not customer self-care |
 | `GET ping-user`, `GET routers/load-traffic/{id}`, `GET users-load-traffic/{id}` | live-traffic probes not surfaced in customer UI |
 | `GET invoice-print`, `GET permission` (both portals) | print view / raw permission dump not consumed |
-| Package create/update (`POST/PUT reseller/packages/*`) | **still missing on the backend** (§4 gap — no controller method in any route generation) |
+| Package create/update (`POST/PUT reseller/packages/*`) | ✅ **Resolved 2026-09-14** — routes **do exist** (`POST packages/{id}`, `PUT packages/{id}/{pkgId}`, `DELETE packages/{id}/{pkgId}` → `Zapi\Modules\Reseller\Package`) and the frontend consumes them via `use-packages.ts` mutations; tracker entry was stale |
 
 ---
 
@@ -188,28 +214,33 @@ Implementation notes:
 
 ## 4. Known data limitations (honest gaps, not broken calls)
 
-The screens are all wired, but some schema gaps mean a few fields report zeros
-rather than a real number. These are documented, not hidden:
+> **2026-09-14 — gap-closure pass.** All schema/semantic gaps below were closed
+> (migration `2026-09-14-000001_CloseCatalogApiGaps`, new Zapi endpoints, new
+> frontend wiring + tests). Remaining notes are genuinely informational.
 
-| Field | Why it is empty |
+| Field | Status |
 |---|---|
-| Plugin `priceBdt` / `installs` | The `plugins` table has no price or install-counter column |
-| Showcase `views` | View counts are not tracked anywhere |
-| Contact `company` | The `contacts` table stores no company field for a lead |
-| `revenue.growthPercentage`, `chartData` | No historical revenue snapshots exist to compute a trend |
-| `adminPackages.tenantCount` | Tenant-to-package assignment is not recorded |
-| `redisLogs.stats` sessions | Only populated when the cache handler is Redis |
+| Plugin `priceBdt` / `installs` | ✅ **Closed** — real `plugins.price` (existed via 2026-08-30 migration) + new `plugins.installs` counter column; controller now reads both |
+| Showcase `views` | ✅ **Closed** — new `product_showcase_categories.views` column; controller reads it |
+| Contact `company` | ✅ **Closed** — new `contacts.company` column; controller maps it |
+| `revenue.growthPercentage`, `chartData` | ✅ **Closed** — computed from 6 months of real `payments` ledger sums (month-over-month growth) |
+| `adminPackages.tenantCount` | ✅ **Closed** — counted from active `tenants.plan` matching the package name |
+| `redisLogs.stats` sessions | Only populated when the cache handler is Redis (inherent — no Redis, no session store) |
 
-### Semantic (calls succeed, payload is generic)
+### Semantic (was generic — now real)
 
-- `platformService.getMetering` / `getSla` call `/v1/platform/stats` and
-  `/v1/platform/system-health` with query flags those endpoints ignore. The
-  calls succeed but the payload is generic rather than metering/SLA specific.
+- ✅ `platformService.getMetering` → dedicated **`GET /v1/platform/metering`**
+  (per-tenant users/SMS row counts, real period).
+- ✅ `platformService.getSla` → dedicated **`GET /v1/platform/sla`** (router
+  uptime %, open tickets, derived severity vs 99.5% target).
 
-### Tables still without a controller
+### Tables without a controller — status
 
-`recycle_bin`, `network_diagrams`, `news_notice` — no screen currently consumes
-them, so no route was invented for them.
+| Table | Status |
+|---|---|
+| `recycle_bin` | ✅ **Closed** — new `GET /v1/platform/recycle-bin`, `POST .../{id}/restore`, `DELETE .../{id}`; frontend hook + page wired to real API with mutations |
+| `news_notice` | Not consumed by any screen; legacy `common/news` surface covers announcements — no route invented |
+| `network_diagrams` | No such data exists in the deployed schema (OLT topology is served live from `olt/topology`); no route invented |
 
 ---
 
