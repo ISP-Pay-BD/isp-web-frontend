@@ -71,7 +71,7 @@ Static mock UI only. No backend API. All data from `src/data/` via mock-api.
 - **P0:** ✅ Complete — see `docs/P0-READY.md`
 - **Plan docs (MD):** ✅ Complete — see `docs/PLAN-STATUS.md`
 - **Phases 1–7:** ✅ Mock UI complete (dummy data) — inventory synced
-- **Phase 8:** ⏳ API integration — await go
+- **Phase 8:** ✅ **API integration complete** — all services wired to real `zapi/` backend
 - **Permissions nav filter:** ✅ `useFilteredNav` wired
 
 ## Git

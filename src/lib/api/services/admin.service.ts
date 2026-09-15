@@ -17,7 +17,7 @@ import type {
   ResellerSubscribersResponse,
 } from '@/features/shared/hierarchy/types';
 import { getAuthUserId } from '../auth-utils';
-import { mockFetch } from '@/lib/mock-api/client';
+
 
 export interface CustomerListParams {
   page?: number;
@@ -225,18 +225,14 @@ export const adminService = {
 
   getAreas: async (resellerId?: string | number): Promise<{ items: Area[] }> => {
     const finalId = resellerId || getAuthUserId();
-    try {
-      const raw = await http.get<unknown>(`/v1/reseller/areas/${finalId}`);
-      if (Array.isArray(raw)) {
-        return { items: raw.map((item) => transformBackendArea(item as Record<string, unknown>)) };
-      }
-      if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
-        return { items: (raw as { data: Record<string, unknown>[] }).data.map((item) => transformBackendArea(item)) };
-      }
-      return { items: [] };
-    } catch {
-      return (await mockFetch('admin.domain', 'areas')) as { items: Area[] };
+    const raw = await http.get<unknown>(`/v1/reseller/areas/${finalId}`);
+    if (Array.isArray(raw)) {
+      return { items: raw.map((item) => transformBackendArea(item as Record<string, unknown>)) };
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data)) {
+      return { items: (raw as { data: Record<string, unknown>[] }).data.map((item) => transformBackendArea(item)) };
+    }
+    return { items: [] };
   },
 
   createArea: async (data: { name: string; subareas?: string[] }, resellerId?: string | number): Promise<Area> => {
@@ -271,20 +267,14 @@ export const adminService = {
 
   getEmployees: async (resellerId?: string | number) => {
     const finalId = resellerId || getAuthUserId();
-    try {
-      const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}`);
-      if (Array.isArray(raw) && raw.length > 0) {
-        return { employees: raw };
-      }
-      if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
-        return { employees: (raw as { data: unknown[] }).data };
-      }
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { employees?: unknown[] };
-      return { employees: mockHr.employees ?? [] };
-    } catch {
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { employees?: unknown[] };
-      return { employees: mockHr.employees ?? [] };
+    const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}`);
+    if (Array.isArray(raw) && raw.length > 0) {
+      return { employees: raw };
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
+      return { employees: (raw as { data: unknown[] }).data };
+    }
+    return { employees: [] };
   },
 
   createEmployee: async (data: Record<string, unknown>, resellerId?: string | number) => {
@@ -304,38 +294,26 @@ export const adminService = {
 
   getAttendanceLogs: async (resellerId?: string | number) => {
     const finalId = resellerId || getAuthUserId();
-    try {
-      const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}/attendance`);
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw;
-      }
-      if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
-        return (raw as { data: unknown[] }).data;
-      }
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { attendanceRecords?: unknown[] };
-      return mockHr.attendanceRecords ?? [];
-    } catch {
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { attendanceRecords?: unknown[] };
-      return mockHr.attendanceRecords ?? [];
+    const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}/attendance`);
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw;
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
+      return (raw as { data: unknown[] }).data;
+    }
+    return [];
   },
 
   getAdvanceSalaryRequests: async (resellerId?: string | number) => {
     const finalId = resellerId || getAuthUserId();
-    try {
-      const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}/advance-salary`);
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw;
-      }
-      if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
-        return (raw as { data: unknown[] }).data;
-      }
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { advanceSalaryRequests?: unknown[] };
-      return mockHr.advanceSalaryRequests ?? [];
-    } catch {
-      const mockHr = (await mockFetch('admin.domain', 'hr')) as { advanceSalaryRequests?: unknown[] };
-      return mockHr.advanceSalaryRequests ?? [];
+    const raw = await http.get<unknown>(`/v1/reseller/employees/${finalId}/advance-salary`);
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw;
     }
+    if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as { data: unknown[] }).data) && (raw as { data: unknown[] }).data.length > 0) {
+      return (raw as { data: unknown[] }).data;
+    }
+    return [];
   },
 
   applyAdvanceSalary: async (payload: { employee_id: string; amount: number; reason?: string }, resellerId?: string | number) => {
@@ -688,20 +666,13 @@ export const adminService = {
   },
 
   getHierarchyTree: async (scope: HierarchyScope, resellerId?: string): Promise<HierarchyTreeResponse> => {
-    try {
-      const authId = getAuthUserId();
-      const res = await http.get<HierarchyTreeResponse>('/v1/hierarchy/tree', {
-        scope,
-        adminId: authId,
-        resellerId: resellerId || undefined,
-      });
-      if (res && res.root && res.summary) {
-        return res;
-      }
-      return (await mockFetch('hierarchy.tree', scope, resellerId)) as HierarchyTreeResponse;
-    } catch {
-      return (await mockFetch('hierarchy.tree', scope, resellerId)) as HierarchyTreeResponse;
-    }
+    const authId = getAuthUserId();
+    const res = await http.get<HierarchyTreeResponse>('/v1/hierarchy/tree', {
+      scope,
+      adminId: authId,
+      resellerId: resellerId || undefined,
+    });
+    return res;
   },
 
   getResellerSubscribers: async (
@@ -726,14 +697,10 @@ export const adminService = {
 
   getCustomerPayments: async (resellerId?: string | number): Promise<{ items: Payment[] }> => {
     const finalId = resellerId || getAuthUserId();
-    try {
-      const raw = await http.get<unknown>(`/v1/reseller/customer-payments/${finalId}`);
-      return {
-        items: transformBackendPaymentsList(raw),
-      };
-    } catch {
-      return (await mockFetch('admin.domain', 'payments')) as { items: Payment[] };
-    }
+    const raw = await http.get<unknown>(`/v1/reseller/customer-payments/${finalId}`);
+    return {
+      items: transformBackendPaymentsList(raw),
+    };
   },
 
   createPayment: async (data: Partial<Payment>, resellerId?: string | number): Promise<Payment> => {

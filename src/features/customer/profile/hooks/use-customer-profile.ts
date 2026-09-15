@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/lib/api/services/customer.service';
-import type { UpdateProfilePayload } from '@/lib/mock-api/handlers/customer.handler';
+import type { UpdateProfilePayload } from '@/types/customer';
 
 export function useCustomerProfile() {
   const queryClient = useQueryClient();

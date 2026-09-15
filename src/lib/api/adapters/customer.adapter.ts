@@ -2,7 +2,7 @@ import type {
   CustomerDashboardData,
   CustomerSubscriptionData,
   CustomerPaymentsData,
-} from '@/lib/mock-api/handlers/customer.handler';
+} from '@/types/customer';
 import { customerSubscription, customerPackages } from '@/data/customer/subscription.data';
 import { newsItems } from '@/data/customer/news.data';
 import { customerProfile } from '@/data/customer/profile.data';

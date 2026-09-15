@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { UserLock } from 'lucide-react';
 import { platformService } from '@/lib/api/services/platform.service';
-import { mockFetch } from '@/lib/mock-api/client';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -81,15 +80,15 @@ export function UserAccessPage() {
     queryFn: async () => {
       try {
         const raw = await platformService.getAdmins();
-        const mock = (await mockFetch('platform.user-access')) as {
-          admins: PlatformAdminUser[];
-          roles: Array<{ id: string; name: string; users: number; permissions: number }>;
+        const admins = Array.isArray(raw) ? raw : (raw as { items?: PlatformAdminUser[] })?.items || [];
+        return {
+          admins: admins as PlatformAdminUser[],
+          roles: [] as Array<{ id: string; name: string; users: number; permissions: number }>,
         };
-        return mock;
       } catch {
-        return (await mockFetch('platform.user-access')) as {
-          admins: PlatformAdminUser[];
-          roles: Array<{ id: string; name: string; users: number; permissions: number }>;
+        return {
+          admins: [] as PlatformAdminUser[],
+          roles: [] as Array<{ id: string; name: string; users: number; permissions: number }>,
         };
       }
     },

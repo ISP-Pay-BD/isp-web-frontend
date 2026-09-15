@@ -9,7 +9,7 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 
 ## Current phase
 
-**P0–Phase 7 mock UI ✅ COMPLETE — Phase 8 (real API) next when you say go.**
+**Phases 0–8 COMPLETE — Full API integration done.**
 
 | Item | State |
 |------|-------|
@@ -21,7 +21,7 @@ Next.js 16 frontend for **ISP Pay BD** — complete UI migration from `isppaybd_
 | Shared components | ✅ Done |
 | **Default AI skill** | ✅ `.cursor/skills/isp-pay-bd/` |
 | Phases 1–7 mock UI (dummy data) | ✅ Done — inventory synced |
-| Phase 8 API integration | ⏳ Out of scope until requested |
+| **Phase 8 API integration** | ✅ **Done** — all services wired to real `zapi/` backend |
 
 ---
 
@@ -111,6 +111,14 @@ All password: `demo1234` — see `src/data/users/users.data.ts`
 
 ## Next action
 
-**✅ Phases 1–7 mock UI complete** (dummy data only). Say **"start Phase 8"** when ready for real API, or pick an optional §H stretch screen.
+**✅ All phases complete.** Frontend is fully integrated with the `zapi/` backend API.
 
-See `docs/PLAN-STATUS.md` + `docs/PONYTAIL-TRACKER.md`.
+- All services use real API calls via `src/lib/api/services/`
+- Auth: JWT login, token refresh, session management
+- Customer portal: all endpoints wired (dashboard, billing, support, router, rewards)
+- Admin portal: all endpoints wired (customers, areas, packages, HR, accounting, network, SMS, reports)
+- Platform portal: all endpoints wired (tenants, admins, revenue, plugins, settings)
+- Employee portal: all endpoints wired (salaries, attendance, profile)
+- Mock data serves as error fallback only (graceful degradation)
+
+Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build` to verify.

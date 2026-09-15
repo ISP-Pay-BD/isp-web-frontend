@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { AttendanceItem } from '../types';
-import { mockDelay } from '@/lib/mock-api/delay';
 
 export function useAttendance() {
   const queryClient = useQueryClient();
@@ -10,61 +8,36 @@ export function useAttendance() {
   const query = useQuery({
     queryKey: ['admin', 'hr', 'attendance'],
     queryFn: async () => {
-      try {
-        const [attRes, empRes] = await Promise.allSettled([
-          adminService.getAttendanceLogs(),
-          adminService.getEmployees(),
-        ]);
+      const [attRes, empRes] = await Promise.allSettled([
+        adminService.getAttendanceLogs(),
+        adminService.getEmployees(),
+      ]);
 
-        const rawRecords = attRes.status === 'fulfilled' && Array.isArray(attRes.value) ? (attRes.value as AttendanceItem[]) : [];
-        const rawEmps = empRes.status === 'fulfilled' && empRes.value && typeof empRes.value === 'object' && 'employees' in empRes.value && Array.isArray(empRes.value.employees)
-          ? (empRes.value.employees as { id: string; name: string }[])
-          : [];
+      const rawRecords = attRes.status === 'fulfilled' && Array.isArray(attRes.value) ? (attRes.value as AttendanceItem[]) : [];
+      const rawEmps = empRes.status === 'fulfilled' && empRes.value && typeof empRes.value === 'object' && 'employees' in empRes.value && Array.isArray(empRes.value.employees)
+        ? (empRes.value.employees as { id: string; name: string }[])
+        : [];
 
-        if (rawRecords.length > 0) {
-          return {
-            records: rawRecords,
-            employees: rawEmps,
-          };
-        }
-
-        if (rawEmps.length > 0) {
-          const records: AttendanceItem[] = rawEmps.map((emp, idx) => ({
-            id: `att_${emp.id}_${idx}`,
-            employeeId: emp.id,
-            employeeName: emp.name,
-            date: new Date().toISOString().split('T')[0]!,
-            checkIn: idx % 4 === 0 ? '09:25' : '08:55',
-            checkOut: '17:30',
-            status: idx % 5 === 0 ? 'late' : (idx % 8 === 0 ? 'absent' : 'present'),
-          }));
-
-          return {
-            records,
-            employees: rawEmps,
-          };
-        }
-
-        const data = await mockFetch('admin.domain', 'hr');
-        const hrData = data as { attendanceRecords: AttendanceItem[]; employees: { id: string; name: string }[] };
-        return {
-          records: hrData.attendanceRecords ?? [],
-          employees: hrData.employees ?? [],
-        };
-      } catch {
-        const data = await mockFetch('admin.domain', 'hr');
-        const hrData = data as { attendanceRecords: AttendanceItem[]; employees: { id: string; name: string }[] };
-        return {
-          records: hrData.attendanceRecords ?? [],
-          employees: hrData.employees ?? [],
-        };
+      if (rawRecords.length > 0) {
+        return { records: rawRecords, employees: rawEmps };
       }
+
+      const records: AttendanceItem[] = rawEmps.map((emp, idx) => ({
+        id: `att_${emp.id}_${idx}`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        date: new Date().toISOString().split('T')[0]!,
+        checkIn: idx % 4 === 0 ? '09:25' : '08:55',
+        checkOut: '17:30',
+        status: idx % 5 === 0 ? 'late' : (idx % 8 === 0 ? 'absent' : 'present'),
+      }));
+
+      return { records, employees: rawEmps };
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, checkIn, checkOut }: { id: string; status: AttendanceItem['status']; checkIn: string; checkOut?: string }) => {
-      await mockDelay(30);
       return { id, status, checkIn, checkOut };
     },
     onSuccess: (updated) => {

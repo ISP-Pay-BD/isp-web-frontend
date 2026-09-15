@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/lib/api/services/customer.service';
-import type { CreateTicketPayload, TicketReplyPayload } from '@/lib/mock-api/handlers/customer.handler';
+import type { CreateTicketPayload, TicketReplyPayload } from '@/types/customer';
 
 export function useCustomerSupportTickets() {
   return useQuery({

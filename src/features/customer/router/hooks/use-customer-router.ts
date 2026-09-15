@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/lib/api/services/customer.service';
-import type { UpdateWifiPayload } from '@/lib/mock-api/handlers/customer.handler';
+import type { UpdateWifiPayload } from '@/types/customer';
 
 /** UI tool ids → backend autofix actions (`POST /v1/customer/autofix/{action}`). */
 const TOOL_ACTIONS: Record<string, { action: 'reboot' | 'reconnect' | 'flush-dns' | 'reset-session' | 'quick-fix'; issue?: string }> = {

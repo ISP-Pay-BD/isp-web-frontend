@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { SalaryPaymentItem, SalaryPaymentFormData } from '../types';
-import { mockDelay } from '@/lib/mock-api/delay';
 
 export function useSalaries() {
   const queryClient = useQueryClient();
@@ -10,50 +8,40 @@ export function useSalaries() {
   const query = useQuery({
     queryKey: ['admin', 'hr', 'salaries'],
     queryFn: async () => {
-      try {
-        const empRes = await adminService.getEmployees();
-        const rawEmps = empRes && typeof empRes === 'object' && 'employees' in empRes && Array.isArray(empRes.employees)
-          ? (empRes.employees as { id: string; name: string; salaryBdt: number }[])
-          : [];
+      const empRes = await adminService.getEmployees();
+      const rawEmps = empRes && typeof empRes === 'object' && 'employees' in empRes && Array.isArray(empRes.employees)
+        ? (empRes.employees as { id: string; name: string; salaryBdt: number }[])
+        : [];
 
-        if (rawEmps.length > 0) {
-          const payments: SalaryPaymentItem[] = rawEmps.map((emp, idx) => ({
-            id: `sal_${emp.id}_${idx}`,
-            employeeId: emp.id,
-            employeeName: emp.name,
-            amountBdt: emp.salaryBdt || 25000,
-            month: '2026-02',
-            paidAt: '2026-02-28',
-            paidVia: idx % 2 === 0 ? 'Bank Transfer' : 'bKash',
-            status: 'paid' as const,
-          }));
+      const payments: SalaryPaymentItem[] = rawEmps.map((emp, idx) => ({
+        id: `sal_${emp.id}_${idx}`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        amountBdt: emp.salaryBdt || 25000,
+        month: '2026-02',
+        paidAt: '2026-02-28',
+        paidVia: idx % 2 === 0 ? 'Bank Transfer' : 'bKash',
+        status: 'paid' as const,
+      }));
 
-          return {
-            salaryPayments: payments,
-            employees: rawEmps,
-          };
-        }
-
-        const data = await mockFetch('admin.domain', 'hr');
-        const hrData = data as { salaryPayments: SalaryPaymentItem[]; employees: { id: string; name: string; salaryBdt: number }[] };
-        return {
-          salaryPayments: hrData.salaryPayments ?? [],
-          employees: hrData.employees ?? [],
-        };
-      } catch {
-        const data = await mockFetch('admin.domain', 'hr');
-        const hrData = data as { salaryPayments: SalaryPaymentItem[]; employees: { id: string; name: string; salaryBdt: number }[] };
-        return {
-          salaryPayments: hrData.salaryPayments ?? [],
-          employees: hrData.employees ?? [],
-        };
-      }
+      return {
+        salaryPayments: payments,
+        employees: rawEmps,
+      };
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (payload: SalaryPaymentFormData & { employeeName: string }) => {
-      await mockDelay(30);
+      const resellerId = (await import('@/lib/api/auth-utils')).getAuthUserId();
+      await import('@/lib/api/client').then((m) =>
+        m.http.post(`/v1/reseller/employee-payments/${resellerId}`, {
+          employee_id: payload.employeeId,
+          amount: payload.amountBdt,
+          month: payload.month,
+          method: payload.paidVia,
+        }),
+      );
       return {
         id: `sal_${Date.now()}`,
         employeeId: payload.employeeId,

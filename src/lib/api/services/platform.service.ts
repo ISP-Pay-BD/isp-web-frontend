@@ -1,5 +1,5 @@
 import { http } from '../client';
-import type { PlatformDashboardStats } from '@/lib/mock-api/handlers/platform.handler';
+import type { PlatformDashboardStats } from '@/types/platform';
 import type { TenantPortal } from '@/data/platform/tenants.data';
 import type {
   PlatformSoftwareSettings,
@@ -145,6 +145,14 @@ export const platformService = {
 
   getSupportTickets: async () => {
     return await http.get<unknown>('/v1/platform/support-tickets');
+  },
+
+  getSupportTicketDetail: async (id: string) => {
+    return await http.get<unknown>(`/v1/platform/support-tickets/${id}`);
+  },
+
+  replySupportTicket: async (id: string, body: string) => {
+    return await http.post(`/v1/platform/support-tickets/${id}/reply`, { body });
   },
 
   getSoftwareSettings: async (): Promise<PlatformSoftwareSettings | null> => {

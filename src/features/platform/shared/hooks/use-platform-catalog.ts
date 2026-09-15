@@ -2,24 +2,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { platformService } from '@/lib/api/services/platform.service';
-import { mockFetch } from '@/lib/mock-api/client';
 import type { MeteringRow, SlaRow, TenantHealthCard, BillingModeRow } from '@/data/platform/catalog.data';
 
 export function usePlatformMetering() {
   return useQuery({
     queryKey: ['platform', 'domain', 'metering'],
     queryFn: async () => {
-      try {
-        const raw = await platformService.getMetering();
-        if (raw && typeof raw === 'object' && 'items' in raw && Array.isArray((raw as { items: unknown[] }).items)) {
-          return (raw as { items: MeteringRow[] }).items;
-        }
-        const res = (await mockFetch('platform.domain', 'metering')) as { items: MeteringRow[] };
-        return res.items;
-      } catch {
-        const res = (await mockFetch('platform.domain', 'metering')) as { items: MeteringRow[] };
-        return res.items;
+      const raw = await platformService.getMetering();
+      if (raw && typeof raw === 'object' && 'items' in raw && Array.isArray((raw as { items: unknown[] }).items)) {
+        return (raw as { items: MeteringRow[] }).items;
       }
+      return [];
     },
   });
 }
@@ -28,17 +21,11 @@ export function usePlatformSla() {
   return useQuery({
     queryKey: ['platform', 'domain', 'sla'],
     queryFn: async () => {
-      try {
-        const raw = await platformService.getSla();
-        if (raw && typeof raw === 'object' && 'items' in raw && Array.isArray((raw as { items: unknown[] }).items)) {
-          return (raw as { items: SlaRow[] }).items;
-        }
-        const res = (await mockFetch('platform.domain', 'sla')) as { items: SlaRow[] };
-        return res.items;
-      } catch {
-        const res = (await mockFetch('platform.domain', 'sla')) as { items: SlaRow[] };
-        return res.items;
+      const raw = await platformService.getSla();
+      if (raw && typeof raw === 'object' && 'items' in raw && Array.isArray((raw as { items: unknown[] }).items)) {
+        return (raw as { items: SlaRow[] }).items;
       }
+      return [];
     },
   });
 }
@@ -47,17 +34,11 @@ export function useTenantHealth(tenantId: string) {
   return useQuery({
     queryKey: ['platform', 'domain', 'tenantHealth', tenantId],
     queryFn: async () => {
-      try {
-        const raw = await platformService.getTenantHealth(tenantId);
-        if (raw && typeof raw === 'object') {
-          return raw as TenantHealthCard;
-        }
-        const map = (await mockFetch('platform.domain', 'tenantHealth')) as Record<string, TenantHealthCard>;
-        return map[tenantId] ?? map.tenant_demo ?? map.ten_01;
-      } catch {
-        const map = (await mockFetch('platform.domain', 'tenantHealth')) as Record<string, TenantHealthCard>;
-        return map[tenantId] ?? map.tenant_demo ?? map.ten_01;
+      const raw = await platformService.getTenantHealth(tenantId);
+      if (raw && typeof raw === 'object') {
+        return raw as TenantHealthCard;
       }
+      return null;
     },
   });
 }
@@ -66,14 +47,16 @@ export function useBillingMode(adminId: string) {
   return useQuery({
     queryKey: ['platform', 'domain', 'billingModes', adminId],
     queryFn: async () => {
-      try {
-        const res = (await mockFetch('platform.domain', 'billingModes')) as { items: BillingModeRow[] };
-        return res.items.find((r) => r.adminId === adminId) ?? res.items[0];
-      } catch {
-        const res = (await mockFetch('platform.domain', 'billingModes')) as { items: BillingModeRow[] };
-        return res.items.find((r) => r.adminId === adminId) ?? res.items[0];
-      }
+      const raw = await platformService.getTenants({ q: adminId });
+      const tenants = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] })?.items ?? []);
+      const match = (tenants as Record<string, unknown>[]).find((t) => t.id === adminId || t.admin_id === adminId);
+      return {
+        adminId,
+        tenantName: String(match?.name ?? match?.tenant_name ?? ''),
+        mode: (String(match?.billing_mode ?? 'prepaid') as 'prepaid' | 'postpaid'),
+        walletBdt: Number(match?.wallet_balance ?? 0),
+        nextInvoiceAt: match?.next_invoice_at ? String(match.next_invoice_at) : null,
+      } as BillingModeRow;
     },
   });
 }
-

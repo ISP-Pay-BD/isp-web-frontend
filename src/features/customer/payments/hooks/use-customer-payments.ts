@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/lib/api/services/customer.service';
-import type { PayInvoicePayload } from '@/lib/mock-api/handlers/customer.handler';
+import type { PayInvoicePayload } from '@/types/customer';
 
 export function useCustomerPayments() {
   const queryClient = useQueryClient();

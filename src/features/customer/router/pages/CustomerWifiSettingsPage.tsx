@@ -30,7 +30,7 @@ export function CustomerWifiSettingsPage() {
   } = useForm<UpdateWifiInput>({
     resolver: zodResolver(updateWifiSchema),
     defaultValues: {
-      ssid: data?.router?.wifiSsid ?? 'Rahim-Home-5G',
+      ssid: String(data?.router?.wifiSsid ?? 'Rahim-Home-5G'),
       password: '',
       securityMode: 'WPA2-PSK [AES]',
       hideSsid: false,

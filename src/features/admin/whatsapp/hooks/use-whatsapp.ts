@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
-import { mockFetch } from '@/lib/mock-api/client';
 import type {
   WhatsAppCampaign,
   WhatsAppConversation,
@@ -14,38 +13,29 @@ export function useWhatsApp() {
   return useQuery({
     queryKey: ['admin', 'domain', 'whatsapp'],
     queryFn: async () => {
-      try {
-        const [tplRes, sessRes] = await Promise.allSettled([
-          adminService.getWhatsAppTemplates(),
-          adminService.getWhatsAppSessions(),
-        ]);
+      const [tplRes, sessRes] = await Promise.allSettled([
+        adminService.getWhatsAppTemplates(),
+        adminService.getWhatsAppSessions(),
+      ]);
 
-        const rawTemplates = tplRes.status === 'fulfilled' && Array.isArray(tplRes.value) ? (tplRes.value as WhatsAppTemplate[]) : [];
-        const fallback = (await mockFetch('admin.domain', 'whatsapp')) as {
-          conversations: WhatsAppConversation[];
-          templates: WhatsAppTemplate[];
-          logs: WhatsAppMessageLog[];
-          optIns: WhatsAppOptIn[];
-          campaigns: WhatsAppCampaign[];
-          settings: WhatsAppSettingsConfig;
-        };
+      const rawTemplates = tplRes.status === 'fulfilled' && Array.isArray(tplRes.value) ? (tplRes.value as WhatsAppTemplate[]) : [];
+      const rawSessions = sessRes.status === 'fulfilled' && sessRes.value ? sessRes.value : {};
 
-        return {
-          ...fallback,
-          templates: rawTemplates.length > 0 ? rawTemplates : fallback.templates,
-        };
-      } catch {
-        const res = await mockFetch('admin.domain', 'whatsapp');
-        return res as {
-          conversations: WhatsAppConversation[];
-          templates: WhatsAppTemplate[];
-          logs: WhatsAppMessageLog[];
-          optIns: WhatsAppOptIn[];
-          campaigns: WhatsAppCampaign[];
-          settings: WhatsAppSettingsConfig;
-        };
-      }
+      const sessions = rawSessions as Record<string, unknown>;
+      const conversations = Array.isArray(sessions.conversations) ? (sessions.conversations as WhatsAppConversation[]) : [];
+      const logs = Array.isArray(sessions.logs) ? (sessions.logs as WhatsAppMessageLog[]) : [];
+      const optIns = Array.isArray(sessions.optIns) ? (sessions.optIns as WhatsAppOptIn[]) : [];
+      const campaigns = Array.isArray(sessions.campaigns) ? (sessions.campaigns as WhatsAppCampaign[]) : [];
+      const settings = (sessions.settings ?? {}) as WhatsAppSettingsConfig;
+
+      return {
+        conversations,
+        templates: rawTemplates,
+        logs,
+        optIns,
+        campaigns,
+        settings,
+      };
     },
   });
 }
-

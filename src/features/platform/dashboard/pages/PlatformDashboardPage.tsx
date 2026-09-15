@@ -2,7 +2,6 @@
 
 import type { SVGProps } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
 import {
   Globe,
   Users,

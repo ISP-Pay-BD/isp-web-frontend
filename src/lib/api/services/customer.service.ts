@@ -16,13 +16,15 @@ import type {
   UpdateWifiPayload,
   UpdateProfilePayload,
   ChangePasswordPayload,
-} from '@/lib/mock-api/handlers/customer.handler';
+  ConnectedDevice,
+  RouterInfo,
+} from '@/types/customer';
 import type { SupportTicket, NewsItem } from '@/data/shared/types';
-import { routerTools, connectedDevices, customerRewards } from '@/data/customer/subscription.data';
+import { customerRewards } from '@/data/customer/subscription.data';
 
 export interface RouterInfoResult {
-  router: typeof routerTools;
-  connectedDevices: typeof connectedDevices;
+  router: RouterInfo;
+  connectedDevices: ConnectedDevice[];
   ipAddress: string;
   macAddress: string;
   connectionStatus: string;
@@ -126,8 +128,15 @@ export const customerService = {
     );
   },
 
-  getConnectedDevices: async () => {
-    return await http.get<typeof connectedDevices>('/v1/customer/device/connected');
+  getConnectedDevices: async (): Promise<ConnectedDevice[]> => {
+    const raw = await http.get<unknown>('/v1/customer/device/connected');
+    if (Array.isArray(raw)) {
+      return raw as ConnectedDevice[];
+    }
+    if (raw && typeof raw === 'object' && 'devices' in raw && Array.isArray((raw as { devices: unknown[] }).devices)) {
+      return (raw as { devices: ConnectedDevice[] }).devices;
+    }
+    return [];
   },
 
   /** Backend routes: `GET /v1/customer/reward/wallet` + `GET /v1/customer/referral/overview` (composed for the rewards screen). */

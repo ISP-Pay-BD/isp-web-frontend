@@ -2,8 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { adminService } from '@/lib/api/services/admin.service';
-import { mockFetch } from '@/lib/mock-api/client';
-import type { HierarchyScope, HierarchyTreeResponse } from '../types';
+import type { HierarchyScope } from '../types';
 
 export function useHierarchyTree(scope: HierarchyScope, resellerId?: string) {
   return useQuery({
@@ -22,5 +21,3 @@ export function useResellerSubscribers(
     enabled: Boolean(resellerId),
   });
 }
-
-
