@@ -4,6 +4,7 @@ export const landingData = {
     activeUsers: 85000,
     activeAdmins: 450,
     paymentsReconciled: '2M+',
+    uptimeSla: '99.9%',
   },
   hero: {
     badge: 'Trusted by 149+ ISPs across Bangladesh',
@@ -86,18 +87,26 @@ export const landingData = {
     {
       q: 'Does it work with my existing MikroTik routers?',
       a: 'Yes. Connect RouterOS API access and ISP Pay BD syncs PPPoE, hotspot, and static users in real time. Every plan includes unlimited routers.',
+      qBn: 'আমার বর্তমান MikroTik রাউটারে কি কাজ করবে?',
+      aBn: 'হ্যাঁ। RouterOS API অ্যাক্সেস যুক্ত করলেই ISP Pay BD রিয়েল-টাইমে PPPoE, হটস্পট ও স্ট্যাটিক ইউজার সিঙ্ক করে। প্রতিটি প্ল্যানে আনলিমিটেড রাউটার।',
     },
     {
       q: 'Which payment methods are supported?',
       a: 'bKash merchant and personal, Nagad, SSLCommerz, PayStation, ShurjoPay, plus cash and bank entries for your collection team.',
+      qBn: 'কোন কোন পেমেন্ট মাধ্যম সাপোর্ট করে?',
+      aBn: 'bKash মার্চেন্ট ও পার্সোনাল, Nagad, SSLCommerz, PayStation, ShurjoPay, সাথে আপনার কালেকশন টিমের জন্য ক্যাশ ও ব্যাংক এন্ট্রি।',
     },
     {
       q: 'Can I use my own brand and domain?',
       a: 'Yes. Each ISP gets a branded operator portal, optional custom domain with SSL, and a Bangla customer app under your name and logo.',
+      qBn: 'নিজের ব্র্যান্ড ও ডোমেইন ব্যবহার করা যাবে?',
+      aBn: 'হ্যাঁ। প্রতিটি ISP পায় নিজের ব্র্যান্ডের অপারেটর পোর্টাল, SSL সহ কাস্টম ডোমেইন (ঐচ্ছিক), আর আপনার নাম ও লোগোতে বাংলা গ্রাহক অ্যাপ।',
     },
     {
       q: 'Is there a free trial?',
       a: 'Yes. You get 14 days free with no credit card required. Our team can migrate subscribers with zero downtime when you go live.',
+      qBn: 'ফ্রি ট্রায়াল আছে কি?',
+      aBn: 'হ্যাঁ। ১৪ দিন ফ্রি, কোনো ক্রেডিট কার্ড লাগবে না। লাইভ হওয়ার সময় আমাদের টিম শূন্য ডাউনটাইমে আপনার গ্রাহকদের মাইগ্রেট করে দেয়।',
     },
   ],
   testimonials: [

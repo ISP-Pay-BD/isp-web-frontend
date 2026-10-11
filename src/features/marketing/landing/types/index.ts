@@ -13,6 +13,7 @@ export interface StatsData {
   activeUsers: number;
   activeAdmins: number;
   paymentsReconciled: string;
+  uptimeSla: string;
 }
 
 export interface FeatureItem {
@@ -57,6 +58,33 @@ export interface ReconcileStep {
   desc: string;
   metric: string;
   metricHighlight?: string;
+  titleBn?: string;
+  descBn?: string;
+  metricHighlightBn?: string;
+}
+
+export type StagePaymentStatus = 'matched' | 'reconnected' | 'review';
+
+export interface StagePayment {
+  time: string;
+  gateway: string;
+  trxId: string;
+  customer: string | null;
+  name: string;
+  amountBdt: number;
+  status: StagePaymentStatus;
+}
+
+export interface HeroStageData {
+  payments: StagePayment[];
+  totals: { collectedBdt: number; matched: number; review: number };
+  subscriber: {
+    name: string;
+    id: string;
+    packageName: string;
+    dueBdt: number;
+    invoices: Array<{ month: string; amountBdt: number }>;
+  };
 }
 
 export interface RoiData {
@@ -170,6 +198,7 @@ export interface PermissionMatrixRow {
 
 export interface LandingSectionsData {
   hero: HeroData;
+  heroStage: HeroStageData;
   stats: StatsData;
   features: FeatureItem[];
   benefits: BenefitItem[];

@@ -67,9 +67,7 @@ export function PricingPage() {
   ];
 
   if (isLoading) {
-    return (
-      <div className="py-24 text-center text-sm text-white/50">Loading pricing…</div>
-    );
+    return <div className="py-24 text-center text-sm text-white/50">Loading pricing…</div>;
   }
 
   if (isError || !payg) {
@@ -91,7 +89,7 @@ export function PricingPage() {
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
+          <p className="text-landing-cta text-xs font-medium tracking-[0.08em]">
             {t('marketing.pages.pricing.badge')}
           </p>
           <h1 className="font-landing-display mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
@@ -130,157 +128,160 @@ export function PricingPage() {
         </Reveal>
 
         <Reveal className="mt-12" delay={0.08}>
-        {model === 'fixed' && (
-          <div>
-            <div className="flex items-center justify-center gap-3 text-sm mb-10">
-              <span className={!isYearly ? 'font-semibold text-white' : 'text-white/60'}>
-                Monthly
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsYearly(!isYearly)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  isYearly ? 'bg-landing-cta' : 'bg-white/20'
-                }`}
-                aria-label="Toggle yearly discount"
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isYearly ? 'translate-x-6' : 'translate-x-1'
-                  } mt-1`}
-                />
-              </button>
-              <span className={isYearly ? 'font-semibold text-white' : 'text-white/60'}>
-                Yearly
-              </span>
-              <span className="text-xs text-white/45">Save 20%</span>
-            </div>
+          {model === 'fixed' && (
+            <div>
+              <div className="mb-10 flex items-center justify-center gap-3 text-sm">
+                <span className={!isYearly ? 'font-semibold text-white' : 'text-white/60'}>
+                  Monthly
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsYearly(!isYearly)}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                    isYearly ? 'bg-landing-cta' : 'bg-white/20'
+                  }`}
+                  aria-label="Toggle yearly discount"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isYearly ? 'translate-x-6' : 'translate-x-1'
+                    } mt-1`}
+                  />
+                </button>
+                <span className={isYearly ? 'font-semibold text-white' : 'text-white/60'}>
+                  Yearly
+                </span>
+                <span className="text-xs text-white/45">Save 20%</span>
+              </div>
 
-            <div className="grid gap-8 md:grid-cols-3">
-              {plans.map((plan) => {
-                const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
-                return (
-                  <div
-                    key={plan.id}
-                    className={`relative flex flex-col justify-between rounded-xl border p-6 ${
-                      plan.highlighted
-                        ? 'border-landing-cta bg-landing-panel'
-                        : 'border-white/10 bg-white/[0.02]'
-                    }`}
-                  >
-                    {plan.highlighted && (
-                      <span className="mb-3 text-[11px] font-medium text-landing-cta">
-                        Most popular
-                      </span>
-                    )}
-
-                    <div>
-                      <h3 className="font-landing-display text-xl font-semibold text-white">
-                        {plan.name}
-                      </h3>
-                      <p className="mt-1 text-xs text-white/50">{plan.customers}</p>
-
-                      <div className="mt-5 flex items-baseline">
-                        <span className="font-landing-display text-3xl font-semibold tabular-nums text-white">
-                          {formatBdtWithSymbol(effectivePrice)}
+              <div className="grid gap-8 md:grid-cols-3">
+                {plans.map((plan) => {
+                  const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`relative flex flex-col justify-between rounded-xl border p-6 ${
+                        plan.highlighted
+                          ? 'border-landing-cta bg-landing-panel'
+                          : 'border-white/10 bg-white/[0.02]'
+                      }`}
+                    >
+                      {plan.highlighted && (
+                        <span className="text-landing-cta mb-3 text-[11px] font-medium">
+                          Most popular
                         </span>
-                        <span className="ml-1 text-sm text-white/45">/ month</span>
+                      )}
+
+                      <div>
+                        <h3 className="font-landing-display text-xl font-semibold text-white">
+                          {plan.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-white/50">{plan.customers}</p>
+
+                        <div className="mt-5 flex items-baseline">
+                          <span className="font-landing-display text-3xl font-semibold text-white tabular-nums">
+                            {formatBdtWithSymbol(effectivePrice)}
+                          </span>
+                          <span className="ml-1 text-sm text-white/45">/ month</span>
+                        </div>
+
+                        <ul className="mt-8 space-y-3.5 border-t border-white/10 pt-6 text-sm text-white/80">
+                          {plan.features.map((feat, idx) => (
+                            <li key={idx} className="flex items-start gap-3">
+                              <Check className="text-landing-cta mt-0.5 h-4 w-4 shrink-0" />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
 
-                      <ul className="mt-8 space-y-3.5 border-t border-white/10 pt-6 text-sm text-white/80">
-                        {plan.features.map((feat, idx) => (
-                          <li key={idx} className="flex items-start gap-3">
-                            <Check className="h-4 w-4 text-landing-cta shrink-0 mt-0.5" />
-                            <span>{feat}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="mt-8 pt-4">
+                        <Link href="/register">
+                          <Button
+                            className={`h-10 w-full text-sm font-semibold ${
+                              plan.highlighted
+                                ? 'bg-landing-cta hover:bg-landing-cta-hover text-white'
+                                : 'bg-white/10 text-white hover:bg-white/15'
+                            }`}
+                          >
+                            Start Free Trial
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-
-                    <div className="mt-8 pt-4">
-                      <Link href="/register">
-                        <Button
-                          className={`w-full h-10 text-sm font-semibold ${
-                            plan.highlighted
-                              ? 'bg-landing-cta hover:bg-landing-cta-hover text-white'
-                              : 'bg-white/10 hover:bg-white/15 text-white'
-                          }`}
-                        >
-                          Start Free Trial
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {model === 'payg' && (
-          <div className="mx-auto max-w-2xl rounded-xl border border-white/10 bg-landing-panel/60 p-6 md:p-8">
-            <div>
-              <p className="text-xs font-medium text-landing-cta">Pay as you grow</p>
-              <h3 className="font-landing-display mt-2 text-xl font-semibold text-white">
-                Calculate your exact monthly cost
-              </h3>
-              <p className="mt-2 text-sm text-white/55">
-                Base fee of {formatBdtWithSymbol(payg.baseFeeBdt)}/mo + {formatBdtWithSymbol(payg.pricePerCustomerBdt)} per subscriber.
-              </p>
-            </div>
+          {model === 'payg' && (
+            <div className="bg-landing-panel/60 mx-auto max-w-2xl rounded-xl border border-white/10 p-6 md:p-8">
+              <div>
+                <p className="text-landing-cta text-xs font-medium">Pay as you grow</p>
+                <h3 className="font-landing-display mt-2 text-xl font-semibold text-white">
+                  Calculate your exact monthly cost
+                </h3>
+                <p className="mt-2 text-sm text-white/55">
+                  Base fee of {formatBdtWithSymbol(payg.baseFeeBdt)}/mo +{' '}
+                  {formatBdtWithSymbol(payg.pricePerCustomerBdt)} per subscriber.
+                </p>
+              </div>
 
-            <div className="mt-8 space-y-4">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-white/80">Active Subscriber Count:</span>
-                <span className="font-mono text-xl font-bold text-landing-accent">
-                  {subscriberCount.toLocaleString()} subscribers
+              <div className="mt-8 space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/80">Active Subscriber Count:</span>
+                  <span className="text-landing-accent font-mono text-xl font-bold">
+                    {subscriberCount.toLocaleString()} subscribers
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min={payg.minCustomers}
+                  max={payg.maxCustomers}
+                  step={payg.step}
+                  value={subscriberCount}
+                  onChange={(e) => setPaygSubscribers(Number(e.target.value))}
+                  className="accent-landing-cta w-full cursor-pointer"
+                />
+
+                <div className="flex justify-between font-mono text-[11px] text-white/40">
+                  <span>{payg.minCustomers}</span>
+                  <span>2,500</span>
+                  <span>{payg.maxCustomers.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-6 text-center">
+                <span className="text-xs tracking-wide text-white/60">
+                  Total Estimated Monthly Deduct
                 </span>
+                <div className="font-landing-display mt-2 text-4xl font-extrabold text-white sm:text-5xl">
+                  {formatBdtWithSymbol(paygTotal)}
+                  <span className="text-base font-normal text-white/50"> / month</span>
+                </div>
+                <p className="mt-2 font-mono text-xs text-emerald-400">
+                  {formatBdtWithSymbol(payg.baseFeeBdt)} base fee +{' '}
+                  {formatBdtWithSymbol(subscriberCount * payg.pricePerCustomerBdt)} (
+                  {subscriberCount} × ৳{payg.pricePerCustomerBdt})
+                </p>
               </div>
 
-              <input
-                type="range"
-                min={payg.minCustomers}
-                max={payg.maxCustomers}
-                step={payg.step}
-                value={subscriberCount}
-                onChange={(e) => setPaygSubscribers(Number(e.target.value))}
-                className="w-full accent-landing-cta cursor-pointer"
-              />
-
-              <div className="flex justify-between text-[11px] font-mono text-white/40">
-                <span>{payg.minCustomers}</span>
-                <span>2,500</span>
-                <span>{payg.maxCustomers.toLocaleString()}</span>
+              <div className="mt-8 text-center">
+                <Link href="/register">
+                  <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-8 text-base font-semibold text-white">
+                    Get Started on PAYG
+                  </Button>
+                </Link>
               </div>
             </div>
-
-            <div className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-6 text-center">
-              <span className="text-xs text-white/60 tracking-wide">
-                Total Estimated Monthly Deduct
-              </span>
-              <div className="font-landing-display mt-2 text-4xl sm:text-5xl font-extrabold text-white">
-                {formatBdtWithSymbol(paygTotal)}
-                <span className="text-base font-normal text-white/50"> / month</span>
-              </div>
-              <p className="mt-2 text-xs text-emerald-400 font-mono">
-                {formatBdtWithSymbol(payg.baseFeeBdt)} base fee + {formatBdtWithSymbol(subscriberCount * payg.pricePerCustomerBdt)} ({subscriberCount} × ৳{payg.pricePerCustomerBdt})
-              </p>
-            </div>
-
-            <div className="mt-8 text-center">
-              <Link href="/register">
-                <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-8 text-base font-semibold text-white">
-                  Get Started on PAYG
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+          )}
         </Reveal>
 
         <Reveal className="mt-24 border-t border-white/10 pt-16" delay={0.04}>
           <div className="mx-auto mb-12 max-w-2xl text-center">
-            <span className="text-xs font-medium tracking-wide text-landing-cta">
+            <span className="text-landing-cta text-xs font-medium tracking-wide">
               Frequently Asked Questions
             </span>
             <h2 className="font-landing-display mt-2 text-3xl font-bold text-white">
@@ -291,8 +292,8 @@ export function PricingPage() {
           <div className="grid gap-6 md:grid-cols-2">
             {faqs.map((faq, i) => (
               <div key={i} className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
-                <h4 className="flex items-start gap-2.5 font-landing-display text-base font-bold text-white">
-                  <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-landing-cta" />
+                <h4 className="font-landing-display flex items-start gap-2.5 text-base font-bold text-white">
+                  <HelpCircle className="text-landing-cta mt-0.5 h-5 w-5 shrink-0" />
                   {faq.q}
                 </h4>
                 <p className="mt-2 pl-7 text-sm leading-relaxed text-white/70">{faq.a}</p>
@@ -301,16 +302,17 @@ export function PricingPage() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-20 rounded-2xl border border-landing-cta/30 bg-landing-panel/90 p-8 text-center shadow-[var(--shadow-md)] md:p-12">
+        <Reveal className="border-landing-cta/30 bg-landing-panel/90 mt-20 rounded-2xl border p-8 text-center shadow-[var(--shadow-md)] md:p-12">
           <h3 className="font-landing-display text-2xl font-bold text-white md:text-3xl">
             Need an enterprise plan for 10,000+ subscribers?
           </h3>
           <p className="mx-auto mt-3 max-w-xl text-sm text-white/70 md:text-base">
-            Custom dedicated database clusters, high-concurrency RouterOS multi-homing, and on-site training for your operations team.
+            Custom dedicated database clusters, high-concurrency RouterOS multi-homing, and on-site
+            training for your operations team.
           </p>
           <div className="mt-6 flex justify-center gap-4">
-            <Link href="/#contact">
-              <Button className="h-11 bg-landing-cta px-7 font-semibold text-white hover:bg-landing-cta-hover">
+            <Link href="/contact">
+              <Button className="bg-landing-cta hover:bg-landing-cta-hover h-11 px-7 font-semibold text-white">
                 Speak with Enterprise Sales
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

@@ -18,20 +18,19 @@ export function RoiSection({ roi }: RoiSectionProps) {
   // Dynamic savings calculations
   // ISP Pay BD costs 500 base + 1.5 per sub on PAYG, or flat tier standard
   const estimatedIspPayBdMonthly = activeSubscribers > 0 ? 500 + activeSubscribers * 1.5 : 0;
-  const hoursSavedMonthly = Math.round((activeSubscribers / 1000) * (roi?.hoursSavedPerDay || 2.5) * 30);
+  const hoursSavedMonthly = Math.round(
+    (activeSubscribers / 1000) * (roi?.hoursSavedPerDay || 2.5) * 30,
+  );
   const monthlyLaborSavings = hoursSavedMonthly * 250; // estimated 250 BDT/hr staff cost
   const directSoftwareSavings = Math.max(0, activeCurrentCost - estimatedIspPayBdMonthly);
   const netMonthlySavings = directSoftwareSavings + monthlyLaborSavings;
   const annualSavings = netMonthlySavings * 12;
 
   return (
-    <section id="roi" className="border-t border-white/10 bg-landing-bg py-20 md:py-28">
+    <section id="roi" className="relative z-[1] pt-12 pb-24 md:pb-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
-            ROI
-          </p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Calculate your monthly &amp; annual operational savings
           </h2>
           <p className="mt-4 text-base text-white/60">
@@ -39,12 +38,12 @@ export function RoiSection({ roi }: RoiSectionProps) {
           </p>
         </div>
 
-        <div className="mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 bg-landing-panel/60 p-6 md:p-10">
+        <div className="bg-landing-panel/60 mx-auto mt-12 max-w-3xl rounded-xl border border-white/10 p-6 md:p-10">
           <div className="grid gap-8 md:grid-cols-2">
             {/* Controls */}
             <div className="space-y-6">
               <div>
-                <div className="flex justify-between items-center text-sm mb-2">
+                <div className="mb-2 flex items-center justify-between text-sm">
                   <label htmlFor="subs-slider" className="font-semibold text-white">
                     Active Subscribers
                   </label>
@@ -58,9 +57,9 @@ export function RoiSection({ roi }: RoiSectionProps) {
                         const val = e.target.value;
                         setSubscribers(val === '' ? '' : Math.max(0, Number(val)));
                       }}
-                      className="w-24 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-right font-mono text-sm font-bold text-landing-accent focus:border-landing-cta focus:outline-none"
+                      className="text-landing-accent focus:border-landing-cta w-24 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-right font-mono text-sm font-bold focus:outline-none"
                     />
-                    <span className="text-xs text-white/50 font-medium">lines</span>
+                    <span className="text-xs font-medium text-white/50">lines</span>
                   </div>
                 </div>
                 <input
@@ -71,9 +70,9 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   step="50"
                   value={activeSubscribers || 100}
                   onChange={(e) => setSubscribers(Number(e.target.value))}
-                  className="w-full accent-landing-cta cursor-pointer"
+                  className="accent-landing-cta w-full cursor-pointer"
                 />
-                <div className="flex justify-between text-[11px] text-white/40 mt-1 font-mono">
+                <div className="mt-1 flex justify-between font-mono text-[11px] text-white/40">
                   <span>100</span>
                   <span>5,000</span>
                   <span>10,000+</span>
@@ -81,7 +80,10 @@ export function RoiSection({ roi }: RoiSectionProps) {
               </div>
 
               <div>
-                <label htmlFor="current-cost" className="block text-sm font-semibold text-white mb-2">
+                <label
+                  htmlFor="current-cost"
+                  className="mb-2 block text-sm font-semibold text-white"
+                >
                   Current monthly software / manual cost (৳)
                 </label>
                 <div className="relative">
@@ -96,20 +98,24 @@ export function RoiSection({ roi }: RoiSectionProps) {
                       setCurrentCost(val === '' ? '' : Math.max(0, Number(val)));
                     }}
                     placeholder="e.g. 5000"
-                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white focus:border-landing-cta focus:outline-none"
+                    className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white focus:outline-none"
                   />
-                  <span className="absolute right-4 top-3 font-mono text-sm text-white/40">BDT</span>
+                  <span className="absolute top-3 right-4 font-mono text-sm text-white/40">
+                    BDT
+                  </span>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2 text-xs text-white/70">
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs text-white/70">
                 <div className="flex justify-between">
                   <span>Staff Hours Saved / Month:</span>
-                  <strong className="text-emerald-400 font-mono">~{hoursSavedMonthly} hours</strong>
+                  <strong className="font-mono text-emerald-400">~{hoursSavedMonthly} hours</strong>
                 </div>
                 <div className="flex justify-between">
                   <span>ISP Pay BD Monthly Estimate:</span>
-                  <span className="font-mono text-white">{formatBdtWithSymbol(estimatedIspPayBdMonthly)}</span>
+                  <span className="font-mono text-white">
+                    {formatBdtWithSymbol(estimatedIspPayBdMonthly)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -117,7 +123,7 @@ export function RoiSection({ roi }: RoiSectionProps) {
             <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-6">
               <div>
                 <p className="text-xs font-medium text-white/45">Estimated total savings</p>
-                <div className="font-landing-display mt-3 text-4xl font-semibold tabular-nums text-white sm:text-5xl">
+                <div className="font-landing-display mt-3 text-4xl font-semibold text-white tabular-nums sm:text-5xl">
                   {formatBdtWithSymbol(annualSavings)}
                   <span className="text-lg font-normal text-white/50"> / year</span>
                 </div>

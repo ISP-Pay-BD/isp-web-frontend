@@ -3,20 +3,19 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { 
-  Monitor, 
-  Smartphone, 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle2, 
-  Sparkles,
-  ExternalLink,
+import {
+  Monitor,
+  Smartphone,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
   Shield,
   Layers,
-  Zap
 } from 'lucide-react';
 import { useMotionSafe, easeOutExpo } from '@/lib/animations';
-import { Reveal, RevealItem } from '@/components/motion/Reveal';
+import { Reveal } from '@/components/motion/Reveal';
+import { useTranslations } from '@/features/marketing/shared';
+import { SectionTitle } from './SectionTitle';
 
 interface ShowcaseItem {
   id: string;
@@ -39,7 +38,7 @@ const WEBSITE_SHOWCASE: ShowcaseItem[] = [
     ],
     kpis: [
       { label: 'Reconciliation Speed', value: '< 1 sec' },
-      { label: 'Auto-Match Rate', value: '99.8%' },
+      { label: 'Auto-Match Rate', value: '98%+' },
     ],
     images: [
       {
@@ -178,6 +177,7 @@ const MOBILE_SHOWCASE: ShowcaseItem[] = [
 ];
 
 export function ProductPreview() {
+  const t = useTranslations();
   const { reduced } = useMotionSafe();
   const [model, setModel] = useState<'website' | 'mobile'>('website');
   const [categoryIndex, setCategoryIndex] = useState(0);
@@ -208,56 +208,51 @@ export function ProductPreview() {
   };
 
   return (
-    <section id="product-preview" className="relative z-[1] border-t border-white/10 bg-landing-bg py-24 md:py-36 overflow-hidden">
-      {/* Ambient background glow */}
-      <div className="pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[900px] rounded-full bg-landing-cta/5 blur-[160px]" />
-
+    <section
+      id="product-preview"
+      className="bg-landing-bg relative z-[1] overflow-hidden border-t border-white/10 py-24 md:py-36"
+    >
       <div className="relative mx-auto max-w-6xl px-4 md:px-6">
-        {/* Section Header */}
         <Reveal>
-          <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-landing-cta/20 bg-landing-cta/10 px-3.5 py-1 text-xs font-semibold tracking-wide text-landing-cta">
-              <Sparkles className="h-3.5 w-3.5" />
-              Live Interactive Product Tour
-            </span>
-            <h2 className="font-landing-display mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              See it in action
-            </h2>
-            <p className="mt-4 text-base text-white/60 max-w-2xl leading-relaxed">
-              Explore authentic high-resolution screenshots of the ISP Pay BD operator console,
-              MikroTik sync engine, fiber OLT diagnostics, and subscriber self-care apps.
-            </p>
-          </div>
+          <SectionTitle
+            align="center"
+            title={t('marketing.landing.preview.title')}
+            description={t('marketing.landing.preview.desc')}
+          />
         </Reveal>
 
         {/* Platform Switcher (Website vs Mobile) */}
         <div className="mt-10 flex justify-center">
-          <div className="inline-flex rounded-2xl border border-white/15 bg-white/[0.03] p-1.5 backdrop-blur-xl shadow-lg">
+          <div className="inline-flex rounded-2xl border border-white/15 bg-white/[0.03] p-1.5 shadow-lg backdrop-blur-xl">
             <button
               type="button"
               onClick={() => handleModelChange('website')}
-              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 ${
+              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-300 sm:text-sm ${
                 model === 'website'
-                  ? 'bg-landing-cta text-white shadow-md shadow-landing-cta/30'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
+                  ? 'bg-landing-cta shadow-landing-cta/30 text-white shadow-md'
+                  : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
             >
               <Monitor className="h-4 w-4" />
               <span>Operator Web Portal</span>
-              <span className="hidden sm:inline-block text-[11px] font-normal opacity-80">(Admin &amp; Reseller)</span>
+              <span className="hidden text-[11px] font-normal opacity-80 sm:inline-block">
+                (Admin &amp; Reseller)
+              </span>
             </button>
             <button
               type="button"
               onClick={() => handleModelChange('mobile')}
-              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 ${
+              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-300 sm:text-sm ${
                 model === 'mobile'
-                  ? 'bg-landing-cta text-white shadow-md shadow-landing-cta/30'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
+                  ? 'bg-landing-cta shadow-landing-cta/30 text-white shadow-md'
+                  : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
             >
               <Smartphone className="h-4 w-4" />
               <span>Mobile Apps</span>
-              <span className="hidden sm:inline-block text-[11px] font-normal opacity-80">(Client &amp; Field)</span>
+              <span className="hidden text-[11px] font-normal opacity-80 sm:inline-block">
+                (Client &amp; Field)
+              </span>
             </button>
           </div>
         </div>
@@ -271,17 +266,19 @@ export function ProductPreview() {
                 key={cat.id}
                 type="button"
                 onClick={() => handleCategoryChange(idx)}
-                className={`relative flex items-center gap-2 rounded-xl px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border ${
+                className={`relative flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-medium transition-all duration-200 sm:text-sm ${
                   active
                     ? 'border-landing-cta/40 bg-landing-cta/15 text-white shadow-sm'
-                    : 'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20 hover:text-white hover:bg-white/[0.04]'
+                    : 'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20 hover:bg-white/[0.04] hover:text-white'
                 }`}
               >
                 <span>{cat.name}</span>
                 {cat.badge && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
-                    active ? 'bg-landing-cta/30 text-white' : 'bg-white/5 text-white/40'
-                  }`}>
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
+                      active ? 'bg-landing-cta/30 text-white' : 'bg-white/5 text-white/40'
+                    }`}
+                  >
                     {cat.badge}
                   </span>
                 )}
@@ -298,16 +295,16 @@ export function ProductPreview() {
             animate={{ opacity: 1, y: 0 }}
             exit={reduced ? undefined : { opacity: 0, y: -12 }}
             transition={{ duration: 0.35, ease: easeOutExpo }}
-            className="mt-10 grid gap-8 lg:grid-cols-12 items-center"
+            className="mt-10 grid items-center gap-8 lg:grid-cols-12"
           >
             {/* Left Detail Description & KPIs */}
-            <div className="space-y-6 lg:col-span-4 order-2 lg:order-1">
+            <div className="order-2 space-y-6 lg:order-1 lg:col-span-4">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-mono text-landing-accent">
+                <div className="text-landing-accent inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[11px]">
                   <Layers className="h-3.5 w-3.5" />
                   Module #{categoryIndex + 1}
                 </div>
-                <h3 className="font-landing-display mt-3 text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                <h3 className="font-landing-display mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                   {currentCategory.name}
                 </h3>
               </div>
@@ -315,8 +312,11 @@ export function ProductPreview() {
               {/* Bullets */}
               <ul className="space-y-3 pt-1">
                 {currentCategory.bullets.map((bullet) => (
-                  <li key={bullet} className="flex items-start gap-3 text-xs sm:text-sm leading-relaxed text-white/70">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-landing-cta mt-0.5" />
+                  <li
+                    key={bullet}
+                    className="flex items-start gap-3 text-xs leading-relaxed text-white/70 sm:text-sm"
+                  >
+                    <CheckCircle2 className="text-landing-cta mt-0.5 h-4 w-4 shrink-0" />
                     <span>{bullet}</span>
                   </li>
                 ))}
@@ -325,8 +325,13 @@ export function ProductPreview() {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 {currentCategory.kpis.map((k) => (
-                  <div key={k.label} className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-sm">
-                    <p className="font-mono text-lg font-bold text-white tracking-tight">{k.value}</p>
+                  <div
+                    key={k.label}
+                    className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-sm"
+                  >
+                    <p className="font-mono text-lg font-bold tracking-tight text-white">
+                      {k.value}
+                    </p>
                     <p className="mt-1 text-[11px] text-white/50">{k.label}</p>
                   </div>
                 ))}
@@ -334,29 +339,33 @@ export function ProductPreview() {
             </div>
 
             {/* Right Screen Device Preview Frame */}
-            <div className="lg:col-span-8 order-1 lg:order-2">
-              <div className="group relative overflow-hidden rounded-2xl border border-white/15 bg-landing-panel/90 shadow-[0_25px_70px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+            <div className="order-1 lg:order-2 lg:col-span-8">
+              <div className="group bg-landing-panel/90 relative overflow-hidden rounded-2xl border border-white/15 shadow-[0_25px_70px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                 {/* Browser / Device Frame Top Bar */}
                 <div className="flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-rose-500/80 inline-block" />
-                    <span className="h-3 w-3 rounded-full bg-amber-500/80 inline-block" />
-                    <span className="h-3 w-3 rounded-full bg-emerald-500/80 inline-block" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-rose-500/80" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-amber-500/80" />
+                    <span className="inline-block h-3 w-3 rounded-full bg-emerald-500/80" />
                   </div>
 
-                  <div className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-mono text-white/50 max-w-[240px] sm:max-w-xs truncate">
-                    <Shield className="h-3 w-3 text-emerald-400 shrink-0" />
-                    <span className="truncate">{model === 'website' ? 'https://app.isppaybd.com' : 'ISP Pay BD Client Mobile Engine'}</span>
+                  <div className="flex max-w-[240px] items-center gap-1.5 truncate rounded-lg border border-white/10 bg-white/5 px-3 py-1 font-mono text-[11px] text-white/50 sm:max-w-xs">
+                    <Shield className="h-3 w-3 shrink-0 text-emerald-400" />
+                    <span className="truncate">
+                      {model === 'website'
+                        ? 'https://app.isppaybd.com'
+                        : 'ISP Pay BD Client Mobile Engine'}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="flex items-center gap-1 font-mono text-[11px] text-emerald-400">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                     <span>Live 4K</span>
                   </div>
                 </div>
 
                 {/* Screenshot Container */}
-                <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/60 flex items-center justify-center">
+                <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden bg-black/60">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentImage.url}
@@ -370,7 +379,7 @@ export function ProductPreview() {
                         src={currentImage.url}
                         alt={currentImage.caption || currentCategory.name}
                         fill
-                        className="object-contain object-center p-2 sm:p-4 transition-transform duration-500 group-hover:scale-[1.01]"
+                        className="object-contain object-center p-2 transition-transform duration-500 group-hover:scale-[1.01] sm:p-4"
                         sizes="(max-width: 768px) 100vw, 800px"
                         priority
                       />
@@ -384,7 +393,7 @@ export function ProductPreview() {
                         type="button"
                         onClick={handlePrevImage}
                         aria-label="Previous screenshot"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all hover:bg-landing-cta hover:border-landing-cta hover:scale-110 shadow-lg"
+                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition-all hover:scale-110"
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
@@ -392,7 +401,7 @@ export function ProductPreview() {
                         type="button"
                         onClick={handleNextImage}
                         aria-label="Next screenshot"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all hover:bg-landing-cta hover:border-landing-cta hover:scale-110 shadow-lg"
+                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition-all hover:scale-110"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </button>
@@ -402,13 +411,13 @@ export function ProductPreview() {
 
                 {/* Bottom Caption Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-black/50 px-4 py-3 text-xs">
-                  <span className="font-mono text-white/70 truncate max-w-md">
+                  <span className="max-w-md truncate font-mono text-white/70">
                     {currentImage.caption}
                   </span>
 
                   {/* Image Thumb Dots / Index */}
                   {images.length > 1 && (
-                    <div className="flex items-center gap-1.5 ml-auto">
+                    <div className="ml-auto flex items-center gap-1.5">
                       {images.map((_, dotIdx) => (
                         <button
                           key={dotIdx}
@@ -416,7 +425,7 @@ export function ProductPreview() {
                           onClick={() => setImageIndex(dotIdx)}
                           className={`h-2 rounded-full transition-all ${
                             dotIdx === imageIndex
-                              ? 'w-6 bg-landing-cta'
+                              ? 'bg-landing-cta w-6'
                               : 'w-2 bg-white/30 hover:bg-white/50'
                           }`}
                           aria-label={`Go to slide ${dotIdx + 1}`}
@@ -433,4 +442,3 @@ export function ProductPreview() {
     </section>
   );
 }
-
