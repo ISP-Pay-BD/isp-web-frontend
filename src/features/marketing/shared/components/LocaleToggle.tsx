@@ -10,7 +10,7 @@ export function LocaleToggle() {
       <button
         type="button"
         onClick={() => setLocale('en')}
-        className={`rounded-full px-2.5 py-1 font-medium transition-all ${
+        className={`rounded-full px-2.5 py-1 font-medium transition ${
           locale === 'en'
             ? 'bg-landing-cta text-white shadow-sm'
             : 'text-white/70 hover:text-white'
@@ -22,7 +22,7 @@ export function LocaleToggle() {
       <button
         type="button"
         onClick={() => setLocale('bn')}
-        className={`rounded-full px-2.5 py-1 font-medium font-bengali transition-all ${
+        className={`rounded-full px-2.5 py-1 font-medium font-bengali transition ${
           locale === 'bn'
             ? 'bg-landing-cta text-white shadow-sm'
             : 'text-white/70 hover:text-white'

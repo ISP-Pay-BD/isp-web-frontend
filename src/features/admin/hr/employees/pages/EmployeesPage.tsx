@@ -223,7 +223,7 @@ export function EmployeesPage() {
                     type="button"
                     onClick={() => toggleLayoutMode('full')}
                     className={cn(
-                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
                       layoutMode === 'full'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -237,7 +237,7 @@ export function EmployeesPage() {
                     type="button"
                     onClick={() => toggleLayoutMode('centered')}
                     className={cn(
-                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                      'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
                       layoutMode === 'centered'
                         ? 'bg-background text-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'

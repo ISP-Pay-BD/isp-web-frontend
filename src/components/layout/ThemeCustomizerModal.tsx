@@ -114,7 +114,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => setTheme('light')}
                 className={cn(
-                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-semibold',
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition text-xs font-semibold',
                   theme === 'light'
                     ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -127,7 +127,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => setTheme('system')}
                 className={cn(
-                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-semibold',
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition text-xs font-semibold',
                   theme === 'dark'
                     ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -140,7 +140,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => setTheme('system')}
                 className={cn(
-                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition-all text-xs font-semibold',
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition text-xs font-semibold',
                   theme === 'system'
                     ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -166,7 +166,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                     type="button"
                     onClick={() => handleSelectPreset(preset.id, preset.name)}
                     className={cn(
-                      'p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between group',
+                      'p-2.5 rounded-xl border text-left transition relative flex flex-col justify-between group',
                       isSelected
                         ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
                         : 'border-border/70 hover:border-primary/40 bg-card'
@@ -209,7 +209,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                   type="button"
                   onClick={() => handleSelectRadius(item.r, item.label)}
                   className={cn(
-                    'p-2 rounded-xl border text-center transition-all text-xs font-semibold',
+                    'p-2 rounded-xl border text-center transition text-xs font-semibold',
                     radius === item.r
                       ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
                       : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -231,7 +231,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => setDensity('comfortable')}
                 className={cn(
-                  'p-2 rounded-xl border text-center transition-all text-xs font-semibold',
+                  'p-2 rounded-xl border text-center transition text-xs font-semibold',
                   density === 'comfortable'
                     ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -243,7 +243,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => setDensity('compact')}
                 className={cn(
-                  'p-2 rounded-xl border text-center transition-all text-xs font-semibold',
+                  'p-2 rounded-xl border text-center transition text-xs font-semibold',
                   density === 'compact'
                     ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -270,7 +270,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                   toast.success('Default table presentation set to Full Width');
                 }}
                 className={cn(
-                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition-all text-xs font-semibold',
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition text-xs font-semibold',
                   tableLayout === 'full' || !tableLayout
                     ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
@@ -286,7 +286,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                   toast.success('Default table presentation set to Centered');
                 }}
                 className={cn(
-                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition-all text-xs font-semibold',
+                  'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition text-xs font-semibold',
                   tableLayout === 'centered'
                     ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/20'
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'

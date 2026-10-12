@@ -127,7 +127,7 @@ export function AiChatPage() {
                     key={qp}
                     type="button"
                     onClick={() => handleSend(qp)}
-                    className="p-2.5 rounded-xl border border-border/60 bg-card hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground transition-all flex items-start gap-2 shadow-xs"
+                    className="p-2.5 rounded-xl border border-border/60 bg-card hover:bg-muted/50 text-xs text-muted-foreground hover:text-foreground transition flex items-start gap-2 shadow-xs"
                   >
                     <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                     <span className="line-clamp-2">{qp}</span>

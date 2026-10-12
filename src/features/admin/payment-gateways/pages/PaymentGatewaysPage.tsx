@@ -85,7 +85,7 @@ export function PaymentGatewaysPage() {
           <Card
             key={gw.id}
             className={cn(
-              'border border-border/70 bg-card/60 backdrop-blur-md shadow-sm hover:border-primary/50 hover:bg-card/90 transition-all duration-200 overflow-hidden',
+              'border border-border/70 bg-card/60 backdrop-blur-md shadow-sm hover:border-primary/50 hover:bg-card/90 transition duration-200 overflow-hidden',
               !gw.enabled && 'opacity-75',
             )}
           >

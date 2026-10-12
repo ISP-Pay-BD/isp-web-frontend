@@ -211,7 +211,7 @@ export function AreasPage() {
           <Button
             size="sm"
             onClick={openCreateArea}
-            className="shadow-md font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200"
+            className="shadow-md font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition duration-200"
           >
             <Plus className="h-4 w-4" /> New Area
           </Button>
@@ -229,7 +229,7 @@ export function AreasPage() {
               { label: 'Without Sub-areas', value: kpi(summary?.areasWithoutSubareas), unit: 'pending breakdown', icon: AlertTriangle, tone: 'bg-amber-500/10 text-amber-500', valueTone: 'text-amber-600 dark:text-amber-400' },
             ] as const
           ).map((k) => (
-            <Card key={k.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm transition-all duration-200">
+            <Card key={k.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm transition duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</span>
                 <div className={`p-2 rounded-lg ${k.tone}`}>
@@ -335,7 +335,7 @@ export function AreasPage() {
                             setPickedAreaId(area.id);
                           }
                         }}
-                        className={`group relative flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 text-left ${
+                        className={`group relative flex items-center justify-between p-3 rounded-lg cursor-pointer transition duration-200 text-left ${
                           isSelected
                             ? 'bg-primary/10 border border-primary/30 shadow-sm text-foreground'
                             : 'hover:bg-muted/40 border border-transparent text-foreground/80 hover:text-foreground'

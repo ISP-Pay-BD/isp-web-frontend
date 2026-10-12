@@ -179,7 +179,7 @@ export function PosReceiptPage() {
                       key={w}
                       type="button"
                       onClick={() => setPaperWidth(w)}
-                      className={`p-2.5 rounded-lg border text-center font-semibold transition-all ${
+                      className={`p-2.5 rounded-lg border text-center font-semibold transition ${
                         paperWidth === w
                           ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary'
                           : 'border-border/70 bg-card/40 text-muted-foreground hover:border-border'
@@ -198,7 +198,7 @@ export function PosReceiptPage() {
                       key={t}
                       type="button"
                       onClick={() => setPaperTheme(t)}
-                      className={`p-2.5 rounded-lg border text-center font-semibold transition-all ${
+                      className={`p-2.5 rounded-lg border text-center font-semibold transition ${
                         paperTheme === t
                           ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary'
                           : 'border-border/70 bg-card/40 text-muted-foreground hover:border-border'
@@ -238,7 +238,7 @@ export function PosReceiptPage() {
         <div className="lg:col-span-7 flex justify-center py-2">
           <div
             id="thermal-pos-slip"
-            className={`transition-all shadow-2xl relative select-none font-mono ${
+            className={`transition shadow-2xl relative select-none font-mono ${
               paperWidth === '80mm' ? 'w-full max-w-[380px]' : 'w-full max-w-[290px]'
             } ${
               paperTheme === 'paper'

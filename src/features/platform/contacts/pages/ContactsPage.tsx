@@ -139,7 +139,7 @@ export function ContactsPage() {
           />
         ) : (
           data.items.map((c) => (
-            <Card key={c.id} className="border-border/60 bg-card hover:border-primary/40 transition-all">
+            <Card key={c.id} className="border-border/60 bg-card hover:border-primary/40 transition">
               <CardContent className="p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1">

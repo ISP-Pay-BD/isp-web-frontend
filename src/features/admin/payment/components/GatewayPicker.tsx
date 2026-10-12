@@ -35,7 +35,7 @@ export function GatewayPicker({
             type="button"
             onClick={() => onChange(slug)}
             className={cn(
-              'flex items-center justify-between gap-2 rounded-lg border p-2.5 text-left text-xs font-semibold transition-all',
+              'flex items-center justify-between gap-2 rounded-lg border p-2.5 text-left text-xs font-semibold transition',
               selected
                 ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary'
                 : 'border-border/70 bg-card/40 text-muted-foreground hover:border-border',

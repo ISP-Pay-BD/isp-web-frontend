@@ -119,7 +119,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                     <div
                       key={plan.id}
                       className={cn(
-                        'group relative flex flex-col justify-between rounded-[2rem] p-1.5 backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
+                        'group relative flex flex-col justify-between rounded-[2rem] p-1.5 backdrop-blur-xl transition duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
                         plan.highlighted
                           ? 'bg-landing-cta/15 ring-landing-cta/50 shadow-[0_0_30px_rgba(247,88,3,0.15)] ring-2'
                           : 'bg-white/[0.03] ring-1 ring-white/10 hover:ring-white/20',
@@ -158,7 +158,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                             nativeButton={false}
                             render={<Link href="/register" />}
                             className={cn(
-                              'group/btn relative h-12 w-full overflow-hidden rounded-full pr-2 pl-6 text-sm font-semibold transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]',
+                              'group/btn relative h-12 w-full overflow-hidden rounded-full pr-2 pl-6 text-sm font-semibold transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]',
                               plan.highlighted
                                 ? 'bg-landing-cta hover:bg-landing-cta-hover text-white shadow-[0_0_24px_rgba(247,88,3,0.3)] hover:shadow-[0_0_36px_rgba(247,88,3,0.45)]'
                                 : 'bg-white/10 text-white hover:bg-white/15',
@@ -210,7 +210,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
               transition={panelTransition}
               className="mt-12 max-w-xl"
             >
-              <div className="rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+              <div className="rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 <div className="bg-landing-panel rounded-[calc(2rem-0.375rem)] p-8 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
                   <h3 className="font-landing-display text-2xl font-semibold text-white">
                     Pay only for active subscribers
@@ -249,7 +249,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                     <Button
                       nativeButton={false}
                       render={<Link href="/register" />}
-                      className="group/btn bg-landing-cta hover:bg-landing-cta-hover relative h-12 w-full overflow-hidden rounded-full pr-2 pl-6 text-sm font-semibold text-white shadow-[0_0_24px_rgba(247,88,3,0.3)] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_36px_rgba(247,88,3,0.45)] active:scale-[0.98]"
+                      className="group/btn bg-landing-cta hover:bg-landing-cta-hover relative h-12 w-full overflow-hidden rounded-full pr-2 pl-6 text-sm font-semibold text-white shadow-[0_0_24px_rgba(247,88,3,0.3)] transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_36px_rgba(247,88,3,0.45)] active:scale-[0.98]"
                     >
                       <span className="flex-1 text-center">Get started with PAYG</span>
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 group-hover/btn:scale-105">

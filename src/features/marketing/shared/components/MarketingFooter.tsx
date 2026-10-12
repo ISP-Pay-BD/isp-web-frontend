@@ -111,7 +111,7 @@ export function MarketingFooter() {
                     className="hover:text-landing-accent group inline-flex items-center gap-1 transition-colors"
                   >
                     <span>{l.label}</span>
-                    <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition-all group-hover:opacity-100" />
+                    <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition group-hover:opacity-100" />
                   </Link>
                 </li>
               ))}
@@ -131,7 +131,7 @@ export function MarketingFooter() {
                     className="hover:text-landing-accent group inline-flex items-center gap-1 transition-colors"
                   >
                     <span>{l.label}</span>
-                    <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition-all group-hover:opacity-100" />
+                    <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition group-hover:opacity-100" />
                   </Link>
                 </li>
               ))}

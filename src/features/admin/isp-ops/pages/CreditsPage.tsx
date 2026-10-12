@@ -192,7 +192,7 @@ export function CreditsPage() {
                 variant={view === pill.key ? 'default' : 'ghost'}
                 onClick={() => switchView(pill.key)}
                 className={cn(
-                  'text-xs h-7 px-2.5 font-medium transition-all',
+                  'text-xs h-7 px-2.5 font-medium transition',
                   view === pill.key ? 'bg-primary text-primary-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground',
                 )}
               >

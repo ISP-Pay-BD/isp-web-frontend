@@ -163,8 +163,8 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Toggle theme"
           >
-            <Sun className="h-4 w-4 scale-100 rotate-0 text-amber-500 transition-all dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute h-4 w-4 scale-0 rotate-90 text-muted-foreground transition-all dark:scale-100 dark:rotate-0" />
+            <Sun className="h-4 w-4 scale-100 rotate-0 text-amber-500 transition dark:scale-0 dark:-rotate-90" />
+            <Moon className="absolute h-4 w-4 scale-0 rotate-90 text-muted-foreground transition dark:scale-100 dark:rotate-0" />
           </Button>
 
           {/* User Account Dropdown Menu */}
@@ -179,7 +179,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="border-border/80 bg-card/80 hover:border-primary/35 hover:bg-accent/70 group ml-1 flex items-center gap-2.5 rounded-lg border py-1 pr-2.5 pl-1.5 shadow-[var(--shadow-xs)] backdrop-blur-xs transition-all focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none"
+                className="border-border/80 bg-card/80 hover:border-primary/35 hover:bg-accent/70 group ml-1 flex items-center gap-2.5 rounded-lg border py-1 pr-2.5 pl-1.5 shadow-[var(--shadow-xs)] backdrop-blur-xs transition focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:outline-none"
               >
                 <div className="relative flex items-center justify-center">
                   <Avatar className="border-primary/20 ring-background h-7 w-7 rounded-md border shadow-[var(--shadow-xs)] ring-2">

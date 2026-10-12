@@ -120,7 +120,7 @@ export function BandwidthBuyHubPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {HUB_MODULES.map((mod) => (
           <Link key={mod.href} href={mod.href}>
-            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden hover:border-primary/40 hover:shadow-md transition-all duration-200 h-full group">
+            <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden hover:border-primary/40 hover:shadow-md transition duration-200 h-full group">
               <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
                 <div className={cn('p-2.5 rounded-xl border shrink-0 w-fit', mod.color)}>
                   <mod.icon className="h-5 w-5" />
@@ -128,7 +128,7 @@ export function BandwidthBuyHubPage() {
                 <div>
                   <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors flex items-center justify-between">
                     <span>{mod.label}</span>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition" />
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{mod.desc}</p>
                 </div>

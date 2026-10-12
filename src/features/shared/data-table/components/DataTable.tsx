@@ -461,7 +461,7 @@ export function DataTable<TData extends RowData>({
                 type="button"
                 onClick={() => handleLayoutModeToggle('full')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'full'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -475,7 +475,7 @@ export function DataTable<TData extends RowData>({
                 type="button"
                 onClick={() => handleLayoutModeToggle('centered')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'centered'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'

@@ -336,7 +336,7 @@ export function MobilePlansPage() {
             <Card
               key={plan.id}
               className={cn(
-                'group relative border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-card/90 transition-all duration-200 overflow-hidden cursor-pointer shadow-sm',
+                'group relative border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-card/90 transition duration-200 overflow-hidden cursor-pointer shadow-sm',
                 !plan.active && 'opacity-65',
               )}
               onClick={() => setSelectedPlan(plan)}

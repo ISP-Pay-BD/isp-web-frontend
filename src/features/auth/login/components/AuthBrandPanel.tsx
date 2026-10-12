@@ -37,7 +37,7 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
         href="/"
         className="group relative z-10 inline-flex items-center gap-3.5 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.99] w-fit"
       >
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] p-2 ring-1 ring-white/15 backdrop-blur-md transition-all group-hover:ring-landing-cta/50 group-hover:bg-white/[0.1]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] p-2 ring-1 ring-white/15 backdrop-blur-md transition group-hover:ring-landing-cta/50 group-hover:bg-white/[0.1]">
           <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={28} height={28} priority />
         </div>
         <div>
@@ -74,7 +74,7 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
 
         {/* Feature Highlights Grid */}
         <div className="grid gap-3 pt-2">
-          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md transition-all hover:bg-white/[0.05] hover:border-white/20">
+          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md transition hover:bg-white/[0.05] hover:border-white/20">
             <div className="rounded-xl bg-landing-cta/15 p-2 text-landing-cta shrink-0 mt-0.5">
               <Zap className="h-4 w-4" />
             </div>
@@ -86,7 +86,7 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md transition-all hover:bg-white/[0.05] hover:border-white/20">
+          <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md transition hover:bg-white/[0.05] hover:border-white/20">
             <div className="rounded-xl bg-blue-500/15 p-2 text-blue-400 shrink-0 mt-0.5">
               <Server className="h-4 w-4" />
             </div>

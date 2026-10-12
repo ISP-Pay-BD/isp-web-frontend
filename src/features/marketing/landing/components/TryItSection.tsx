@@ -160,7 +160,7 @@ export function TryItSection() {
 
                       {/* CTA Button */}
                       <Link href={card.loginHref} className="block w-full">
-                        <Button className="bg-landing-cta hover:bg-landing-cta-hover shadow-landing-cta/20 group hover:shadow-landing-cta/30 h-10 w-full text-xs font-semibold text-white shadow-lg transition-all duration-300">
+                        <Button className="bg-landing-cta hover:bg-landing-cta-hover shadow-landing-cta/20 group hover:shadow-landing-cta/30 h-10 w-full text-xs font-semibold text-white shadow-lg transition duration-300">
                           <span>Explore {card.role}</span>
                           <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                         </Button>

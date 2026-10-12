@@ -201,7 +201,7 @@ export function ShowcasePage() {
               key={t}
               type="button"
               onClick={() => setTarget(t)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
                 target === t
                   ? 'bg-primary text-primary-foreground shadow-2xs'
                   : 'bg-card border border-border/70 hover:bg-muted text-muted-foreground'
@@ -233,7 +233,7 @@ export function ShowcasePage() {
           {filteredItems.map((item) => (
             <Card
               key={item.id}
-              className="border-border/60 bg-card overflow-hidden group hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between"
+              className="border-border/60 bg-card overflow-hidden group hover:border-primary/50 hover:shadow-md transition flex flex-col justify-between"
             >
               <div>
                 <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">

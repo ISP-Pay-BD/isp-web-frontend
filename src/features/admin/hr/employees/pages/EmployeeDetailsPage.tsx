@@ -141,7 +141,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
       type="button"
       onClick={() => setActiveTab(tab)}
       className={cn(
-        'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition-all duration-150 px-2',
+        'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition duration-150 px-2',
         activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
       )}
     >
@@ -477,7 +477,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                               key={p.id}
                               onClick={() => setSelectedLocationId(p.id)}
                               className={cn(
-                                'p-2.5 rounded-lg border text-xs cursor-pointer transition-all duration-150',
+                                'p-2.5 rounded-lg border text-xs cursor-pointer transition duration-150',
                                 selectedLocationId === p.id
                                   ? 'bg-primary/10 border-primary/40 text-foreground'
                                   : 'bg-card hover:bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground',

@@ -352,7 +352,7 @@ export function AllCustomersPage() {
                 type="button"
                 onClick={() => handleLayoutModeChange('full')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'full'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -366,7 +366,7 @@ export function AllCustomersPage() {
                 type="button"
                 onClick={() => handleLayoutModeChange('centered')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'centered'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -440,7 +440,7 @@ export function AllCustomersPage() {
               size="sm"
               disabled={exportMutation.isPending}
               onClick={() => exportMutation.mutate(listFilters)}
-              className="text-xs h-8 border-border/80 hover:bg-accent transition-all duration-150"
+              className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
             >
               <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
               {exportMutation.isPending ? 'Exporting…' : 'Export'}
@@ -453,7 +453,7 @@ export function AllCustomersPage() {
                 size="sm"
                 disabled={actions.syncPppoe.isPending}
                 onClick={() => actions.syncPppoe.mutate(undefined)}
-                className="text-xs h-8 border-border/80 hover:bg-accent transition-all duration-150"
+                className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
                 title="Re-link every customer's PPPoE secret id from its router"
               >
                 <Key className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
@@ -507,7 +507,7 @@ export function AllCustomersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs h-8 border-border/80 hover:bg-accent transition-all duration-150"
+                  className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
                 >
                   <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Import Excel
                 </Button>
@@ -515,7 +515,7 @@ export function AllCustomersPage() {
               <Link href="/admin/customers/new">
                 <Button
                   size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 shadow-sm transition-all duration-150"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 shadow-sm transition duration-150"
                 >
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> New Customer
                 </Button>

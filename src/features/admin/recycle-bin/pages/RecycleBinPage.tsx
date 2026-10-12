@@ -198,7 +198,7 @@ export function RecycleBinPage() {
                 setEntity(isActive ? '' : stat.key);
                 setPage(1);
               }}
-              className={`rounded-xl border p-3.5 text-left transition-all backdrop-blur-md ${
+              className={`rounded-xl border p-3.5 text-left transition backdrop-blur-md ${
                 isActive ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary' : 'border-border/70 bg-card/60 hover:border-primary/40'
               }`}
             >

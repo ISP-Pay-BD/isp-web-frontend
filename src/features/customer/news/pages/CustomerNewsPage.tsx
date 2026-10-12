@@ -83,7 +83,7 @@ export function CustomerNewsPage() {
               <Card
                 key={item.id}
                 onClick={() => setSelectedNews(item)}
-                className="relative flex flex-col justify-between p-5 hover:border-primary/50 transition-all cursor-pointer group"
+                className="relative flex flex-col justify-between p-5 hover:border-primary/50 transition cursor-pointer group"
               >
                 <div className="space-y-2.5">
                   <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">

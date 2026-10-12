@@ -156,7 +156,7 @@ export function NetworkMapPage() {
               type="button"
               onClick={() => setSelectedLevel('all')}
               className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-200',
+                'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition duration-200',
                 selectedLevel === 'all'
                   ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20'
                   : 'border-border/60 bg-card text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-foreground',
@@ -175,7 +175,7 @@ export function NetworkMapPage() {
                   type="button"
                   onClick={() => setSelectedLevel(lvl)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-200',
+                    'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition duration-200',
                     isSelected
                       ? `ring-2 ${style.ring} border-current bg-card ${style.text}`
                       : 'border-border/60 bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',

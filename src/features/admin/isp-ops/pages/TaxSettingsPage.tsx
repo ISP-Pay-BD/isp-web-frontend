@@ -173,7 +173,7 @@ export function TaxSettingsPage() {
               onClick={handleToggleEnabled}
               disabled={save.isPending}
               className={cn(
-                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all',
+                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition',
                 tax.enabled
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                   : 'bg-muted/60 text-muted-foreground border-border/80',

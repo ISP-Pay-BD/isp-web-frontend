@@ -107,7 +107,7 @@ export function PricingPage() {
             <button
               type="button"
               onClick={() => setModel('fixed')}
-              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all duration-200 ease-out ${
+              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition duration-200 ease-out ${
                 model === 'fixed'
                   ? 'bg-landing-cta text-white shadow-md'
                   : 'text-white/70 hover:text-white'
@@ -118,7 +118,7 @@ export function PricingPage() {
             <button
               type="button"
               onClick={() => setModel('payg')}
-              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition-all duration-200 ease-out ${
+              className={`rounded-lg px-6 py-2.5 text-sm font-semibold transition duration-200 ease-out ${
                 model === 'payg'
                   ? 'bg-landing-cta text-white shadow-md'
                   : 'text-white/70 hover:text-white'

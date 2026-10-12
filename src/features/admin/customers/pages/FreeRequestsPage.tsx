@@ -146,7 +146,7 @@ export function FreeRequestsPage() {
                 type="button"
                 onClick={() => setStatusFilter(f.key)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
                   statusFilter === f.key
                     ? 'bg-foreground text-background border-foreground'
                     : 'bg-card text-muted-foreground border-border hover:border-foreground/30',

@@ -329,7 +329,7 @@ export function NetworkDiagramPage() {
                           {Array.from(splittersMap.entries()).map(([splitterName, onus]) => (
                             <div
                               key={splitterName}
-                              className="rounded-xl border border-border/50 bg-background/80 p-4 space-y-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200"
+                              className="rounded-xl border border-border/50 bg-background/80 p-4 space-y-3 shadow-sm hover:shadow-md hover:border-primary/20 transition duration-200"
                             >
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-foreground flex items-center gap-2">
@@ -352,7 +352,7 @@ export function NetworkDiagramPage() {
                                     <div
                                       key={onu.id}
                                       onClick={() => setSelectedNode(onu)}
-                                      className={`group/onu flex items-center justify-between p-2.5 rounded-lg border text-xs cursor-pointer transition-all duration-200 ${
+                                      className={`group/onu flex items-center justify-between p-2.5 rounded-lg border text-xs cursor-pointer transition duration-200 ${
                                         onu.status === 'online'
                                           ? 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-sm'
                                           : 'bg-red-500/5 hover:bg-red-500/10 border-red-500/20 hover:border-red-500/40 hover:shadow-sm'

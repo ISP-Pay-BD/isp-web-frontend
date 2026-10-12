@@ -100,7 +100,7 @@ export function UserAccessPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {roles.data.map((role) => (
-          <Card key={role.id} className="border-border/60 bg-card hover:border-primary/40 transition-all">
+          <Card key={role.id} className="border-border/60 bg-card hover:border-primary/40 transition">
             <CardContent className="p-4 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-sm text-foreground">{role.name}</span>

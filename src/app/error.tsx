@@ -30,7 +30,7 @@ export default function ErrorPage({
           <RefreshCw className="h-4 w-4" />
           Try again
         </Button>
-        <Link href="/" className="inline-flex items-center justify-center rounded-lg border border-transparent bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/80 gap-2">
+        <Link href="/" className="inline-flex items-center justify-center rounded-lg border border-transparent bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/80 gap-2">
           <Home className="h-4 w-4" />
           Home
         </Link>

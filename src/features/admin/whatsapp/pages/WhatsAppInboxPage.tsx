@@ -204,7 +204,7 @@ export function WhatsAppInboxPage() {
                     type="button"
                     onClick={() => setActiveId(conv.id)}
                     className={cn(
-                      'w-full text-left p-3.5 hover:bg-muted/40 transition-all relative block',
+                      'w-full text-left p-3.5 hover:bg-muted/40 transition relative block',
                       isSelected && 'bg-primary/5 border-l-3 border-l-primary',
                     )}
                   >
@@ -380,7 +380,7 @@ export function WhatsAppNavLinks() {
             href={l.href}
             className={cn(
               buttonVariants({ variant: isActive ? 'default' : 'ghost', size: 'sm' }),
-              'gap-1.5 text-xs h-8 rounded-lg font-medium transition-all',
+              'gap-1.5 text-xs h-8 rounded-lg font-medium transition',
               isActive
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',

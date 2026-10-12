@@ -167,7 +167,7 @@ export function HotspotHubPage() {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href}>
-                <Card className="h-full border-border/60 bg-card/60 backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-card/90 hover:shadow-md group">
+                <Card className="h-full border-border/60 bg-card/60 backdrop-blur-sm transition duration-200 hover:border-primary/40 hover:bg-card/90 hover:shadow-md group">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${item.bgColor} ${item.color}`}>
@@ -179,7 +179,7 @@ export function HotspotHubPage() {
                     </div>
                     <CardTitle className="mt-3 text-base font-semibold group-hover:text-primary transition-colors flex items-center justify-between">
                       {item.label}
-                      <ArrowRight className="h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary" />
+                      <ArrowRight className="h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition text-primary" />
                     </CardTitle>
                     <CardDescription className="text-xs text-muted-foreground line-clamp-2 mt-1">
                       {item.desc}

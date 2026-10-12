@@ -333,7 +333,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <button
               type="button"
               onClick={handleLogout}
-              className={`border-destructive/15 bg-destructive/5 hover:bg-destructive/10 text-destructive hover:border-destructive/30 dark:border-destructive/25 dark:bg-destructive/[0.08] dark:hover:bg-destructive/15 flex items-center gap-2 rounded-lg border py-2 text-xs font-medium transition-all active:scale-[0.98] ${isCollapsed ? 'justify-center' : 'w-full'}`}
+              className={`border-destructive/15 bg-destructive/5 hover:bg-destructive/10 text-destructive hover:border-destructive/30 dark:border-destructive/25 dark:bg-destructive/[0.08] dark:hover:bg-destructive/15 flex items-center gap-2 rounded-lg border py-2 text-xs font-medium transition active:scale-[0.98] ${isCollapsed ? 'justify-center' : 'w-full'}`}
               title={isCollapsed ? 'Log out' : undefined}
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -343,7 +343,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
         ) : (
           <Link
             href="/login"
-            className={`bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold shadow-[var(--shadow-primary)] transition-all ${isCollapsed ? 'px-0' : 'w-full'}`}
+            className={`bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold shadow-[var(--shadow-primary)] transition ${isCollapsed ? 'px-0' : 'w-full'}`}
           >
             {!isCollapsed && <span>Log in</span>}
           </Link>

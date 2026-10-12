@@ -134,7 +134,7 @@ export function CustomerSubscriptionPage() {
                           type="button"
                           key={pkg.id}
                           onClick={() => setSelectedPackageId(pkg.id)}
-                          className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all text-left ${
+                          className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition text-left ${
                             isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-muted-foreground/40'
                           }`}
                         >

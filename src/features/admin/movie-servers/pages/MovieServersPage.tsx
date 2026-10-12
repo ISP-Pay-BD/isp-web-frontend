@@ -241,7 +241,7 @@ export function MovieServersPage() {
             return (
               <Card
                 key={srv.id}
-                className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm hover:border-primary/50 hover:bg-card/90 transition-all duration-200 overflow-hidden"
+                className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm hover:border-primary/50 hover:bg-card/90 transition duration-200 overflow-hidden"
               >
                 <CardHeader className="p-5 border-b border-border/50 flex flex-row items-start justify-between space-y-0 gap-3">
                   <div className="flex items-center gap-3 min-w-0">

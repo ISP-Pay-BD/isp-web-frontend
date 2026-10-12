@@ -90,7 +90,7 @@ export function CustomerPackagesPage() {
               return (
                 <Card
                   key={pkg.id}
-                  className={`relative flex flex-col justify-between transition-all hover:shadow-lg ${
+                  className={`relative flex flex-col justify-between transition hover:shadow-lg ${
                     isCurrent ? 'border-primary ring-2 ring-primary/30 bg-primary/[0.02]' : ''
                   }`}
                 >

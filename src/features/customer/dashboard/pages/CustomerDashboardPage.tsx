@@ -361,7 +361,7 @@ export function CustomerDashboardPage() {
         {/* Quick Actions Bento Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <div>
-            <Card className="h-full flex flex-col justify-between hover:shadow-md transition-all">
+            <Card className="h-full flex flex-col justify-between hover:shadow-md transition">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Quick router tools</CardTitle>
                 <CardDescription className="text-xs">Self-service internet troubleshooting</CardDescription>
@@ -371,7 +371,7 @@ export function CustomerDashboardPage() {
                   type="button"
                   onClick={handleQuickReset}
                   disabled={quickReset.isPending}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition-all text-left group"
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition text-left group"
                 >
                   <div className="space-y-0.5">
                     <div className="text-sm font-semibold">Reset my connection</div>
@@ -386,7 +386,7 @@ export function CustomerDashboardPage() {
 
                 <Link
                   href="/customer/router/wifi"
-                  className="flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition-all group"
+                  className="flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition group"
                 >
                   <div className="space-y-0.5">
                     <div className="text-sm font-semibold">Change WiFi SSID & Password</div>
@@ -397,7 +397,7 @@ export function CustomerDashboardPage() {
 
                 <Link
                   href="/customer/router/devices"
-                  className="flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition-all group"
+                  className="flex items-center justify-between p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition group"
                 >
                   <div className="space-y-0.5">
                     <div className="text-sm font-semibold">Connection & devices</div>
@@ -411,7 +411,7 @@ export function CustomerDashboardPage() {
 
           {/* Provider notices (GET /v1/news) */}
           <div>
-            <Card className="h-full flex flex-col justify-between hover:shadow-md transition-all">
+            <Card className="h-full flex flex-col justify-between hover:shadow-md transition">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -455,7 +455,7 @@ export function CustomerDashboardPage() {
 
           {/* Provider helpline (GET /v1/customer/support/contact) */}
           <div>
-            <Card className="h-full flex flex-col justify-between hover:shadow-md transition-all">
+            <Card className="h-full flex flex-col justify-between hover:shadow-md transition">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <LifeBuoy className="h-4 w-4 text-primary" />
@@ -478,7 +478,7 @@ export function CustomerDashboardPage() {
                     {support.mobile && (
                       <a
                         href={`tel:${support.mobile}`}
-                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition-all group"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-primary/40 hover:bg-accent/50 transition group"
                       >
                         <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                           <Phone className="h-4 w-4" />
@@ -495,7 +495,7 @@ export function CustomerDashboardPage() {
                         href={whatsappHref(support.whatsapp)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group"
                       >
                         <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600">
                           <MessageCircle className="h-4 w-4" />
@@ -510,7 +510,7 @@ export function CustomerDashboardPage() {
                     {support.email && (
                       <a
                         href={`mailto:${support.email}`}
-                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border/80 hover:border-blue-500/40 hover:bg-blue-500/5 transition group"
                       >
                         <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600">
                           <Mail className="h-4 w-4" />

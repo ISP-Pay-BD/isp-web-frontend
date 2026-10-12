@@ -397,7 +397,7 @@ export function BillingPoliciesPage() {
                         onClick={toggleAutoSuspend}
                         disabled={save.isPending}
                         className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all font-sans',
+                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition font-sans',
                           policy.autoSuspend
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                             : 'bg-muted/60 text-muted-foreground border-border/80 hover:bg-muted',

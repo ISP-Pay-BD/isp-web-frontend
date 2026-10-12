@@ -141,7 +141,7 @@ export function AdminDashboardPage() {
       {/* Primary KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Link href="/admin/customers?status=active" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition-all hover:border-primary/50">
+          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Active Customers</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -162,7 +162,7 @@ export function AdminDashboardPage() {
         </Link>
 
         <Link href="/admin/customer-payments" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition-all hover:border-primary/50">
+          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Received This Month</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
@@ -183,7 +183,7 @@ export function AdminDashboardPage() {
         </Link>
 
         <Link href="/admin/customers?status=expired" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition-all hover:border-amber-500/50">
+          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-amber-500/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Payment Due</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
@@ -204,7 +204,7 @@ export function AdminDashboardPage() {
         </Link>
 
         <Link href="/admin/support" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition-all hover:border-rose-500/50">
+          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-rose-500/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Open Tickets</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
@@ -227,7 +227,7 @@ export function AdminDashboardPage() {
         </Link>
 
         <Link href="/admin/subscription" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition-all hover:border-primary/50">
+          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Customer Quota</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">

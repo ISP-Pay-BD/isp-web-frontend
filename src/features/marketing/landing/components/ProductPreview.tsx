@@ -227,7 +227,7 @@ export function ProductPreview() {
             <button
               type="button"
               onClick={() => handleModelChange('website')}
-              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-300 sm:text-sm ${
+              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition duration-300 sm:text-sm ${
                 model === 'website'
                   ? 'bg-landing-cta shadow-landing-cta/30 text-white shadow-md'
                   : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -242,7 +242,7 @@ export function ProductPreview() {
             <button
               type="button"
               onClick={() => handleModelChange('mobile')}
-              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition-all duration-300 sm:text-sm ${
+              className={`flex items-center gap-2.5 rounded-xl px-5 py-2.5 text-xs font-semibold transition duration-300 sm:text-sm ${
                 model === 'mobile'
                   ? 'bg-landing-cta shadow-landing-cta/30 text-white shadow-md'
                   : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -266,7 +266,7 @@ export function ProductPreview() {
                 key={cat.id}
                 type="button"
                 onClick={() => handleCategoryChange(idx)}
-                className={`relative flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-medium transition-all duration-200 sm:text-sm ${
+                className={`relative flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-medium transition duration-200 sm:text-sm ${
                   active
                     ? 'border-landing-cta/40 bg-landing-cta/15 text-white shadow-sm'
                     : 'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20 hover:bg-white/[0.04] hover:text-white'
@@ -393,7 +393,7 @@ export function ProductPreview() {
                         type="button"
                         onClick={handlePrevImage}
                         aria-label="Previous screenshot"
-                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition-all hover:scale-110"
+                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition hover:scale-110"
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
@@ -401,7 +401,7 @@ export function ProductPreview() {
                         type="button"
                         onClick={handleNextImage}
                         aria-label="Next screenshot"
-                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition-all hover:scale-110"
+                        className="hover:bg-landing-cta hover:border-landing-cta absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-lg backdrop-blur-md transition hover:scale-110"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </button>
@@ -423,7 +423,7 @@ export function ProductPreview() {
                           key={dotIdx}
                           type="button"
                           onClick={() => setImageIndex(dotIdx)}
-                          className={`h-2 rounded-full transition-all ${
+                          className={`h-2 rounded-full transition ${
                             dotIdx === imageIndex
                               ? 'bg-landing-cta w-6'
                               : 'w-2 bg-white/30 hover:bg-white/50'

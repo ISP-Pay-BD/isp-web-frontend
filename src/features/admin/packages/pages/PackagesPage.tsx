@@ -251,7 +251,7 @@ export function PackagesPage() {
                 variant={statusFilter === pill.key ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter(pill.key)}
                 className={cn(
-                  'text-xs h-7 px-2.5 font-medium transition-all',
+                  'text-xs h-7 px-2.5 font-medium transition',
                   statusFilter === pill.key
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -391,7 +391,7 @@ export function PackagesPage() {
             <div
               key={pkg.id}
               onClick={() => setSelectedPkg(pkg)}
-              className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-md p-5 flex flex-col justify-between hover:border-primary/40 hover:shadow-lg transition-all duration-200 group relative cursor-pointer"
+              className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-md p-5 flex flex-col justify-between hover:border-primary/40 hover:shadow-lg transition duration-200 group relative cursor-pointer"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">

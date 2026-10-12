@@ -165,7 +165,7 @@ export function BtrcReportPage() {
                   type="button"
                   onClick={() => toggleLayoutMode(mode)}
                   className={cn(
-                    'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                    'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
                     layoutMode === mode ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
                   )}
                   title={mode === 'full' ? 'Full width layout' : 'Centered layout'}

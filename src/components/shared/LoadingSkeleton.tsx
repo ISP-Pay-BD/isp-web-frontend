@@ -19,7 +19,7 @@ export function DashboardSkeleton({
   return (
     <div
       className={cn(
-        'space-y-6 p-1 md:p-2 transition-all duration-200',
+        'space-y-6 p-1 md:p-2 transition duration-200',
         layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
         className
       )}
@@ -105,7 +105,7 @@ export function TablePageSkeleton({
   return (
     <div
       className={cn(
-        'space-y-5 p-1 md:p-2 transition-all duration-200',
+        'space-y-5 p-1 md:p-2 transition duration-200',
         layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
         className
       )}
@@ -233,7 +233,7 @@ export function CardGridSkeleton({
   return (
     <div
       className={cn(
-        'space-y-6 p-1 md:p-2 transition-all duration-200',
+        'space-y-6 p-1 md:p-2 transition duration-200',
         layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full',
         className
       )}

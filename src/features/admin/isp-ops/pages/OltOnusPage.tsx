@@ -307,7 +307,7 @@ export function OltOnusPage() {
               resetPage();
             }}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150',
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
               status === c.key
                 ? 'bg-foreground text-background border-foreground'
                 : 'bg-card text-muted-foreground border-border hover:border-foreground/30',

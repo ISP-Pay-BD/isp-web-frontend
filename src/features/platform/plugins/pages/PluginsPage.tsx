@@ -269,7 +269,7 @@ export function PluginsPage() {
                 setCategory(cat);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition ${
                 category === cat
                   ? 'bg-primary text-primary-foreground shadow-2xs'
                   : 'bg-card border border-border/70 hover:bg-muted text-muted-foreground'
@@ -311,7 +311,7 @@ export function PluginsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.items.map((plugin) => (
-            <Card key={plugin.id} className="border-border/60 bg-card hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between">
+            <Card key={plugin.id} className="border-border/60 bg-card hover:border-primary/40 hover:shadow-md transition flex flex-col justify-between">
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">

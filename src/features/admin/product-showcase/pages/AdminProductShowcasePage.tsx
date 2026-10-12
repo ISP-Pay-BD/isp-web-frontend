@@ -66,7 +66,7 @@ export function AdminProductShowcasePage() {
           {data.items.map((cat) => {
             const cover = cat.images[0];
             return (
-              <Card key={cat.id} className="border-border/60 overflow-hidden group hover:border-primary/60 transition-all shadow-sm hover:shadow-md flex flex-col bg-card/80">
+              <Card key={cat.id} className="border-border/60 overflow-hidden group hover:border-primary/60 transition shadow-sm hover:shadow-md flex flex-col bg-card/80">
                 <button
                   type="button"
                   disabled={!cover}

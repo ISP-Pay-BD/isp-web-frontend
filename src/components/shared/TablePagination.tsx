@@ -170,7 +170,7 @@ export function TablePagination({
                     size="icon"
                     variant={isCurrent ? 'default' : 'outline'}
                     className={cn(
-                      'h-8 w-8 text-xs font-mono font-semibold transition-all duration-150',
+                      'h-8 w-8 text-xs font-mono font-semibold transition duration-150',
                       isCurrent
                         ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                         : 'border-border/70 hover:bg-muted/80 text-foreground'

@@ -212,7 +212,7 @@ export function PopFundingPage() {
                       type="button"
                       onClick={() => setValue('type', t)}
                       className={cn(
-                        'py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all',
+                        'py-1.5 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition',
                         fundingType === t
                           ? cn(
                               'bg-background shadow-xs border border-border/60',
@@ -365,7 +365,7 @@ export function PopFundingPage() {
                     key={r.id}
                     onClick={() => setSelectedPop(r)}
                     className={cn(
-                      'border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden transition-all duration-200 cursor-pointer group',
+                      'border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden transition duration-200 cursor-pointer group',
                       isSelected ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : 'hover:border-primary/40 hover:shadow-md',
                     )}
                   >

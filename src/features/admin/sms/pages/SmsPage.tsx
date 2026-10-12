@@ -355,7 +355,7 @@ export function SmsPage() {
                   <button
                     type="button"
                     onClick={() => setTargetType('all')}
-                    className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition-all ${
+                    className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition ${
                       targetType === 'all'
                         ? 'border-primary/80 bg-primary/5 ring-1 ring-primary/40'
                         : 'border-border/60 hover:bg-muted/40'
@@ -375,7 +375,7 @@ export function SmsPage() {
                   <button
                     type="button"
                     onClick={() => setTargetType('specific')}
-                    className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition-all ${
+                    className={`flex items-start gap-3 p-3.5 rounded-lg border text-left transition ${
                       targetType === 'specific'
                         ? 'border-primary/80 bg-primary/5 ring-1 ring-primary/40'
                         : 'border-border/60 hover:bg-muted/40'

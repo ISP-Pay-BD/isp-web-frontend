@@ -145,7 +145,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full h-11 rounded-xl bg-landing-cta text-white font-semibold text-sm shadow-[0_4px_14px_rgba(247,88,3,0.3)] hover:bg-landing-cta-hover hover:shadow-[0_6px_20px_rgba(247,88,3,0.4)] transition-all active:scale-[0.99] mt-2"
+            className="w-full h-11 rounded-xl bg-landing-cta text-white font-semibold text-sm shadow-[0_4px_14px_rgba(247,88,3,0.3)] hover:bg-landing-cta-hover hover:shadow-[0_6px_20px_rgba(247,88,3,0.4)] transition active:scale-[0.99] mt-2"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

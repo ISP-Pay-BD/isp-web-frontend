@@ -368,7 +368,7 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
                   type="button"
                   onClick={() => applyPreset(preset)}
                   className={cn(
-                    'text-left rounded-xl border overflow-hidden transition-all hover:shadow-md group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    'text-left rounded-xl border overflow-hidden transition hover:shadow-md group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     isSelected ? 'border-primary ring-2 ring-primary/30 bg-card' : 'border-border/80 hover:border-primary/40 bg-card/60',
                   )}
                 >

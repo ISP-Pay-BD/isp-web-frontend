@@ -129,7 +129,7 @@ export function OltDiagnosticsModal({
                 {data.ponPorts.map((port) => (
                   <div
                     key={port.port}
-                    className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition-all duration-200"
+                    className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition duration-200"
                   >
                     <div className="flex items-center justify-between mb-2.5">
                       <span className="text-xs font-bold text-foreground">{port.port}</span>
@@ -161,7 +161,7 @@ export function OltDiagnosticsModal({
                   type="button"
                   onClick={() => setStatusFilter(f.key as typeof statusFilter)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150',
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
                     statusFilter === f.key
                       ? 'bg-foreground text-background border-foreground'
                       : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
@@ -258,7 +258,7 @@ export function OltDiagnosticsModal({
                 size="sm"
                 disabled={isFetching}
                 onClick={() => refetch()}
-                className="gap-1.5 transition-all duration-150 hover:shadow-md"
+                className="gap-1.5 transition duration-150 hover:shadow-md"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
                 {isFetching ? 'Reading…' : 'Refresh'}

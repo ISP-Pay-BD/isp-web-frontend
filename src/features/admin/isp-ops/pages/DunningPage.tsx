@@ -184,7 +184,7 @@ export function DunningPage() {
                       key={step.id}
                       onClick={() => openEditor(step)}
                       className={cn(
-                        'p-3.5 rounded-lg border transition-all cursor-pointer relative group flex flex-col justify-between',
+                        'p-3.5 rounded-lg border transition cursor-pointer relative group flex flex-col justify-between',
                         !step.active && 'opacity-60',
                         isPastDue
                           ? 'border-rose-500/30 bg-rose-500/5 hover:border-rose-500/60'
@@ -271,7 +271,7 @@ export function DunningPage() {
                           disabled={saveRule.isPending}
                           onClick={(e) => handleToggle(step, e)}
                           className={cn(
-                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all',
+                            'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition',
                             step.active
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                               : 'bg-muted/60 text-muted-foreground border-border/80',
