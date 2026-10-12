@@ -176,6 +176,7 @@
     "landing": {
       "hero": {
         "badge": "Trusted by {count}+ ISPs across Bangladesh",
+        "badgeFallback": "Built for ISPs across Bangladesh",
         "titleLead": "Run your whole ISP from",
         "titleAccent": "one console.",
         "subtitle": "Every bKash and Nagad payment matched to the right customer, MikroTik PPPoE kept in sync, and a branded Bangla app for your subscribers.",
@@ -258,6 +259,10 @@
       "faq": {
         "title": "Answers before you ask sales",
         "subtitle": "How billing, MikroTik sync, bKash/Nagad reconciliation and reseller payouts work on ISP Pay BD."
+      },
+      "app": {
+        "homeAlt": "Subscriber app home screen: package, monthly bill, PPPoE connection and a Pay Now button",
+        "paymentAlt": "Subscriber app payment screen with aamarPay, bKash, Nagad and SSLCommerz"
       }
     }
   },

@@ -1,63 +1,87 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
-import type { EmployeeItem, EmployeeFormData } from '../types';
+'use client';
 
-export function useEmployees() {
-  const queryClient = useQueryClient();
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { hrService } from '@/lib/api/services/employee.service';
+import { hrKeys } from '../../shared/keys';
+import { toBdMobile880 } from '../../shared/format';
+import type { EmployeeFormValues } from '../schemas';
+import type { EmployeeListParams } from '../types';
+import { mapEmployee, mapEmployeeSummary } from './mappers';
 
-  const query = useQuery({
-    queryKey: ['admin', 'hr', 'employees'],
+export function useEmployees(params: EmployeeListParams) {
+  return useQuery({
+    queryKey: [...hrKeys.employees, params],
     queryFn: async () => {
-      const data = await adminService.getEmployees();
-      return (data.employees as EmployeeItem[]) ?? [];
+      const res = await hrService.listEmployees({
+        page: params.page,
+        per_page: params.perPage,
+        search: params.search || undefined,
+        designation: params.designation !== 'all' ? params.designation : undefined,
+        status: params.status !== 'all' ? params.status : undefined,
+        sort: params.sort,
+        dir: params.dir,
+      });
+      return { items: res.items.map(mapEmployee), meta: res.meta };
     },
+    placeholderData: keepPreviousData,
   });
+}
 
-  const createMutation = useMutation({
-    mutationFn: async (payload: EmployeeFormData) => {
-      const res = await adminService.createEmployee(payload as unknown as Record<string, unknown>);
-      return res as EmployeeItem;
-    },
-    onSuccess: (newEmp) => {
-      queryClient.setQueryData<EmployeeItem[]>(['admin', 'hr', 'employees'], (prev) => [
-        newEmp,
-        ...(prev ?? []),
-      ]);
-    },
+export function useEmployeeSummary() {
+  return useQuery({
+    queryKey: hrKeys.employeeSummary,
+    queryFn: async () => mapEmployeeSummary(await hrService.employeeSummary()),
   });
+}
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<EmployeeFormData> }) => {
-      const res = await adminService.updateEmployee(id, data);
-      return res as { id: string } & Partial<EmployeeFormData>;
-    },
-    onSuccess: (updated) => {
-      queryClient.setQueryData<EmployeeItem[]>(['admin', 'hr', 'employees'], (prev) =>
-        prev?.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)) ?? [],
-      );
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await adminService.deleteEmployee(id);
-      return id;
-    },
-    onSuccess: (deletedId) => {
-      queryClient.setQueryData<EmployeeItem[]>(['admin', 'hr', 'employees'], (prev) =>
-        prev?.filter((item) => item.id !== deletedId) ?? [],
-      );
-    },
-  });
-
-  return {
-    ...query,
-    employees: query.data ?? [],
-    createEmployee: createMutation.mutateAsync,
-    isCreating: createMutation.isPending,
-    updateEmployee: updateMutation.mutateAsync,
-    isUpdating: updateMutation.isPending,
-    deleteEmployee: deleteMutation.mutateAsync,
-    isDeleting: deleteMutation.isPending,
+/** Backend body for create/update (web employee/new.php + edit.php field names). */
+export function toEmployeeBody(values: EmployeeFormValues): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    name: values.name.trim(),
+    mobile: toBdMobile880(values.mobile),
+    email: values.email.trim(),
+    designation: values.designation,
+    salary: values.salary.trim(),
+    area_id: values.areaIds,
+    address: values.address.trim(),
+    nid_number: values.nidNumber.trim(),
+    status: values.status,
   };
+  if (values.password) {
+    body.password = values.password;
+    body.re_password = values.rePassword;
+  }
+  return body;
+}
+
+/** Create / update / delete — each invalidates the list, summary and pickers. */
+export function useEmployeeMutations() {
+  const qc = useQueryClient();
+  const refresh = (id?: string) => {
+    qc.invalidateQueries({ queryKey: hrKeys.employees });
+    qc.invalidateQueries({ queryKey: hrKeys.employeeSummary });
+    qc.invalidateQueries({ queryKey: hrKeys.meta });
+    if (id) qc.invalidateQueries({ queryKey: hrKeys.employee(id) });
+  };
+
+  const create = useMutation({
+    mutationFn: (values: EmployeeFormValues) => hrService.createEmployee(toEmployeeBody(values)),
+    // The form maps field errors itself (handleApiError), so no global toast.
+    meta: { silent: true },
+    onSuccess: () => refresh(),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, values }: { id: string; values: EmployeeFormValues }) =>
+      hrService.updateEmployee(id, toEmployeeBody(values)),
+    meta: { silent: true },
+    onSuccess: (_d, v) => refresh(v.id),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: string) => hrService.deleteEmployee(id),
+    onSuccess: (_d, id) => refresh(id),
+  });
+
+  return { create, update, remove };
 }

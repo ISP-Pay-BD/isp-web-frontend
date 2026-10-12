@@ -8,9 +8,7 @@ import {
   Edit,
   Zap,
   Phone,
-  Mail,
   MapPin,
-  Calendar,
   Wifi,
   WifiOff,
   Receipt,
@@ -20,46 +18,31 @@ import {
   Shield,
   FileText,
   Radio,
-  Link2,
   RefreshCw,
   MoreVertical,
   ChevronRight,
   Signal,
-  Cpu,
   HardDrive,
   ArrowUpRight,
   ArrowDown,
   ArrowUp,
   Eye,
   EyeOff,
-  Copy,
-  Check,
-  CheckCircle2,
-  AlertTriangle,
   Clock,
   Printer,
   Layers,
-  Router as RouterIcon,
-  Cable,
-  Tag,
-  Key
+  Key,
+  BadgeCheck,
 } from 'lucide-react';
-import {
-  useCustomer,
-  useCustomerOptical,
-  useCustomerSession,
-  useCustomerUsage,
-  useCustomerPayments,
-} from '../hooks/use-customers';
+import { useCustomer, useCustomerActions, useCustomerSession } from '../hooks/use-customers';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { Can } from '@/components/shared/Can';
 import { MapboxMap } from '@/components/shared/MapboxMap';
-import { cn } from '@/lib/utils';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -71,93 +54,70 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+const dash = (v: string | undefined | null) => (v ? v : '—');
+const ymd = (v: string | null | undefined) => (v ? v.slice(0, 10) : '—');
+
 export function CustomerDetailPage({ id }: { id: string }) {
   const router = useRouter();
-  
-  // Parallel asynchronous queries: Core profile, Optical signal, Live session, Usage, and Payments
-  const { data, isLoading, isError } = useCustomer(id);
-  const opticalQuery = useCustomerOptical(id);
+
+  const { data: customer, isLoading, isError, error, refetch } = useCustomer(id);
   const sessionQuery = useCustomerSession(id);
-  const usageQuery = useCustomerUsage(id);
-  const paymentsQuery = useCustomerPayments(id);
+  const actions = useCustomerActions();
 
   const [showPppoePassword, setShowPppoePassword] = useState(false);
-  const [showRouterPassword, setShowRouterPassword] = useState(false);
-  const [isPppoeEnabled, setIsPppoeEnabled] = useState(true);
-  const [isPinging, setIsPinging] = useState(false);
 
-  const customer = data?.customer;
-  const payments = (paymentsQuery.data && paymentsQuery.data.length > 0 ? paymentsQuery.data : data?.payments) ?? [];
-  const pppoe = customer?.pppoeDetails;
-  const olt = opticalQuery.data || customer?.oltDetails;
-  const conn = customer?.connectionDetails;
-  const bandwidthUsage = usageQuery.data || customer?.bandwidthUsage || [];
+  const session = sessionQuery.data;
+  const pppoe = customer?.pppoe;
+  const onu = customer?.onu ?? null;
+  const conn = customer?.connection;
+  const bandwidthUsage = useMemo(() => customer?.usage ?? [], [customer?.usage]);
+  const payments = customer?.payments ?? [];
 
-  const daysLeft = useMemo(() => {
-    if (!customer?.expiryDate) return 0;
-    const exp = new Date(customer.expiryDate);
-    const now = new Date();
-    return Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  }, [customer?.expiryDate]);
+  const expiryTs = customer?.expiryDate ? Date.parse(customer.expiryDate.replace(' ', 'T')) : NaN;
+  const daysLeft = Number.isFinite(expiryTs) ? Math.ceil((expiryTs - Date.now()) / 86_400_000) : null;
 
   const daysLeftColor =
-    daysLeft < 0 
-      ? 'text-red-400 bg-red-500/10 border-red-500/20' 
-      : daysLeft <= 5 
-        ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' 
-        : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    daysLeft === null
+      ? 'text-muted-foreground bg-muted/20 border-border/60'
+      : daysLeft < 0
+        ? 'text-red-400 bg-red-500/10 border-red-500/20'
+        : daysLeft <= 5
+          ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+          : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
 
   const bwToday = useMemo(() => {
-    if (!bandwidthUsage.length) return { download: 0, upload: 0 };
     const today = bandwidthUsage[bandwidthUsage.length - 1];
     return { download: today?.downloadMb ?? 0, upload: today?.uploadMb ?? 0 };
   }, [bandwidthUsage]);
 
-  const totalBw = useMemo(() => {
-    if (!bandwidthUsage.length) return { download: 0, upload: 0 };
-    return bandwidthUsage.reduce(
-      (acc, d) => ({ download: acc.download + d.downloadMb, upload: acc.upload + d.uploadMb }),
-      { download: 0, upload: 0 }
-    );
-  }, [bandwidthUsage]);
+  const totalBw = useMemo(
+    () =>
+      bandwidthUsage.reduce(
+        (acc, d) => ({ download: acc.download + d.downloadMb, upload: acc.upload + d.uploadMb }),
+        { download: 0, upload: 0 },
+      ),
+    [bandwidthUsage],
+  );
 
-  const formatBw = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`);
-
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
-  };
-
-  const handlePingTest = () => {
-    setIsPinging(true);
-    setTimeout(() => {
-      setIsPinging(false);
-      const pingMs = Math.floor(Math.random() * 6) + 2;
-      toast.success(`Ping response from ${customer?.ipAddress || customer?.username}: ${pingMs}ms (0% loss)`);
-    }, 700);
-  };
-
-  const handleKickSession = () => {
-    toast.success(`CoA Disconnect packet dispatched for ${customer?.username}. Session terminated.`);
-  };
-
-  const handleTogglePppoe = () => {
-    const nextState = !isPppoeEnabled;
-    setIsPppoeEnabled(nextState);
-    toast.info(`PPPoE Secret ${customer?.username} is now ${nextState ? 'ENABLED' : 'DISABLED'}`);
-  };
+  const formatBw = (mb: number) => (mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(1)} MB`);
 
   if (isLoading) return <PageSkeleton variant="detail" rows={7} />;
   if (isError || !customer) {
     return (
       <EmptyState
-        title="Customer not found"
-        description="Could not locate customer with the requested ID."
-        actionLabel="Back to Customers"
-        onAction={() => router.push('/admin/customers')}
+        title="Could not load this customer"
+        description={errorMessage(error, 'The customer was not found or the server did not answer.')}
+        actionLabel="Retry"
+        onAction={() => refetch()}
       />
     );
   }
+
+  const live = session?.available ? session : null;
+  const routerOffline = session?.routerOnline === false;
+  const framedIp = live?.address || customer.ipAddress || pppoe?.address;
+  const callerMac = live?.callerId || pppoe?.callerId || pppoe?.lastCallerId || customer.macAddress;
+  const connected = customer.connStatus === 'conn';
 
   return (
     <div className="space-y-6">
@@ -169,7 +129,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
         <ChevronRight className="h-3 w-3 text-muted-foreground/60" />
         <span className="text-foreground font-medium">{customer.name}</span>
         <Badge variant="outline" className="text-[10px] font-mono border-border/60 ml-1">
-          {customer.code || customer.id}
+          #{customer.id}
         </Badge>
       </div>
 
@@ -183,7 +143,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 border border-primary/30 flex items-center justify-center text-primary font-bold text-2xl shadow-inner">
                   {customer.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
-                <span 
+                <span
                   className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-background flex items-center justify-center ${
                     customer.online ? 'bg-emerald-500' : 'bg-slate-500'
                   }`}
@@ -196,7 +156,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">{customer.name}</h1>
-                  <StatusBadge status={customer.status} />
+                  <StatusBadge status={customer.status} label={customer.status === 'suspended' ? 'Disconnected' : undefined} />
                   {customer.online ? (
                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 gap-1.5 text-xs font-medium">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -215,18 +175,16 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
                 <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono flex-wrap pt-0.5">
                   <span className="flex items-center gap-1.5 text-foreground font-medium">
-                    <User className="h-3.5 w-3.5 text-primary" /> {customer.username}
+                    <User className="h-3.5 w-3.5 text-primary" /> {dash(pppoe?.name || customer.username)}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {customer.phone}
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {dash(customer.phone)}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> {customer.areaName}
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> {dash(customer.areaName)}
                   </span>
-                  <span>•</span>
-                  <span>Code: <strong className="text-foreground">{customer.code || customer.id}</strong></span>
                 </div>
               </div>
             </div>
@@ -238,16 +196,16 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   <Zap className="h-3.5 w-3.5" /> Recharge Line
                 </Button>
               </Link>
-              
-              <Button 
-                size="sm" 
-                variant="outline" 
-                disabled={isPinging}
-                onClick={handlePingTest} 
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={actions.ping.isPending}
+                onClick={() => actions.ping.mutate(customer.id)}
                 className="gap-1.5 text-xs border-border/70 hover:border-primary/50 text-foreground"
               >
-                <Activity className={`h-3.5 w-3.5 text-primary ${isPinging ? 'animate-spin' : ''}`} />
-                {isPinging ? 'Pinging...' : 'Check Ping'}
+                <Activity className={`h-3.5 w-3.5 text-primary ${actions.ping.isPending ? 'animate-spin' : ''}`} />
+                {actions.ping.isPending ? 'Pinging...' : 'Check Ping'}
               </Button>
 
               <Can menu="customer" action="update">
@@ -271,19 +229,27 @@ export function CustomerDetailPage({ id }: { id: string }) {
                     className="gap-2 cursor-pointer text-xs"
                     onClick={() => router.push(`/admin/customers/${customer.id}/mac-bind`)}
                   >
-                    <Shield className="h-3.5 w-3.5 text-primary" /> Bind / Change MAC Address
+                    <Shield className="h-3.5 w-3.5 text-primary" /> MAC Binding
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="gap-2 cursor-pointer text-xs"
-                    onClick={handleKickSession}
+                    onClick={() => router.push(`/admin/customers/${customer.id}/kyc`)}
                   >
-                    <RefreshCw className="h-3.5 w-3.5 text-amber-400" /> Kick Session (CoA)
+                    <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" /> KYC Documents
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="gap-2 cursor-pointer text-xs"
-                    onClick={() => handleCopy(`https://pay.isppaybd.com/bill/${customer.username}`, 'Self-Care Pay Link')}
+                    disabled={actions.kick.isPending}
+                    onClick={() => actions.kick.mutate(customer.id)}
                   >
-                    <Link2 className="h-3.5 w-3.5" /> Copy Payment Link
+                    <RefreshCw className="h-3.5 w-3.5 text-amber-400" /> Kick Session
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer text-xs"
+                    disabled={actions.syncPppoe.isPending}
+                    onClick={() => actions.syncPppoe.mutate(customer.id)}
+                  >
+                    <Key className="h-3.5 w-3.5 text-amber-500" /> Sync PPPoE ID
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -305,26 +271,28 @@ export function CustomerDetailPage({ id }: { id: string }) {
           {/* 1. Connection & Live Traffic */}
           <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Live Bandwidth Stream</span>
+              <span className="text-xs font-medium text-muted-foreground">Live Bandwidth</span>
               <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Activity className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-2.5 flex items-baseline gap-2">
               <div className="text-xl font-bold font-mono text-foreground">
-                {sessionQuery.data?.traffic?.rxbyte 
-                  ? `${Number(sessionQuery.data.traffic.rxbyte).toFixed(1)} Mbps` 
-                  : (customer.online ? '2.4 Mbps' : '0 Kbps')}
+                {live?.rxMbps !== null && live?.rxMbps !== undefined ? `${live.rxMbps.toFixed(1)} Mbps` : '—'}
               </div>
-              <span className="text-xs text-muted-foreground font-mono">
-                ↓ DL / {sessionQuery.data?.traffic?.txbyte ? `${Number(sessionQuery.data.traffic.txbyte).toFixed(1)}M` : '512k'} ↑
-              </span>
+              {live?.txMbps !== null && live?.txMbps !== undefined && (
+                <span className="text-xs text-muted-foreground font-mono">↓ / {live.txMbps.toFixed(1)}M ↑</span>
+              )}
             </div>
             <p className="mt-1 text-xs text-emerald-400 font-medium flex items-center gap-1">
               <Wifi className="h-3 w-3" />
-              {customer.online 
-                ? `Connected (${sessionQuery.data?.uptime && sessionQuery.data.uptime !== '--' ? sessionQuery.data.uptime : '6h 36m'} uptime)` 
-                : 'Disconnected'}
+              {sessionQuery.isLoading
+                ? 'Checking router…'
+                : routerOffline
+                  ? 'Router offline / unreachable'
+                  : live
+                    ? `Connected${live.uptime ? ` (${live.uptime} uptime)` : ''}`
+                    : 'No active session'}
             </p>
           </div>
 
@@ -337,26 +305,27 @@ export function CustomerDetailPage({ id }: { id: string }) {
               </div>
             </div>
             <div className="mt-2.5 text-lg font-bold text-foreground truncate">
-              {customer.packageName}
+              {dash(customer.packageName)}
             </div>
             <p className="mt-1 text-xs font-mono text-primary font-semibold">
-              ৳{customer.packagePrice ?? 0} / month · {customer.areaName}
+              {customer.packagePrice !== null ? <CurrencyDisplay amount={customer.packagePrice} /> : '—'}
+              {customer.areaName ? ` · ${customer.areaName}` : ''}
             </p>
           </div>
 
           {/* 3. Validity & Expiry */}
           <div className={`rounded-xl border p-4 backdrop-blur-md relative overflow-hidden transition-colors ${daysLeftColor}`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Line Validity Runway</span>
+              <span className="text-xs font-medium text-muted-foreground">Line Validity</span>
               <div className="p-2 rounded-lg bg-card/80 border border-border/60">
                 <Clock className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-2.5 text-xl font-bold font-mono">
-              {daysLeft} Days Left
+              {daysLeft === null ? 'No expiry set' : daysLeft < 0 ? `Expired ${Math.abs(daysLeft)} days ago` : `${daysLeft} Days Left`}
             </div>
             <p className="mt-1 text-xs font-mono opacity-90">
-              Due Date: {customer.expiryDate}
+              Due Date: {ymd(customer.expiryDate)}
             </p>
           </div>
 
@@ -369,16 +338,26 @@ export function CustomerDetailPage({ id }: { id: string }) {
               </div>
             </div>
             <div className="mt-2.5 text-xl font-bold font-mono text-foreground flex items-center gap-2">
-              <span>
-                {olt?.rxPower && olt.rxPower !== '--' ? olt.rxPower : '-19.40 dBm'}
-              </span>
-              <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
-                {olt?.status === 'offline' ? 'Offline' : 'Good'}
-              </Badge>
+              <span>{onu?.rx || 'Not found'}</span>
+              {onu?.status && (
+                <Badge variant="outline" className="text-[10px] border-border/60 capitalize">
+                  {onu.status}
+                </Badge>
+              )}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground truncate">
-              OLT: {olt?.name && olt.name !== '--' ? olt.name : 'parvez_olt (BDCOM)'}
-            </p>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground truncate">
+                {onu?.oltName ? `OLT: ${onu.oltName}` : 'No synchronized ONU'}
+              </p>
+              <button
+                type="button"
+                disabled={actions.refreshOnu.isPending}
+                onClick={() => actions.refreshOnu.mutate(customer.id)}
+                className="text-[11px] font-semibold text-primary hover:underline disabled:opacity-50 shrink-0"
+              >
+                {actions.refreshOnu.isPending ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -392,12 +371,18 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Radio className="h-4 w-4 text-primary" />
-                    MikroTik PPPoE NAS Interface
+                    MikroTik PPPoE Account
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Access:</span>
-                    <Switch checked={isPppoeEnabled} onCheckedChange={handleTogglePppoe} />
-                  </div>
+                  <Can menu="customer" action="update_conn">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{connected ? 'Enabled' : 'Disabled'}</span>
+                      <Switch
+                        checked={connected}
+                        disabled={actions.setConnStatus.isPending}
+                        onCheckedChange={(on) => actions.setConnStatus.mutate({ id: customer.id, status: on ? 'conn' : 'disconn' })}
+                      />
+                    </div>
+                  </Can>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 pt-4">
@@ -405,184 +390,141 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
                     <span className="text-muted-foreground block text-[11px]">PPPoE Username</span>
                     <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                      {pppoe?.name || customer.username || '--'}
+                      {dash(pppoe?.name)}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground block text-[11px]">PPPoE Password</span>
-                      <button 
-                        type="button" 
-                        onClick={() => setShowPppoePassword(!showPppoePassword)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        {showPppoePassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </button>
+                      {pppoe?.password && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPppoePassword(!showPppoePassword)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          {showPppoePassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </button>
+                      )}
                     </div>
                     <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                      {showPppoePassword ? (pppoe?.password || '••••••••') : '••••••••'}
+                      {pppoe?.password ? (showPppoePassword ? pppoe.password : '••••••••') : '—'}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                    <span className="text-muted-foreground block text-[11px]">Core Router</span>
+                    <span className="text-muted-foreground block text-[11px]">Router</span>
                     <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                      {customer.routerName || 'MikroTik-CCR1036'}
+                      {dash(customer.routerName)}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
                     <span className="text-muted-foreground block text-[11px]">Bandwidth Profile</span>
                     <span className="font-mono font-semibold text-primary text-xs mt-0.5 block truncate">
-                      {pppoe?.profile || customer.packageName || 'Default'}
+                      {dash(pppoe?.profile)}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
                     <span className="text-muted-foreground block text-[11px]">Framed IP Address</span>
                     <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                      {sessionQuery.data?.address && sessionQuery.data.address !== '--' 
-                        ? String(sessionQuery.data.address) 
-                        : customer.ipAddress || '10.72.14.32'}
+                      {dash(framedIp)}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                    <span className="text-muted-foreground block text-[11px]">MAC Address</span>
+                    <span className="text-muted-foreground block text-[11px]">Caller MAC</span>
                     <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                      {sessionQuery.data?.caller_id && sessionQuery.data.caller_id !== '--'
-                        ? String(sessionQuery.data.caller_id)
-                        : customer.macAddress || pppoe?.lastCallerId || '08:40:F3:AB:A4:FC'}
+                      {dash(callerMac)}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-between text-xs">
                   <div>
-                    <span className="text-muted-foreground">Session Uptime: </span>
+                    <span className="text-muted-foreground">{live ? 'Session Uptime: ' : 'Last logged out: '}</span>
                     <strong className="text-emerald-400 font-mono">
-                      {sessionQuery.data?.uptime && sessionQuery.data.uptime !== '--'
-                        ? String(sessionQuery.data.uptime)
-                        : pppoe?.lastLoggedOut || '6h 36m'}
+                      {live ? dash(live.uptime) : dash(pppoe?.lastLoggedOut)}
                     </strong>
                   </div>
-                  <Button size="sm" variant="outline" onClick={handleKickSession} className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actions.kick.isPending}
+                    onClick={() => actions.kick.mutate(customer.id)}
+                    className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                  >
                     <RefreshCw className="mr-1 h-3 w-3" /> Kick Session
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* 2. GPON OLT / ONU Diagnostic Card */}
-            {olt && (
+            {/* 2. OLT / ONU Diagnostic Card (only with a synchronized ONU) */}
+            {onu && (
               <Card className="border-border/70 bg-card/60 backdrop-blur-md">
                 <CardHeader className="border-b border-border/50 pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Signal className="h-4 w-4 text-primary" />
-                      GPON OLT / ONU Diagnostic
+                      OLT / ONU Diagnostic
                     </CardTitle>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        olt.status === 'online' 
-                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' 
-                          : 'border-red-500/30 bg-red-500/10 text-red-400'
-                      }`}
-                    >
-                      {olt.status === 'online' ? 'ONU Online' : 'ONU Offline'}
+                    <Badge variant="outline" className="text-xs capitalize border-border/60">
+                      {dash(onu.status)}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-muted-foreground block text-[11px]">OLT Name</span>
-                      <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                        {olt.name}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-muted-foreground block text-[11px]">ONU ID</span>
-                      <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                        {olt.onuId}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-muted-foreground block text-[11px]">RX Optical Signal</span>
-                      <span className="font-mono font-bold text-emerald-400 text-xs mt-0.5 block">
-                        {olt.rxPower} (Normal Range)
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-muted-foreground block text-[11px]">ONU Hardware MAC</span>
-                      <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                        {olt.macAddress}
-                      </span>
-                    </div>
-
-                    {olt.callId && (
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                        <span className="text-muted-foreground block text-[11px]">Call ID</span>
-                        <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                          {olt.callId}
-                        </span>
+                    {(
+                      [
+                        ['OLT Name', onu.oltName],
+                        ['ONU ID', onu.onuId],
+                        ['RX Optical Signal', onu.rx],
+                        ['ONU MAC', onu.mac],
+                        ['Reason', onu.reason],
+                        ['Last Seen', onu.lastSeen],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div key={label} className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
+                        <span className="text-muted-foreground block text-[11px]">{label}</span>
+                        <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">{dash(value)}</span>
+                      </div>
+                    ))}
+                    {onu.description && (
+                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 col-span-2">
+                        <span className="text-muted-foreground block text-[11px]">PON Description</span>
+                        <span className="text-xs font-medium text-foreground mt-0.5 block">{onu.description}</span>
                       </div>
                     )}
-
-                    {olt.matchedId && (
-                      <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                        <span className="text-muted-foreground block text-[11px]">Matched ID</span>
-                        <span className="font-mono font-semibold text-foreground text-xs mt-0.5 block truncate">
-                          {olt.matchedId}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 col-span-2">
-                      <span className="text-muted-foreground block text-[11px]">PON Description</span>
-                      <span className="text-xs font-medium text-foreground mt-0.5 block">
-                        {olt.description}
-                      </span>
-                    </div>
                   </div>
-
-                  {olt.lastSeen && (
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Last Seen on OLT:</span>
-                      <span className="font-mono text-foreground font-medium">{olt.lastSeen}</span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* 3. 7-Day Bandwidth Usage & History */}
-            {bandwidthUsage && bandwidthUsage.length > 0 && (
+            {/* 3. Bandwidth Usage History */}
+            {bandwidthUsage.length > 0 && (
               <Card className="border-border/70 bg-card/60 backdrop-blur-md">
                 <CardHeader className="border-b border-border/50 pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Activity className="h-4 w-4 text-primary" />
-                      7-Day Bandwidth Traffic Ledger
+                      Bandwidth Usage History
                     </CardTitle>
                     <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary font-mono text-xs">
-                      Cycle: {formatBw(totalBw.download + totalBw.upload)}
+                      Total: {formatBw(totalBw.download + totalBw.upload)}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 text-center">
-                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Today DL</span>
+                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Latest DL</span>
                       <div className="text-sm font-bold font-mono text-foreground mt-0.5">{formatBw(bwToday.download)}</div>
                     </div>
                     <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 text-center">
-                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Today UL</span>
+                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Latest UL</span>
                       <div className="text-sm font-bold font-mono text-foreground mt-0.5">{formatBw(bwToday.upload)}</div>
                     </div>
                     <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 text-center">
@@ -598,8 +540,8 @@ export function CustomerDetailPage({ id }: { id: string }) {
                   </div>
 
                   <div className="rounded-xl border border-border/60 overflow-hidden divide-y divide-border/40 max-h-56 overflow-y-auto">
-                    {bandwidthUsage.map((bw, i) => (
-                      <div key={i} className="flex items-center justify-between p-2.5 text-xs hover:bg-muted/20 transition-colors">
+                    {[...bandwidthUsage].reverse().map((bw) => (
+                      <div key={bw.date} className="flex items-center justify-between p-2.5 text-xs hover:bg-muted/20 transition-colors">
                         <span className="font-mono text-foreground">{bw.date}</span>
                         <div className="flex items-center gap-4">
                           <span className="flex items-center gap-1 font-mono text-emerald-400">
@@ -636,40 +578,43 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">Mobile Phone</span>
-                    <div className="font-semibold text-sm font-mono text-foreground">{customer.phone}</div>
+                    <div className="font-semibold text-sm font-mono text-foreground">{dash(customer.phone)}</div>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">Email Address</span>
-                    <div className="font-semibold text-sm text-foreground truncate">{customer.email || 'N/A'}</div>
+                    <div className="font-semibold text-sm text-foreground truncate">{dash(customer.email)}</div>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">Service Area</span>
                     <div className="font-semibold text-sm text-foreground">
-                      {customer.areaName} {customer.subAreaName ? `(${customer.subAreaName})` : ''}
+                      {dash(customer.areaName)} {customer.subAreaName ? `(${customer.subAreaName})` : ''}
                     </div>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">Joined Date</span>
-                    <div className="font-semibold text-sm font-mono text-foreground">{customer.createdAt}</div>
+                    <div className="font-semibold text-sm font-mono text-foreground">{ymd(customer.createdAt)}</div>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">National ID (NID)</span>
-                    <div className="font-semibold text-sm font-mono text-foreground">{customer.nidNumber || '3819283748291'}</div>
+                    <div className="font-semibold text-sm font-mono text-foreground flex items-center gap-1.5">
+                      {dash(customer.nidNumber)}
+                      {customer.nidVerified && <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" aria-label="NID verified" />}
+                    </div>
                   </div>
 
                   <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20 sm:col-span-2 space-y-0.5">
                     <span className="text-muted-foreground text-[11px]">Installation Address</span>
-                    <div className="font-semibold text-sm text-foreground">{customer.address || 'House 24, Road 5, Block B, Dhaka'}</div>
+                    <div className="font-semibold text-sm text-foreground">{dash(customer.address)}</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* 2. Physical Fiber Line & Hardware Specs */}
+            {/* 2. Physical Line & Fiber Specs */}
             {conn && (
               <Card className="border-border/70 bg-card/60 backdrop-blur-md">
                 <CardHeader className="border-b border-border/50 pb-3">
@@ -680,76 +625,33 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Connection Type</span>
-                      <span className="font-semibold text-foreground">{conn.connectionType || customer.connectionType}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Cable Requirement</span>
-                      <span className="font-semibold font-mono text-foreground">{conn.cableRequirement || '25 meter'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Fiber Code</span>
-                      <span className="font-mono font-semibold text-foreground">{conn.fiberCode || 'FBR-002'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Core Color</span>
-                      <span className="font-semibold text-foreground capitalize">{conn.coreColor || 'Blue'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Number of Core</span>
-                      <span className="font-semibold text-foreground">{conn.numberOfCore || '2 Core'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Client Type</span>
-                      <span className="font-semibold text-foreground capitalize">{conn.clientType || 'Residential'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">Billing Status</span>
-                      <span className="font-semibold text-emerald-400 capitalize">{conn.billingStatus || 'Current'}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
-                      <span className="text-[10px] text-muted-foreground block">OTC Paid</span>
-                      <span className="font-semibold text-foreground">{conn.otc || 'Yes'}</span>
-                    </div>
+                    {(
+                      [
+                        ['Connection Type', conn.lineType],
+                        ['Cable (m)', conn.cableRequirement],
+                        ['Fiber Code', conn.fiberCode],
+                        ['Core Color', conn.coreColor],
+                        ['Number of Core', conn.numberOfCore],
+                        ['Client Type', conn.clientType],
+                        ['Billing Status', conn.billingStatus],
+                        ['OTC', conn.otc],
+                        ['ONU MAC', conn.onuMac],
+                        ['Vendor', conn.vendorName],
+                        ['Connected By', conn.connectedBy],
+                        ['WiFi Router User', conn.routerUsername],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div key={label} className="p-2.5 rounded-lg border border-border/60 bg-muted/20">
+                        <span className="text-[10px] text-muted-foreground block">{label}</span>
+                        <span className="font-semibold text-foreground capitalize break-all">{dash(value)}</span>
+                      </div>
+                    ))}
                   </div>
-
-                  {/* WiFi Router Credentials */}
-                  {(conn.routerUsername || conn.routerPassword) && (
-                    <div className="p-3 rounded-lg border border-border/60 bg-background/60 grid grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <span className="text-muted-foreground text-[11px] block">Customer WiFi Router User</span>
-                        <span className="font-mono font-semibold text-foreground">{conn.routerUsername || 'admin'}</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-[11px] block">WiFi Password</span>
-                          <button 
-                            type="button" 
-                            onClick={() => setShowRouterPassword(!showRouterPassword)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            {showRouterPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          </button>
-                        </div>
-                        <span className="font-mono font-semibold text-foreground">
-                          {showRouterPassword ? conn.routerPassword : '••••••••'}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* 3. Address & Geographical Mapbox Map */}
+            {/* 3. Address & Geographical Map */}
             <Card className="border-border/70 bg-card/60 backdrop-blur-md">
               <CardHeader className="border-b border-border/50 pb-3">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -758,7 +660,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-3">
-                {customer.latitude && customer.longitude ? (
+                {customer.latitude !== undefined && customer.longitude !== undefined ? (
                   <div className="space-y-3">
                     <div className="rounded-xl overflow-hidden border border-border/70 shadow-sm">
                       <MapboxMap
@@ -805,17 +707,23 @@ export function CustomerDetailPage({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* ================= BOTTOM FULL-WIDTH INVOICES TABLE ================= */}
+        {/* ================= BOTTOM FULL-WIDTH PAYMENTS LEDGER ================= */}
         <Card className="border-border/70 bg-card/60 backdrop-blur-md">
           <CardHeader className="border-b border-border/50 pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-primary" />
-                  Invoice Ledger & Collection Receipts ({payments.length})
+                  Payment Ledger ({customer.paymentsSummary.totalCount})
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Historical record of all billing invoices, recharge receipts, and online gateway collections
+                  Collected <CurrencyDisplay amount={customer.paymentsSummary.successfulAmount} className="inline" />
+                  {customer.paymentsSummary.pendingAmount > 0 && (
+                    <>
+                      {' · '}pending <CurrencyDisplay amount={customer.paymentsSummary.pendingAmount} className="inline" />
+                    </>
+                  )}
+                  {customer.paymentsSummary.totalCount > payments.length && ` · showing the latest ${payments.length}`}
                 </CardDescription>
               </div>
               <Link href={`/admin/customer-payments/new?customerId=${customer.id}`}>
@@ -827,7 +735,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
           </CardHeader>
           <CardContent className="pt-2">
             {payments.length === 0 ? (
-              <EmptyState title="No payment receipts" description="No invoices recorded for this customer yet." />
+              <EmptyState title="No payment receipts" description="No payments recorded for this customer yet." />
             ) : (
               <div className="divide-y divide-border/40">
                 {payments.map((p) => (
@@ -835,12 +743,15 @@ export function CustomerDetailPage({ id }: { id: string }) {
                     <div className="space-y-0.5">
                       <div className="font-mono font-bold text-sm text-foreground flex items-center gap-2">
                         {p.invoiceNo}
-                        <Badge variant="outline" className="text-[10px] uppercase font-mono border-border/60">
-                          {p.method}
-                        </Badge>
+                        {p.method && (
+                          <Badge variant="outline" className="text-[10px] uppercase font-mono border-border/60">
+                            {p.method}
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground font-mono">
-                        Date: {p.paidAt.slice(0, 10)}
+                        {p.month ? `${p.month} · ` : ''}Date: {ymd(p.paidAt)}
+                        {p.receivedBy ? ` · by ${p.receivedBy}` : ''}
                       </div>
                     </div>
 
@@ -849,7 +760,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                         <div className="font-bold font-mono text-sm text-foreground">
                           <CurrencyDisplay amount={p.amountBdt} />
                         </div>
-                        <StatusBadge status={p.status} />
+                        <StatusBadge status={p.status === 'successful' ? 'paid' : p.status || 'pending'} label={p.status || undefined} />
                       </div>
 
                       <Button

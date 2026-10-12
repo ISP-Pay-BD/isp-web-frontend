@@ -1,14 +1,27 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
+import { useHotspotRouter } from '@/features/admin/hotspot/hooks/useHotspotRouter';
+import {
+  useDeleteWalledGardenRule,
+  useSaveWalledGardenRule,
+  useWalledGarden,
+} from '@/features/admin/hotspot/hooks/useWalledGarden';
+import { HotspotRouterSelect } from '@/features/admin/hotspot/components/HotspotRouterSelect';
+import { HotspotQueryError, HotspotRouterGate } from '@/features/admin/hotspot/components/HotspotStates';
+import { HotspotKpi, HotspotKpiRow } from '@/features/admin/hotspot/components/HotspotKpi';
+import type { WalledGardenRule } from '@/features/admin/hotspot/types';
 import { DataTable } from '@/features/shared/data-table';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -20,109 +33,92 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-import {
-  Plus,
-  Download,
-  ShieldCheck,
-  CheckCircle2,
-  Globe,
-  MoreHorizontal,
-  Zap,
-  Edit,
-  Trash2,
-  CreditCard,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, ShieldCheck, CheckCircle2, Globe, MoreHorizontal, Edit, Trash2, Ban, Power, ShieldX, Loader2 } from 'lucide-react';
 
-type Row = IspOpsData['walledGardenRules'][number];
+/** Mirrors the backend rule: host name / wildcard / IP, no spaces or punctuation. */
+const HOST_RE = /^[a-z0-9*][a-z0-9*.-]{0,252}$/;
 
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.host).toLowerCase().includes(q) ||
-    String(r.comment).toLowerCase().includes(q)
-  );
-};
+const ACTIONS = [
+  { value: 'allow', label: 'Allow' },
+  { value: 'deny', label: 'Deny' },
+] as const;
+
+type EditorState = { rule: WalledGardenRule | null } | null;
 
 export function WalledGardenPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [rules, setRules] = useState<Row[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const hs = useHotspotRouter();
+  const [editor, setEditor] = useState<EditorState>(null);
 
-  // Form State
-  const [host, setHost] = useState('');
-  const [comment, setComment] = useState('');
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Hotspot Walled Garden Rules"
+        subtitle="Hosts guests can reach before logging in to the hotspot of the selected router."
+        breadcrumb={[
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Hotspot', href: '/admin/hotspot' },
+          { label: 'Walled Garden' },
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <HotspotRouterSelect state={hs} />
+            {hs.router ? (
+              <Button size="sm" onClick={() => setEditor({ rule: null })} className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Host Rule
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
+      <HotspotRouterGate state={hs}>
+        {hs.router ? (
+          <WalledGardenBody
+            key={hs.router.id}
+            routerId={hs.router.id}
+            routerName={hs.router.name}
+            editor={editor}
+            onEditorChange={setEditor}
+          />
+        ) : null}
+      </HotspotRouterGate>
+    </div>
+  );
+}
 
-  const initialRows = data?.walledGardenRules ?? [];
-  const rows = rules.length > 0 ? rules : initialRows;
+function WalledGardenBody({
+  routerId,
+  routerName,
+  editor,
+  onEditorChange,
+}: {
+  routerId: string;
+  routerName: string;
+  editor: EditorState;
+  onEditorChange: (next: EditorState) => void;
+}) {
+  const table = useServerTable();
+  const { page, pageSize, search } = table;
+  const [deleteTarget, setDeleteTarget] = useState<WalledGardenRule | null>(null);
 
-  const totalRules = rows.length;
-  const enabledCount = rows.filter((r) => r.enabled).length;
-  const disabledCount = totalRules - enabledCount;
-  const pgwCount = rows.filter((r) =>
-    r.host.toLowerCase().includes('bkash') ||
-    r.host.toLowerCase().includes('nagad') ||
-    r.host.toLowerCase().includes('ssl') ||
-    r.host.toLowerCase().includes('payment')
-  ).length;
+  const rules = useWalledGarden(routerId, { page, pageSize, search });
+  const save = useSaveWalledGardenRule(routerId);
+  const saveRule = save.mutate;
+  const remove = useDeleteWalledGardenRule(routerId);
+  const summary = rules.data?.summary;
 
-  const handleAddHost = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!host.trim()) {
-      toast.error('Please enter host name or IP address');
-      return;
-    }
-
-    const newRule: Row = {
-      id: `wg_${Date.now()}`,
-      host: host.toLowerCase(),
-      comment: comment.trim() || 'Pre-auth bypass rule',
-      enabled: true,
-    };
-
-    setRules((prev) => [newRule, ...(prev.length > 0 ? prev : initialRows)]);
-    toast.success(`Walled Garden host "${newRule.host}" whitelisted.`);
-    setModalOpen(false);
-    setHost('');
-    setComment('');
-  };
-
-  const handleExportCsv = () => {
-    const headers = ['Destination Host', 'Comment / Description', 'Enabled Status'];
-    const csvRows = rows.map((r) => [
-      r.host,
-      `"${r.comment}"`,
-      r.enabled ? 'Enabled' : 'Disabled',
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `walled_garden_rules_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Walled garden rules exported to CSV');
-  };
-
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<WalledGardenRule, unknown>[]>(
     () => [
       {
-        accessorKey: 'host',
-        header: 'Whitelisted Host / Domain',
+        accessorKey: 'dstHost',
+        header: 'Destination Host',
         enableHiding: false,
         size: 260,
         cell: ({ row }) => (
@@ -130,39 +126,56 @@ export function WalledGardenPage() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <Globe className="h-4 w-4" />
             </div>
-            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
-              {String(row.original.host)}
-            </span>
+            <div>
+              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
+                {row.original.dstHost || '—'}
+              </span>
+              {row.original.dynamic ? <span className="mt-0.5 block text-xs text-muted-foreground">Added by the router</span> : null}
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: 'comment',
-        header: 'Rule Purpose & Description',
-        size: 320,
+        accessorKey: 'action',
+        header: 'Action',
+        size: 100,
         cell: ({ row }) => (
-          <span className="text-sm text-foreground">{String(row.original.comment)}</span>
+          <Badge
+            variant="outline"
+            className={
+              row.original.action === 'allow'
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
+            }
+          >
+            {row.original.action === 'allow' ? 'Allow' : 'Deny'}
+          </Badge>
         ),
+      },
+      {
+        accessorKey: 'comment',
+        header: 'Comment',
+        size: 280,
+        cell: ({ row }) => <span className="text-sm text-foreground">{row.original.comment || '—'}</span>,
+      },
+      {
+        accessorKey: 'hits',
+        header: 'Hits',
+        size: 90,
+        cell: ({ row }) => <span className="font-mono text-xs tabular-nums text-muted-foreground">{row.original.hits}</span>,
       },
       {
         accessorKey: 'enabled',
         header: 'Status',
-        size: 130,
-        cell: ({ row }) => {
-          const en = !!row.original.enabled;
-          return (
-            <Badge
-              variant="outline"
-              className={
-                en
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                  : 'bg-muted text-muted-foreground'
-              }
-            >
-              {en ? 'Enabled' : 'Disabled'}
-            </Badge>
-          );
-        },
+        size: 110,
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={row.original.enabled ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-muted text-muted-foreground'}
+          >
+            {row.original.enabled ? 'Enabled' : 'Disabled'}
+          </Badge>
+        ),
       },
       {
         id: 'actions',
@@ -170,28 +183,38 @@ export function WalledGardenPage() {
         size: 60,
         cell: ({ row }) => {
           const r = row.original;
+          if (r.dynamic) return null;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger
+                aria-label={`Actions for ${r.dstHost}`}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Rule Options</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.success(`DNS test reached ${r.host}`)}>
-                  <Zap className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                  Test DNS Resolution
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Editing ${r.host}`)}>
-                  <Edit className="h-3.5 w-3.5 mr-2" />
-                  Edit Rule
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Rule Options</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => onEditorChange({ rule: r })}>
+                    <Edit className="h-3.5 w-3.5 mr-2" />
+                    Edit Rule
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      saveRule(
+                        { id: r.id, enabled: !r.enabled },
+                        { onSuccess: () => toast.success(`${r.dstHost} ${r.enabled ? 'disabled' : 'enabled'}`) },
+                      )
+                    }
+                  >
+                    {r.enabled ? <Ban className="h-3.5 w-3.5 mr-2" /> : <Power className="h-3.5 w-3.5 mr-2" />}
+                    {r.enabled ? 'Disable Rule' : 'Enable Rule'}
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`Rule ${r.host} deleted`)}
-                >
+                <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleteTarget(r)}>
                   <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Remove Host
+                  Remove Rule
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -199,141 +222,214 @@ export function WalledGardenPage() {
         },
       },
     ],
-    [],
+    [onEditorChange, saveRule],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load rules" actionLabel="Retry" onAction={() => refetch()} />;
+  if (rules.isError) {
+    return (
+      <HotspotQueryError
+        error={rules.error}
+        routerName={routerName}
+        title="Failed to load walled garden rules"
+        onRetry={() => void rules.refetch()}
+      />
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Hotspot Walled Garden Rules"
-        subtitle="Manage pre-authentication access rules, captive portal assets, and payment gateway bypasses."
-        breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Walled Garden' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
-              <Download className="mr-2 h-4 w-4" />
-              Export Rules
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Host Rule
-            </Button>
-          </div>
-        }
-      />
+    <>
+      <HotspotKpiRow>
+        <HotspotKpi
+          label="Total Rules"
+          value={summary ? summary.total : '—'}
+          hint="Walled garden entries"
+          icon={<ShieldCheck className="h-4 w-4 text-primary" />}
+        />
+        <HotspotKpi
+          label="Enabled"
+          value={summary ? summary.enabled : '—'}
+          hint="Applied before login"
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          positive
+        />
+        <HotspotKpi
+          label="Disabled"
+          value={summary ? summary.disabled : '—'}
+          hint="Kept but not applied"
+          icon={<Ban className="h-4 w-4 text-muted-foreground" />}
+        />
+        <HotspotKpi
+          label="Deny Rules"
+          value={summary ? summary.deny : '—'}
+          hint={summary ? `${summary.allow} allow rules` : undefined}
+          icon={<ShieldX className="h-4 w-4 text-rose-500" />}
+        />
+      </HotspotKpiRow>
 
-      {/* KPI Ribbon */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Rules</span>
-            <ShieldCheck className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalRules}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Whitelisted host patterns</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Active Enabled</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {enabledCount}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Bypassing captive portal</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Disabled</span>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {disabledCount}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Inactive exemptions</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Payment Gateways</span>
-            <CreditCard className="h-4 w-4 text-sky-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {pgwCount}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">bKash, Nagad, SSLCommerz</p>
-        </div>
-      </div>
-
-      {/* Main Data Table */}
       <DataTable
         columns={columns}
-        data={rows}
-        searchKey="host"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search host domain or comment..."
+        data={rules.data?.items ?? []}
+        isLoading={rules.isLoading}
+        emptyTitle={search ? 'No rules match' : 'No walled garden rules'}
+        emptyDescription="Add the hosts guests must reach before logging in, e.g. your payment gateway."
+        searchPlaceholder="Search host or comment..."
+        getRowId={(r) => r.id}
+        server={table.server(rules.data?.meta.total ?? 0)}
       />
 
-      {/* Add Host Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleAddHost}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-primary" />
-                Whitelist Walled Garden Host
-              </DialogTitle>
-              <DialogDescription>
-                Allow guest devices to access this domain or IP address before logging into the captive portal.
-              </DialogDescription>
-            </DialogHeader>
+      {editor ? (
+        <RuleDialog
+          key={editor.rule?.id ?? 'new'}
+          rule={editor.rule}
+          pending={save.isPending}
+          onClose={() => onEditorChange(null)}
+          onSubmit={(input) =>
+            saveRule(
+              { id: editor.rule?.id, ...input },
+              {
+                onSuccess: () => {
+                  toast.success(editor.rule ? `Rule ${input.dstHost} updated` : `${input.dstHost} added to the walled garden`);
+                  onEditorChange(null);
+                },
+              },
+            )
+          }
+        />
+      ) : null}
 
-            <div className="grid gap-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="wg-host">Destination Host / Domain *</Label>
-                <Input
-                  id="wg-host"
-                  placeholder="e.g. *.bkash.com or *.isppaybd.com"
-                  value={host}
-                  onChange={(e) => setHost(e.target.value)}
-                  className="font-mono"
-                  required
-                />
-              </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Remove this rule?"
+        description={deleteTarget ? `${deleteTarget.dstHost} is removed from the router's walled garden.` : undefined}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (!target) return;
+          remove.mutate(target.id, { onSuccess: () => toast.success(`${target.dstHost} removed`) });
+        }}
+      />
+    </>
+  );
+}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="wg-desc">Purpose / Comment</Label>
-                <Input
-                  id="wg-desc"
-                  placeholder="e.g. bKash payment gateway checkout redirection"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                />
-              </div>
+interface RuleInput {
+  dstHost: string;
+  action: 'allow' | 'deny';
+  comment: string;
+  enabled: boolean;
+}
+
+function RuleDialog({
+  rule,
+  pending,
+  onClose,
+  onSubmit,
+}: {
+  rule: WalledGardenRule | null;
+  pending: boolean;
+  onClose: () => void;
+  onSubmit: (input: RuleInput) => void;
+}) {
+  const [form, setForm] = useState<RuleInput>({
+    dstHost: rule?.dstHost ?? '',
+    action: rule?.action ?? 'allow',
+    comment: rule?.comment ?? '',
+    enabled: rule?.enabled ?? true,
+  });
+  const set = (patch: Partial<RuleInput>) => setForm((f) => ({ ...f, ...patch }));
+  const host = form.dstHost.trim().toLowerCase();
+  const hostError = host && (!HOST_RE.test(host) || !/[a-z0-9]/.test(host)) ? 'Use a host like *.bkash.com or an IP address' : '';
+  const commentError = form.comment.length > 120 ? 'At most 120 characters' : '';
+  const invalid = !host || Boolean(hostError || commentError);
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!invalid) onSubmit({ ...form, dstHost: host, comment: form.comment.trim() });
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              {rule ? 'Edit Walled Garden Rule' : 'Add Walled Garden Host'}
+            </DialogTitle>
+            <DialogDescription>Guests can reach allowed hosts before logging in to the hotspot.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="wg-host">Destination Host *</Label>
+              <Input
+                id="wg-host"
+                placeholder="e.g. *.bkash.com"
+                value={form.dstHost}
+                onChange={(e) => set({ dstHost: e.target.value })}
+                className="font-mono"
+                aria-invalid={Boolean(hostError)}
+                required
+              />
+              {hostError ? <p className="text-destructive text-xs">{hostError}</p> : null}
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Whitelist Host</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="wg-action">Action</Label>
+                <Select value={form.action} onValueChange={(v) => v && set({ action: v as RuleInput['action'] })} items={[...ACTIONS]}>
+                  <SelectTrigger id="wg-action" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTIONS.map((a) => (
+                      <SelectItem key={a.value} value={a.value}>
+                        {a.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <label className="flex items-end justify-between gap-3 pb-1.5">
+                <span className="text-sm font-medium">Enabled</span>
+                <Switch checked={form.enabled} onCheckedChange={(checked) => set({ enabled: Boolean(checked) })} />
+              </label>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="wg-desc">Comment</Label>
+              <Input
+                id="wg-desc"
+                placeholder="Optional, e.g. payment gateway checkout"
+                value={form.comment}
+                onChange={(e) => set({ comment: e.target.value })}
+                aria-invalid={Boolean(commentError)}
+              />
+              {commentError ? <p className="text-destructive text-xs">{commentError}</p> : null}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={invalid || pending}>
+              {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {rule ? 'Save Rule' : 'Add Rule'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

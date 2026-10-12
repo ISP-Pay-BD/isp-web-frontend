@@ -34,7 +34,7 @@ export function SpotlightCard({ children, className, as = 'article' }: Spotlight
       onMouseMove={onMove}
       onMouseLeave={() => setSpot((s) => ({ ...s, visible: false }))}
       className={cn(
-        'group relative overflow-hidden rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform hover:-translate-y-1 hover:ring-white/20 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]',
+        'group relative overflow-hidden rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:ring-white/20',
         className,
       )}
       style={
@@ -47,7 +47,7 @@ export function SpotlightCard({ children, className, as = 'article' }: Spotlight
             }
       }
     >
-      <div className="relative z-[1] h-full w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
+      <div className="bg-landing-panel relative z-[1] h-full w-full overflow-hidden rounded-[calc(2rem-0.375rem)] shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
         {children}
       </div>
     </Comp>

@@ -14,16 +14,17 @@ interface Plan {
   name: string;
   priceBdt: number;
   period: string;
-  customers: string | number | null;
+  customers: string;
   features: string[];
-  highlighted?: boolean;
 }
+
+/** Calculator slider range — a UI control, not pricing data. */
+const PAYG_SLIDER = { min: 50, max: 5000, step: 50, initial: 500 } as const;
 
 export function PricingPage() {
   const t = useTranslations();
   const { data, isLoading, isError, refetch } = useMarketingPricing();
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
-  const [isYearly, setIsYearly] = useState(false);
   const [paygSubscribers, setPaygSubscribers] = useState<number | null>(null);
 
   const payg = data?.payg;
@@ -35,17 +36,14 @@ export function PricingPage() {
       name: tier.name,
       priceBdt: tier.priceBdt,
       period: tier.period,
-      customers: tier.customers ? `Up to ${tier.customers}` : 'Unlimited',
+      customers: tier.customers ? `Up to ${tier.customers.toLocaleString()} subscribers` : 'Unlimited subscribers',
       features: [...tier.features],
-      highlighted: tier.highlight,
     }));
   }, [tiers]);
 
-  const subscriberCount = paygSubscribers ?? payg?.defaultCustomers ?? 500;
-
-  const paygTotal = payg
-    ? payg.baseFeeBdt + Math.max(subscriberCount, payg.minCustomers) * payg.pricePerCustomerBdt
-    : 0;
+  const subscriberCount = paygSubscribers ?? PAYG_SLIDER.initial;
+  const paygTotal = payg ? payg.baseFeeBdt + subscriberCount * payg.pricePerCustomerBdt : 0;
+  const trialDays = data?.trialDays ?? 0;
 
   const faqs = [
     {
@@ -60,17 +58,21 @@ export function PricingPage() {
       q: 'How does payment collection work for my fee?',
       a: 'Auto-deduct from your prepaid platform wallet or automated monthly bKash/Nagad invoice.',
     },
-    {
-      q: 'What happens when my 14-day trial ends?',
-      a: 'Your network keeps running safely. You simply select a plan to continue automated billing.',
-    },
+    ...(trialDays > 0
+      ? [
+          {
+            q: `What happens when my ${trialDays}-day trial ends?`,
+            a: 'Your network keeps running safely. You simply select a plan to continue automated billing.',
+          },
+        ]
+      : []),
   ];
 
   if (isLoading) {
     return <div className="py-24 text-center text-sm text-white/50">Loading pricing…</div>;
   }
 
-  if (isError || !payg) {
+  if (isError || !data) {
     return (
       <div className="py-24 text-center">
         <p className="text-sm text-white/70">Failed to load pricing.</p>
@@ -100,7 +102,7 @@ export function PricingPage() {
           </p>
         </Reveal>
 
-        <Reveal className="mt-12 flex justify-center" delay={0.05}>
+        <Reveal className={`mt-12 justify-center ${payg ? 'flex' : 'hidden'}`} delay={0.05}>
           <div className="inline-flex rounded-xl border border-white/15 bg-white/5 p-1 backdrop-blur-md">
             <button
               type="button"
@@ -130,47 +132,18 @@ export function PricingPage() {
         <Reveal className="mt-12" delay={0.08}>
           {model === 'fixed' && (
             <div>
-              <div className="mb-10 flex items-center justify-center gap-3 text-sm">
-                <span className={!isYearly ? 'font-semibold text-white' : 'text-white/60'}>
-                  Monthly
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsYearly(!isYearly)}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
-                    isYearly ? 'bg-landing-cta' : 'bg-white/20'
-                  }`}
-                  aria-label="Toggle yearly discount"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isYearly ? 'translate-x-6' : 'translate-x-1'
-                    } mt-1`}
-                  />
-                </button>
-                <span className={isYearly ? 'font-semibold text-white' : 'text-white/60'}>
-                  Yearly
-                </span>
-                <span className="text-xs text-white/45">Save 20%</span>
-              </div>
-
               <div className="grid gap-8 md:grid-cols-3">
+                {plans.length === 0 ? (
+                  <p className="text-center text-sm text-white/60 md:col-span-3">
+                    Plans are being updated. Please contact us for current pricing.
+                  </p>
+                ) : null}
                 {plans.map((plan) => {
-                  const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
                   return (
                     <div
                       key={plan.id}
-                      className={`relative flex flex-col justify-between rounded-xl border p-6 ${
-                        plan.highlighted
-                          ? 'border-landing-cta bg-landing-panel'
-                          : 'border-white/10 bg-white/[0.02]'
-                      }`}
+                      className="relative flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.02] p-6"
                     >
-                      {plan.highlighted && (
-                        <span className="text-landing-cta mb-3 text-[11px] font-medium">
-                          Most popular
-                        </span>
-                      )}
 
                       <div>
                         <h3 className="font-landing-display text-xl font-semibold text-white">
@@ -180,9 +153,9 @@ export function PricingPage() {
 
                         <div className="mt-5 flex items-baseline">
                           <span className="font-landing-display text-3xl font-semibold text-white tabular-nums">
-                            {formatBdtWithSymbol(effectivePrice)}
+                            {formatBdtWithSymbol(plan.priceBdt)}
                           </span>
-                          <span className="ml-1 text-sm text-white/45">/ month</span>
+                          <span className="ml-1 text-sm text-white/45">/ {plan.period}</span>
                         </div>
 
                         <ul className="mt-8 space-y-3.5 border-t border-white/10 pt-6 text-sm text-white/80">
@@ -198,13 +171,9 @@ export function PricingPage() {
                       <div className="mt-8 pt-4">
                         <Link href="/register">
                           <Button
-                            className={`h-10 w-full text-sm font-semibold ${
-                              plan.highlighted
-                                ? 'bg-landing-cta hover:bg-landing-cta-hover text-white'
-                                : 'bg-white/10 text-white hover:bg-white/15'
-                            }`}
+                            className="bg-landing-cta hover:bg-landing-cta-hover h-10 w-full text-sm font-semibold text-white"
                           >
-                            Start Free Trial
+                            {trialDays > 0 ? 'Start Free Trial' : 'Get Started'}
                           </Button>
                         </Link>
                       </div>
@@ -215,7 +184,7 @@ export function PricingPage() {
             </div>
           )}
 
-          {model === 'payg' && (
+          {model === 'payg' && payg && (
             <div className="bg-landing-panel/60 mx-auto max-w-2xl rounded-xl border border-white/10 p-6 md:p-8">
               <div>
                 <p className="text-landing-cta text-xs font-medium">Pay as you grow</p>
@@ -238,18 +207,18 @@ export function PricingPage() {
 
                 <input
                   type="range"
-                  min={payg.minCustomers}
-                  max={payg.maxCustomers}
-                  step={payg.step}
+                  min={PAYG_SLIDER.min}
+                  max={PAYG_SLIDER.max}
+                  step={PAYG_SLIDER.step}
                   value={subscriberCount}
                   onChange={(e) => setPaygSubscribers(Number(e.target.value))}
                   className="accent-landing-cta w-full cursor-pointer"
                 />
 
                 <div className="flex justify-between font-mono text-[11px] text-white/40">
-                  <span>{payg.minCustomers}</span>
-                  <span>2,500</span>
-                  <span>{payg.maxCustomers.toLocaleString()}</span>
+                  <span>{PAYG_SLIDER.min}</span>
+                  <span>{((PAYG_SLIDER.min + PAYG_SLIDER.max) / 2).toLocaleString()}</span>
+                  <span>{PAYG_SLIDER.max.toLocaleString()}</span>
                 </div>
               </div>
 

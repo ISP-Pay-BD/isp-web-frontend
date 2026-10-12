@@ -7,10 +7,13 @@ import type { User } from '@/types/auth';
 const AUTH_LOGIN = '/v1/auth/login';
 const AUTH_REFRESH = '/v1/auth/refresh';
 const AUTH_ME = '/v1/auth/me';
+const AUTH_RESET_PASSWORD = '/v1/auth/reset-password';
 
 export interface LoginCredentials {
   email: string;
   password?: string;
+  /** TOTP code for accounts with two-factor authentication enabled */
+  otp?: string;
 }
 
 export interface LoginResponse {
@@ -50,6 +53,15 @@ export const authService = {
       token: rawData.access_token || '',
       refreshToken: rawData.refresh_token,
     };
+  },
+
+  /** POST /api/v1/auth/reset-password — consumes the emailed code. */
+  resetPassword: async (payload: { email: string; code: string; newPassword: string }): Promise<void> => {
+    await http.post(AUTH_RESET_PASSWORD, {
+      email: payload.email,
+      code: payload.code,
+      new_password: payload.newPassword,
+    });
   },
 
   me: async (): Promise<User> => {

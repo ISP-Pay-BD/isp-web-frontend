@@ -2,6 +2,7 @@
 
 import { Check, Lock } from 'lucide-react';
 import { useTranslations } from '@/features/marketing/shared';
+import { LockIllustration } from './illustrations';
 import type { PermissionMatrixRow } from '../types';
 
 function Cell({ on }: { on: boolean }) {
@@ -19,8 +20,13 @@ export function PermissionsTable({ matrix }: { matrix: PermissionMatrixRow[] }) 
 
   return (
     <div>
-      <h3 className="font-landing-display text-lg font-semibold text-white">{k('title')}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-white/55">{k('desc')}</p>
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-landing-display text-lg font-semibold text-white">{k('title')}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-white/55">{k('desc')}</p>
+        </div>
+        <LockIllustration className="size-20 shrink-0" />
+      </div>
 
       <div className="mt-6 overflow-x-auto border-y border-white/10">
         <table className="w-full text-left text-sm">

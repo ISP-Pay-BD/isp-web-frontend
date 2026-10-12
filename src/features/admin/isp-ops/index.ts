@@ -1,5 +1,3 @@
-export { useIspOps } from './hooks/use-isp-ops';
-
 export { RouterDetailPage } from './pages/RouterDetailPage';
 export { RouterUsersPage } from './pages/RouterUsersPage';
 export { RadiusPanelPage } from './pages/RadiusPanelPage';

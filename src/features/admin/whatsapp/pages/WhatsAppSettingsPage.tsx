@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,84 +8,91 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { Can } from '@/components/shared/Can';
 import { toast } from 'sonner';
-import {
-  Settings,
-  Globe,
-  Server,
-  Zap,
-  Bot,
-  Copy,
-  CheckCircle2,
-  RefreshCw,
-  QrCode,
-  ShieldCheck,
-  Save,
-} from 'lucide-react';
+import { Globe, Server, Zap, Copy, RefreshCw, ShieldCheck, Save } from 'lucide-react';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { formatDateTime } from '@/lib/format';
 import { WhatsAppNavLinks } from './WhatsAppInboxPage';
-import { useWhatsApp } from '../hooks/use-whatsapp';
+import { useRestartWahaSession, useSaveWhatsAppSettings, useWhatsAppSettings } from '../hooks/use-whatsapp';
+import { metaFormFrom, type WaMetaForm } from '../types';
+
+const TOGGLES: Array<{ key: keyof Pick<WaMetaForm, 'utilityEnabled' | 'authenticationEnabled' | 'marketingEnabled' | 'aiEnabled'>; label: string; desc: string }> = [
+  { key: 'utilityEnabled', label: 'Utility Alerts (bills, receipts, expiry)', desc: 'Sends approved UTILITY templates when billing events fire' },
+  { key: 'authenticationEnabled', label: 'OTP over WhatsApp', desc: 'Sends login / verification codes with AUTHENTICATION templates' },
+  { key: 'marketingEnabled', label: 'Marketing Campaigns', desc: 'Allows campaigns to opted-in numbers' },
+  { key: 'aiEnabled', label: 'AI Customer Support Auto-Responder', desc: 'The AI assistant answers incoming customer messages' },
+];
 
 export function WhatsAppSettingsPage() {
-  const { data, isLoading, isError, refetch } = useWhatsApp();
-  const [settings, setSettings] = useState(data?.settings);
-  const [isSaving, setIsSaving] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState(
-    'You are a friendly AI customer assistant for ISP Pay BD broadband service. Answer subscriber billing, speed, and ONU reboot questions concisely in Bengali and English.'
-  );
+  const settings = useWhatsAppSettings();
+  const saveSettings = useSaveWhatsAppSettings();
+  const restartWaha = useRestartWahaSession();
+  // Unsaved edits only — the form value is server data + these overrides.
+  const [draft, setDraft] = useState<Partial<WaMetaForm>>({});
 
-  if (isLoading) return <PageSkeleton variant="form" />;
-  if (isError || !data) {
+  const form = useMemo<WaMetaForm>(() => ({ ...metaFormFrom(settings.data?.meta ?? null), ...draft }), [settings.data, draft]);
+  const set = <K extends keyof WaMetaForm>(key: K, value: WaMetaForm[K]) => setDraft((d) => ({ ...d, [key]: value }));
+
+  if (settings.isLoading) return <PageSkeleton variant="form" />;
+  if (settings.isError || !settings.data) {
     return (
       <EmptyState
         title="Failed to load settings"
-        description="Could not fetch WhatsApp gateway configuration."
+        description={errorMessage(settings.error, 'Could not fetch WhatsApp configuration.')}
         actionLabel="Retry"
-        onAction={() => refetch()}
+        onAction={() => settings.refetch()}
       />
     );
   }
 
-  const cfg = settings ?? data.settings;
+  const cfg = settings.data;
+  const canEdit = cfg.canUpdate;
+  const dirty = Object.keys(draft).length > 0;
 
   const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      toast.success('WhatsApp Business API & WAHA gateway settings updated successfully!');
-    }, 500);
+    if (!form.phoneNumberId.trim()) {
+      toast.error('Phone Number ID is required');
+      return;
+    }
+    saveSettings.mutate(form, {
+      onSuccess: () => {
+        setDraft({});
+        toast.success('WhatsApp settings saved');
+      },
+    });
   };
 
   const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
+    navigator.clipboard.writeText(text).then(
+      () => toast.success(`${label} copied to clipboard`),
+      () => toast.error('Could not copy to clipboard'),
+    );
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="WhatsApp Gateway & Bot Settings"
-        subtitle="Configure Meta Cloud API credentials, self-hosted WAHA bridge, and automated workflow triggers"
+        subtitle="Meta Cloud API credentials, WAHA session and automated message categories"
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'WhatsApp' },
           { label: 'Settings' },
         ]}
         actions={
-          <Can menu="whatsapp_business" action="update">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </Button>
-          </Can>
+          canEdit ? (
+            <Can menu="whatsapp_business" action="update">
+              <Button onClick={handleSave} disabled={saveSettings.isPending || !dirty} className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90">
+                <Save className="h-4 w-4" />
+                {saveSettings.isPending ? 'Saving...' : 'Save Configuration'}
+              </Button>
+            </Can>
+          ) : undefined
         }
       />
 
@@ -93,16 +100,20 @@ export function WhatsAppSettingsPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Meta Cloud API', value: cfg.meta.enabled ? 'ENABLED (Tier 2)' : 'DISABLED' },
-          { label: 'WAHA Session Status', value: `${cfg.waha.sessionStatus} (${cfg.waha.activeSessionName})` },
-          { label: 'Automated Triggers', value: '4 Active Workflows' },
-          { label: 'AI Auto-Responder', value: cfg.notifications.autoAiReply ? 'Online (GPT-4o mini)' : 'Disabled' },
-          { label: 'Webhook Health', value: '200 OK (Latency: 28ms)' },
+          { label: 'Meta Cloud API', value: cfg.meta ? (cfg.meta.isActive ? 'Active' : 'Inactive') : cfg.canMeta ? 'Not configured' : 'Not enabled' },
+          { label: 'WAHA Session', value: cfg.waha ? `${cfg.waha.sessionStatus} (${cfg.waha.session || '—'})` : cfg.canWaha ? 'Not configured' : 'Not enabled' },
+          { label: 'Active Categories', value: [form.utilityEnabled, form.authenticationEnabled, form.marketingEnabled].filter(Boolean).length },
+          { label: 'AI Auto-Responder', value: form.aiEnabled ? 'Enabled' : 'Disabled' },
         ]}
       />
 
+      {!canEdit && (
+        <p className="text-xs text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          Meta settings for this account are managed by the platform owner — fields are read-only.
+        </p>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Meta Cloud API Card */}
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -111,50 +122,36 @@ export function WhatsAppSettingsPage() {
                 Meta Cloud API Platform
               </CardTitle>
               <div className="flex items-center gap-2">
-                <Switch
-                  checked={cfg.meta.enabled}
-                  onCheckedChange={(c) =>
-                    setSettings({ ...cfg, meta: { ...cfg.meta, enabled: c } })
-                  }
-                />
-                <Badge
-                  variant={cfg.meta.enabled ? 'default' : 'secondary'}
-                  className={cfg.meta.enabled ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
-                >
-                  {cfg.meta.enabled ? 'Enabled' : 'Disabled'}
+                <Switch checked={form.isActive} disabled={!canEdit} onCheckedChange={(c) => set('isActive', c)} />
+                <Badge variant={form.isActive ? 'default' : 'secondary'} className={form.isActive ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}>
+                  {form.isActive ? 'Enabled' : 'Disabled'}
                 </Badge>
               </div>
             </div>
-            <CardDescription>Official WhatsApp Business Platform credentials & Webhooks</CardDescription>
+            <CardDescription>Official WhatsApp Business Platform credentials & webhook</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Meta App ID</Label>
-                <Input value={cfg.meta.appId} readOnly className="font-mono text-xs bg-muted/20" />
+                <Label className="text-xs font-semibold">Phone Number ID</Label>
+                <Input value={form.phoneNumberId} readOnly={!canEdit} onChange={(e) => set('phoneNumberId', e.target.value)} className="font-mono text-xs" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Phone Number ID</Label>
-                <Input value={cfg.meta.phoneNumberId} readOnly className="font-mono text-xs bg-muted/20" />
+                <Label className="text-xs font-semibold">Display Phone</Label>
+                <Input value={form.displayPhone} readOnly={!canEdit} onChange={(e) => set('displayPhone', e.target.value)} className="font-mono text-xs" />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">WhatsApp Business Account (WABA) ID</Label>
-              <Input value={cfg.meta.wabaId} readOnly className="font-mono text-xs bg-muted/20" />
+              <Input value={form.wabaId} readOnly={!canEdit} onChange={(e) => set('wabaId', e.target.value)} className="font-mono text-xs" />
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Webhook Callback URL</Label>
               <div className="flex gap-2">
-                <Input value={cfg.meta.webhookUrl} readOnly className="font-mono text-xs bg-muted/20 flex-1" />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => copyToClipboard(cfg.meta.webhookUrl, 'Webhook URL')}
-                  title="Copy Webhook URL"
-                >
+                <Input value={cfg.webhookUrl} readOnly className="font-mono text-xs bg-muted/20 flex-1" />
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" disabled={!cfg.webhookUrl} onClick={() => copyToClipboard(cfg.webhookUrl, 'Webhook URL')} title="Copy Webhook URL">
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -163,44 +160,48 @@ export function WhatsAppSettingsPage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Webhook Verification Token</Label>
               <div className="flex gap-2">
-                <Input value={cfg.meta.webhookVerifyToken} readOnly className="font-mono text-xs bg-muted/20 flex-1" />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => copyToClipboard(cfg.meta.webhookVerifyToken, 'Verify Token')}
-                  title="Copy Verify Token"
-                >
+                <Input value={form.verifyToken} readOnly={!canEdit} onChange={(e) => set('verifyToken', e.target.value)} className="font-mono text-xs flex-1" />
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" disabled={!form.verifyToken} onClick={() => copyToClipboard(form.verifyToken, 'Verify token')} title="Copy Verify Token">
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border border-border/50">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                <span className="font-medium">System User Permanent Token: Configured</span>
+            {canEdit && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Access Token</Label>
+                  <Input
+                    type="password"
+                    value={form.accessToken}
+                    onChange={(e) => set('accessToken', e.target.value)}
+                    placeholder={cfg.meta?.hasAccessToken ? `Saved (${cfg.meta.accessTokenMasked.slice(-4)}) — leave blank to keep` : 'Permanent system-user token'}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">App Secret</Label>
+                  <Input
+                    type="password"
+                    value={form.appSecret}
+                    onChange={(e) => set('appSecret', e.target.value)}
+                    placeholder={cfg.meta?.hasAppSecret ? 'Saved — leave blank to keep' : 'Meta app secret'}
+                    className="font-mono text-xs"
+                  />
+                </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => {
-                  toast.promise(new Promise((res) => setTimeout(res, 500)), {
-                    loading: 'Testing Meta Graph endpoint...',
-                    success: 'Meta Cloud API 200 OK — Handshake Verified',
-                    error: 'Handshake failed',
-                  });
-                }}
-              >
-                <RefreshCw className="h-3 w-3" />
-                Ping Test
-              </Button>
+            )}
+
+            <div className="flex items-center gap-2 p-3 bg-muted/20 rounded-lg border border-border/50">
+              <ShieldCheck className={`h-4 w-4 ${cfg.meta?.hasAccessToken ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+              <span className="font-medium">
+                Access token: {cfg.meta?.hasAccessToken ? 'configured' : 'not configured'}
+                {cfg.meta?.updatedAt ? ` · updated ${formatDateTime(cfg.meta.updatedAt)}` : ''}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Self-Hosted WAHA Bridge Card */}
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -208,145 +209,101 @@ export function WhatsAppSettingsPage() {
                 <Server className="h-4 w-4 text-primary" />
                 Self-Hosted WAHA Bridge
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={cfg.waha.enabled}
-                  onCheckedChange={(c) =>
-                    setSettings({ ...cfg, waha: { ...cfg.waha, enabled: c } })
-                  }
-                />
+              {cfg.waha && (
                 <Badge
-                  variant={cfg.waha.sessionStatus === 'CONNECTED' ? 'default' : 'secondary'}
-                  className={cfg.waha.sessionStatus === 'CONNECTED' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
+                  variant={cfg.waha.sessionStatus === 'WORKING' ? 'default' : 'secondary'}
+                  className={cfg.waha.sessionStatus === 'WORKING' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
                 >
                   {cfg.waha.sessionStatus}
                 </Badge>
-              </div>
+              )}
             </div>
-            <CardDescription>WhatsApp HTTP API Docker container for instant two-way chat</CardDescription>
+            <CardDescription>WhatsApp HTTP API session for two-way chat</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-xs">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">WAHA Server REST Endpoint</Label>
-              <Input value={cfg.waha.serverUrl} readOnly className="font-mono text-xs bg-muted/20" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Active Session Name</Label>
-                <Input value={cfg.waha.activeSessionName} readOnly className="font-mono text-xs bg-muted/20" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">API Secret Key</Label>
-                <Input value="••••••••••••••••••••" readOnly className="font-mono text-xs bg-muted/20" />
-              </div>
-            </div>
-
-            <div className="p-3 bg-muted/20 rounded-lg border border-border/50 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground">Session Control:</span>
-                <span className="text-emerald-500 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Socket Connected
-                </span>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs h-8 gap-1.5"
-                  onClick={() => toast.info('Displaying WAHA QR Code for WhatsApp Web linking...')}
-                >
-                  <QrCode className="h-3.5 w-3.5 text-primary" />
-                  Scan QR Link
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs h-8 gap-1.5"
-                  onClick={() => {
-                    toast.promise(new Promise((res) => setTimeout(res, 600)), {
-                      loading: 'Restarting WAHA socket worker...',
-                      success: 'Session "default" restarted and re-authenticated',
-                      error: 'Restart failed',
-                    });
-                  }}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Restart Session
-                </Button>
-              </div>
-            </div>
+            {!cfg.waha ? (
+              <EmptyState
+                title={cfg.canWaha ? 'WAHA not configured' : 'WAHA not enabled'}
+                description={cfg.canWaha ? 'WAHA server details are set by the platform owner.' : 'Ask the platform owner to enable WAHA for this account.'}
+                className="py-8"
+              />
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">WAHA Server REST Endpoint</Label>
+                  <Input value={cfg.waha.baseUrl || 'Platform default server'} readOnly className="font-mono text-xs bg-muted/20" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Session Name</Label>
+                    <Input value={cfg.waha.session} readOnly className="font-mono text-xs bg-muted/20" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">API Key</Label>
+                    <Input value={cfg.waha.hasApiKey ? 'Configured' : 'Not set'} readOnly className="font-mono text-xs bg-muted/20" />
+                  </div>
+                </div>
+                <div className="p-3 bg-muted/20 rounded-lg border border-border/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">Session Control</span>
+                    <span className="font-medium">{cfg.waha.isActive ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  <Can menu="whatsapp_business" action="update">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-8 gap-1.5"
+                      disabled={restartWaha.isPending}
+                      onClick={() => restartWaha.mutate(undefined, { onSuccess: () => toast.success('WAHA session (re)started') })}
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${restartWaha.isPending ? 'animate-spin' : ''}`} />
+                      Start / Restart Session
+                    </Button>
+                  </Can>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Notification Automation & AI Bot Card */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
-            Automated Notification Triggers & AI Bot
+            Message Categories & AI Bot
           </CardTitle>
-          <CardDescription>
-            Configure automatic dispatch for subscriber lifecycle events and chatbot auto-reply
-          </CardDescription>
+          <CardDescription>Which automatic WhatsApp messages this account may send</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="divide-y divide-border/40 border border-border/50 rounded-xl overflow-hidden bg-muted/10">
-            {[
-              {
-                key: 'sendBillAlert' as const,
-                label: 'Automated Invoice & Bill Generation Alerts',
-                desc: 'Dispatches WhatsApp message with PDF bill link when monthly invoice is generated',
-              },
-              {
-                key: 'sendPaymentReceipt' as const,
-                label: 'Payment Confirmation Receipts',
-                desc: 'Sends instant receipt with bKash/Nagad TrxID upon verified payment',
-              },
-              {
-                key: 'sendExpiryWarning' as const,
-                label: 'Pre-Disconnection Expiry Warnings',
-                desc: 'Alerts subscribers 48 hours and 24 hours prior to account suspension',
-              },
-              {
-                key: 'autoAiReply' as const,
-                label: 'Enable AI Customer Support Auto-Responder (Beta)',
-                desc: 'Automatically answers incoming customer questions regarding speed, payment, and ONU faults',
-              },
-            ].map((item) => (
+            {TOGGLES.map((item) => (
               <div key={item.key} className="flex items-center justify-between p-3.5 hover:bg-muted/20 transition-colors">
                 <div className="space-y-0.5 max-w-xl">
                   <span className="text-xs font-semibold text-foreground block">{item.label}</span>
                   <p className="text-[11px] text-muted-foreground">{item.desc}</p>
                 </div>
-                <Switch
-                  checked={cfg.notifications[item.key]}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...cfg,
-                      notifications: { ...cfg.notifications, [item.key]: checked },
-                    })
-                  }
-                />
+                <Switch checked={form[item.key]} disabled={!canEdit} onCheckedChange={(checked) => set(item.key, checked)} />
               </div>
             ))}
-          </div>
-
-          {cfg.notifications.autoAiReply && (
-            <div className="space-y-2 p-4 bg-primary/5 rounded-xl border border-primary/20">
-              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                <Bot className="h-4 w-4" />
-                AI Auto-Responder System Prompt
+            <div className="flex items-center justify-between p-3.5">
+              <div className="space-y-0.5">
+                <span className="text-xs font-semibold text-foreground block">OTP delivery channel</span>
+                <p className="text-[11px] text-muted-foreground">Where one-time codes are sent first</p>
               </div>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="h-20 text-xs font-mono bg-background"
-                placeholder="Enter AI prompt instructions..."
-              />
+              <Select value={form.otpChannel} disabled={!canEdit} onValueChange={(v) => v && set('otpChannel', v)}>
+                <SelectTrigger className="h-8 w-[210px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sms">SMS only</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp only</SelectItem>
+                  <SelectItem value="whatsapp_then_sms">WhatsApp then SMS fallback</SelectItem>
+                  <SelectItem value="sms_then_whatsapp">SMS then WhatsApp fallback</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
     </div>

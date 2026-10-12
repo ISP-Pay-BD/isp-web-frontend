@@ -1,15 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { Suspense, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import {
+  Plus,
+  Download,
+  Boxes,
+  CheckCircle2,
+  CircleSlash,
+  MoreHorizontal,
+  Package,
+  Layers,
+  Edit,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useInventory, type InventoryItem } from '../hooks/use-inventory';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { Can, ConfirmDialog, PageSkeleton } from '@/components/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -26,143 +39,91 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
-import {
-  Plus,
-  Download,
-  Boxes,
-  AlertTriangle,
-  CheckCircle2,
-  MoreHorizontal,
-  Package,
-  Layers,
-  Edit,
-  SlidersHorizontal,
-  Trash2,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { num } from '@/lib/api/case';
+import { INVENTORY_URL, idParam, mapItem, type InventoryCategory, type InventoryItem, type ItemPayload } from '../api';
+import { useDeleteInventoryItem, useInventoryItems, useSaveInventoryItem } from '../hooks/use-inventory-items';
+import { useAllInventoryCategories } from '../hooks/use-inventory-categories';
+import { useInventorySummary } from '../hooks/use-inventory-summary';
+import { StockMovementDialog } from '../components/StockMovementDialog';
+import { KpiTile } from '../shared/KpiTile';
+import { ListState } from '../shared/ListState';
+import { OptionSelect } from '../shared/OptionSelect';
+import { FieldError, fieldError } from '../shared/form-utils';
+import { useUrlParam } from '../shared/hooks';
+import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '../shared/table-utils';
 
-const itemSearchFilter = (
-  row: LegacyRow<InventoryItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const item = row.original;
-  return (
-    item.name.toLowerCase().includes(q) ||
-    item.code.toLowerCase().includes(q) ||
-    item.categoryName.toLowerCase().includes(q) ||
-    item.unitName.toLowerCase().includes(q)
-  );
-};
+const MENU = 'inventory_purchess';
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
 
 export function InventoryItemsPage() {
-  const { items: initialItems, isLoading, isError, refetch } = useInventory();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  return (
+    <Suspense fallback={<PageSkeleton variant="table" rows={8} />}>
+      <InventoryItemsView />
+    </Suspense>
+  );
+}
 
-  // Form State
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [categoryName, setCategoryName] = useState('ONU & CPE');
-  const [unitName, setUnitName] = useState('Pcs');
-  const [unitPriceBdt, setUnitPriceBdt] = useState('1450');
-  const [minStockAlert, setMinStockAlert] = useState('10');
-  const [status, setStatus] = useState('active');
+function InventoryItemsView() {
+  const table = useServerTable();
+  const [categoryId, setCategoryId] = useUrlParam('category_id');
+  const [status, setStatus] = useState('');
+  const query = useInventoryItems({ page: table.page, pageSize: table.pageSize, search: table.search, categoryId, status });
+  const summary = useInventorySummary();
+  const categoriesQuery = useAllInventoryCategories();
+  const deleteItem = useDeleteInventoryItem();
 
-  const list = items.length > 0 ? items : initialItems;
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<InventoryItem | null>(null);
+  const [deleting, setDeleting] = useState<InventoryItem | null>(null);
+  const [adjusting, setAdjusting] = useState<InventoryItem | null>(null);
+  const [exporting, setExporting] = useState(false);
 
-  const totalSkus = list.length;
-  const activeCount = list.filter((i) => i.status === 'active').length;
-  const lowStockCount = list.filter((i) => i.minStockAlert >= 15).length;
-  const avgPrice = list.length > 0
-    ? Math.round(list.reduce((acc, i) => acc + (i.unitPriceBdt || 0), 0) / list.length)
-    : 0;
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const categoryOptions = useMemo(() => categories.map((c) => ({ value: c.id, label: c.name })), [categories]);
+  const s = summary.data;
+  const kpi = (v: number | undefined) => (v === undefined ? '—' : v.toLocaleString());
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !code.trim()) {
-      toast.error('Please provide item name and SKU code');
-      return;
-    }
-
-    const newItem: InventoryItem = {
-      id: `inv_sku_${Date.now()}`,
-      code: code.toUpperCase(),
-      name,
-      categoryName,
-      unitName,
-      unitPriceBdt: Number(unitPriceBdt) || 0,
-      minStockAlert: Number(minStockAlert) || 5,
-      status,
-    };
-
-    setItems((prev) => [newItem, ...(prev.length > 0 ? prev : initialItems)]);
-    toast.success(`SKU "${newItem.code} — ${newItem.name}" added to inventory catalog.`);
-    setModalOpen(false);
-
-    // Reset Form
-    setCode('');
-    setName('');
-    setUnitPriceBdt('1450');
-    setMinStockAlert('10');
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
   };
 
-  const handleExportCsv = () => {
-    const headers = ['SKU Code', 'Item Name', 'Category', 'Unit', 'Unit Price (BDT)', 'Min Stock Alert', 'Status'];
-    const rows = list.map((i) => [
-      i.code,
-      `"${i.name.replace(/"/g, '""')}"`,
-      `"${i.categoryName}"`,
-      i.unitName,
-      i.unitPriceBdt,
-      i.minStockAlert,
-      i.status,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `inventory_items_catalog_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Inventory SKU catalog exported to CSV');
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = (
+        await fetchAllPages<unknown>(`${INVENTORY_URL}/items`, {
+          search: table.search || undefined,
+          category_id: idParam(categoryId),
+          status: status || undefined,
+        })
+      ).map(mapItem);
+      downloadCsv(
+        `inventory_items_${todayYmd()}.csv`,
+        ['Item Name', 'Category', 'Sub-category', 'Unit Price (BDT)', 'VAT %', 'Status', 'Description'],
+        rows.map((i) => [i.itemName, i.category, i.subcategory, i.unitPrice, i.vat, i.status, i.description]),
+      );
+      toast.success(`Exported ${rows.length} items`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const columns = useMemo<LegacyColumnDef<InventoryItem, unknown>[]>(
     () => [
       {
-        accessorKey: 'code',
-        header: 'SKU Code',
+        accessorKey: 'itemName',
+        header: 'Item',
         enableHiding: false,
-        size: 140,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-              {row.original.code}
-            </span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'name',
-        header: 'Item Specification',
-        enableHiding: false,
-        size: 260,
+        size: 280,
         cell: ({ row }) => {
           const item = row.original;
           return (
@@ -171,10 +132,10 @@ export function InventoryItemsPage() {
                 <Package className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-medium text-foreground text-sm line-clamp-1">{item.name}</span>
+                <span className="font-medium text-foreground text-sm line-clamp-1">{item.itemName}</span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                   <Layers className="h-3 w-3" />
-                  {item.categoryName}
+                  {item.subcategory ? `${item.category} / ${item.subcategory}` : item.category || '—'}
                 </span>
               </div>
             </div>
@@ -182,43 +143,30 @@ export function InventoryItemsPage() {
         },
       },
       {
-        accessorKey: 'categoryName',
+        accessorKey: 'category',
         header: 'Category',
         size: 160,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background/50 font-normal">
-            {row.original.categoryName}
+            {row.original.category || '—'}
           </Badge>
         ),
       },
       {
-        accessorKey: 'unitName',
-        header: 'Unit',
-        size: 100,
-        cell: ({ row }) => (
-          <span className="text-sm font-mono text-muted-foreground">{row.original.unitName}</span>
-        ),
-      },
-      {
-        accessorKey: 'unitPriceBdt',
+        accessorKey: 'unitPrice',
         header: 'Unit Price',
         size: 140,
         cell: ({ row }) => (
           <span className="font-semibold text-sm tabular-nums text-foreground">
-            {formatBdtWithSymbol(row.original.unitPriceBdt)}
+            {formatBdtWithSymbol(row.original.unitPrice)}
           </span>
         ),
       },
       {
-        accessorKey: 'minStockAlert',
-        header: 'Min Alert',
-        size: 120,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 text-xs">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500/80" />
-            <span className="tabular-nums font-medium">{row.original.minStockAlert} {row.original.unitName}</span>
-          </div>
-        ),
+        accessorKey: 'vat',
+        header: 'VAT',
+        size: 90,
+        cell: ({ row }) => <span className="text-sm tabular-nums text-muted-foreground">{row.original.vat}%</span>,
       },
       {
         accessorKey: 'status',
@@ -248,23 +196,31 @@ export function InventoryItemsPage() {
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>SKU Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info(`Editing ${item.code}`)}>
-                  <Edit className="h-3.5 w-3.5 mr-2" />
-                  Edit Item Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Stock adjustment for ${item.name}`)}>
-                  <SlidersHorizontal className="h-3.5 w-3.5 mr-2" />
-                  Adjust Stock Count
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`SKU ${item.code} deprecated`)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Deactivate Item
-                </DropdownMenuItem>
+                <DropdownMenuLabel>Item Actions</DropdownMenuLabel>
+                <Can menu={MENU} action="update">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditing(item);
+                      setFormOpen(true);
+                    }}
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-2" />
+                    Edit Item
+                  </DropdownMenuItem>
+                </Can>
+                <Can menu={MENU} action="create">
+                  <DropdownMenuItem onClick={() => setAdjusting(item)}>
+                    <SlidersHorizontal className="h-3.5 w-3.5 mr-2" />
+                    Adjust Stock
+                  </DropdownMenuItem>
+                </Can>
+                <Can menu={MENU} action="delete">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(item)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                    Delete Item
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -274,16 +230,14 @@ export function InventoryItemsPage() {
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
-  if (isError) {
-    return <EmptyState title="Failed to load items" actionLabel="Retry" onAction={() => refetch()} />;
-  }
+  const page = query.data;
+  const filtered = Boolean(table.search || categoryId || status);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Inventory Items Catalog"
-        subtitle="Catalog of network hardware, optical fiber accessories, CPE modems, and power equipment."
+        subtitle="Catalogue of network hardware, fiber accessories, CPE devices and other stock items."
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Inventory', href: '/admin/inventory/items' },
@@ -291,192 +245,302 @@ export function InventoryItemsPage() {
         ]}
         actions={
           <div className="flex items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              {exporting ? 'Exporting…' : 'Export CSV'}
             </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Add New SKU
-            </Button>
+            <Can menu={MENU} action="create">
+              <Button size="sm" onClick={openCreate} className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </Can>
           </div>
         }
       />
 
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total SKUs</span>
-            <Boxes className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalSkus}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Cataloged items</p>
+        <KpiTile label="Total Items" icon={<Boxes className="h-4 w-4 text-primary" />} value={kpi(s?.totalItems)} hint="Cataloged items" />
+        <KpiTile
+          label="Active"
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          value={kpi(s?.activeItems)}
+          hint="Available for use"
+          hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
+        />
+        <KpiTile
+          label="Inactive"
+          icon={<CircleSlash className="h-4 w-4 text-muted-foreground" />}
+          value={kpi(s?.inactiveItems)}
+          hint="Hidden from use"
+        />
+        <KpiTile label="Categories" icon={<Layers className="h-4 w-4 text-primary" />} value={kpi(s?.categoriesCount)} hint="Category groups" />
+      </div>
+
+      <ListState
+        isLoading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        isEmpty={!filtered && page?.meta.total === 0}
+        errorTitle="Failed to load items"
+        emptyTitle="No items yet"
+        emptyDescription="Add your first catalogue item to start tracking stock."
+        icon={<Package className="h-5 w-5" />}
+      >
+        <DataTable
+          columns={columns}
+          data={page?.items ?? []}
+          getRowId={(r) => r.id}
+          searchPlaceholder="Search items..."
+          emptyTitle="No items match your filters"
+          server={{
+            page: table.page,
+            pageSize: table.pageSize,
+            total: page?.meta.total ?? 0,
+            onPageChange: table.setPage,
+            onPageSizeChange: table.onPageSizeChange,
+            search: table.search,
+            onSearchChange: table.onSearchChange,
+          }}
+          toolbarActions={
+            <div className="flex flex-wrap items-center gap-2">
+              <OptionSelect
+                value={categoryId}
+                onChange={(v) => {
+                  setCategoryId(v);
+                  table.resetPage();
+                }}
+                options={categoryOptions}
+                noneLabel="All categories"
+                className="h-9 w-48 text-xs"
+              />
+              <OptionSelect
+                value={status}
+                onChange={(v) => {
+                  setStatus(v);
+                  table.resetPage();
+                }}
+                options={STATUS_OPTIONS}
+                noneLabel="All statuses"
+                className="h-9 w-36 text-xs"
+              />
+            </div>
+          }
+        />
+      </ListState>
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          {formOpen ? (
+            <ItemForm
+              item={editing}
+              categories={categories}
+              categoriesLoading={categoriesQuery.isLoading}
+              defaultCategoryId={categoryId}
+              onDone={() => setFormOpen(false)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title="Delete item?"
+        description={deleting ? `"${deleting.itemName}" will be removed from the catalogue.` : undefined}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!deleting) return;
+          const target = deleting;
+          deleteItem.mutate(target.id, { onSuccess: () => toast.success(`"${target.itemName}" deleted`) });
+          setDeleting(null);
+        }}
+      />
+
+      <StockMovementDialog
+        open={adjusting !== null}
+        onOpenChange={(o) => !o && setAdjusting(null)}
+        type="adjust"
+        prefill={adjusting ? { itemId: adjusting.id } : undefined}
+      />
+    </div>
+  );
+}
+
+function ItemForm({
+  item,
+  categories,
+  categoriesLoading,
+  defaultCategoryId,
+  onDone,
+}: {
+  item: InventoryItem | null;
+  categories: InventoryCategory[];
+  categoriesLoading: boolean;
+  defaultCategoryId: string;
+  onDone: () => void;
+}) {
+  const isEdit = item !== null;
+  const [itemName, setItemName] = useState(item?.itemName ?? '');
+  const [categoryId, setCategoryId] = useState(item?.categoryId ?? defaultCategoryId);
+  const [subIndex, setSubIndex] = useState(item?.subcategoryIndex !== null && item ? String(item.subcategoryIndex) : '');
+  const [price, setPrice] = useState(item ? String(item.unitPrice) : '');
+  const [vat, setVat] = useState(item ? String(item.vat) : '');
+  const [status, setStatus] = useState(item?.status ?? 'active');
+  const [description, setDescription] = useState(item?.description ?? '');
+  const [localError, setLocalError] = useState<Record<string, string>>({});
+  const save = useSaveInventoryItem();
+  const err = save.error;
+
+  const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }));
+  const subOptions = (categories.find((c) => c.id === categoryId)?.subcategories ?? []).map((sc) => ({
+    value: String(sc.index),
+    label: sc.name,
+  }));
+  const errorFor = (...keys: string[]) => keys.map((k) => localError[k]).find(Boolean) ?? fieldError(err, ...keys);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (itemName.trim().length < 3) errors.item_name = 'Item name must be at least 3 characters';
+    if (!categoryId) errors.category_id = 'Select a category';
+    if (vat !== '' && (num(vat, -1) < 0 || num(vat) > 100)) errors.vat = 'VAT must be between 0 and 100';
+    setLocalError(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    const body: ItemPayload = {
+      item_name: itemName.trim(),
+      category_id: idParam(categoryId),
+      subcategory_index: subIndex !== '' ? Number(subIndex) : undefined,
+      status,
+      price: num(price),
+      vat: vat !== '' ? num(vat) : undefined,
+      description: description.trim() || undefined,
+    };
+    save.mutate(
+      { id: item?.id, body },
+      {
+        onSuccess: () => {
+          toast.success(isEdit ? `"${body.item_name}" updated` : `"${body.item_name}" added to the catalogue`);
+          onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-primary" />
+          {isEdit ? 'Edit Inventory Item' : 'Add Inventory Item'}
+        </DialogTitle>
+        <DialogDescription>
+          {isEdit ? 'Update the catalogue details of this item.' : 'Register a new item in the inventory catalogue.'}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-4 py-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="item-name">Item Name *</Label>
+          <Input
+            id="item-name"
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            aria-invalid={Boolean(errorFor('item_name')) || undefined}
+            required
+          />
+          <FieldError message={errorFor('item_name')} />
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Active Deployed</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="item-cat">Category *</Label>
+            <OptionSelect
+              id="item-cat"
+              value={categoryId}
+              onChange={(v) => {
+                setCategoryId(v);
+                setSubIndex('');
+              }}
+              options={categoryOptions}
+              placeholder={categoriesLoading ? 'Loading…' : 'Select category'}
+              disabled={isEdit || categoriesLoading}
+              invalid={Boolean(errorFor('category_id'))}
+            />
+            <FieldError message={errorFor('category_id')} />
           </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {activeCount}
+          <div className="space-y-1.5">
+            <Label htmlFor="item-sub">Sub-category</Label>
+            <OptionSelect
+              id="item-sub"
+              value={subIndex}
+              onChange={setSubIndex}
+              options={subOptions}
+              noneLabel="None"
+              disabled={isEdit || subOptions.length === 0}
+              invalid={Boolean(errorFor('subcategory_index'))}
+            />
+            <FieldError message={errorFor('subcategory_index')} />
           </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ready for deployment</p>
+        </div>
+        {isEdit ? (
+          <p className="-mt-2 text-xs text-muted-foreground">The category of an existing item cannot be changed.</p>
+        ) : null}
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="item-price">Unit Price (BDT)</Label>
+            <Input
+              id="item-price"
+              type="number"
+              min={0}
+              step="any"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              aria-invalid={Boolean(errorFor('unit', 'price')) || undefined}
+            />
+            <FieldError message={errorFor('unit', 'price')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="item-vat">VAT %</Label>
+            <Input
+              id="item-vat"
+              type="number"
+              min={0}
+              max={100}
+              step="any"
+              value={vat}
+              onChange={(e) => setVat(e.target.value)}
+              aria-invalid={Boolean(errorFor('vat')) || undefined}
+            />
+            <FieldError message={errorFor('vat')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="item-status">Status</Label>
+            <OptionSelect id="item-status" value={status} onChange={(v) => setStatus(v || 'active')} options={STATUS_OPTIONS} />
+            <FieldError message={errorFor('status')} />
+          </div>
         </div>
 
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Min Stock Alerts</span>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {lowStockCount}
-          </div>
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">Threshold &gt; 15 units</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Avg SKU Value</span>
-            <Package className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {formatBdtWithSymbol(avgPrice)}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Per unit catalog baseline</p>
+        <div className="space-y-1.5">
+          <Label htmlFor="item-desc">Description</Label>
+          <Textarea id="item-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <FieldError message={errorFor('description')} />
         </div>
       </div>
 
-      {/* Main Data Table */}
-      <DataTable
-        columns={columns}
-        data={list}
-        searchKey="name"
-        searchFilterFn={itemSearchFilter}
-        searchPlaceholder="Search by SKU code, name, category..."
-      />
-
-      {/* Add SKU Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleAddItem}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                Add New Inventory SKU
-              </DialogTitle>
-              <DialogDescription>
-                Register a new hardware item, passive fiber accessory, or CPE device into the central catalog.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="sku-code">SKU Code *</Label>
-                  <Input
-                    id="sku-code"
-                    placeholder="e.g. ONU-GPON-01"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="font-mono text-sm uppercase"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sku-cat">Category *</Label>
-                  <Select value={categoryName} onValueChange={(val) => { if (val) setCategoryName(val); }}>
-                    <SelectTrigger id="sku-cat">
-                      <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ONU & CPE">ONU & CPE</SelectItem>
-                      <SelectItem value="Fiber Cable">Fiber Cable</SelectItem>
-                      <SelectItem value="Passive Accessories">Passive Accessories</SelectItem>
-                      <SelectItem value="Routing & Switching">Routing & Switching</SelectItem>
-                      <SelectItem value="Power & Backup">Power & Backup</SelectItem>
-                      <SelectItem value="Tools & Splicing">Tools & Splicing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sku-name">Item Name / Model Specification *</Label>
-                <Input
-                  id="sku-name"
-                  placeholder="e.g. Huawei HG8546M 1GE+3FE+WiFi GPON ONU"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="sku-unit">Unit</Label>
-                  <Select value={unitName} onValueChange={(val) => { if (val) setUnitName(val); }}>
-                    <SelectTrigger id="sku-unit">
-                      <SelectValue placeholder="Unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pcs">Pcs</SelectItem>
-                      <SelectItem value="Meter">Meter</SelectItem>
-                      <SelectItem value="Drum (1000m)">Drum (1000m)</SelectItem>
-                      <SelectItem value="Box">Box</SelectItem>
-                      <SelectItem value="Set">Set</SelectItem>
-                      <SelectItem value="Roll">Roll</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="sku-price">Unit Price (BDT)</Label>
-                  <Input
-                    id="sku-price"
-                    type="number"
-                    value={unitPriceBdt}
-                    onChange={(e) => setUnitPriceBdt(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="sku-min">Min Alert Qty</Label>
-                  <Input
-                    id="sku-min"
-                    type="number"
-                    value={minStockAlert}
-                    onChange={(e) => setMinStockAlert(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sku-status">Initial Status</Label>
-                <Select value={status} onValueChange={(val) => { if (val) setStatus(val); }}>
-                  <SelectTrigger id="sku-status">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active (Deployable)</SelectItem>
-                    <SelectItem value="inactive">Inactive / In Review</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Add to Catalog</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Add to Catalog'}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

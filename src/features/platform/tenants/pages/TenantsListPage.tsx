@@ -1,22 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import {
-  Globe,
-  Plus,
-  Copy,
-  Check,
-  ExternalLink,
-  Edit2,
-  Trash2,
-  CheckCircle2,
-  Ban,
-  Filter,
-} from 'lucide-react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { Plus, Copy, Check, ExternalLink, Edit2, Trash2, CheckCircle2, Ban, HeartPulse } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { platformService } from '@/lib/api/services/platform.service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,88 +13,60 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { DataTable } from '@/features/shared/data-table';
+import { formatBdt } from '@/lib/format';
 import { toast } from 'sonner';
-import type { TenantPortal } from '@/data/platform/tenants.data';
+import type { PlatformTenant } from '@/features/platform/types';
 
-const tenantSearchFilter = (
-  row: LegacyRow<TenantPortal>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const t = row.original;
-  return (
-    t.name.toLowerCase().includes(q) ||
-    t.slug.toLowerCase().includes(q) ||
-    t.ownerEmail.toLowerCase().includes(q) ||
-    t.ownerName.toLowerCase().includes(q)
-  );
-};
+const STATUS_FILTERS = [
+  { value: '', label: 'All statuses' },
+  { value: 'active', label: 'Active' },
+  { value: 'suspended', label: 'Suspended' },
+] as const;
 
 export function TenantsListPage() {
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['platform', 'tenants'],
-    queryFn: async () => {
-      const res = await platformService.getTenants();
-      let list: TenantPortal[] = [];
-      if (Array.isArray(res)) {
-        list = res as TenantPortal[];
-      } else if (res && typeof res === 'object' && 'items' in res) {
-        list = (res as { items: TenantPortal[] }).items;
-      }
-      return {
-        items: list,
-        stats: {
-          total: list.length,
-          active: list.filter((t) => t.status === 'active').length,
-          suspended: list.filter((t) => t.status === 'suspended').length,
-          trial: list.filter((t) => t.status === 'trial').length,
-          totalCustomers: list.reduce((acc, t) => acc + (t.customers || 0), 0),
-        },
-      };
-    },
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ['platform', 'tenants', 'list', { page, pageSize, search, status }],
+    queryFn: () => platformService.getTenants({ page, perPage: pageSize, search, status }),
+    placeholderData: keepPreviousData,
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => platformService.deleteTenant(id),
     onSuccess: () => {
-      toast.success('Tenant portal deleted successfully');
+      toast.success('Tenant portal deleted. The owner account was kept.');
       setDeletingId(null);
-      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
+      void queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
+      void queryClient.invalidateQueries({ queryKey: ['platform', 'dashboard'] });
     },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to delete tenant portal');
-      setDeletingId(null);
-    },
+    onSettled: () => setDeletingId(null),
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'suspended' }) =>
-      platformService.updateTenant(id, { status }),
+    mutationFn: ({ id, next }: { id: string; next: 'active' | 'suspended' }) =>
+      platformService.setTenantStatus(id, next),
     onSuccess: (_, vars) => {
-      toast.success(`Tenant status updated to ${vars.status}`);
-      queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || 'Failed to update tenant status');
+      toast.success(vars.next === 'active' ? 'Portal activated' : 'Portal suspended');
+      void queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
     },
   });
 
-  const copyUrl = (slug: string) => {
-    const url = `https://${slug}.isppaybd.com`;
-    navigator.clipboard.writeText(url);
-    setCopiedSlug(slug);
-    toast.success('Portal URL copied to clipboard');
-    setTimeout(() => setCopiedSlug(null), 2000);
+  const copyUrl = (t: PlatformTenant) => {
+    void navigator.clipboard.writeText(t.portalUrl).then(() => {
+      setCopiedSlug(t.slug);
+      toast.success('Portal URL copied to clipboard');
+      setTimeout(() => setCopiedSlug(null), 2000);
+    });
   };
 
-  const columns = useMemo<LegacyColumnDef<TenantPortal, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<PlatformTenant, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -118,16 +78,13 @@ export function TenantsListPage() {
           return (
             <div className="flex items-center gap-3">
               <div
-                className="h-8 w-8 rounded-md flex items-center justify-center text-white font-bold text-xs shrink-0 shadow-xs"
-                style={{ backgroundColor: t.primaryColor || '#e85a1a' }}
+                className="h-8 w-8 rounded-md flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs shrink-0 shadow-xs"
+                style={t.primaryColor ? { backgroundColor: t.primaryColor } : undefined}
               >
                 {t.name.slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <Link
-                  href={`/platform/tenants/${t.id}`}
-                  className="font-semibold text-foreground hover:underline"
-                >
+                <Link href={`/platform/tenants/${t.id}`} className="font-semibold text-foreground hover:underline">
                   {t.name}
                 </Link>
                 <div className="text-xs text-muted-foreground">ID: {t.id}</div>
@@ -139,23 +96,23 @@ export function TenantsListPage() {
       {
         accessorKey: 'slug',
         header: 'Portal URL',
-        size: 200,
+        size: 220,
         cell: ({ row }) => {
           const t = row.original;
           return (
             <div className="flex items-center gap-2 font-mono text-xs">
               <a
-                href={`https://${t.slug}.isppaybd.com`}
+                href={t.portalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline flex items-center gap-1"
               >
-                {t.slug}.isppaybd.com
+                {t.domain}
                 <ExternalLink className="h-3 w-3 inline" />
               </a>
               <button
                 type="button"
-                onClick={() => copyUrl(t.slug)}
+                onClick={() => copyUrl(t)}
                 className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
                 title="Copy Portal URL"
               >
@@ -171,32 +128,33 @@ export function TenantsListPage() {
       },
       {
         id: 'owner',
-        accessorFn: (row) => row.ownerName,
+        accessorFn: (row) => row.ownerName ?? '',
         header: 'Owner Contact',
         size: 180,
         cell: ({ row }) => {
           const t = row.original;
-          return (
+          return t.ownerName ? (
             <div>
               <div className="text-xs font-medium text-foreground">{t.ownerName}</div>
               <div className="text-xs text-muted-foreground">{t.ownerEmail}</div>
               <div className="text-[11px] text-muted-foreground font-mono">{t.ownerPhone}</div>
             </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">No owner linked</span>
           );
         },
       },
       {
         accessorKey: 'plan',
         header: 'Plan & Subs',
-        size: 140,
+        size: 150,
         cell: ({ row }) => (
           <div>
             <Badge variant="outline" className="font-semibold text-xs mb-0.5">
-              {row.original.plan}
+              {row.original.plan ?? 'No plan'}
             </Badge>
-            <div className="text-xs text-muted-foreground">
-              {row.original.customers.toLocaleString()} active subs
-            </div>
+            <div className="text-xs text-muted-foreground">{row.original.customers.toLocaleString()} subscribers</div>
+            <div className="text-[11px] text-muted-foreground">৳{formatBdt(row.original.monthRevenue)} paid this month</div>
           </div>
         ),
       },
@@ -204,28 +162,23 @@ export function TenantsListPage() {
         accessorKey: 'status',
         header: 'Status',
         size: 110,
-        cell: ({ row }) => {
-          const status = row.original.status;
-          return (
-            <Badge
-              variant="outline"
-              className={
-                status === 'active'
-                  ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs'
-                  : status === 'trial'
-                    ? 'border-amber-500/30 text-amber-600 bg-amber-500/10 text-xs'
-                    : 'border-red-500/30 text-red-600 bg-red-500/10 text-xs'
-              }
-            >
-              {status}
-            </Badge>
-          );
-        },
+        cell: ({ row }) => (
+          <Badge
+            variant="outline"
+            className={
+              row.original.status === 'active'
+                ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs'
+                : 'border-red-500/30 text-red-600 bg-red-500/10 text-xs'
+            }
+          >
+            {row.original.status}
+          </Badge>
+        ),
       },
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        size: 200,
+        size: 220,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => {
@@ -237,6 +190,11 @@ export function TenantsListPage() {
                   Details
                 </Button>
               </Link>
+              <Link href={`/platform/tenants/${t.id}/health`}>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Health score">
+                  <HeartPulse className="h-3.5 w-3.5 text-rose-500" />
+                </Button>
+              </Link>
               <Link href={`/platform/tenants/${t.id}/edit`}>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Edit Tenant">
                   <Edit2 className="h-3.5 w-3.5 text-blue-600" />
@@ -246,12 +204,8 @@ export function TenantsListPage() {
                 variant="ghost"
                 size="sm"
                 className="h-8 w-8 p-0"
-                onClick={() =>
-                  statusMutation.mutate({
-                    id: t.id,
-                    status: t.status === 'active' ? 'suspended' : 'active',
-                  })
-                }
+                disabled={statusMutation.isPending}
+                onClick={() => statusMutation.mutate({ id: t.id, next: t.status === 'active' ? 'suspended' : 'active' })}
                 title={t.status === 'active' ? 'Suspend Portal' : 'Activate Portal'}
               >
                 {t.status === 'active' ? (
@@ -285,14 +239,14 @@ export function TenantsListPage() {
     return (
       <EmptyState
         title="Failed to load tenants"
-        description="Could not retrieve tenant portals from the server."
+        description={error instanceof Error ? error.message : 'Could not retrieve tenant portals from the server.'}
         actionLabel="Try Again"
         onAction={() => refetch()}
       />
     );
   }
 
-  const { items, stats } = data;
+  const { summary } = data;
 
   return (
     <div className="space-y-6">
@@ -308,49 +262,62 @@ export function TenantsListPage() {
         }
       />
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums">{stats.total}</span>{' '}
+          <span className="font-semibold tabular-nums">{summary.total}</span>{' '}
           <span className="text-muted-foreground">total portals</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{stats.active}</span>{' '}
+          <span className="font-semibold tabular-nums">{summary.active}</span>{' '}
           <span className="text-muted-foreground">active portals</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{stats.suspended}</span>{' '}
+          <span className="font-semibold tabular-nums">{summary.suspended}</span>{' '}
           <span className="text-muted-foreground">suspended portals</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{stats.trial}</span>{' '}
-          <span className="text-muted-foreground">trial portals</span>
         </p>
       </div>
 
       <DataTable
         columns={columns}
-        data={items}
+        data={data.items}
         getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search name, slug, email, owner..."
-        searchFilterFn={tenantSearchFilter}
-        facetFilters={[
-          {
-            columnId: 'status',
-            title: 'Status',
-            options: ['active', 'trial', 'suspended'],
+        searchPlaceholder="Search name, subdomain, owner email or phone..."
+        server={{
+          page,
+          pageSize,
+          total: data.total,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
           },
-        ]}
-        emptyTitle="No tenant portals found"
+          search,
+          onSearchChange: (q) => {
+            setSearch(q);
+            setPage(1);
+          },
+        }}
+        emptyTitle={search || status ? 'No portals match your filters' : 'No tenant portals yet'}
         emptyDescription="Create a subdomain portal for an ISP. No Nginx or DNS change is required per tenant."
         toolbarActions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push('/platform/tenants/new')}
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> New Portal
-          </Button>
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Filter by status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 rounded-md border border-input bg-background px-3 text-xs"
+            >
+              {STATUS_FILTERS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            {isFetching ? <span className="text-xs text-muted-foreground">Updating…</span> : null}
+          </div>
         }
       />
 
@@ -358,8 +325,8 @@ export function TenantsListPage() {
         open={Boolean(deletingId)}
         onOpenChange={(open) => !open && setDeletingId(null)}
         title="Delete Tenant Portal"
-        description="Are you sure you want to permanently delete this tenant portal? All tenant subscribers, packages and accounting data will be unlinked."
-        confirmLabel="Yes, Delete Portal"
+        description="The subdomain portal is removed and its users are unlinked from it. The owner account, subscribers and billing data are kept."
+        confirmLabel={deleteMutation.isPending ? 'Deleting…' : 'Yes, Delete Portal'}
         destructive
         onConfirm={() => deletingId && deleteMutation.mutate(deletingId)}
       />

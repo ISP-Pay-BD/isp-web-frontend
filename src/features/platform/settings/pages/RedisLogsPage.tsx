@@ -8,7 +8,6 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Database, Server, Activity } from 'lucide-react';
 
 const LEVEL_STYLES: Record<string, string> = {
   info: 'border-blue-500/30 text-blue-600 bg-blue-500/10',
@@ -31,7 +30,7 @@ export function RedisLogsPage() {
     return (
       <EmptyState
         title="Failed to load logs"
-        description="Could not retrieve Redis and system logs."
+        description={error instanceof Error ? error.message : 'Could not retrieve Redis and system logs.'}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -49,7 +48,7 @@ export function RedisLogsPage() {
     <div className="space-y-6">
       <PlatformPageHeader
         title="Redis & System Logs"
-        subtitle="Cache telemetry, session stats, and platform event stream inspector"
+        subtitle="Redis cache telemetry (zeros when the cache is not Redis) and the latest application log entries"
         breadcrumb={[
           { label: 'Platform', href: '/platform/dashboard' },
           { label: 'Settings', href: '/platform/settings' },
@@ -68,11 +67,7 @@ export function RedisLogsPage() {
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-500">{`${data.stats.uptimeDays} days`}</span>{' '}
-          <span className="text-muted-foreground">system uptime</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-blue-500">{data.stats.activeSessions}</span>{' '}
-          <span className="text-muted-foreground">active sessions</span>
+          <span className="text-muted-foreground">redis uptime</span>
         </p>
       </div>
 

@@ -1,62 +1,98 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
-import { pluginsMarketplaceFull, pluginCategories } from '@/data/marketing/plugins.data';
+import { camelizeKeys, num, str } from '@/lib/api/case';
+import { formatBdtWithSymbol } from '@/lib/format';
+import type { PluginRequestInput, PublicPlugin, PublicPluginsParams, PublicPluginsResult } from '../types';
 
-/** Row shape returned by GET /v1/platform/plugins (`PlatformCatalogController::plugins`). */
-interface BackendPluginRow {
-  id: string;
-  name: string;
-  category: string;
-  desc: string;
-  image?: string | null;
-  installed?: boolean;
-  priceBdt?: number;
-  installs?: number;
+const PER_PAGE = 50;
+
+function strOrNull(value: unknown): string | null {
+  const s = str(value);
+  return s === '' ? null : s;
 }
 
-function isBackendPluginPayload(value: unknown): value is { items: BackendPluginRow[] } {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'items' in value &&
-    Array.isArray((value as { items: unknown }).items) &&
-    (value as { items: unknown[] }).items.every(
-      (item) => !!item && typeof item === 'object' && 'name' in item,
-    )
-  );
+/** Single mapper for `PluginCatalog::toItem` rows. */
+export function toPublicPlugin(value: unknown): PublicPlugin {
+  const r = camelizeKeys<Record<string, unknown>>(value) ?? {};
+  return {
+    id: str(r.id),
+    slug: str(r.slug),
+    name: str(r.name),
+    category: str(r.category, 'General'),
+    description: str(r.description),
+    imageUrl: strOrNull(r.imageUrl),
+    priceBdt: num(r.priceBdt),
+    priceType: strOrNull(r.priceType),
+    billingCycle: strOrNull(r.billingCycle),
+  };
 }
 
-export function useMarketingPlugins() {
+/** GET /v1/public/plugins — published plugins, server search + category. */
+export function usePublicPlugins(params: PublicPluginsParams) {
   return useQuery({
-    queryKey: ['marketing', 'plugins'],
-    queryFn: async () => {
-      try {
-        const raw = await http.get<unknown>('/v1/platform/plugins');
-        if (isBackendPluginPayload(raw)) {
-          const plugins = raw.items.map((item, index) => ({
-            // Keep the marketplace card contract: static-content fields the
-            // backend does not track (tagline / features) stay as content.
-            ...pluginsMarketplaceFull[index % pluginsMarketplaceFull.length],
-            id: item.id,
-            name: item.name,
-            category: item.category,
-            desc: item.desc,
-            priceBdt: item.priceBdt ?? 0,
-            installs: item.installs ?? 0,
-          }));
-          const categories = Array.from(
-            new Set(['All', ...plugins.map((p) => p.category)]),
-          );
-          return { plugins, categories };
-        }
-        // Shape mismatch: static marketplace content, not a fake API result.
-        return { plugins: pluginsMarketplaceFull, categories: pluginCategories };
-      } catch {
-        // Backend unreachable: static marketplace content fallback.
-        return { plugins: pluginsMarketplaceFull, categories: pluginCategories };
-      }
+    queryKey: ['marketing', 'plugins', params],
+    queryFn: async ({ signal }): Promise<PublicPluginsResult> => {
+      const res = await http.getPage<unknown>(
+        '/v1/public/plugins',
+        {
+          search: params.search || undefined,
+          category: params.category || undefined,
+          page: params.page,
+          per_page: PER_PAGE,
+        },
+        { signal },
+      );
+      const categories = Array.isArray(res.raw.categories)
+        ? res.raw.categories.map((c) => str(c)).filter(Boolean)
+        : [];
+      return {
+        items: res.items.map(toPublicPlugin),
+        total: res.meta.total,
+        page: res.meta.page,
+        totalPages: res.meta.totalPages,
+        categories,
+      };
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** GET /v1/public/plugins/{slug} — 404 ApiError when the plugin is not published. */
+export function usePublicPlugin(slug: string) {
+  return useQuery({
+    queryKey: ['marketing', 'plugin', slug],
+    queryFn: async ({ signal }) =>
+      toPublicPlugin(await http.get<unknown>(`/v1/public/plugins/${encodeURIComponent(slug)}`, undefined, signal)),
+    enabled: slug !== '',
+  });
+}
+
+/** POST /v1/public/plugins/{slug}/request → 201 { id, message }. */
+export function useRequestPlugin(slug: string) {
+  return useMutation({
+    // The form maps 422 field errors + toasts via handleApiError — skip the global toast.
+    meta: { silent: true },
+    mutationFn: async (input: PluginRequestInput) => {
+      const res = await http.post<{ id?: unknown; message?: unknown }>(
+        `/v1/public/plugins/${encodeURIComponent(slug)}/request`,
+        {
+          name: input.name,
+          phone: input.phone,
+          email: input.email || undefined,
+          company: input.company || undefined,
+          message: input.message || undefined,
+        },
+      );
+      return { id: str(res?.id), message: str(res?.message) };
     },
   });
+}
+
+/** "Free" when 0, else "৳2,500 / monthly". */
+export function pluginPriceLabel(plugin: Pick<PublicPlugin, 'priceBdt' | 'billingCycle'>): string {
+  if (plugin.priceBdt <= 0) return 'Free';
+  const price = formatBdtWithSymbol(plugin.priceBdt);
+  return plugin.billingCycle ? `${price} / ${plugin.billingCycle}` : price;
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   transformBackendCustomer,
-  transformBackendCustomersList,
   transformBackendDashboardStats,
   transformBackendArea,
 } from '@/lib/api/adapters/admin.adapter';
@@ -11,7 +10,8 @@ describe('admin.adapter', () => {
     const raw = {
       id: 55,
       name: 'Tanvir Hossain',
-      pppoe_id: 'tanvir_uttara',
+      pppoe_id: '*920', // MikroTik internal id, not the login
+      pppoe_name: 'tanvir_uttara',
       mobile: '01812345678',
       email: 'tanvir@gmail.com',
       conn_status: 'active',
@@ -33,30 +33,48 @@ describe('admin.adapter', () => {
     expect(customer.packageName).toBe('Speed 50 Mbps');
   });
 
-  it('transforms backend dashboard metrics correctly', () => {
+  it('transforms backend dashboard metrics correctly (real payload keys, no sample fallbacks)', () => {
     const raw = {
       total_customers: 250,
-      active_customers: 230,
-      expired_customers: 20,
+      users_active: 230,
+      users_expired: 20,
       today_collection: 45000,
-      monthly_collection: 550000,
-      online_users: 185,
+      customers_payment_received: 550000,
+      pop_online: 185,
+      ticket_stats: { open: 2, ongoing: 1, solved: 6, closed: 1, total: 10 },
+      customer_payment_statistics: { months: ['Jan', 'Feb'], successful: [100, 200], pending: [10, 0], failed: [0, 0] },
+      routers: [{ id: 1, name: 'Core', host: '10.0.0.1', users_total: 5, users_online: 3, users_offline: 2 }],
+      geo_revenue: [{ area_name: 'Mirpur', customer_count: 4, active_count: 3, revenue: 1200 }],
     };
 
     const stats = transformBackendDashboardStats(raw);
     expect(stats.totalCustomers).toBe(250);
     expect(stats.activeCustomers).toBe(230);
     expect(stats.todayCollectionBdt).toBe(45000);
-    expect(stats.onlineUsers).toBe(185);
+    expect(stats.monthlyCollectionBdt).toBe(550000);
+    expect(stats.connectedCustomers).toBe(185);
+    expect(stats.ticketStats.solvedRate).toBe(70);
+    expect(stats.monthlyTrend).toEqual([
+      { month: 'Jan', collected: 100, pending: 10 },
+      { month: 'Feb', collected: 200, pending: 0 },
+    ]);
+    expect(stats.routers[0]).toMatchObject({ totalUsers: 5, activeUsers: 3, inactiveUsers: 2 });
+    expect(stats.geoRevenue[0]).toEqual({ area: 'Mirpur', revenueBdt: 1200, customers: 4, active: 3 });
+    // Nothing invented when the backend sends nothing.
+    const empty = transformBackendDashboardStats({});
+    expect(empty.paymentMethods).toEqual([]);
+    expect(empty.routers).toEqual([]);
+    expect(empty.customerQuota).toBeNull();
   });
 
   it('transforms backend area and subareas correctly', () => {
+    // Real zapi rows: areas.id / areas.area_name; sub_areas use area_name too.
     const raw = {
-      area_id: 12,
+      id: 12,
       area_name: 'Mirpur',
       subareas: [
-        { id: 1, subarea_name: 'Section 1', area_code: 'MIR-1', status: 'active' },
-        { id: 2, subarea_name: 'Section 2', area_code: 'MIR-2', status: 'active' },
+        { id: 1, area_name: 'Section 1', area_code: 'MIR-1', status: 'active' },
+        { id: 2, area_name: 'Section 2', area_code: 'MIR-2', status: 'active' },
       ],
     };
 

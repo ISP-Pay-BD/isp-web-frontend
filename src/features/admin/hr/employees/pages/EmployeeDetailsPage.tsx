@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -9,28 +10,24 @@ import {
   Calendar,
   MapPin,
   Phone,
-  Mail,
-  CreditCard,
-  CheckCircle2,
-  Clock,
   Navigation,
   Compass,
-  FileText,
   DollarSign,
   Copy,
   Edit2,
-  AlertCircle,
-  Shield,
-  Layers,
-  ChevronRight,
+  Wrench,
+  Plus,
+  Download,
 } from 'lucide-react';
-import { PageHero, PageContent } from '@/components/motion/PageHero';
-import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
-import { MapboxMap } from '@/components/shared/MapboxMap';
+import { toast } from 'sonner';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge, TablePagination } from '@/components/shared';
+import type { MapboxMarker } from '@/components/shared/MapboxMap';
+import { saveBlob } from '@/lib/api/client';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -39,57 +36,69 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useEmployees } from '../hooks/use-employees';
-import { attendanceRecords, advanceSalaryRequests } from '@/data/admin/hr.data';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { EmployeeItem } from '../types';
+import { useEmployeeActivity } from '../hooks/use-employee-activity';
+import { useEmployeeMutations } from '../hooks/use-employees';
+import { useInstallationMutations, useInstallations } from '../hooks/use-installations';
+import { EmployeeModal } from '../components/EmployeeModal';
+import { AssignInstallationDialog } from '../components/AssignInstallationDialog';
+import { useHrMeta } from '../../shared/use-hr-meta';
+import { datePart, formatClock, formatDuration, initials, titleCase } from '../../shared/format';
+import type { EmployeeFormValues } from '../schemas';
+import type { InstallationStatus } from '../types';
+
+// mapbox-gl is heavy — load the map only when the GPS tab is opened.
+const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[380px] w-full rounded-lg" />,
+});
+
+type Tab = 'attendance' | 'locations' | 'advances' | 'installations';
+
+const statusTone: Record<string, string> = {
+  present: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  approved: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  completed: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  late: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  assigned: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  in_progress: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  deducted: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+  cancelled: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+};
+const toneFor = (status: string) => statusTone[status] ?? 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+
+const OPEN_INSTALL: InstallationStatus[] = ['pending', 'assigned', 'in_progress'];
 
 export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const router = useRouter();
-  const { employees, isLoading, isError, refetch } = useEmployees();
-  const [activeTab, setActiveTab] = useState<'attendance' | 'locations' | 'advances'>('attendance');
-  const [selectedDay, setSelectedDay] = useState('2026-09-09');
+  const [activeTab, setActiveTab] = useState<Tab>('attendance');
+  const [trackDate, setTrackDate] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [installPage, setInstallPage] = useState(1);
+  const [installPageSize, setInstallPageSize] = useState(10);
 
-  const employee = useMemo(
-    () => employees.find((e) => e.id === employeeId) || null,
-    [employees, employeeId]
-  );
+  const activity = useEmployeeActivity(employeeId, trackDate);
+  const meta = useHrMeta();
+  const { update } = useEmployeeMutations();
+  const installations = useInstallations({ employeeId, status: 'all', page: installPage, perPage: installPageSize });
+  const { cancel } = useInstallationMutations();
 
-  const attendance = useMemo(
-    () => attendanceRecords.filter((a) => a.employeeId === employeeId || a.employeeName === employee?.name),
-    [employeeId, employee?.name]
-  );
+  const data = activity.data;
+  const pings = useMemo(() => [...(data?.locations ?? [])].reverse(), [data?.locations]);
 
-  const advances = useMemo(
-    () => advanceSalaryRequests.filter((adv) => adv.employeeId === employeeId || adv.employeeName === employee?.name),
-    [employeeId, employee?.name]
-  );
-
-  // Mock location telemetry points
-  const locationPings = useMemo(
-    () => [
-      { id: 'loc_1', time: '09:15 AM', lat: 23.8759, lng: 90.3795, address: 'Uttara Sector 3 (Check-in HQ)' },
-      { id: 'loc_2', time: '10:30 AM', lat: 23.8682, lng: 90.3921, address: 'Uttara Sector 7 (Fiber Box Maintenance)' },
-      { id: 'loc_3', time: '11:45 AM', lat: 23.8614, lng: 90.3989, address: 'Sector 11 (Client Drop Cable Fix)' },
-      { id: 'loc_4', time: '01:30 PM', lat: 23.8710, lng: 90.4012, address: 'Sector 13 (ONU Power Calibration)' },
-      { id: 'loc_5', time: '03:45 PM', lat: 23.8765, lng: 90.3850, address: 'Sector 4 (POP Node Inspection)' },
-      { id: 'loc_6', time: '05:30 PM', lat: 23.8759, lng: 90.3795, address: 'Uttara HQ (Shift Closing)' },
-    ],
-    []
-  );
-
-  const markers = useMemo(
+  const markers = useMemo<MapboxMarker[]>(
     () =>
-      locationPings.map((p, idx) => ({
+      pings.map((p, idx) => ({
         id: p.id,
-        latitude: p.lat,
-        longitude: p.lng,
-        color: idx === 0 ? '#10b981' : idx === locationPings.length - 1 ? '#ef4444' : '#2E8BFF',
-        label: `${idx + 1}. ${p.time} — ${p.address}`,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        color: idx === 0 ? '#10b981' : idx === pings.length - 1 ? '#ef4444' : '#2E8BFF',
+        label: `${idx + 1}. ${formatClock(p.createdAt)}${p.address ? ` — ${p.address}` : ''}`,
       })),
-    [locationPings]
+    [pings],
   );
 
   const handleCopy = (text: string, label: string) => {
@@ -97,19 +106,51 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
     toast.success(`${label} copied to clipboard`);
   };
 
-  if (isLoading) return <PageSkeleton variant="detail" rows={8} />;
-  if (isError || !employee) {
+  const exportTrack = () => {
+    const header = 'stop,recorded_at,latitude,longitude,address';
+    const lines = pings.map((p, i) =>
+      [i + 1, p.createdAt, p.latitude, p.longitude, `"${p.address.replace(/"/g, '""')}"`].join(','),
+    );
+    saveBlob(
+      new Blob([[header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }),
+      `gps-track-${employeeId}${trackDate ? `-${trackDate}` : ''}.csv`,
+    );
+  };
+
+  const handleSave = (values: EmployeeFormValues) => update.mutateAsync({ id: employeeId, values });
+
+  if (activity.isLoading) return <PageSkeleton variant="detail" rows={8} />;
+  if (activity.isError || !data) {
+    const notFound = activity.error?.status === 404;
     return (
       <EmptyState
-        title="Employee record not found"
-        description="Could not find staff member with the requested ID."
-        actionLabel="Back to Staff List"
-        onAction={() => router.push('/admin/hr/employees')}
+        title={notFound ? 'Employee record not found' : 'Failed to load employee'}
+        description={notFound ? 'Could not find a staff member with the requested ID.' : activity.error?.message}
+        actionLabel={notFound ? 'Back to Staff List' : 'Retry'}
+        onAction={() => (notFound ? router.push('/admin/hr/employees') : activity.refetch())}
       />
     );
   }
 
-  const isTechnician = employee.role.toLowerCase().includes('technician') || employee.role.toLowerCase().includes('engineer');
+  const employee = data.employee;
+  const installItems = installations.data?.items ?? [];
+  const installTotal = installations.data?.meta.total ?? 0;
+
+  const tabButton = (tab: Tab, icon: ReactNode, label: string, count: number) => (
+    <button
+      type="button"
+      onClick={() => setActiveTab(tab)}
+      className={cn(
+        'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition-all duration-150 px-2',
+        activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {icon} {label}
+      <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-muted">
+        {count}
+      </Badge>
+    </button>
+  );
 
   return (
     <div className="space-y-6 w-full pb-16">
@@ -133,12 +174,12 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="h-16 w-16 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-xl shadow-sm">
-                  {employee.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  {initials(employee.name)}
                 </div>
                 <span
                   className={cn(
                     'absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background',
-                    employee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400'
+                    employee.status === 'active' ? 'bg-emerald-500' : 'bg-slate-400',
                   )}
                 />
               </div>
@@ -147,25 +188,38 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                 <div className="flex items-center gap-2.5 flex-wrap">
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">{employee.name}</h1>
                   <Badge variant="outline" className="font-mono text-xs bg-muted/60 text-muted-foreground">
-                    {employee.id}
+                    #{employee.id}
                   </Badge>
                   <StatusBadge status={employee.status} />
                 </div>
                 <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground font-medium flex-wrap">
-                  <span className="text-primary font-semibold">{employee.role}</span>
-                  <span>•</span>
+                  {employee.designationLabel ? (
+                    <>
+                      <span className="text-primary font-semibold">{employee.designationLabel}</span>
+                      <span>•</span>
+                    </>
+                  ) : null}
                   <span className="flex items-center gap-1 font-mono">
-                    <Phone className="h-3 w-3" /> {employee.phone}
+                    <Phone className="h-3 w-3" /> {employee.mobile || '—'}
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {employee.area ?? 'Central Zone'}
+                    <MapPin className="h-3 w-3" /> {employee.areaLabel || '—'}
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 text-xs border-border/80"
+                disabled={!meta.data}
+                onClick={() => setEditOpen(true)}
+              >
+                <Edit2 className="h-3.5 w-3.5" /> Edit
+              </Button>
               <Link href="/admin/hr/employees">
                 <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs border-border/80">
                   <ArrowLeft className="h-3.5 w-3.5" /> Back to Staff
@@ -180,30 +234,30 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Monthly Salary
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monthly Salary</span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={employee.salaryBdt} className="text-2xl font-bold tracking-tight text-foreground" />
+            {employee.salary !== null ? (
+              <CurrencyDisplay amount={employee.salary} className="text-2xl font-bold tracking-tight text-foreground" />
+            ) : (
+              <span className="text-2xl font-bold tracking-tight text-muted-foreground">—</span>
+            )}
           </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Attendance Records
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attendance Records</span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
               <Calendar className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 tabular-nums">
-              {attendance.length || 5}
+              {data.attendanceCount}
             </span>
             <span className="text-xs text-muted-foreground">sessions</span>
           </div>
@@ -211,35 +265,33 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              GPS Location Pings
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">GPS Location Pings</span>
             <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
               <Navigation className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400 tabular-nums">
-              {locationPings.length}
+              {data.locationCount}
             </span>
-            <span className="text-xs text-muted-foreground">stops today</span>
+            <span className="text-xs text-muted-foreground">{trackDate ? `on ${trackDate}` : 'recorded'}</span>
           </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              GPS Tracking Status
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">GPS Tracking</span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
               <Compass className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold tracking-tight text-amber-500">
-              {isTechnician ? 'Active' : 'Standby'}
+              {data.locationRequired ? 'Required' : 'Off'}
             </span>
-            <span className="text-xs text-muted-foreground">15m interval</span>
+            {data.locationRequired && data.locationInterval > 0 ? (
+              <span className="text-xs text-muted-foreground">{data.locationInterval}m interval</span>
+            ) : null}
           </div>
         </Card>
       </div>
@@ -256,240 +308,199 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
             </CardHeader>
             <CardContent className="p-4 space-y-3.5 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Employee Code</span>
+                <span className="text-muted-foreground">Employee ID</span>
                 <div className="flex items-center gap-1.5 font-mono font-bold text-foreground">
-                  <span>{employee.id.toUpperCase()}</span>
+                  <span>{employee.id}</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(employee.id.toUpperCase(), 'Employee Code')}
+                    onClick={() => handleCopy(employee.id, 'Employee ID')}
                     className="text-muted-foreground hover:text-primary"
-                    title="Copy code"
+                    title="Copy ID"
                   >
                     <Copy className="h-3 w-3" />
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Designation</span>
-                <span className="font-semibold text-foreground">{employee.role}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Official Mobile</span>
-                <span className="font-mono text-foreground">{employee.phone}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Email Address</span>
-                <span className="font-mono text-muted-foreground">{employee.email ?? `${employee.id}@isppaybd.com`}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">National ID (NID)</span>
-                <span className="font-mono text-muted-foreground">{employee.nid ?? '199226954812004'}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Assigned Area</span>
-                <span className="font-medium text-foreground">{employee.area ?? 'Central Zone'}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Date Joined</span>
-                <span className="font-mono text-muted-foreground">{employee.joinedAt}</span>
-              </div>
+              {[
+                ['Designation', employee.designationLabel || '—'],
+                ['Official Mobile', employee.mobile || '—'],
+                ['Email Address', employee.email || '—'],
+                ['National ID (NID)', employee.nidNumber ? `${employee.nidNumber}${employee.nidVerified ? ' ✓' : ''}` : '—'],
+                ['Assigned Areas', employee.areaLabel || '—'],
+                ['Address', employee.address || '—'],
+                ['Date Joined', datePart(employee.joinedAt) || '—'],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-start justify-between gap-3 py-1 border-b border-border/40">
+                  <span className="text-muted-foreground shrink-0">{label}</span>
+                  <span className="text-right font-medium text-foreground break-words">{value}</span>
+                </div>
+              ))}
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-muted-foreground">Live Telemetry</span>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
-                </Badge>
+                <span className="text-muted-foreground">Last Location Update</span>
+                <span className="font-mono text-muted-foreground">
+                  {data.lastLocationUpdate ? `${datePart(data.lastLocationUpdate)} ${formatClock(data.lastLocationUpdate)}` : '—'}
+                </span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Activity Tabs (Attendance, Locations Map, Advances) */}
+        {/* Right Activity Tabs */}
         <div className="lg:col-span-8 space-y-4">
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/50 overflow-hidden">
             <div className="border-b border-border/60 bg-muted/20 px-4 pt-2">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('attendance')}
-                  className={cn(
-                    'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition-all duration-150 px-2',
-                    activeTab === 'attendance'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Calendar className="h-3.5 w-3.5" /> Attendance
-                  <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-muted">
-                    {attendance.length || 5}
-                  </Badge>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('locations')}
-                  className={cn(
-                    'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition-all duration-150 px-2',
-                    activeTab === 'locations'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Navigation className="h-3.5 w-3.5" /> GPS Location Track
-                  <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-muted">
-                    {locationPings.length}
-                  </Badge>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('advances')}
-                  className={cn(
-                    'flex items-center gap-1.5 pb-2.5 pt-1 text-xs font-bold border-b-2 transition-all duration-150 px-2',
-                    activeTab === 'advances'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <DollarSign className="h-3.5 w-3.5" /> Salary Advances
-                  <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-muted">
-                    {advances.length}
-                  </Badge>
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {tabButton('attendance', <Calendar className="h-3.5 w-3.5" />, 'Attendance', data.attendanceCount)}
+                {tabButton('locations', <Navigation className="h-3.5 w-3.5" />, 'GPS Location Track', data.locationCount)}
+                {tabButton('advances', <DollarSign className="h-3.5 w-3.5" />, 'Salary Advances', data.advanceCount)}
+                {tabButton('installations', <Wrench className="h-3.5 w-3.5" />, 'Installations', installTotal)}
               </div>
             </div>
 
             <CardContent className="p-0">
-              {/* Tab 1: Attendance Table */}
               {activeTab === 'attendance' && (
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Check In</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Check Out</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Duration</TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="divide-y divide-border/60">
-                      {(attendance.length > 0 ? attendance : [
-                        { id: '1', date: '2026-09-09', checkIn: '09:02 AM', checkOut: '06:15 PM', status: 'present' as const },
-                        { id: '2', date: '2026-09-08', checkIn: '08:58 AM', checkOut: '06:30 PM', status: 'present' as const },
-                        { id: '3', date: '2026-09-07', checkIn: '09:20 AM', checkOut: '06:05 PM', status: 'late' as const },
-                        { id: '4', date: '2026-09-06', checkIn: '09:00 AM', checkOut: '06:00 PM', status: 'present' as const },
-                        { id: '5', date: '2026-09-05', checkIn: '09:05 AM', checkOut: '06:10 PM', status: 'present' as const },
-                      ]).map((rec) => (
-                        <TableRow key={rec.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="font-mono text-xs font-medium text-foreground">{rec.date}</TableCell>
-                          <TableCell className="font-mono text-xs text-foreground">{rec.checkIn || '09:00 AM'}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">{rec.checkOut || '06:00 PM'}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">9h 15m</TableCell>
-                          <TableCell className="text-right">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'capitalize text-[10px] font-medium',
-                                rec.status === 'present'
-                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                  : rec.status === 'late'
-                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                              )}
-                            >
-                              {rec.status}
-                            </Badge>
-                          </TableCell>
+                  {data.attendance.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-muted-foreground">No attendance recorded for this staff member yet.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Check In</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Check Out</TableHead>
+                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Duration</TableHead>
+                          <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-border/60">
+                        {data.attendance.map((rec) => (
+                          <TableRow key={rec.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-mono text-xs font-medium text-foreground">{rec.date}</TableCell>
+                            <TableCell className="font-mono text-xs text-foreground">{formatClock(rec.checkIn) || '—'}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{formatClock(rec.checkOut) || '—'}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                              {formatDuration(rec.checkIn, rec.checkOut) || '—'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="outline" className={cn('capitalize text-[10px] font-medium', toneFor(rec.status))}>
+                                {rec.status || '—'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               )}
 
-              {/* Tab 2: GPS Locations Map */}
               {activeTab === 'locations' && (
                 <div className="p-4 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border border-border/50">
                     <div className="flex items-center gap-2">
                       <Compass className="h-4 w-4 text-primary" />
                       <div>
-                        <span className="text-xs font-bold text-foreground">Track Date: Today (2026-09-09)</span>
-                        <p className="text-[11px] text-muted-foreground">Showing 6 recorded technician field stops in chronological order.</p>
+                        <span className="text-xs font-bold text-foreground">
+                          {trackDate ? `Track date: ${trackDate}` : 'Most recent pings'}
+                        </span>
+                        <p className="text-[11px] text-muted-foreground">
+                          Showing {pings.length} recorded stop{pings.length === 1 ? '' : 's'} in chronological order.
+                        </p>
                       </div>
                     </div>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toast.success('Opening external Mapbox navigation')}
-                      className="text-xs h-7 border-border/80"
-                    >
-                      Export GPS Track
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="date"
+                        value={trackDate}
+                        onChange={(e) => {
+                          setTrackDate(e.target.value);
+                          setSelectedLocationId(null);
+                        }}
+                        className="h-7 w-[150px] text-xs"
+                        aria-label="Track date"
+                      />
+                      {trackDate ? (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTrackDate('')}>
+                          Clear
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={exportTrack}
+                        disabled={pings.length === 0}
+                        className="text-xs h-7 gap-1 border-border/80"
+                      >
+                        <Download className="h-3 w-3" /> Export CSV
+                      </Button>
+                    </div>
                   </div>
 
-                  <MapboxMap
-                    markers={markers}
-                    selectedId={selectedLocationId}
-                    onSelect={setSelectedLocationId}
-                    height={380}
-                    className="rounded-lg overflow-hidden border border-border/60 shadow-sm"
-                    renderMarker={(marker, selected) => (
-                      <div className="relative flex flex-col items-center cursor-pointer group">
-                        <span
-                          className={cn(
-                            'h-4 w-4 rounded-full border-2 border-white shadow-md transition-transform duration-200',
-                            selected ? 'scale-125 ring-4 ring-primary/40' : 'group-hover:scale-110'
-                          )}
-                          style={{ backgroundColor: marker.color }}
-                        />
-                        {selected ? (
-                          <span className="mt-1.5 max-w-[200px] truncate rounded-md bg-popover px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md ring-1 ring-border">
-                            {marker.label}
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
-                  />
-
-                  {/* Waypoints timeline */}
-                  <div className="space-y-2 pt-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Chronological Stops
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {locationPings.map((p, i) => (
-                        <div
-                          key={p.id}
-                          onClick={() => setSelectedLocationId(p.id)}
-                          className={cn(
-                            'p-2.5 rounded-lg border text-xs cursor-pointer transition-all duration-150',
-                            selectedLocationId === p.id
-                              ? 'bg-primary/10 border-primary/40 text-foreground'
-                              : 'bg-card hover:bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground'
-                          )}
-                        >
-                          <div className="flex items-center justify-between font-mono text-[11px] mb-1">
-                            <span className="font-bold text-foreground">Stop #{i + 1}</span>
-                            <span className="text-primary font-semibold">{p.time}</span>
+                  {pings.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-muted-foreground">
+                      {activity.isFetching ? 'Loading track…' : 'No GPS pings recorded for this period.'}
+                    </div>
+                  ) : (
+                    <>
+                      <MapboxMap
+                        markers={markers}
+                        selectedId={selectedLocationId}
+                        onSelect={setSelectedLocationId}
+                        height={380}
+                        className="rounded-lg overflow-hidden border border-border/60 shadow-sm"
+                        renderMarker={(marker, selected) => (
+                          <div className="relative flex flex-col items-center cursor-pointer group">
+                            <span
+                              className={cn(
+                                'h-4 w-4 rounded-full border-2 border-white shadow-md transition-transform duration-200',
+                                selected ? 'scale-125 ring-4 ring-primary/40' : 'group-hover:scale-110',
+                              )}
+                              style={{ backgroundColor: marker.color }}
+                            />
+                            {selected ? (
+                              <span className="mt-1.5 max-w-[200px] truncate rounded-md bg-popover px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md ring-1 ring-border">
+                                {marker.label}
+                              </span>
+                            ) : null}
                           </div>
-                          <p className="text-foreground text-[11px] truncate">{p.address}</p>
+                        )}
+                      />
+
+                      <div className="space-y-2 pt-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Chronological Stops</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {pings.map((p, i) => (
+                            <div
+                              key={p.id}
+                              onClick={() => setSelectedLocationId(p.id)}
+                              className={cn(
+                                'p-2.5 rounded-lg border text-xs cursor-pointer transition-all duration-150',
+                                selectedLocationId === p.id
+                                  ? 'bg-primary/10 border-primary/40 text-foreground'
+                                  : 'bg-card hover:bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground',
+                              )}
+                            >
+                              <div className="flex items-center justify-between font-mono text-[11px] mb-1">
+                                <span className="font-bold text-foreground">Stop #{i + 1}</span>
+                                <span className="text-primary font-semibold">
+                                  {trackDate ? formatClock(p.createdAt) : `${datePart(p.createdAt)} ${formatClock(p.createdAt)}`}
+                                </span>
+                              </div>
+                              <p className="text-foreground text-[11px] truncate">
+                                {p.address || `${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}`}
+                              </p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
-              {/* Tab 3: Advance Salary Requests */}
               {activeTab === 'advances' && (
                 <div className="overflow-x-auto">
                   <Table>
@@ -498,37 +509,29 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">Amount</TableHead>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">Reason</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Deduct Month</TableHead>
                         <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-border/60">
-                      {advances.length === 0 ? (
+                      {data.advances.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="text-center py-12 text-muted-foreground text-xs">
+                          <td colSpan={5} className="text-center py-12 text-muted-foreground text-xs">
                             No advance salary requests recorded for this staff member.
                           </td>
                         </tr>
                       ) : (
-                        advances.map((adv) => (
+                        data.advances.map((adv) => (
                           <TableRow key={adv.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs text-foreground">{adv.requestedAt}</TableCell>
+                            <TableCell className="font-mono text-xs text-foreground">{datePart(adv.createdAt) || '—'}</TableCell>
                             <TableCell className="font-mono text-xs font-bold text-foreground">
-                              <CurrencyDisplay amount={adv.amountBdt} />
+                              <CurrencyDisplay amount={adv.amount} />
                             </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{adv.reason}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{adv.reason || '—'}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{adv.deductMonth || '—'}</TableCell>
                             <TableCell className="text-right">
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'capitalize text-[10px] font-medium',
-                                  adv.status === 'approved'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : adv.status === 'pending'
-                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                                      : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                                )}
-                              >
-                                {adv.status}
+                              <Badge variant="outline" className={cn('capitalize text-[10px] font-medium', toneFor(adv.status))}>
+                                {adv.status || '—'}
                               </Badge>
                             </TableCell>
                           </TableRow>
@@ -538,10 +541,111 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                   </Table>
                 </div>
               )}
+
+              {activeTab === 'installations' && (
+                <div className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">Field installation work orders assigned to {employee.name}.</p>
+                    <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setAssignOpen(true)}>
+                      <Plus className="h-3.5 w-3.5" /> Assign Installation
+                    </Button>
+                  </div>
+                  {installations.isLoading ? (
+                    <Skeleton className="h-40 w-full rounded-lg" />
+                  ) : installations.isError ? (
+                    <EmptyState
+                      title="Failed to load installations"
+                      description={installations.error.message}
+                      actionLabel="Retry"
+                      onAction={() => installations.refetch()}
+                    />
+                  ) : installItems.length === 0 ? (
+                    <div className="py-10 text-center text-xs text-muted-foreground">No installations assigned yet.</div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-border/60">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Job</TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Scheduled</TableHead>
+                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
+                            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-border/60">
+                          {installItems.map((job) => (
+                            <TableRow key={job.id} className="hover:bg-muted/30 transition-colors">
+                              <TableCell className="text-xs">
+                                <div className="font-semibold text-foreground">{job.title}</div>
+                                <div className="text-muted-foreground">
+                                  {[job.customerName, job.address].filter(Boolean).join(' · ') || '—'}
+                                </div>
+                                {job.completedAt ? (
+                                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                                    Completed {datePart(job.completedAt)} {formatClock(job.completedAt)}
+                                    {job.completedLatitude !== null && job.completedLongitude !== null
+                                      ? ` · ${job.completedLatitude.toFixed(5)}, ${job.completedLongitude.toFixed(5)}`
+                                      : ''}
+                                  </div>
+                                ) : null}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-muted-foreground">
+                                {job.scheduledAt ? `${datePart(job.scheduledAt)} ${formatClock(job.scheduledAt)}` : '—'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={cn('text-[10px] font-medium', toneFor(job.status))}>
+                                  {titleCase(job.status)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {OPEN_INSTALL.includes(job.status) ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs text-destructive hover:bg-destructive/10"
+                                    disabled={cancel.isPending}
+                                    onClick={() =>
+                                      cancel.mutate(job.id, { onSuccess: () => toast.success('Installation cancelled') })
+                                    }
+                                  >
+                                    Cancel
+                                  </Button>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                  <TablePagination
+                    currentPage={installPage}
+                    pageSize={installPageSize}
+                    totalItems={installTotal}
+                    onPageChange={setInstallPage}
+                    onPageSizeChange={setInstallPageSize}
+                    pageSizeOptions={[10, 20, 50]}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {editOpen && meta.data ? (
+        <EmployeeModal open={editOpen} onOpenChange={setEditOpen} employee={employee} meta={meta.data} onSave={handleSave} />
+      ) : null}
+      {assignOpen ? (
+        <AssignInstallationDialog
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+          employeeId={employee.id}
+          employeeName={employee.name}
+        />
+      ) : null}
     </div>
   );
 }

@@ -176,6 +176,7 @@
     "landing": {
       "hero": {
         "badge": "বাংলাদেশের {count}+ ISP-এর আস্থা",
+        "badgeFallback": "বাংলাদেশের ISP-দের জন্য তৈরি",
         "titleLead": "পুরো ISP চালান",
         "titleAccent": "একটি কনসোল থেকে।",
         "subtitle": "প্রতিটি bKash ও Nagad পেমেন্ট সঠিক গ্রাহকের সাথে মিলে যায়, MikroTik PPPoE সবসময় সিঙ্কে থাকে, আর আপনার গ্রাহকরা পায় আপনার ব্র্যান্ডের বাংলা অ্যাপ।",
@@ -258,6 +259,10 @@
       "faq": {
         "title": "সেলসকে জিজ্ঞেস করার আগেই উত্তর",
         "subtitle": "ISP Pay BD-তে বিলিং, MikroTik সিঙ্ক, bKash/Nagad রিকনসিলিয়েশন আর রিসেলার পেআউট কীভাবে কাজ করে।"
+      },
+      "app": {
+        "homeAlt": "গ্রাহক অ্যাপের হোম স্ক্রিন: প্যাকেজ, মাসিক বিল, PPPoE সংযোগ আর Pay Now বাটন",
+        "paymentAlt": "গ্রাহক অ্যাপের পেমেন্ট স্ক্রিন: aamarPay, bKash, Nagad ও SSLCommerz"
       }
     }
   },

@@ -1,118 +1,93 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-
-type Row = IspOpsData['ipoeSessions'][number];
-
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.mac).toLowerCase().includes(q) ||
-    String(r.ipv4).toLowerCase().includes(q) ||
-    String(r.ipv6).toLowerCase().includes(q) ||
-    String(r.vlan).toLowerCase().includes(q)
-  );
-};
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useIpoeCustomers, type IpoeCustomer } from '../hooks/use-network-ops';
+import { useServerTable } from '../hooks/use-server-table';
 
 const statusBadgeClass: Record<string, string> = {
-  online: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
-  offline: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25',
+  active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25',
+  inactive: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25',
 };
 
-export function IpoePage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
+const mono = (v: string | null) => <span className="text-foreground font-mono text-xs tabular-nums">{v ?? '—'}</span>;
 
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+/** IPoE = static (MAC/IP-bound) customers and their router binding. */
+export function IpoePage() {
+  const table = useServerTable();
+  const { data, isLoading, isError, error, refetch } = useIpoeCustomers({ page: table.page, pageSize: table.pageSize, search: table.search });
+
+  const columns = useMemo<LegacyColumnDef<IpoeCustomer, unknown>[]>(
     () => [
       {
-        accessorKey: 'mac',
-        header: 'MAC',
+        accessorKey: 'name',
+        header: 'Customer',
+        enableHiding: false,
         cell: ({ row }) => (
-          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.mac)}</span>
+          <div>
+            <p className="text-foreground font-medium">{row.original.name}</p>
+            <p className="text-muted-foreground text-xs font-mono">{row.original.mobile ?? '—'}</p>
+          </div>
         ),
       },
+      { accessorKey: 'mac', header: 'MAC', cell: ({ row }) => mono(row.original.mac) },
+      { accessorKey: 'ip', header: 'IPv4', cell: ({ row }) => mono(row.original.ip) },
+      { accessorKey: 'gateway', header: 'Gateway', cell: ({ row }) => mono(row.original.gateway) },
       {
-        accessorKey: 'ipv4',
-        header: 'IPv4',
-        cell: ({ row }) => (
-          <span className="text-foreground font-mono text-xs tabular-nums">{String(row.original.ipv4)}</span>
-        ),
+        accessorKey: 'maxLimit',
+        header: 'Rate limit',
+        cell: ({ row }) => <span className="text-muted-foreground font-mono text-xs">{row.original.maxLimit ?? '—'}</span>,
       },
       {
-        accessorKey: 'ipv6',
-        header: 'IPv6',
-        cell: ({ row }) => (
-          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.ipv6)}</span>
-        ),
-      },
-      {
-        accessorKey: 'vlan',
-        header: 'VLAN',
-        cell: ({ row }) => (
-          <span className="text-muted-foreground font-mono text-xs tabular-nums">{String(row.original.vlan)}</span>
-        ),
-      },
-      {
-        accessorKey: 'uptime',
-        header: 'Uptime',
-        cell: ({ row }) => (
-          <span className="text-muted-foreground tabular-nums">{String(row.original.uptime)}</span>
-        ),
+        accessorKey: 'routerName',
+        header: 'Router',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.routerName ?? '—'}</span>,
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => {
-          const status = String(row.original.status);
-          return (
-            <Badge variant="outline" className={`capitalize ${statusBadgeClass[status] ?? ''}`}>
-              {status}
-            </Badge>
-          );
-        },
+        cell: ({ row }) => (
+          <Badge variant="outline" className={`capitalize ${statusBadgeClass[row.original.status] ?? ''}`}>
+            {row.original.status || '—'}
+          </Badge>
+        ),
       },
     ],
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isLoading && !data) return <PageSkeleton variant="table" />;
+  if (isError && !data) {
+    return <EmptyState title="Failed to load IPoE customers" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
-
-  const rows = data.ipoeSessions;
-  const online = rows.filter((r) => r.status === 'online').length;
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="IPoE Dual-Stack"
-        subtitle="MAC-based IPoE sessions"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'IPoE Dual-Stack' }]}
+        title="IPoE Sessions"
+        subtitle="MAC/IP-bound static customers and their router binding"
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'IPoE' }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: rows.length, label: 'sessions' },
-          { value: online, label: 'online' },
+          { value: (data?.summary.total ?? 0).toLocaleString(), label: 'static customers' },
+          { value: (data?.summary.active ?? 0).toLocaleString(), label: 'active' },
         ]}
       />
       <DataTable
         columns={columns}
-        data={rows}
-        searchKey="mac"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search…"
+        data={data?.items ?? []}
+        getRowId={(row, i) => `${row.userId}-${i}`}
+        searchPlaceholder="Search name, mobile, IP or MAC…"
+        emptyTitle={table.search ? 'No customers match your search' : 'No static (IPoE) customers'}
+        server={table.server(data?.meta.total ?? 0)}
       />
     </div>
   );

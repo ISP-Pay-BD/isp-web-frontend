@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { themePresetsData } from '@/data/admin/theme-studio.data';
+import { THEME_PRESETS as themePresetsData } from '@/features/admin/theme-studio/presets';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

@@ -1,20 +1,21 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/motion/Reveal';
+import { landingAssets } from '@/config/assets';
 import { useTranslations } from '@/features/marketing/shared';
 import { SectionTitle } from './SectionTitle';
-import { SubscriberPhone } from './SubscriberPhone';
-import type { HeroStageData, MobileAppData } from '../types';
+import { TiltCard } from './TiltCard';
+import type { MobileAppData } from '../types';
 
 interface MobileAppPromoProps {
   data: MobileAppData;
-  subscriber: HeroStageData['subscriber'];
 }
 
-export function MobileAppPromo({ data, subscriber }: MobileAppPromoProps) {
+export function MobileAppPromo({ data }: MobileAppPromoProps) {
   const t = useTranslations();
 
   return (
@@ -49,9 +50,39 @@ export function MobileAppPromo({ data, subscriber }: MobileAppPromoProps) {
             </Button>
           </Reveal>
 
-          {/* The same subscriber app as in the hero, so the page tells one story. */}
-          <Reveal delay={0.08} className="flex justify-center lg:col-span-5">
-            <SubscriberPhone subscriber={subscriber} />
+          {/* Real screens from the branded app: home in front, the payment gateways behind it. */}
+          <Reveal
+            delay={0.08}
+            className="relative mx-auto h-[540px] w-full max-w-[400px] lg:col-span-5"
+          >
+            <div
+              className="pointer-events-none absolute inset-0 -z-10"
+              aria-hidden
+              style={{
+                backgroundImage:
+                  'radial-gradient(closest-side, color-mix(in srgb, var(--landing-cta) 22%, transparent), transparent)',
+              }}
+            />
+            <Image
+              src={landingAssets.appScreens.payment}
+              alt={t('marketing.landing.app.paymentAlt')}
+              width={390}
+              height={798}
+              sizes="220px"
+              className="absolute top-12 left-0 w-[200px] -rotate-6 drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)] sm:w-[220px]"
+            />
+            <TiltCard className="absolute top-0 right-0 w-[230px] rounded-[2.5rem] sm:w-[250px]">
+              <div className="rounded-[2.5rem] bg-white/[0.06] p-2 shadow-[0_30px_80px_rgba(0,0,0,0.6)] ring-1 ring-white/15">
+                <Image
+                  src={landingAssets.appScreens.home}
+                  alt={t('marketing.landing.app.homeAlt')}
+                  width={612}
+                  height={1360}
+                  sizes="250px"
+                  className="h-auto w-full rounded-[2rem]"
+                />
+              </div>
+            </TiltCard>
           </Reveal>
         </div>
       </div>

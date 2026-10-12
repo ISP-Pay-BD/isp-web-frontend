@@ -22,21 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CustomerPageShell } from '@/features/customer/shared';
+import {
+  CustomerPageShell,
+  createTicketSchema,
+  TICKET_CATEGORIES,
+  TICKET_PRIORITIES,
+  type CreateTicketInput,
+} from '@/features/customer/shared';
 import { useCreateTicket } from '../hooks/use-customer-support';
-import { createTicketSchema, type CreateTicketInput } from '@/features/customer/shared';
+import { handleApiError } from '@/lib/api/utils/error-handler';
 import { toast } from 'sonner';
 
-const categories = [
-  'Internet Slow / Speed Drop',
-  'Fiber Cable Cut / Physical Line Down',
-  'Frequent Disconnections',
-  'Billing / Payment Not Reflected',
-  'Router / WiFi Password Change Request',
-  'Package Upgrade Inquiry',
-  'Optical Signal / Red LOS Light on ONT',
-  'Other Inquiry',
-];
+/** Labels for the backend's `tickets.category` enum values. */
+const CATEGORY_LABELS: Record<(typeof TICKET_CATEGORIES)[number], string> = {
+  technical: 'Technical / connection problem',
+  noc: 'Network outage (NOC)',
+  sales: 'Sales / package inquiry',
+  marketing: 'Offers & marketing',
+  general: 'General / billing',
+  none: 'Other',
+};
 
 export function CustomerNewTicketPage() {
   const router = useRouter();
@@ -46,12 +51,13 @@ export function CustomerNewTicketPage() {
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     formState: { errors },
   } = useForm<CreateTicketInput>({
     resolver: zodResolver(createTicketSchema),
     defaultValues: {
-      category: categories[0],
+      category: 'technical',
       priority: 'medium',
       subject: '',
       message: '',
@@ -62,11 +68,11 @@ export function CustomerNewTicketPage() {
 
   const onSubmit = async (data: CreateTicketInput) => {
     try {
-      await createMutation.mutateAsync(data);
-      toast.success('Support ticket created successfully! Our team will get back shortly.');
-      router.push('/customer/support');
-    } catch {
-      toast.error('Failed to submit ticket. Please check fields and retry.');
+      const res = await createMutation.mutateAsync(data);
+      toast.success('Support ticket opened. Your provider will reply here.');
+      router.push(res?.id ? `/customer/support/${res.id}` : '/customer/support');
+    } catch (err) {
+      handleApiError(err, setError);
     }
   };
 
@@ -97,7 +103,7 @@ export function CustomerNewTicketPage() {
                 Ticket Information
               </CardTitle>
               <CardDescription className="text-xs">
-                Provide specific details to help our network NOC technicians diagnose your issue quickly.
+                Provide specific details so your provider can diagnose the issue quickly.
               </CardDescription>
             </CardHeader>
 
@@ -106,18 +112,19 @@ export function CustomerNewTicketPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="category">Issue Category</Label>
                 <Select
-                  defaultValue={categories[0]}
+                  items={CATEGORY_LABELS}
+                  defaultValue="technical"
                   onValueChange={(val) => {
-                    if (val) setValue('category', val);
+                    if (val) setValue('category', val as CreateTicketInput['category']);
                   }}
                 >
                   <SelectTrigger id="category" className="w-full">
                     <SelectValue placeholder="Select issue category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {TICKET_CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
-                        {cat}
+                        {CATEGORY_LABELS[cat]}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -131,7 +138,7 @@ export function CustomerNewTicketPage() {
               <div className="space-y-1.5">
                 <Label>Priority Level</Label>
                 <div className="grid grid-cols-3 gap-2.5">
-                  {(['low', 'medium', 'high'] as const).map((p) => (
+                  {TICKET_PRIORITIES.map((p) => (
                     <Button
                       key={p}
                       type="button"

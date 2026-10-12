@@ -1,372 +1,306 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Gauge, Plus, RefreshCw, Download, Activity, CheckCircle2, AlertTriangle, ArrowUpRight, TrendingUp } from 'lucide-react';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { BandwidthSlaRow } from '@/data/admin/isp-ops.data';
+import { Textarea } from '@/components/ui/textarea';
+import { Gauge, Plus, Activity, CheckCircle2, Info, Pencil, Trash2 } from 'lucide-react';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useDeleteSla, useSaveSla, useSlas, type BandwidthSla, type SlaScope } from '../hooks/use-sla';
+import { useNetOpsOptions, type CustomerOption } from '../hooks/use-network-ops';
+import { useServerTable } from '../hooks/use-server-table';
+import { CustomerPicker, OptionSelect } from '../components/NetOpsControls';
 
-const searchFilter = (row: LegacyRow<BandwidthSlaRow>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.link).toLowerCase().includes(q) ||
-    String(r.committedMbps).toLowerCase().includes(q) ||
-    String(r.avgMbps).toLowerCase().includes(q) ||
-    String(r.uptimePct).toLowerCase().includes(q)
-  );
-};
+interface SlaForm {
+  name: string;
+  scope: SlaScope;
+  packageId: string;
+  customer: CustomerOption | null;
+  committedMbps: string;
+  uptimeTargetPct: string;
+  status: 'active' | 'inactive';
+  notes: string;
+}
 
+const emptyForm: SlaForm = { name: '', scope: 'package', packageId: '', customer: null, committedMbps: '', uptimeTargetPct: '', status: 'active', notes: '' };
+
+/** SLA definitions (committed Mbps + uptime target) per package or customer. */
 export function BandwidthSlaPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [slaList, setSlaList] = useState<BandwidthSlaRow[]>([]);
+  const table = useServerTable();
+  const { data, isLoading, isError, error, refetch } = useSlas({ page: table.page, pageSize: table.pageSize, search: table.search });
   const [modalOpen, setModalOpen] = useState(false);
-  const [isAuditing, setIsAuditing] = useState(false);
+  const [editing, setEditing] = useState<BandwidthSla | null>(null);
+  const [form, setForm] = useState<SlaForm>(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<BandwidthSla | null>(null);
+  const options = useNetOpsOptions(modalOpen);
+  const save = useSaveSla();
+  const remove = useDeleteSla();
 
-  // Form State
-  const [link, setLink] = useState('');
-  const [committedMbps, setCommittedMbps] = useState('1000');
-  const [avgMbps, setAvgMbps] = useState('980');
-  const [uptimePct, setUptimePct] = useState('99.98');
+  const set = (patch: Partial<SlaForm>) => setForm((f) => ({ ...f, ...patch }));
 
-  const initialRows = data?.bandwidthSla ?? [];
-  const list = slaList.length > 0 ? slaList : initialRows;
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
 
-  const totalLinks = list.length;
-  const totalCommitted = list.reduce((s, r) => s + r.committedMbps, 0);
-  const totalDelivered = list.reduce((s, r) => s + r.avgMbps, 0);
-  const totalBreaches = list.reduce((s, r) => s + r.breaches, 0);
-  const avgUptime = totalLinks > 0 ? (list.reduce((s, r) => s + r.uptimePct, 0) / totalLinks).toFixed(2) : '99.9';
+  const openEdit = (s: BandwidthSla) => {
+    setEditing(s);
+    setForm({
+      name: s.name,
+      scope: s.scope,
+      packageId: s.packageId ?? '',
+      customer: s.userId ? { id: s.userId, name: s.customerName ?? `#${s.userId}`, mobile: null, pppoeId: null } : null,
+      committedMbps: String(s.committedMbps),
+      uptimeTargetPct: String(s.uptimeTargetPct),
+      status: s.status,
+      notes: s.notes ?? '',
+    });
+    setModalOpen(true);
+  };
 
-  const handleAddSla = (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!link.trim()) {
-      toast.error('Please enter uplink or client circuit name');
-      return;
-    }
-
-    const newSla: BandwidthSlaRow = {
-      id: `sla_${Date.now()}`,
-      link,
-      committedMbps: Number(committedMbps) || 1000,
-      avgMbps: Number(avgMbps) || 980,
-      uptimePct: Number(uptimePct) || 99.9,
-      breaches: 0,
-    };
-
-    setSlaList((prev) => [newSla, ...(prev.length > 0 ? prev : initialRows)]);
-    toast.success(`Bandwidth SLA monitor for "${newSla.link}" configured.`);
-    setModalOpen(false);
-    setLink('');
-  };
-
-  const handleRunAudit = () => {
-    setIsAuditing(true);
-    setTimeout(() => {
-      setIsAuditing(false);
-      toast.success('Generated 30-day BTRC & Enterprise SLA compliance audit. 0 penalty credits due.');
-    }, 800);
-  };
-
-  const handleExportCsv = () => {
-    const headers = ['Circuit / Upstream Link', 'Committed Bandwidth (Mbps)', 'Delivered Avg (Mbps)', 'Fulfillment %', 'Uptime %', 'SLA Breaches'];
-    const rows = list.map((r) => [
-      r.link,
-      r.committedMbps,
-      r.avgMbps,
-      `${Math.round((r.avgMbps / (r.committedMbps || 1)) * 100)}%`,
-      `${r.uptimePct}%`,
-      r.breaches,
-    ]);
-    const csvContent = [headers.join(','), ...rows.map((r) => r.map((cell) => `"${cell}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `bandwidth-sla-report-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Bandwidth SLA compliance report downloaded.');
-  };
-
-  const columns = useMemo<LegacyColumnDef<BandwidthSlaRow, unknown>[]>(
-    () => [
+    save.mutate(
       {
-        accessorKey: 'link',
-        header: 'Upstream / DIA Circuit',
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
-              <Gauge className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-foreground">{row.original.link}</p>
-              <p className="text-xs text-muted-foreground">Carrier Grade SLA</p>
-            </div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'committedMbps',
-        header: 'CIR Committed',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs font-bold text-foreground">
-            {row.original.committedMbps.toLocaleString()} Mbps
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'avgMbps',
-        header: 'Actual Delivery',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-            {row.original.avgMbps.toLocaleString()} Mbps
-          </span>
-        ),
-      },
-      {
-        id: 'fulfillment',
-        header: 'SLA Fulfillment',
-        cell: ({ row }) => {
-          const ratio = Math.round((row.original.avgMbps / (row.original.committedMbps || 1)) * 100);
-          return (
-            <div className="min-w-[150px] space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground">{ratio}% CIR</span>
-                <span className={ratio >= 98 ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>
-                  {ratio >= 98 ? 'Guaranteed' : 'Fluctuating'}
-                </span>
-              </div>
-              <Progress value={Math.min(ratio, 100)} className="h-1.5" />
-            </div>
-          );
+        id: editing?.id,
+        body: {
+          name: form.name,
+          scope: form.scope,
+          package_id: form.scope === 'package' ? form.packageId || null : null,
+          user_id: form.scope === 'customer' ? (form.customer?.id ?? null) : null,
+          committed_mbps: form.committedMbps,
+          uptime_target_pct: form.uptimeTargetPct,
+          status: form.status,
+          notes: form.notes || null,
         },
       },
-      {
-        accessorKey: 'uptimePct',
-        header: 'Uptime %',
-        cell: ({ row }) => (
-          <Badge
-            variant="outline"
-            className={
-              row.original.uptimePct >= 99.9
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 font-mono text-xs'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 font-mono text-xs'
-            }
-          >
-            {row.original.uptimePct}%
-          </Badge>
-        ),
-      },
-      {
-        accessorKey: 'breaches',
-        header: 'SLA Breaches',
-        cell: ({ row }) => (
-          <Badge
-            variant="outline"
-            className={
-              row.original.breaches === 0
-                ? 'bg-muted text-muted-foreground text-xs'
-                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 font-mono text-xs font-bold'
-            }
-          >
-            {row.original.breaches === 0 ? '0 Incidents' : `${row.original.breaches} Breaches`}
-          </Badge>
-        ),
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs gap-1"
-              onClick={() => toast.success(`Generated 30-Day MRTG throughput graph for ${row.original.link}`)}
-            >
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-              MRTG
-            </Button>
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
+      { onSuccess: () => setModalOpen(false) },
+    );
+  };
 
-  if (isLoading && list.length === 0) return <PageSkeleton variant="table" />;
-  if (isError && list.length === 0) {
-    return <EmptyState title="Failed to load Bandwidth SLA" actionLabel="Retry" onAction={() => refetch()} />;
+  const columns: LegacyColumnDef<BandwidthSla, unknown>[] = [
+    {
+      accessorKey: 'name',
+      header: 'SLA',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
+            <Gauge className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-foreground">{row.original.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {row.original.scope === 'package' ? `Package: ${row.original.packageName ?? '—'}` : `Customer: ${row.original.customerName ?? '—'}`}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'committedMbps',
+      header: 'CIR Committed',
+      cell: ({ row }) => (
+        <div>
+          <span className="font-mono text-xs font-bold text-foreground">{row.original.committedMbps.toLocaleString()} Mbps</span>
+          {row.original.packageBandwidth && <div className="text-xs text-muted-foreground font-mono">Plan: {row.original.packageBandwidth}</div>}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'uptimeTargetPct',
+      header: 'Uptime Target',
+      cell: ({ row }) => <span className="font-mono text-xs font-bold text-foreground">{row.original.uptimeTargetPct}%</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          className={row.original.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs' : 'bg-muted text-muted-foreground text-xs'}
+        >
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(row.original)} title="Edit">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(row.original)} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  if (isLoading && !data) return <PageSkeleton variant="table" />;
+  if (isError && !data) {
+    return <EmptyState title="Failed to load Bandwidth SLA" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
+
+  const summary = data?.summary;
+  const packageOptions = (options.data?.packages ?? []).map((p) => ({ value: p.value, label: p.bandwidth ? `${p.label} (${p.bandwidth})` : p.label }));
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Bandwidth SLA & CIR Quality Assurance"
-        subtitle="Track carrier uplink commitments, enterprise CIR fulfillment, packet loss, and automatic SLA rebate calculations"
+        title="Bandwidth SLA"
+        subtitle="Committed bandwidth and uptime targets per package or customer"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Network' }, { label: 'Bandwidth SLA' }]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleRunAudit} disabled={isAuditing}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${isAuditing ? 'animate-spin' : ''}`} />
-              Run SLA Audit
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportCsv}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Export Report
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add SLA Circuit
-            </Button>
-          </div>
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            New SLA
+          </Button>
         }
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Committed Capacity</span>
+            <span>SLA Definitions</span>
             <Gauge className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{(totalCommitted / 1000).toFixed(1)} Gbps</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Across {totalLinks} audited links</p>
-          </div>
+          <div className="mt-2 text-2xl font-bold text-foreground tabular-nums">{summary?.total ?? 0}</div>
+          <p className="text-xs text-muted-foreground mt-0.5">{summary?.active ?? 0} active</p>
         </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Average Delivery</span>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <span>Committed (active)</span>
+            <Activity className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{(totalDelivered / 1000).toFixed(1)} Gbps</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Fulfillment & CIR rate</p>
-          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{(summary?.committedMbpsActive ?? 0).toLocaleString()} Mbps</div>
+          <p className="text-xs text-muted-foreground mt-0.5">Sum of committed rates</p>
         </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Mean Uptime</span>
-            <CheckCircle2 className="h-4 w-4 text-blue-500" />
+            <span>Measurement</span>
+            {summary?.measurementAvailable ? <CheckCircle2 className="h-4 w-4 text-blue-500" /> : <Info className="h-4 w-4 text-muted-foreground" />}
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{avgUptime}%</div>
-            <p className="text-xs text-muted-foreground mt-0.5">99.9% contractual target</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>SLA Breaches (30d)</span>
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{totalBreaches}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Zero penalty claims</p>
-          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {summary?.measurementAvailable
+              ? 'Measured delivery is available.'
+              : 'Delivered throughput and uptime are not recorded yet, so only targets are shown.'}
+          </p>
         </div>
       </div>
 
       <DataTable
         columns={columns}
-        data={list}
-        searchKey="link"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search circuits, links, committed speeds..."
-        toolbarActions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add SLA Circuit
-          </Button>
-        }
+        data={data?.items ?? []}
+        getRowId={(row) => row.id}
+        searchPlaceholder="Search SLAs..."
+        emptyTitle={table.search ? 'No SLAs match your search' : 'No SLA definitions yet'}
+        server={table.server(data?.meta.total ?? 0)}
       />
 
-      {/* Add SLA Circuit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Register Bandwidth SLA Target</DialogTitle>
-            <DialogDescription>
-              Configure Committed Information Rate (CIR), peak burst thresholds, and automated uptime tracking.
-            </DialogDescription>
+            <DialogTitle>{editing ? 'Edit SLA' : 'New Bandwidth SLA'}</DialogTitle>
+            <DialogDescription>Define the committed rate and uptime target for a package or a single customer.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleAddSla} className="space-y-4 py-2">
+          <form onSubmit={handleSave} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="link">Circuit / Provider Link Name *</Label>
-              <Input
-                id="link"
-                placeholder="e.g. NTT IIG 10G Primary Link"
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                required
-              />
+              <Label htmlFor="sla-name">Name *</Label>
+              <Input id="sla-name" value={form.name} onChange={(e) => set({ name: e.target.value })} required />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="committedMbps">Committed Bandwidth (Mbps) *</Label>
-                <Input
-                  id="committedMbps"
-                  type="number"
-                  placeholder="1000"
-                  value={committedMbps}
-                  onChange={(e) => setCommittedMbps(e.target.value)}
-                  required
+                <Label htmlFor="sla-scope">Applies to</Label>
+                <OptionSelect
+                  id="sla-scope"
+                  value={form.scope}
+                  onChange={(v) => set({ scope: (v || 'package') as SlaScope })}
+                  options={[
+                    { value: 'package', label: 'Package' },
+                    { value: 'customer', label: 'Customer' },
+                  ]}
+                  placeholder="Scope"
                 />
               </div>
-
               <div className="space-y-1.5">
-                <Label htmlFor="avgMbps">Delivered Average (Mbps)</Label>
-                <Input
-                  id="avgMbps"
-                  type="number"
-                  placeholder="980"
-                  value={avgMbps}
-                  onChange={(e) => setAvgMbps(e.target.value)}
+                <Label htmlFor="sla-status">Status</Label>
+                <OptionSelect
+                  id="sla-status"
+                  value={form.status}
+                  onChange={(v) => set({ status: v === 'inactive' ? 'inactive' : 'active' })}
+                  options={[
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' },
+                  ]}
+                  placeholder="Status"
                 />
               </div>
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="uptimePct">Target Uptime (%)</Label>
-              <Input
-                id="uptimePct"
-                placeholder="99.95"
-                value={uptimePct}
-                onChange={(e) => setUptimePct(e.target.value)}
-              />
+            {form.scope === 'package' ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="sla-package">Package *</Label>
+                <OptionSelect id="sla-package" value={form.packageId} onChange={(v) => set({ packageId: v })} options={packageOptions} placeholder="Select package" />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="sla-customer">Customer *</Label>
+                <CustomerPicker id="sla-customer" value={form.customer} onChange={(c) => set({ customer: c })} />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="sla-mbps">Committed (Mbps) *</Label>
+                <Input id="sla-mbps" type="number" min={0.01} step="0.01" value={form.committedMbps} onChange={(e) => set({ committedMbps: e.target.value })} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="sla-uptime">Uptime target (%) *</Label>
+                <Input id="sla-uptime" type="number" min={0.01} max={100} step="0.01" value={form.uptimeTargetPct} onChange={(e) => set({ uptimeTargetPct: e.target.value })} required />
+              </div>
             </div>
-
+            <div className="space-y-1.5">
+              <Label htmlFor="sla-notes">Notes</Label>
+              <Textarea id="sla-notes" value={form.notes} onChange={(e) => set({ notes: e.target.value })} rows={2} />
+            </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Track SLA Circuit</Button>
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? 'Saving…' : 'Save SLA'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete SLA"
+        description={`Delete "${deleteTarget?.name ?? ''}"?`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (deleteTarget) remove.mutate(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }
-

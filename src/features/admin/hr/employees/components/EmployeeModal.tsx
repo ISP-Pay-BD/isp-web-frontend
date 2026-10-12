@@ -1,9 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { employeeSchema, type EmployeeFormValues } from '../schemas';
 import type { EmployeeItem } from '../types';
+import type { HrMeta } from '../../shared/types';
+import { applyServerErrors } from '../../shared/form-errors';
 import {
   Dialog,
   DialogContent,
@@ -15,41 +19,65 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
 
 interface EmployeeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee?: EmployeeItem | null;
-  onSave: (data: EmployeeFormValues) => Promise<void>;
+  meta: HrMeta;
+  onSave: (data: EmployeeFormValues) => Promise<unknown>;
 }
 
-export function EmployeeModal({ open, onOpenChange, employee, onSave }: EmployeeModalProps) {
+/** Backend field → form field for server-side validation errors. */
+const SERVER_KEYS: Record<string, string> = {
+  area_id: 'areaIds',
+  nid_number: 'nidNumber',
+  re_password: 'rePassword',
+};
+
+export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: EmployeeModalProps) {
   const isEdit = !!employee;
+  const schema = useMemo(() => employeeSchema(isEdit), [isEdit]);
   const {
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: employee?.name ?? '',
-      phone: employee?.phone ?? '',
+      mobile: employee?.mobile ?? '',
       email: employee?.email ?? '',
-      role: employee?.role ?? 'Field Technician',
-      salaryBdt: employee?.salaryBdt ?? 20000,
-      area: employee?.area ?? 'Uttara Sector 3',
-      nid: employee?.nid ?? '',
+      designation: employee?.designation ?? '',
+      salary: employee?.salary !== null && employee?.salary !== undefined ? String(employee.salary) : '',
+      areaIds: employee?.areaIds ?? [],
+      address: employee?.address ?? '',
+      nidNumber: employee?.nidNumber ?? '',
       status: employee?.status ?? 'active',
+      password: '',
+      rePassword: '',
     },
   });
 
-  const selectedRole = watch('role');
+  const selectedDesignation = watch('designation');
   const selectedStatus = watch('status');
+  const selectedAreas = watch('areaIds');
+  const designationItems = useMemo(
+    () => Object.fromEntries(meta.designations.map((d) => [d.value, d.label])),
+    [meta.designations],
+  );
+
+  const toggleArea = (id: string, checked: boolean) => {
+    const next = checked ? [...selectedAreas, id] : selectedAreas.filter((a) => a !== id);
+    setValue('areaIds', next, { shouldValidate: true });
+  };
 
   const onSubmit = async (values: EmployeeFormValues) => {
     try {
@@ -57,20 +85,20 @@ export function EmployeeModal({ open, onOpenChange, employee, onSave }: Employee
       toast.success(isEdit ? 'Employee updated successfully' : 'Employee registered successfully');
       reset();
       onOpenChange(false);
-    } catch {
-      toast.error('Failed to save employee details');
+    } catch (err) {
+      applyServerErrors(err, setError, SERVER_KEYS);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Employee Profile' : 'Register New Employee'}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update staff information, payroll amount, and assigned area.'
-              : 'Add new staff member to ISP Pay BD payroll and operational team.'}
+              ? 'Update staff information, payroll amount, and assigned areas.'
+              : 'Add a new staff member with login access to the employee portal.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -78,76 +106,122 @@ export function EmployeeModal({ open, onOpenChange, employee, onSave }: Employee
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="name">Full Name *</Label>
-              <Input id="name" placeholder="e.g. Tanvir Hasan" {...register('name')} />
+              <Input id="name" {...register('name')} />
               {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phone">Mobile (01XXXXXXXXX) *</Label>
-              <Input id="phone" placeholder="01712345678" {...register('phone')} />
-              {errors.phone && <p className="text-destructive text-xs">{errors.phone.message}</p>}
+              <Label htmlFor="mobile">Mobile *</Label>
+              <Input id="mobile" inputMode="tel" placeholder="01XXXXXXXXX" {...register('mobile')} />
+              {errors.mobile && <p className="text-destructive text-xs">{errors.mobile.message}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="role">Designation / Role *</Label>
-              <Select value={selectedRole} onValueChange={(val) => val && setValue('role', val, { shouldValidate: true })}>
-                <SelectTrigger id="role">
+              <Label htmlFor="designation">Designation *</Label>
+              <Select
+                items={designationItems}
+                value={selectedDesignation || null}
+                onValueChange={(val) => val && setValue('designation', String(val), { shouldValidate: true })}
+              >
+                <SelectTrigger id="designation" className="w-full">
                   <SelectValue placeholder="Select designation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Support Agent">Support Agent</SelectItem>
-                  <SelectItem value="Field Technician">Field Technician</SelectItem>
-                  <SelectItem value="Network Engineer">Network Engineer</SelectItem>
-                  <SelectItem value="Accountant">Accountant</SelectItem>
-                  <SelectItem value="Sales Executive">Sales Executive</SelectItem>
-                  <SelectItem value="Office Admin">Office Admin</SelectItem>
+                  {meta.designations.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {errors.role && <p className="text-destructive text-xs">{errors.role.message}</p>}
+              {errors.designation && <p className="text-destructive text-xs">{errors.designation.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="salaryBdt">Monthly Salary (৳) *</Label>
-              <Input id="salaryBdt" type="number" step="500" {...register('salaryBdt')} />
-              {errors.salaryBdt && <p className="text-destructive text-xs">{errors.salaryBdt.message}</p>}
+              <Label htmlFor="salary">Monthly Salary (৳)</Label>
+              <Input id="salary" type="number" min={0} step="any" {...register('salary')} />
+              {errors.salary && <p className="text-destructive text-xs">{errors.salary.message}</p>}
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Service Areas *</Label>
+            {meta.areas.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs">
+                No service areas yet — create one under Areas first.
+              </p>
+            ) : (
+              <div className="grid max-h-36 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-border/60 p-2.5 sm:grid-cols-2">
+                {meta.areas.map((a) => (
+                  <label key={a.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={selectedAreas.includes(a.id)}
+                      onCheckedChange={(checked) => toggleArea(a.id, checked === true)}
+                    />
+                    <span className="truncate">{a.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {errors.areaIds && <p className="text-destructive text-xs">{errors.areaIds.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="address">Address *</Label>
+            <Textarea id="address" rows={2} {...register('address')} />
+            {errors.address && <p className="text-destructive text-xs">{errors.address.message}</p>}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="area">Service Area *</Label>
-              <Input id="area" placeholder="e.g. Uttara Sector 3" {...register('area')} />
-              {errors.area && <p className="text-destructive text-xs">{errors.area.message}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="status">Status</Label>
-              <Select value={selectedStatus} onValueChange={(val) => setValue('status', val as 'active' | 'inactive')}>
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="staff@isppaybd.com" {...register('email')} />
+              <Label htmlFor="email">Email Address *</Label>
+              <Input id="email" type="email" {...register('email')} />
               {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="nid">National ID (NID)</Label>
-              <Input id="nid" placeholder="10 or 17 digit NID" {...register('nid')} />
-              {errors.nid && <p className="text-destructive text-xs">{errors.nid.message}</p>}
+              <Label htmlFor="nidNumber">National ID (NID)</Label>
+              <Input id="nidNumber" inputMode="numeric" placeholder="10, 13 or 17 digits" {...register('nidNumber')} />
+              {errors.nidNumber && <p className="text-destructive text-xs">{errors.nidNumber.message}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="password">{isEdit ? 'New Password' : 'Password *'}</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                placeholder={isEdit ? 'Leave blank to keep' : ''}
+                {...register('password')}
+              />
+              {errors.password && <p className="text-destructive text-xs">{errors.password.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rePassword">{isEdit ? 'Confirm New Password' : 'Confirm Password *'}</Label>
+              <Input id="rePassword" type="password" autoComplete="new-password" {...register('rePassword')} />
+              {errors.rePassword && <p className="text-destructive text-xs">{errors.rePassword.message}</p>}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 sm:w-1/2 sm:pr-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              items={{ active: 'Active', inactive: 'Inactive' }}
+              value={selectedStatus}
+              onValueChange={(val) => val && setValue('status', val as 'active' | 'inactive')}
+            >
+              <SelectTrigger id="status" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter className="pt-3">

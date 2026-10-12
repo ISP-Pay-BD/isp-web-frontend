@@ -1,28 +1,45 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { employeeService } from '@/lib/api/services/employee.service';
+import { normalizeBdPhone } from '@/lib/format';
+import { employeeKeys } from '@/features/employee/shared/keys';
+import { mapProfile } from '@/features/employee/shared/lib/mappers';
+import type { EmployeeProfile } from '@/features/employee/shared';
 import type { ProfileUpdateFormValues } from '../schemas/profile.schema';
 
+/** My HR record (`/v1/employee-portal/profile`). */
 export function useEmployeeProfile() {
   return useQuery({
-    queryKey: ['employee', 'profile'],
-    queryFn: () => employeeService.getProfile(),
+    queryKey: employeeKeys.profile,
+    queryFn: async () => mapProfile(await employeeService.profile()),
   });
 }
 
-export function useUpdateEmployeeProfile() {
+/**
+ * Self update via PATCH /v1/users/me. The mobile is a login identifier, so it
+ * is only sent when it actually changed, in the stored `8801XXXXXXXXX` form.
+ */
+export function useUpdateEmployeeProfile(current: EmployeeProfile | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: ProfileUpdateFormValues) => employeeService.updateProfile(payload),
+    mutationFn: (values: ProfileUpdateFormValues) => {
+      const body: Record<string, unknown> = {
+        name: values.name.trim(),
+        email: values.email.trim(),
+        address: values.address.trim(),
+      };
+      const next = normalizeBdPhone(values.phone);
+      if (!current || next !== normalizeBdPhone(current.mobile)) {
+        body.mobile = `88${next}`;
+      }
+      return employeeService.updateProfile(body);
+    },
     onSuccess: () => {
       toast.success('Profile updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['employee', 'profile'] });
-    },
-    onError: () => {
-      toast.error('Failed to update profile. Please try again.');
+      queryClient.invalidateQueries({ queryKey: employeeKeys.profile });
     },
   });
 }

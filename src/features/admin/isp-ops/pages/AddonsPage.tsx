@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import {
   Layers,
   Search,
@@ -9,186 +12,556 @@ import {
   Film,
   Globe,
   Radio,
-  Sparkles,
   CheckCircle2,
-  XCircle,
-  Clock,
   MoreVertical,
-  Check,
   RefreshCw,
   X,
-  Tag,
   ArrowRight,
-  TrendingUp,
-  Filter,
-  SlidersHorizontal,
-  PackageCheck,
-  ShieldCheck,
-  Sliders,
   DollarSign,
-  PlayCircle,
   Eye,
+  Pencil,
+  Sliders,
+  Trash2,
+  UserPlus,
+  Users,
 } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { CardGridSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { TablePagination } from '@/components/shared/TablePagination';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { AddonRow } from '@/data/admin/isp-ops.data';
+import { handleApiError } from '@/lib/api/utils/error-handler';
+import { todayYmd } from '@/features/admin/accounting/shared/table-utils';
+import {
+  useAddonSubscriptions,
+  useAddons,
+  useDeleteAddonSubscription,
+  useDeleteCatalogItem,
+  useSaveAddonSubscription,
+  useSaveCatalogItem,
+} from '../hooks/use-catalog';
+import { CatalogCustomerPicker } from '../components/CatalogCustomerPicker';
+import {
+  ADDON_CATEGORIES,
+  SUBSCRIPTION_STATUSES,
+  type Addon,
+  type AddonBillingType,
+  type AddonCategory,
+  type AddonSubscription,
+  type CustomerOption,
+  type SubscriptionStatus,
+} from '../catalog.types';
 
-type CategoryFilter = 'all' | 'ott' | 'iptv' | 'static_ip' | 'other';
+type CategoryFilter = 'all' | AddonCategory;
 type StatusFilter = 'all' | 'active' | 'inactive';
 
-const categoryConfig: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bg: string; border: string }> = {
-  ott: {
-    label: 'OTT Entertainment',
-    icon: Film,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
-  },
-  iptv: {
-    label: 'IPTV Channels / STB',
-    icon: Tv,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-  },
-  static_ip: {
-    label: 'Public Static IP Routing',
-    icon: Globe,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-  },
-  other: {
-    label: 'Hardware & Optimization',
-    icon: Radio,
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-  },
+const CARD_PAGE_SIZE = 12;
+
+const categoryConfig: Record<AddonCategory, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bg: string; border: string }> = {
+  ott: { label: 'OTT Entertainment', icon: Film, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  iptv: { label: 'IPTV Channels / STB', icon: Tv, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  static_ip: { label: 'Public Static IP', icon: Globe, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  other: { label: 'Hardware & Other', icon: Radio, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' },
 };
 
-export function AddonsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
+const billingLabel = (b: string) => (b === 'one_time' ? 'One-time' : 'Monthly');
 
+interface AddonForm {
+  name: string;
+  category: AddonCategory;
+  price: string;
+  billing_type: AddonBillingType;
+  description: string;
+  active: boolean;
+}
+
+const toForm = (a?: Addon | null): AddonForm => ({
+  name: a?.name ?? '',
+  category: a?.category ?? 'other',
+  price: a ? String(a.price) : '',
+  billing_type: a?.billingType ?? 'monthly',
+  description: a?.description ?? '',
+  active: a?.active ?? true,
+});
+
+function AddonFormDialog({ addon, open, onOpenChange }: { addon: Addon | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const save = useSaveCatalogItem('addons');
+  const { register, handleSubmit, setValue, watch, reset, setError, formState: { errors } } = useForm<AddonForm>({
+    defaultValues: toForm(addon),
+  });
+  useEffect(() => {
+    if (open) reset(toForm(addon));
+  }, [open, addon, reset]);
+  const category = watch('category');
+  const billing = watch('billing_type');
+
+  const onSubmit = (v: AddonForm) =>
+    save.mutate(
+      {
+        id: addon?.id,
+        body: { name: v.name, category: v.category, price: Number(v.price), billing_type: v.billing_type, description: v.description, active: v.active },
+      },
+      {
+        onSuccess: () => {
+          toast.success(addon ? 'Add-on updated' : `Add-on "${v.name}" created`);
+          onOpenChange(false);
+        },
+        onError: (err) => handleApiError(err, setError),
+      },
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg p-6">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" /> {addon ? 'Edit Add-on Product' : 'Create New Add-on Product'}
+          </DialogTitle>
+          <DialogDescription className="text-xs">Sellable OTT, IPTV, static IP or hardware add-on.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="addon-name" className="text-xs font-semibold text-muted-foreground">Add-on Title *</Label>
+            <Input id="addon-name" className="h-9 text-xs" {...register('name', { required: 'Title is required' })} />
+            {errors.name && <p className="text-[11px] text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">Category *</Label>
+              <Select value={category} onValueChange={(v) => v && setValue('category', v as AddonCategory)}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue>{(v: string | null) => categoryConfig[(v ?? 'other') as AddonCategory]?.label}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="text-xs">
+                  {ADDON_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>{categoryConfig[c].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="addon-price" className="text-xs font-semibold text-muted-foreground">Price (BDT) *</Label>
+              <Input
+                id="addon-price"
+                type="number"
+                min={0}
+                step="0.01"
+                className="h-9 text-xs font-mono"
+                {...register('price', { required: 'Price is required' })}
+              />
+              {errors.price && <p className="text-[11px] text-destructive">{errors.price.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">Billing *</Label>
+              <Select value={billing} onValueChange={(v) => v && setValue('billing_type', v === 'one_time' ? 'one_time' : 'monthly')}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue>{(v: string | null) => billingLabel(v ?? 'monthly')}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="text-xs">
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="one_time">One-time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="addon-desc" className="text-xs font-semibold text-muted-foreground">Description</Label>
+            <Input id="addon-desc" className="h-9 text-xs" {...register('description')} />
+            {errors.description && <p className="text-[11px] text-destructive">{errors.description.message}</p>}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" className="rounded border-border text-primary focus:ring-primary" {...register('active')} />
+            Active — available for new customer subscriptions
+          </label>
+          <div className="flex justify-end gap-2 pt-4 border-t border-border/60">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="text-xs">Cancel</Button>
+            <Button type="submit" disabled={save.isPending} className="text-xs font-semibold">
+              {addon ? 'Save Changes' : 'Create Add-on Product'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AssignAddonDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const save = useSaveAddonSubscription();
+  const activeAddons = useAddons({ page: 1, pageSize: 100, filters: { active: 1 } });
+  const [customer, setCustomer] = useState<CustomerOption[]>([]);
+  const [addonId, setAddonId] = useState('');
+  const [startDate, setStartDate] = useState(todayYmd());
+  const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setCustomer([]);
+    setAddonId('');
+    setStartDate(todayYmd());
+    setEndDate('');
+  }, [open]);
+
+  const addons = activeAddons.data?.items ?? [];
+  const submit = () =>
+    save.mutate(
+      { body: { customer_id: Number(customer[0]?.id), addon_id: Number(addonId), start_date: startDate, end_date: endDate || undefined } },
+      {
+        onSuccess: () => {
+          toast.success('Add-on assigned');
+          onOpenChange(false);
+        },
+        onError: (err) => handleApiError(err),
+      },
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Assign Add-on to Customer</DialogTitle>
+          <DialogDescription className="text-xs">The add-on&apos;s current price is recorded on the subscription.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 text-xs">
+          <CatalogCustomerPicker selected={customer} onChange={setCustomer} />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Add-on *</Label>
+            <Select value={addonId || null} onValueChange={(v) => v && setAddonId(String(v))}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue>
+                  {(v: string | null) => {
+                    const a = addons.find((x) => x.id === v);
+                    return a ? `${a.name} · ৳${a.price.toLocaleString()}` : activeAddons.isLoading ? 'Loading add-ons…' : 'Select add-on';
+                  }}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {addons.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">
+                    {a.name} · ৳{a.price.toLocaleString()} ({billingLabel(a.billingType)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="sub-start" className="text-xs font-semibold">Start Date</Label>
+              <Input id="sub-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sub-end" className="text-xs font-semibold">End Date</Label>
+              <Input id="sub-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 text-xs" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs">Cancel</Button>
+            <Button onClick={submit} disabled={!customer[0] || !addonId || save.isPending} className="text-xs font-semibold">Assign</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SubscriptionsCard() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'' | SubscriptionStatus>('');
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [removing, setRemoving] = useState<AddonSubscription | null>(null);
+  const subs = useAddonSubscriptions({ page, pageSize, search, filters: { status } });
+  const save = useSaveAddonSubscription();
+  const remove = useDeleteAddonSubscription();
+
+  const onSearchChange = useCallback((v: string) => {
+    setSearch(v);
+    setPage(1);
+  }, []);
+
+  const { mutate: saveSub } = save;
+  const columns = useMemo<LegacyColumnDef<AddonSubscription, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'customerName',
+        header: 'Customer',
+        size: 180,
+        cell: ({ row }) => (
+          <div>
+            <span className="font-semibold text-xs text-foreground block">{row.original.customerName || `#${row.original.customerId}`}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{row.original.customerMobile}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'addonName',
+        header: 'Add-on',
+        size: 170,
+        cell: ({ row }) => (
+          <div>
+            <span className="text-xs font-medium text-foreground block">{row.original.addonName || '—'}</span>
+            <span className="text-[10px] text-muted-foreground">{billingLabel(row.original.billingType)}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'price',
+        header: 'Price',
+        size: 100,
+        cell: ({ row }) => <CurrencyDisplay amount={row.original.price} className="text-xs font-semibold" />,
+      },
+      {
+        accessorKey: 'startDate',
+        header: 'Period',
+        size: 170,
+        cell: ({ row }) => (
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {row.original.startDate || '—'} → {row.original.endDate || 'open'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 140,
+        cell: ({ row }) => (
+          <Select
+            value={row.original.status}
+            onValueChange={(v) =>
+              v &&
+              v !== row.original.status &&
+              saveSub(
+                { id: row.original.id, body: { status: v } },
+                { onSuccess: () => toast.success(`Subscription ${v}`), onError: (err) => handleApiError(err) },
+              )
+            }
+          >
+            <SelectTrigger className="h-7 w-[120px] text-[11px] capitalize">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SUBSCRIPTION_STATUSES.map((s) => (
+                <SelectItem key={s} value={s} className="text-xs capitalize">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 60,
+        cell: ({ row }) => (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-destructive hover:bg-destructive/10"
+            onClick={() => setRemoving(row.original)}
+            aria-label="Remove subscription"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        ),
+      },
+    ],
+    [saveSub],
+  );
+
+  const summary = subs.data?.summary;
+
+  return (
+    <Card className="border-border/60 shadow-sm">
+      <CardHeader className="pb-3 flex flex-row items-start justify-between gap-2">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Customer Subscriptions</CardTitle>
+          <CardDescription className="text-xs">
+            {summary
+              ? `${summary.active} active · ৳${summary.monthlyRecurring.toLocaleString()} monthly recurring · ৳${summary.oneTimeTotal.toLocaleString()} one-time`
+              : 'Which customers have which add-ons'}
+          </CardDescription>
+        </div>
+        <Button size="sm" className="text-xs gap-1.5" onClick={() => setAssignOpen(true)}>
+          <UserPlus className="h-3.5 w-3.5" /> Assign Add-on
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {subs.isError ? (
+          <EmptyState title="Failed to load subscriptions" description={subs.error?.message} actionLabel="Retry" onAction={() => subs.refetch()} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={subs.data?.items ?? []}
+            isLoading={subs.isLoading}
+            getRowId={(r) => r.id}
+            searchPlaceholder="Search customer, mobile or add-on..."
+            emptyTitle={search || status ? 'No subscriptions match your filters' : 'No customer has an add-on yet'}
+            enableColumnVisibility={false}
+            server={{
+              page,
+              pageSize,
+              total: subs.data?.meta.total ?? 0,
+              onPageChange: setPage,
+              onPageSizeChange: (s) => {
+                setPageSize(s);
+                setPage(1);
+              },
+              search,
+              onSearchChange,
+            }}
+            toolbarActions={
+              <Select
+                value={status || 'all'}
+                onValueChange={(v) => {
+                  setStatus(v && v !== 'all' ? (v as SubscriptionStatus) : '');
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[130px] text-xs capitalize">
+                  <SelectValue>{(v: string | null) => (v && v !== 'all' ? v : 'All statuses')}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {SUBSCRIPTION_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
+        )}
+      </CardContent>
+      <AssignAddonDialog open={assignOpen} onOpenChange={setAssignOpen} />
+      <ConfirmDialog
+        open={!!removing}
+        onOpenChange={(o) => !o && setRemoving(null)}
+        title="Remove this subscription?"
+        description={removing ? `${removing.addonName} for ${removing.customerName}` : undefined}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() =>
+          removing &&
+          remove.mutate(removing.id, {
+            onSuccess: () => {
+              toast.success('Subscription removed');
+              setRemoving(null);
+            },
+          })
+        }
+      />
+    </Card>
+  );
+}
+
+export function AddonsPage() {
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [selectedAddon, setSelectedAddon] = useState<AddonRow | null>(null);
-  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
 
-  // New Addon Form State
-  const [newAddonName, setNewAddonName] = useState('');
-  const [newCategory, setNewCategory] = useState<'ott' | 'iptv' | 'static_ip' | 'other'>('ott');
-  const [newPrice, setNewPrice] = useState('250');
-  const [newStatus, setNewStatus] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300); // debounce server search
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
-  const addonsList = useMemo(() => data?.addons ?? [], [data?.addons]);
+  const { data, isLoading, isError, error, refetch, isFetching } = useAddons({
+    page,
+    pageSize: CARD_PAGE_SIZE,
+    search,
+    filters: {
+      category: categoryFilter === 'all' ? undefined : categoryFilter,
+      active: statusFilter === 'all' ? undefined : statusFilter === 'active' ? 1 : 0,
+    },
+  });
+  const save = useSaveCatalogItem('addons');
+  const remove = useDeleteCatalogItem('addons');
 
-  const filteredAddons = useMemo(() => {
-    return addonsList.filter((item) => {
-      const q = search.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        item.name.toLowerCase().includes(q) ||
-        item.id.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        item.priceBdt.toString().includes(q);
+  const [selectedAddon, setSelectedAddon] = useState<Addon | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Addon | null>(null);
+  const [deleting, setDeleting] = useState<Addon | null>(null);
 
-      const matchesCat = categoryFilter === 'all' || item.category === categoryFilter;
-      const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && item.active) ||
-        (statusFilter === 'inactive' && !item.active);
+  const addons = data?.items ?? [];
+  const stats = data?.summary;
 
-      return matchesSearch && matchesCat && matchesStatus;
-    });
-  }, [addonsList, search, categoryFilter, statusFilter]);
-
-  const stats = useMemo(() => {
-    const total = addonsList.length;
-    const active = addonsList.filter((a) => a.active).length;
-    const avgPrice = total > 0 ? Math.round(addonsList.reduce((acc, a) => acc + a.priceBdt, 0) / total) : 0;
-    const ottCount = addonsList.filter((a) => a.category === 'ott').length;
-    const iptvCount = addonsList.filter((a) => a.category === 'iptv').length;
-    const ipCount = addonsList.filter((a) => a.category === 'static_ip').length;
-
-    return { total, active, avgPrice, ottCount, iptvCount, ipCount };
-  }, [addonsList]);
-
-  const handleCreateAddon = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAddonName.trim()) {
-      toast.error('Addon name is required');
-      return;
-    }
-    toast.success(`Add-on product "${newAddonName}" registered successfully!`);
-    setIsNewModalOpen(false);
-    setNewAddonName('');
-    setNewPrice('250');
+  const openForm = (a: Addon | null) => {
+    setEditing(a);
+    setFormOpen(true);
   };
 
-  const handleToggleStatus = (addon: AddonRow) => {
-    toast.success(`"${addon.name}" is now ${addon.active ? 'Disabled' : 'Activated'}`);
+  const toggleStatus = (a: Addon) =>
+    save.mutate(
+      { id: a.id, body: { active: !a.active } },
+      {
+        onSuccess: () => {
+          toast.success(`"${a.name}" ${a.active ? 'deactivated' : 'activated'}`);
+          setSelectedAddon(null);
+        },
+        onError: (err) => handleApiError(err),
+      },
+    );
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setCategoryFilter('all');
+    setStatusFilter('all');
+    setPage(1);
   };
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load addons" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isLoading) return <CardGridSkeleton />;
+  if (isError || !stats) {
+    return <EmptyState title="Failed to load add-ons" description={error?.message} actionLabel="Retry" onAction={() => refetch()} />;
   }
+
+  const kpis: { label: string; value: React.ReactNode; icon: React.ComponentType<{ className?: string }>; tone: string }[] = [
+    { label: 'Total Add-ons', value: stats.total, icon: Layers, tone: 'purple' },
+    { label: 'Active', value: stats.active, icon: CheckCircle2, tone: 'emerald' },
+    { label: 'OTT Passes', value: stats.byCategory.ott, icon: Film, tone: 'purple' },
+    { label: 'IPTV / STB', value: stats.byCategory.iptv, icon: Tv, tone: 'blue' },
+    { label: 'Static IPs', value: stats.byCategory.static_ip, icon: Globe, tone: 'emerald' },
+    { label: 'Avg. Price', value: `৳${Math.round(stats.avgPrice).toLocaleString()}`, icon: DollarSign, tone: 'amber' },
+  ];
+  const toneClass: Record<string, string> = {
+    purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  };
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Header */}
       <PageHeader
         title="VAS & Add-on Products"
         subtitle="Manage sellable OTT subscriptions, IPTV channel packages, public static IPs, and hardware leases."
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Addons & VAS' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="text-xs border-border/80 hover:bg-accent gap-1.5"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs border-border/80 hover:bg-accent gap-1.5">
+              <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
               Refresh
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsNewModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5"
-            >
+            <Button size="sm" onClick={() => openForm(null)} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5">
               <Plus className="h-4 w-4" />
               New Add-on
             </Button>
@@ -196,85 +569,20 @@ export function AddonsPage() {
         }
       />
 
-      {/* KPI Stats Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Addons</span>
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <Layers className="h-4 w-4" />
+        {kpis.map((k) => (
+          <Card key={k.label} className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</span>
+                <div className={cn('p-2 rounded-lg border', toneClass[k.tone])}>
+                  <k.icon className="h-4 w-4" />
+                </div>
               </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-foreground">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Active</span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-emerald-400">{stats.active}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">OTT Passes</span>
-              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <Film className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-purple-400">{stats.ottCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">IPTV / STB</span>
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                <Tv className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-blue-400">{stats.iptvCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Static IPs</span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <Globe className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-emerald-400">{stats.ipCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Avg. Price</span>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <DollarSign className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 text-2xl font-black font-mono text-amber-400">৳{stats.avgPrice}</div>
-          </CardContent>
-        </Card>
+              <div className="mt-2 text-2xl font-black font-mono text-foreground">{k.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Filter Toolbar */}
@@ -282,38 +590,44 @@ export function AddonsPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search add-ons by title, category, code, price..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search add-ons by title or description..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9 h-9 text-xs bg-background/80"
           />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
+          {searchInput && (
+            <button onClick={() => setSearchInput('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
-
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={categoryFilter} onValueChange={(v) => v && setCategoryFilter(v as CategoryFilter)}>
+          <Select
+            value={categoryFilter}
+            onValueChange={(v) => {
+              setCategoryFilter((v as CategoryFilter) || 'all');
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-[180px] h-9 text-xs bg-background/80">
-              <SelectValue placeholder="All Categories" />
+              <SelectValue>{(v: string | null) => (v && v !== 'all' ? categoryConfig[v as AddonCategory].label : 'All Categories')}</SelectValue>
             </SelectTrigger>
             <SelectContent className="text-xs">
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="ott">OTT Entertainment</SelectItem>
-              <SelectItem value="iptv">IPTV Channels</SelectItem>
-              <SelectItem value="static_ip">Public Static IP</SelectItem>
-              <SelectItem value="other">Hardware & Others</SelectItem>
+              {ADDON_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>{categoryConfig[c].label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter((v as StatusFilter) || 'all');
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-[140px] h-9 text-xs bg-background/80">
-              <SelectValue placeholder="All Status" />
+              <SelectValue>{(v: string | null) => (v === 'active' ? 'Active Only' : v === 'inactive' ? 'Disabled Only' : 'All Status')}</SelectValue>
             </SelectTrigger>
             <SelectContent className="text-xs">
               <SelectItem value="all">All Status</SelectItem>
@@ -324,31 +638,25 @@ export function AddonsPage() {
         </div>
       </div>
 
-      {/* Addons Grid / Cards */}
-      {filteredAddons.length === 0 ? (
+      {addons.length === 0 ? (
         <EmptyState
           icon={<Layers className="h-10 w-10 text-muted-foreground" />}
-          title="No add-on products found"
-          description="Try modifying your search or filters, or create a new catalog add-on."
+          title={search || categoryFilter !== 'all' || statusFilter !== 'all' ? 'No add-on products match' : 'No add-on products yet'}
+          description="Create a catalog add-on, or clear the filters."
           actionLabel="Clear Filters"
-          onAction={() => {
-            setSearch('');
-            setCategoryFilter('all');
-            setStatusFilter('all');
-          }}
+          onAction={resetFilters}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredAddons.map((addon) => {
-            const cfg = categoryConfig[addon.category] ?? categoryConfig.other;
+        <div className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 transition-opacity', isFetching && 'opacity-60')}>
+          {addons.map((addon) => {
+            const cfg = categoryConfig[addon.category];
             const Icon = cfg.icon;
-
             return (
               <Card
                 key={addon.id}
                 className={cn(
                   'group relative border border-border/70 bg-card/60 hover:border-primary/50 hover:bg-card/90 transition-all duration-200 overflow-hidden cursor-pointer shadow-sm',
-                  !addon.active && 'opacity-65'
+                  !addon.active && 'opacity-65',
                 )}
                 onClick={() => setSelectedAddon(addon)}
               >
@@ -362,18 +670,16 @@ export function AddonsPage() {
                         variant="outline"
                         className={cn(
                           'text-[10px] font-semibold px-2 py-0.5',
-                          addon.active
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                          addon.active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
                         )}
                       >
                         {addon.active ? 'Active' : 'Disabled'}
                       </Badge>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           onClick={(e) => e.stopPropagation()}
                           className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none"
+                          aria-label="Add-on actions"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </DropdownMenuTrigger>
@@ -381,38 +687,35 @@ export function AddonsPage() {
                           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedAddon(addon); }}>
                             <Eye className="h-3.5 w-3.5 mr-2" /> Inspect Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleStatus(addon); }}>
-                            <Sliders className="h-3.5 w-3.5 mr-2" /> Toggle Status
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openForm(addon); }}>
+                            <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleStatus(addon); }}>
+                            <Sliders className="h-3.5 w-3.5 mr-2" /> {addon.active ? 'Deactivate' : 'Activate'}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-rose-400"
-                            onClick={(e) => { e.stopPropagation(); toast.error(`Cannot delete active add-on with subscribers`); }}
-                          >
-                            <X className="h-3.5 w-3.5 mr-2" /> Archive Product
+                          <DropdownMenuItem className="text-rose-400" onClick={(e) => { e.stopPropagation(); setDeleting(addon); }}>
+                            <X className="h-3.5 w-3.5 mr-2" /> Delete Product
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
-
                   <div>
-                    <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{addon.id}</span>
-                    <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                      {addon.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{cfg.label}</p>
+                    <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">#{addon.id}</span>
+                    <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{addon.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {cfg.label} · {addon.activeSubscriptions} active subscriber{addon.activeSubscriptions === 1 ? '' : 's'}
+                    </p>
                   </div>
-
                   <div className="pt-2 border-t border-border/50 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] text-muted-foreground uppercase">Retail Price</span>
                       <p className="text-lg font-bold font-mono text-foreground">
-                        ৳{addon.priceBdt.toLocaleString()}
-                        <span className="text-xs font-normal text-muted-foreground">/mo</span>
+                        ৳{addon.price.toLocaleString()}
+                        <span className="text-xs font-normal text-muted-foreground">{addon.billingType === 'monthly' ? '/mo' : ' once'}</span>
                       </p>
                     </div>
-
                     <Button
                       variant="ghost"
                       size="sm"
@@ -431,194 +734,93 @@ export function AddonsPage() {
           })}
         </div>
       )}
+      {(data?.meta.total ?? 0) > CARD_PAGE_SIZE && (
+        <TablePagination
+          currentPage={page}
+          pageSize={CARD_PAGE_SIZE}
+          pageSizeOptions={[CARD_PAGE_SIZE]}
+          totalItems={data?.meta.total ?? 0}
+          onPageChange={setPage}
+          onPageSizeChange={() => setPage(1)}
+        />
+      )}
 
-      {/* Deep Dive Inspector Drawer */}
+      <SubscriptionsCard />
+
+      {/* Inspector Drawer */}
       <Sheet open={!!selectedAddon} onOpenChange={(open) => !open && setSelectedAddon(null)}>
         <SheetContent className="bg-card border-border text-foreground w-full sm:max-w-md overflow-y-auto">
           {selectedAddon && (
             <div className="space-y-6">
               <SheetHeader>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20">
-                    {selectedAddon.id}
-                  </Badge>
+                  <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20">#{selectedAddon.id}</Badge>
                   <Badge
                     variant="outline"
-                    className={cn(
-                      'text-[10px]',
-                      selectedAddon.active
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                    )}
+                    className={cn('text-[10px]', selectedAddon.active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20')}
                   >
                     {selectedAddon.active ? 'Active' : 'Disabled'}
                   </Badge>
                 </div>
                 <SheetTitle className="text-xl font-bold text-foreground">{selectedAddon.name}</SheetTitle>
-                <SheetDescription className="text-xs text-muted-foreground">
-                  VAS product telemetry, subscriber attachment, and package availability.
-                </SheetDescription>
+                <SheetDescription className="text-xs text-muted-foreground">{selectedAddon.description || 'No description'}</SheetDescription>
               </SheetHeader>
-
-              <div className="space-y-4">
-                <Card className="border border-border/70 bg-muted/20 p-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Category</span>
-                      <span className="font-semibold text-foreground capitalize">{selectedAddon.category.replace('_', ' ')}</span>
+              <Card className="border border-border/70 bg-muted/20 p-4">
+                <div className="space-y-3">
+                  {[
+                    ['Category', categoryConfig[selectedAddon.category].label],
+                    ['Price', `৳${selectedAddon.price.toLocaleString()}`],
+                    ['Billing', billingLabel(selectedAddon.billingType)],
+                    ['Active Subscriptions', String(selectedAddon.activeSubscriptions)],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className="font-semibold text-foreground font-mono">{value}</span>
                     </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Monthly Tariff</span>
-                      <span className="font-mono font-bold text-primary text-sm">৳{selectedAddon.priceBdt}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Billing Cycle</span>
-                      <span className="font-medium text-foreground">Prepaid / Monthly Recurring</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground">Mushak 6.3 Tax (5%)</span>
-                      <span className="font-mono text-foreground">৳{Math.round(selectedAddon.priceBdt * 0.05)}</span>
-                    </div>
-                  </div>
-                </Card>
-
-                <div className="space-y-2">
-                  <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Provisioning Configuration</h5>
-                  <Card className="border border-border/70 bg-muted/20 p-3 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-emerald-400">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Auto-provisioning upon invoice settlement</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-blue-400">
-                      <Sparkles className="h-4 w-4" />
-                      <span>Compatible with all FTTH & Corporate packages</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-purple-400">
-                      <Tv className="h-4 w-4" />
-                      <span>Includes direct vendor API sync token</span>
-                    </div>
-                  </Card>
+                  ))}
                 </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs"
-                    onClick={() => {
-                      handleToggleStatus(selectedAddon);
-                      setSelectedAddon(null);
-                    }}
-                  >
-                    {selectedAddon.active ? 'Deactivate Product' : 'Activate Product'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-border hover:bg-accent text-xs"
-                    onClick={() => setSelectedAddon(null)}
-                  >
-                    Close
-                  </Button>
-                </div>
+              </Card>
+              <div className="flex gap-2 pt-4">
+                <Button className="flex-1 font-semibold text-xs" disabled={save.isPending} onClick={() => toggleStatus(selectedAddon)}>
+                  {selectedAddon.active ? 'Deactivate Product' : 'Activate Product'}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => {
+                    openForm(selectedAddon);
+                    setSelectedAddon(null);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button variant="outline" className="text-xs" onClick={() => setSelectedAddon(null)}>
+                  Close
+                </Button>
               </div>
             </div>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* New Addon Modal */}
-      {isNewModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <Card className="border border-border bg-card text-foreground w-full max-w-lg shadow-2xl animate-in fade-in-0 zoom-in-95">
-            <div className="p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-border/60 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                    <Plus className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">Create New Add-on Product</h3>
-                    <p className="text-xs text-muted-foreground">Configure a sellable OTT, IPTV, or Static IP add-on.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsNewModalOpen(false)}
-                  className="text-muted-foreground hover:text-foreground rounded-lg p-1"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateAddon} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Add-on Title *</label>
-                  <Input
-                    placeholder="e.g. SonyLIV Sports HD + Bongo Bundle"
-                    value={newAddonName}
-                    onChange={(e) => setNewAddonName(e.target.value)}
-                    className="h-9 text-xs"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Product Category *</label>
-                    <Select value={newCategory} onValueChange={(v) => v && setNewCategory(v as any)}>
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="text-xs">
-                        <SelectItem value="ott">OTT Entertainment</SelectItem>
-                        <SelectItem value="iptv">IPTV Channels / STB</SelectItem>
-                        <SelectItem value="static_ip">Public Static IP</SelectItem>
-                        <SelectItem value="other">Hardware / Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Price (BDT / month) *</label>
-                    <Input
-                      type="number"
-                      placeholder="250"
-                      value={newPrice}
-                      onChange={(e) => setNewPrice(e.target.value)}
-                      className="h-9 text-xs font-mono"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="newStatus"
-                    checked={newStatus}
-                    onChange={(e) => setNewStatus(e.target.checked)}
-                    className="rounded border-border text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="newStatus" className="text-xs text-muted-foreground cursor-pointer">
-                    Publish immediately to subscriber portal and sales catalog
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t border-border/60">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsNewModalOpen(false)}
-                    className="border-border hover:bg-accent text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs">
-                    Create Add-on Product
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </Card>
-        </div>
-      )}
+      <AddonFormDialog addon={editing} open={formOpen} onOpenChange={setFormOpen} />
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title={`Delete ${deleting?.name ?? 'add-on'}?`}
+        description="Only add-ons that were never assigned can be deleted; deactivate it otherwise."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() =>
+          deleting &&
+          remove.mutate(deleting.id, {
+            onSuccess: () => {
+              toast.success('Add-on deleted');
+              setDeleting(null);
+            },
+          })
+        }
+      />
     </div>
   );
 }

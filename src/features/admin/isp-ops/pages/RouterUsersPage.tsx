@@ -1,112 +1,209 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import { RefreshCw, WifiOff } from 'lucide-react';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { PppoeSession } from '@/data/admin/isp-ops.data';
+import { cn } from '@/lib/utils';
+import { useRouterDetail } from '@/features/admin/routers/hooks/useRouterDetail';
+import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
+import {
+  useDisconnectSession,
+  useRouterSessions,
+  type PppoeRow,
+  type SessionMode,
+} from '@/features/admin/routers/hooks/useRouterSessions';
 
-const searchFilter = (row: LegacyRow<PppoeSession>, _c: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return r.username.toLowerCase().includes(q) || r.ip.includes(q) || r.mac.toLowerCase().includes(q);
-};
+const MODES: { value: SessionMode; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Online' },
+  { value: 'inactive', label: 'Offline' },
+];
+
+function mb(bytes: number) {
+  return bytes > 0 ? (bytes / 1_048_576).toFixed(1) : '—';
+}
 
 export function RouterUsersPage() {
   const params = useParams<{ id: string }>();
-  const { data, isLoading, isError, refetch } = useIspOps();
+  const routerId = params.id;
+  const table = useServerTable();
+  const { page, pageSize, search } = table;
+  const [mode, setMode] = useState<SessionMode>('active');
+  const [kickTarget, setKickTarget] = useState<PppoeRow | null>(null);
 
-  const columns = useMemo<LegacyColumnDef<PppoeSession, unknown>[]>(
+  const router = useRouterDetail(routerId);
+  const sessions = useRouterSessions(routerId, { page, pageSize, search, mode });
+  const disconnect = useDisconnectSession();
+
+  const columns = useMemo<LegacyColumnDef<PppoeRow, unknown>[]>(
     () => [
       {
-        accessorKey: 'username',
+        accessorKey: 'name',
         header: 'Username',
         enableHiding: false,
-        cell: ({ row }) => <span className="font-mono text-xs">{row.original.username}</span>,
+        cell: ({ row }) => (
+          <div>
+            <span className="font-mono text-xs">{row.original.name}</span>
+            <div className="text-xs text-muted-foreground">{row.original.profile}</div>
+          </div>
+        ),
       },
       {
-        accessorKey: 'ip',
+        accessorKey: 'active',
+        header: 'Status',
+        cell: ({ row }) => <StatusBadge status={row.original.active ? 'online' : 'offline'} />,
+      },
+      {
+        accessorKey: 'address',
         header: 'IP',
-        cell: ({ row }) => <span className="font-mono text-xs">{row.original.ip}</span>,
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.address || '—'}</span>,
       },
       {
-        accessorKey: 'mac',
-        header: 'MAC',
-        cell: ({ row }) => <span className="font-mono text-xs">{row.original.mac}</span>,
+        accessorKey: 'callerId',
+        header: 'MAC / Caller ID',
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.callerId || '—'}</span>,
       },
       {
-        accessorKey: 'uptime',
-        header: 'Uptime',
-        cell: ({ row }) => <span className="tabular-nums text-sm">{row.original.uptime}</span>,
+        id: 'uptime',
+        header: 'Uptime / Last logout',
+        cell: ({ row }) => (
+          <span className="tabular-nums text-sm">
+            {row.original.active ? row.original.uptime || '—' : row.original.lastLoggedOut || '—'}
+          </span>
+        ),
       },
       {
-        accessorKey: 'rxMbps',
-        header: 'RX Mbps',
-        cell: ({ row }) => <span className="tabular-nums text-sm">{row.original.rxMbps}</span>,
-      },
-      {
-        accessorKey: 'txMbps',
-        header: 'TX Mbps',
-        cell: ({ row }) => <span className="tabular-nums text-sm">{row.original.txMbps}</span>,
+        id: 'traffic',
+        header: 'Down / Up (MB)',
+        cell: ({ row }) => (
+          <span className="tabular-nums text-sm">
+            {mb(row.original.bytesOut)} / {mb(row.original.bytesIn)}
+          </span>
+        ),
       },
       {
         id: 'actions',
         header: '',
-        cell: ({ row }) => (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => toast.success(`CoA disconnect sent for ${row.original.username} (mock)`)}
-          >
-            Kick
-          </Button>
-        ),
+        cell: ({ row }) =>
+          row.original.active && row.original.sessionId ? (
+            <Button size="sm" variant="outline" onClick={() => setKickTarget(row.original)}>
+              Kick
+            </Button>
+          ) : null,
       },
     ],
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load sessions" actionLabel="Retry" onAction={() => refetch()} />;
+  if (sessions.isLoading) return <PageSkeleton variant="table" />;
+  if (sessions.isError) {
+    return (
+      <EmptyState
+        title="Failed to load sessions"
+        description={sessions.error?.message}
+        actionLabel="Retry"
+        onAction={() => sessions.refetch()}
+      />
+    );
   }
 
-  const router = data.routerDetails.find((r) => r.id === params.id) ?? data.routerDetails[0];
-  const sessions = data.pppoeSessions.filter((s) => s.routerId === (router?.id ?? params.id));
-  const totalRx = sessions.reduce((s, x) => s + x.rxMbps, 0);
+  const data = sessions.data;
+  const name = router.data?.name ?? `Router ${routerId}`;
+
+  const confirmKick = () => {
+    const target = kickTarget;
+    if (!target) return;
+    disconnect.mutate(
+      { routerId, sessionId: target.sessionId, username: target.name },
+      {
+        onSuccess: () => toast.success(`${target.name} disconnected`),
+        onSettled: () => setKickTarget(null),
+      },
+    );
+  };
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title={`PPPoE users · ${router?.name ?? params.id}`}
-        subtitle="Live sessions — kick sends mock RADIUS CoA / PoD"
+        title={`PPPoE users · ${name}`}
+        subtitle="Live sessions read from the router — Kick drops the session on the NAS"
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'Routers', url: '/admin/routers' },
-          { label: router?.name ?? 'Router', url: `/admin/routers/${router?.id ?? params.id}` },
+          { label: name, url: `/admin/routers/${routerId}` },
           { label: 'Users' },
         ]}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => sessions.refetch()} disabled={sessions.isFetching}>
+            <RefreshCw className={cn('mr-1.5 h-4 w-4', sessions.isFetching && 'animate-spin')} />
+            Refresh
+          </Button>
+        }
       />
-      <OpsSummaryStrip
-        items={[
-          { value: sessions.length, label: "sessions" },
-          { value: totalRx.toFixed(1), label: "Mbps RX" },
-        ]}
-      />
-      <DataTable
-        columns={columns}
-        data={sessions}
-        searchKey="username"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search username, IP, MAC…"
+
+      {data && !data.reachable ? (
+        <EmptyState
+          icon={<WifiOff className="h-5 w-5" />}
+          title="Router offline"
+          description={data.error || 'The router did not answer, so live sessions are unavailable.'}
+          actionLabel="Try again"
+          onAction={() => sessions.refetch()}
+        />
+      ) : (
+        <>
+          <OpsSummaryStrip
+            items={[
+              { value: data?.activeCount ?? 0, label: 'online' },
+              { value: mode === 'active' ? '—' : (data?.inactiveCount ?? 0), label: 'offline' },
+              { value: data?.total ?? 0, label: 'matching' },
+            ]}
+          />
+          <DataTable
+            columns={columns}
+            data={data?.rows ?? []}
+            getRowId={(row) => row.name}
+            searchPlaceholder="Search username, IP, MAC, profile…"
+            emptyTitle={search ? 'No user matches your search' : 'No PPPoE users'}
+            server={table.server(data?.total ?? 0)}
+            toolbarActions={
+              <div className="flex items-center gap-1">
+                {MODES.map((m) => (
+                  <Button
+                    key={m.value}
+                    size="sm"
+                    variant={mode === m.value ? 'default' : 'outline'}
+                    onClick={() => {
+                      setMode(m.value);
+                      table.resetPage();
+                    }}
+                  >
+                    {m.label}
+                  </Button>
+                ))}
+              </div>
+            }
+          />
+        </>
+      )}
+
+      <ConfirmDialog
+        open={!!kickTarget}
+        onOpenChange={(open) => !open && setKickTarget(null)}
+        title="Disconnect session?"
+        description={kickTarget ? `${kickTarget.name} will be dropped from ${name}. The client can reconnect immediately.` : undefined}
+        confirmLabel="Disconnect"
+        destructive
+        onConfirm={confirmKick}
       />
     </div>
   );

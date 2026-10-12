@@ -1,11 +1,10 @@
 /**
  * WT01 — Landing sections 1–14 content (hero through integrations).
- * Composed from base marketing data files for mock-api + landing page.
+ * Marketing site copy for the landing page (plan prices come from the public plans API).
  */
 
 import { landingData } from './landing.data';
 import { landingSections } from './sections.data';
-import { paygCalculator, pricingTiers } from './pricing.data';
 
 const featureBullets: Record<string, string[]> = {
   f1: ['Business Dashboard', 'Accounting Dashboard', 'Real-time KPIs'],
@@ -398,18 +397,6 @@ export const landingSectionsAData = {
       'How billing, MikroTik sync, bKash/Nagad reconciliation, and reseller payouts work on ISP Pay BD.',
   },
   roi: landingSections.roi,
-  pricing: {
-    plans: pricingTiers.map((tier) => ({
-      id: tier.id,
-      name: tier.name,
-      priceBdt: tier.priceBdt,
-      period: tier.period,
-      customers: tier.customers ? `Up to ${tier.customers.toLocaleString()}` : 'Unlimited',
-      features: [...tier.features],
-      highlighted: tier.highlight,
-    })),
-    payg: { ...paygCalculator },
-  },
   comparison: {
     headers: ['Capability', 'ISP Pay BD', 'The panel you have now'],
     rows: [
@@ -559,12 +546,6 @@ export const landingSectionsAData = {
     'NetZone',
     'DhakaNet',
     'GreenLink',
-  ],
-  trustBadges: [
-    { label: '149+ ISPs', sub: 'Across Bangladesh' },
-    { label: '85K+ users', sub: 'Managed daily' },
-    { label: '2M+ payments', sub: 'Reconciled' },
-    { label: '99.9% uptime', sub: 'Platform SLA' },
   ],
   connects: [
     { name: 'API Access', desc: 'REST API for custom integrations' },

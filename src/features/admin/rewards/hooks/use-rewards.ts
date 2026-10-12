@@ -1,146 +1,112 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { ReferralTransaction, RewardConfig, TopReferrer } from '@/data/admin/rewards.data';
+import { adminService } from '@/lib/api/services/admin.service';
+import { http } from '@/lib/api/client';
+import { getResellerId } from '@/lib/api/auth-utils';
+import {
+  mapReferral,
+  mapRewardConfig,
+  mapRewardsReport,
+  type ReferralStatus,
+} from '../types';
 
-/**
- * Adapts the backend rewards payloads to the shape the rewards screen expects.
- *
- * Backend surfaces used:
- *  - `GET /v1/reseller/rewards/{id}/config`  → { owner_id, config, global, defaults }
- *  - `GET /v1/reseller/referrals/{id}`       → { items: [...], pagination }
- *  - `GET /v1/reseller/rewards/{id}/report`  → { referrals, rewards, top_referrers }
- */
-export function useRewards() {
-  const queryClient = useQueryClient();
+export const rewardKeys = {
+  all: ['admin', 'rewards'] as const,
+  config: ['admin', 'rewards', 'config'] as const,
+  report: ['admin', 'rewards', 'report'] as const,
+  referrals: (params: Record<string, unknown>) => ['admin', 'rewards', 'referrals', params] as const,
+};
 
-  const configQuery = useQuery({
-    queryKey: ['admin', 'domain', 'rewards', 'config'],
-    queryFn: () => adminService.getRewardsConfig(),
+/** GET /v1/reseller/rewards/{id}/config — resolved config for this tenant. */
+export function useRewardsConfig() {
+  return useQuery({
+    queryKey: rewardKeys.config,
+    queryFn: async () => mapRewardConfig(await adminService.getRewardsConfig()),
   });
+}
 
-  const referralsQuery = useQuery({
-    queryKey: ['admin', 'domain', 'rewards', 'referrals'],
-    queryFn: () => adminService.getReferrals(),
+/** GET /v1/reseller/rewards/{id}/report — counts, points, top referrers, 12-month series. */
+export function useRewardsReport() {
+  return useQuery({
+    queryKey: rewardKeys.report,
+    queryFn: async () => mapRewardsReport(await adminService.getRewardsReport()),
   });
+}
 
-  const reportQuery = useQuery({
-    queryKey: ['admin', 'domain', 'rewards', 'report'],
-    queryFn: () => adminService.getRewardsReport(),
-  });
+export interface ReferralListParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  status?: ReferralStatus | '';
+}
 
-  const data = useMemo(() => {
-    const cfg = (configQuery.data ?? {}) as Record<string, unknown>;
-    const configObj = (cfg.config ?? {}) as Record<string, unknown>;
-    const referralsRaw = (referralsQuery.data ?? { items: [] }) as { items?: Record<string, unknown>[] };
-    const report = (reportQuery.data ?? {}) as Record<string, unknown>;
-    const reportReferrals = (report.referrals ?? {}) as Record<string, unknown>;
-    const reportRewards = (report.rewards ?? {}) as Record<string, unknown>;
-    const topRaw = Array.isArray(report.top_referrers) ? report.top_referrers : [];
-
-    const rewardConfig: RewardConfig = {
-      pointsPerReferral: Number(configObj.referral_points ?? 0),
-      pointsToBdtRatio: Number(configObj.point_value_bdt ?? 1),
-      minPointsToRedeem: Number(configObj.max_redeem_percent ?? 0),
-      programEnabled: Number(configObj.referral_enabled ?? 1) === 1,
-    };
-
-    const transactions: ReferralTransaction[] = (referralsRaw.items ?? []).map((r) => {
-      const status = String(r.status ?? 'pending').toLowerCase();
-      return {
-        id: String(r.id ?? ''),
-        referrerName: String(r.referrer_name ?? ''),
-        referrerPhone: '',
-        refereeName: String(r.referee_name ?? ''),
-        refereePhone: String(r.referee_mobile ?? ''),
-        packageSubscribed: String(r.package_id ?? ''),
-        pointsEarned: Number(r.points_awarded ?? 0),
-        status: status === 'verified' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending',
-        date: String(r.registered_at ?? ''),
-      };
-    });
-
-    const topReferrers: TopReferrer[] = topRaw.map((t) => {
-      const row = t as Record<string, unknown>;
-      return {
-        id: String(row.referrer_id ?? ''),
-        name: String(row.referrer_name ?? ''),
-        phone: '',
-        totalReferrals: Number(row.verified ?? 0),
-        totalPoints: 0,
-        convertedCount: Number(row.verified ?? 0),
-      };
-    });
-
-    return {
-      config: rewardConfig,
-      transactions,
-      topReferrers,
-      rawConfig: cfg,
-      summary: {
-        totalReferrals: Number(reportReferrals.total ?? 0),
-        verifiedReferrals: Number(reportReferrals.verified ?? 0),
-        pendingReferrals: Number(reportReferrals.pending ?? 0),
-        pointsIssued: Number(reportRewards.points_issued ?? 0),
-        pointsRedeemed: Number(reportRewards.points_redeemed ?? 0),
-        rewardCostBdt: Number(reportRewards.reward_cost_bdt ?? 0),
-      },
-    };
-  }, [configQuery.data, referralsQuery.data, reportQuery.data]);
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin', 'domain', 'rewards'] });
-  };
-
-  /** PUT /v1/reseller/rewards/{id}/config — keys per RewardSources::SPEC_DEFAULTS. */
-  const saveConfigMutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) => adminService.updateRewardsConfig(values),
-    onSuccess: () => {
-      invalidate();
-      toast.success('Referral program configuration updated successfully!');
+/** GET /v1/reseller/referrals/{id} — server-paginated, searchable, status filter. */
+export function useReferrals({ page, pageSize, search, status }: ReferralListParams) {
+  const params = { page, per_page: pageSize, search: search || undefined, status: status || undefined };
+  return useQuery({
+    queryKey: rewardKeys.referrals(params),
+    queryFn: async () => {
+      const res = await adminService.getReferrals(params);
+      return { items: res.items.map(mapReferral), meta: res.meta };
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to update configuration'),
+    placeholderData: keepPreviousData,
   });
+}
 
-  /** POST /v1/reseller/referrals/{id}/{referralId}/approve */
-  const approveMutation = useMutation({
+/** PUT /v1/reseller/rewards/{id}/config — keys per RewardConfigService::SPEC_DEFAULTS. */
+export function useSaveRewardsConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (values: Record<string, number>) => adminService.updateRewardsConfig(values),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: rewardKeys.config });
+      qc.invalidateQueries({ queryKey: rewardKeys.report });
+    },
+  });
+}
+
+/** POST /v1/reseller/referrals/{id}/{referralId}/approve — activates the referee + awards points. */
+export function useApproveReferral() {
+  const qc = useQueryClient();
+  return useMutation({
     mutationFn: (referralId: string) => adminService.approveReferral(referralId),
     onSuccess: () => {
-      invalidate();
-      toast.success('Referral approved & points credited');
+      qc.invalidateQueries({ queryKey: rewardKeys.all });
+      toast.success('Referral approved and points credited');
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to approve referral'),
   });
+}
 
-  /** POST /v1/reseller/referrals/{id}/{referralId}/reject */
-  const rejectMutation = useMutation({
-    mutationFn: (vars: { referralId: string; reason?: string }) =>
-      adminService.rejectReferral(vars.referralId, vars.reason ?? ''),
+/** POST /v1/reseller/referrals/{id}/{referralId}/reject — body { reason }. */
+export function useRejectReferral() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ referralId, reason }: { referralId: string; reason: string }) =>
+      adminService.rejectReferral(referralId, reason),
     onSuccess: () => {
-      invalidate();
+      qc.invalidateQueries({ queryKey: rewardKeys.all });
       toast.success('Referral rejected');
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to reject referral'),
   });
+}
 
-  const isLoading = configQuery.isLoading || referralsQuery.isLoading || reportQuery.isLoading;
-  const isError = configQuery.isError || referralsQuery.isError || reportQuery.isError;
-  const refetch = () => {
-    configQuery.refetch();
-    referralsQuery.refetch();
-    reportQuery.refetch();
-  };
-
-  return {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    saveConfigMutation,
-    approveMutation,
-    rejectMutation,
-  };
+/**
+ * POST /v1/reseller/rewards/{rid}/bonus — staff grant (+) or deduction (−) of
+ * points for one customer. `requestId` makes a retried submit idempotent.
+ */
+export function useGrantRewardPoints() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { customerId: string; points: number; note: string; requestId: string }) =>
+      http.post<{ posted: boolean; duplicate: boolean; balance: number; available: number }>(
+        `/v1/reseller/rewards/${getResellerId()}/bonus`,
+        { customer_id: Number(input.customerId), points: input.points, note: input.note, request_id: input.requestId },
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: rewardKeys.all });
+      toast.success(res.duplicate ? 'Already applied' : `Points updated — balance ${res.balance.toLocaleString()} pts`);
+    },
+  });
 }

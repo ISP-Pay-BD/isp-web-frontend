@@ -7,5 +7,5 @@ export { EmployeesPage } from './pages/EmployeesPage';
 export { EmployeeDetailsPage } from './pages/EmployeeDetailsPage';
 export { EmployeeModal } from './components/EmployeeModal';
 export { useEmployees } from './hooks/use-employees';
-export type { EmployeeItem, EmployeeFormData } from './types';
+export type { EmployeeItem } from './types';
 export { employeeSchema, type EmployeeFormValues } from './schemas';

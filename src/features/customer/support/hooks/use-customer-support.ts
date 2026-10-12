@@ -1,47 +1,47 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerService } from '@/lib/api/services/customer.service';
-import type { CreateTicketPayload, TicketReplyPayload } from '@/types/customer';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { customerService, type CreateTicketPayload, type PageParams } from '@/lib/api/services/customer.service';
+import { customerKeys } from '@/features/customer/shared/hooks/use-customer-account';
 
-export function useCustomerSupportTickets() {
+/** GET /v1/tickets — the caller's own tickets (JWT-scoped), paginated. */
+export function useCustomerSupportTickets(params: PageParams) {
   return useQuery({
-    queryKey: ['customer', 'support', 'list'],
-    queryFn: () => customerService.getSupportTickets(),
+    queryKey: customerKeys.ticketsPage(params),
+    queryFn: () => customerService.getTickets(params),
+    placeholderData: keepPreviousData,
   });
 }
 
+/** GET /v1/tickets/{id} + POST /v1/tickets/{id}/message */
 export function useCustomerTicketDetail(id: string) {
   const queryClient = useQueryClient();
 
   const ticketQuery = useQuery({
-    queryKey: ['customer', 'support', 'detail', id],
-    queryFn: () => customerService.getTicketDetail(id),
-    enabled: !!id,
+    queryKey: customerKeys.ticket(id),
+    queryFn: () => customerService.getTicket(id),
+    enabled: Boolean(id),
   });
 
   const replyMutation = useMutation({
-    mutationFn: (payload: TicketReplyPayload) => customerService.replyTicket(payload),
+    mutationFn: (message: string) => customerService.replyTicket(id, message),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'detail', id] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'list'] });
+      queryClient.invalidateQueries({ queryKey: customerKeys.tickets });
     },
   });
 
-  return {
-    ...ticketQuery,
-    replyMutation,
-  };
+  return { ...ticketQuery, replyMutation };
 }
 
+/** POST /v1/tickets — `{subject, category, priority, message}`. */
 export function useCreateTicket() {
   const queryClient = useQueryClient();
-
   return useMutation({
+    meta: { silent: true },
     mutationFn: (payload: CreateTicketPayload) => customerService.createTicket(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'support', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });
+      queryClient.invalidateQueries({ queryKey: customerKeys.tickets });
+      queryClient.invalidateQueries({ queryKey: customerKeys.dashboard });
     },
   });
 }

@@ -1,19 +1,14 @@
 import { z } from 'zod';
 
+/** Backend field names (PackageService create/update) so server errors map onto the inputs. */
 export const packageSchema = z.object({
-  name: z.string().min(2, 'Package name required'),
-  speedMbps: z.coerce.number().min(1, 'Speed must be at least 1 Mbps'),
-  burstSpeedMbps: z.coerce.number().optional(),
-  priceBdt: z.coerce.number().min(1, 'Price must be greater than 0'),
-  validityDays: z.coerce.number().min(1, 'Validity must be at least 1 day'),
-  type: z.enum(['home', 'corporate', 'hotspot']),
-  visible: z.boolean(),
-  mikrotikProfile: z.string().optional(),
-  poolName: z.string().optional(),
-  fupQuotaGb: z.coerce.number().optional(),
-  fupThrottleMbps: z.coerce.number().optional(),
-  staticIpIncluded: z.boolean().optional(),
-  slaUptime: z.string().optional(),
+  package_name: z.string().trim().min(2, 'Package name required'),
+  bandwidth: z.string().trim().min(1, 'Bandwidth is required'),
+  price: z.string().trim().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid price'),
+  selling_price: z.union([z.literal(''), z.string().trim().regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid price')]),
+  pricing_type: z.enum(['weekly', 'monthly', 'yearly']),
+  status: z.enum(['active', 'inactive']),
+  mikrotik_profile: z.string().trim().max(255).optional(),
 });
 
 export type PackageFormValues = z.infer<typeof packageSchema>;

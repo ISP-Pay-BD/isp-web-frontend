@@ -22,6 +22,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useSupportContact } from '../hooks/use-customer-account';
+import { whatsappHref } from '@/lib/api/adapters/customer.adapter';
 
 type NavTab = {
   label: string;
@@ -51,7 +53,7 @@ type MoreLink = {
 };
 
 const activeMoreLinks: MoreLink[] = [
-  { label: 'My Subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Plan details, expiry & data quota' },
+  { label: 'My Subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Plan details, expiry & renewal' },
   { label: 'Available Packages', href: '/customer/packages', icon: Package, desc: 'Explore broadband speeds & upgrades' },
   { label: 'Payment History', href: '/customer/payments', icon: CreditCard, desc: 'Past invoices & receipts' },
   { label: 'Router & WiFi', href: '/customer/router', icon: Router, desc: 'Tools, connected devices & passwords' },
@@ -64,7 +66,7 @@ const expiredMoreLinks: MoreLink[] = [
   { label: 'My Subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Renew your broadband plan' },
   { label: 'Available Packages', href: '/customer/packages', icon: Package, desc: 'Choose a package to reconnect' },
   { label: 'Payment History', href: '/customer/payments', icon: CreditCard, desc: 'Past invoices & receipts' },
-  { label: 'Pay Now', href: '/customer/payments/pay', icon: CreditCard, desc: 'Recharge via bKash or Nagad' },
+  { label: 'Pay Now', href: '/customer/payments/pay', icon: CreditCard, desc: 'Submit a payment for verification' },
 ];
 
 export function CustomerBottomNav() {
@@ -72,6 +74,8 @@ export function CustomerBottomNav() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const isExpired = user?.status === 'inactive';
+  const { data: support } = useSupportContact();
+  const whatsapp = support?.whatsapp ? whatsappHref(support.whatsapp) : '';
 
   const primaryTabs = isExpired ? expiredPrimaryTabs : activePrimaryTabs;
   const moreLinks = isExpired ? expiredMoreLinks : activeMoreLinks;
@@ -83,15 +87,17 @@ export function CustomerBottomNav() {
 
   return (
     <>
-      <a
-        href="https://wa.me/8801700000000"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="WhatsApp Support"
-        className="bg-[#25D366] fixed right-4 bottom-20 z-40 flex h-12 w-12 items-center justify-center rounded-lg text-white shadow-[var(--shadow-md)] transition-transform hover:scale-[1.03] active:scale-95 md:bottom-6"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </a>
+      {whatsapp && (
+        <a
+          href={whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp Support"
+          className="bg-[#25D366] fixed right-4 bottom-20 z-40 flex h-12 w-12 items-center justify-center rounded-lg text-white shadow-[var(--shadow-md)] transition-transform hover:scale-[1.03] active:scale-95 md:bottom-6"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </a>
+      )}
 
       <div className="bg-background/95 border-border/70 fixed right-0 bottom-0 left-0 z-30 flex h-16 items-center justify-around border-t px-2 py-1 shadow-[var(--shadow-sm)] backdrop-blur-md md:hidden">
         {primaryTabs.map((tab) => {
@@ -132,7 +138,7 @@ export function CustomerBottomNav() {
                 <SheetTitle className="flex items-center justify-between text-base font-semibold">
                   <span>Menu</span>
                   <span className="text-muted-foreground text-xs font-normal">
-                    ID: {user?.id ?? 'cust_001'}
+                    ID: {user?.id ?? '—'}
                   </span>
                 </SheetTitle>
               </SheetHeader>
@@ -162,13 +168,15 @@ export function CustomerBottomNav() {
                   );
                 })}
 
-                <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs text-muted-foreground px-2">
-                  <div className="flex items-center gap-2">
+                {support?.mobile && (
+                  <a
+                    href={`tel:${support.mobile}`}
+                    className="mt-3 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground px-2"
+                  >
                     <PhoneCall className="h-3.5 w-3.5 text-primary" />
-                    <span>NOC Helpline: 01700-000000</span>
-                  </div>
-                  <span>v2.1</span>
-                </div>
+                    <span>Helpline: {support.mobile}</span>
+                  </a>
+                )}
               </div>
             </SheetContent>
           </Sheet>

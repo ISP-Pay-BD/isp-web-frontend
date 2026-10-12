@@ -1,88 +1,93 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { DateDisplay } from '@/components/shared/DateDisplay';
 import { ChartCard } from '@/components/shared/ChartCard';
 import { FilterBar } from '@/components/shared/FilterBar';
 import { formatBdt } from '@/lib/format';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import {
   EmployeePageShell,
   EmployeeLoadingSkeleton,
   EmployeeEmptyState,
   EmployeeErrorState,
 } from '@/features/employee/shared';
+import { useEmployeeSummary } from '@/features/employee/shared/hooks/use-employee-summary';
+import { formatDay } from '@/features/employee/shared/lib/datetime';
 import { useEmployeeSalaries } from '../hooks/use-employee-salaries';
 import type { EmployeeSalary } from '@/features/employee/shared';
 
-function formatSalaryMonth(month: string): string {
-  const [year, m] = month.split('-');
-  const date = new Date(Number(year), Number(m) - 1, 1);
-  return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-}
+const STATUS_LABEL: Record<EmployeeSalary['status'], string> = { successful: 'paid', pending: 'pending', failed: 'failed' };
+const periodLabel = (s: EmployeeSalary) => [s.month, s.year].filter(Boolean).join(' ') || '—';
 
 export function EmployeeSalariesPage() {
-  const { data, isLoading, isError, refetch } = useEmployeeSalaries();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const { data, isLoading, isError, error, refetch } = useEmployeeSalaries(page, pageSize);
+  const summary = useEmployeeSummary();
   const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const total = data?.meta.total ?? 0;
 
   const columns = useMemo<LegacyColumnDef<EmployeeSalary, unknown>[]>(
     () => [
       {
-        accessorKey: 'month',
+        id: 'period',
         header: 'Month',
-        cell: ({ row }) => (
-          <span className="font-medium">{formatSalaryMonth(row.original.month)}</span>
-        ),
+        cell: ({ row }) => <span className="font-medium">{periodLabel(row.original)}</span>,
       },
       {
-        accessorKey: 'amountBdt',
+        accessorKey: 'netAmount',
         header: 'Net Amount',
-        cell: ({ row }) => <CurrencyDisplay amount={row.original.amountBdt} className="font-semibold" />,
+        cell: ({ row }) => <CurrencyDisplay amount={row.original.netAmount} className="font-semibold" />,
       },
       {
         id: 'breakdown',
         header: 'Breakdown',
         cell: ({ row }) => {
-          const b = row.original.breakdown;
-          return (
+          const s = row.original;
+          return s.advanceDeducted > 0 ? (
             <span className="text-muted-foreground text-xs">
-              Basic {formatBdt(b.basic)} · Allowance {formatBdt(b.allowance)} · Deduction{' '}
-              {formatBdt(b.deduction)}
+              Gross {formatBdt(s.grossSalary)} · Advance recovered {formatBdt(s.advanceDeducted)}
             </span>
+          ) : (
+            <span className="text-muted-foreground text-xs">—</span>
           );
         },
       },
       {
-        accessorKey: 'paidAt',
-        header: 'Paid On',
-        cell: ({ row }) => <DateDisplay value={row.original.paidAt} />,
+        id: 'paidVia',
+        header: 'Method',
+        cell: ({ row }) => <span className="text-xs">{row.original.paidVia || '—'}</span>,
       },
       {
-        accessorKey: 'status',
+        id: 'paidAt',
+        header: 'Paid On',
+        cell: ({ row }) => <span className="tabular-nums">{formatDay(row.original.paidAt) || '—'}</span>,
+      },
+      {
+        id: 'status',
         header: 'Status',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => <StatusBadge status={STATUS_LABEL[row.original.status]} />,
       },
     ],
     [],
   );
 
+  // Trend of the payments on this page (oldest → newest).
   const chartData = useMemo(
     () =>
       [...items]
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .map((s) => ({
-          month: formatSalaryMonth(s.month),
-          amount: s.amountBdt,
-        })),
+        .filter((s) => s.status === 'successful')
+        .reverse()
+        .map((s) => ({ month: periodLabel(s), amount: s.netAmount })),
     [items],
   );
 
-  const totalPaid = items.reduce((sum, s) => sum + s.amountBdt, 0);
   const lastPayment = items[0];
 
   if (isLoading) {
@@ -96,7 +101,7 @@ export function EmployeeSalariesPage() {
   if (isError) {
     return (
       <EmployeePageShell title="My Salaries" subtitle="Salary slips and payment history">
-        <EmployeeErrorState onRetry={() => refetch()} />
+        <EmployeeErrorState message={error?.message} onRetry={() => refetch()} />
       </EmployeePageShell>
     );
   }
@@ -114,12 +119,18 @@ export function EmployeeSalariesPage() {
         <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
           <p>
             <span className="font-semibold tabular-nums">
-              <CurrencyDisplay amount={totalPaid} />
+              {summary.data ? <CurrencyDisplay amount={summary.data.salaryReceived} /> : '—'}
             </span>{' '}
             <span className="text-muted-foreground">total received</span>
           </p>
           <p>
-            <span className="font-semibold tabular-nums">{items.length}</span>{' '}
+            <span className="font-semibold tabular-nums">
+              {summary.data ? <CurrencyDisplay amount={summary.data.salaryPending} /> : '—'}
+            </span>{' '}
+            <span className="text-muted-foreground">pending</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums">{total}</span>{' '}
             <span className="text-muted-foreground">payments</span>
           </p>
           <p className="text-muted-foreground">
@@ -127,9 +138,9 @@ export function EmployeeSalariesPage() {
             {lastPayment ? (
               <>
                 <span className="font-medium text-foreground">
-                  <CurrencyDisplay amount={lastPayment.amountBdt} />
+                  <CurrencyDisplay amount={lastPayment.netAmount} />
                 </span>{' '}
-                · {formatSalaryMonth(lastPayment.month)}
+                · {periodLabel(lastPayment)}
               </>
             ) : (
               '—'
@@ -137,8 +148,8 @@ export function EmployeeSalariesPage() {
           </p>
         </div>
 
-        {chartData.length > 0 ? (
-          <ChartCard title="Salary trend" description="Net salary by month">
+        {chartData.length > 1 ? (
+          <ChartCard title="Salary trend" description="Net salary per payment">
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -155,13 +166,7 @@ export function EmployeeSalariesPage() {
                     axisLine={false}
                     tickFormatter={(v) => `৳${v / 1000}k`}
                   />
-                  <Tooltip
-                    content={
-                      <ChartTooltip
-                        formatter={(val: number) => `৳${formatBdt(val)}`}
-                      />
-                    }
-                  />
+                  <Tooltip content={<ChartTooltip formatter={(val: number) => `৳${formatBdt(val)}`} />} />
                   <Bar
                     dataKey="amount"
                     fill="hsl(var(--primary))"
@@ -177,7 +182,7 @@ export function EmployeeSalariesPage() {
 
         <FilterBar filters={<span className="text-muted-foreground text-sm">Payment history</span>} />
 
-        {items.length === 0 ? (
+        {total === 0 ? (
           <EmployeeEmptyState
             title="No salary records"
             description="Your salary payments will appear here once processed by HR."
@@ -186,11 +191,10 @@ export function EmployeeSalariesPage() {
           <DataTable
             columns={columns}
             data={items}
-            searchKey="month"
-            searchPlaceholder="Filter by month..."
-            facetFilters={[{ columnId: 'status', title: 'Status' }]}
+            getRowId={(row) => row.id}
             emptyTitle="No salary records"
             emptyDescription="Your salary payments will appear here once processed."
+            server={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (size) => { setPageSize(size); setPage(1); } }}
           />
         )}
       </div>

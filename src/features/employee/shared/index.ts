@@ -1,4 +1,4 @@
-﻿export { EmployeePageShell } from './components/EmployeePageShell';
+export { EmployeePageShell } from './components/EmployeePageShell';
 export {
   EmployeeLoadingSkeleton,
   EmployeeEmptyState,
@@ -8,4 +8,8 @@ export type {
   EmployeeSalary,
   EmployeeAdvanceRequest,
   EmployeeProfile,
+  EmployeeSummary,
+  EmployeeAttendanceRow,
+  EmployeeJob,
+  EmployeeInstallation,
 } from './types';

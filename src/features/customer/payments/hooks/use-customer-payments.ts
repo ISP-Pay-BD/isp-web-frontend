@@ -1,28 +1,36 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerService } from '@/lib/api/services/customer.service';
-import type { PayInvoicePayload } from '@/types/customer';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { customerService, type ManualPaymentPayload, type PageParams } from '@/lib/api/services/customer.service';
+import { customerKeys } from '@/features/customer/shared/hooks/use-customer-account';
 
-export function useCustomerPayments() {
-  const queryClient = useQueryClient();
-
-  const paymentsQuery = useQuery({
-    queryKey: ['customer', 'payments'],
-    queryFn: () => customerService.getPayments(),
+/** GET /v1/customer/payment-fetch — server-paginated payment history. */
+export function useCustomerPayments(params: PageParams) {
+  return useQuery({
+    queryKey: customerKeys.paymentsPage(params),
+    queryFn: () => customerService.getPayments(params),
+    placeholderData: keepPreviousData,
   });
+}
 
-  const payMutation = useMutation({
-    mutationFn: (payload: PayInvoicePayload) => customerService.payInvoice(payload),
+/** POST /v1/customer/payments — records a manual payment as pending (staff verify it). */
+export function useSubmitManualPayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    meta: { silent: true },
+    mutationFn: (payload: ManualPaymentPayload) => customerService.submitManualPayment(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'payments'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'subscription'] });
+      queryClient.invalidateQueries({ queryKey: customerKeys.payments });
+      queryClient.invalidateQueries({ queryKey: customerKeys.dashboard });
     },
   });
+}
 
-  return {
-    ...paymentsQuery,
-    payMutation,
-  };
+/** GET /v1/customer/json/invoice-print?invoice_id= — only settled payments have an invoice. */
+export function useCustomerInvoice(id: string) {
+  return useQuery({
+    queryKey: customerKeys.invoice(id),
+    queryFn: () => customerService.getInvoice(id),
+    enabled: Boolean(id),
+  });
 }

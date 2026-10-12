@@ -7,21 +7,25 @@ import {
   AlertTriangle,
   Send,
   Zap,
-  Phone,
-  Receipt,
   Download,
-  Filter,
-  Layers,
   MapPin,
   Calendar,
   CheckCircle2,
   Clock,
-  ArrowUpDown,
   X,
   AlignJustify,
   AlignCenter,
+  History,
 } from 'lucide-react';
-import { useExpiredCustomers } from '../hooks/use-customers';
+import {
+  useAreaOptions,
+  useCustomerSummary,
+  useCustomers,
+  useExportCustomers,
+} from '../hooks/use-customers';
+import { useDebouncedValue } from '../hooks/use-debounced-value';
+import { SendSmsDialog } from '../components/SendSmsDialog';
+import type { CustomerListFilters } from '../types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -32,7 +36,6 @@ import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -41,33 +44,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { areas } from '@/data/admin/areas.data';
-import type { Customer } from '../types';
+
+const DAYS_BUCKET: Record<string, string | undefined> = {
+  all: undefined,
+  today: 'expired_today',
+  last_7: 'expired_7',
+  over_30: 'expired_over_30',
+};
 
 export function ExpiredCustomersPage() {
-  const { data, isLoading, isError, refetch } = useExpiredCustomers();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim());
   const [areaFilter, setAreaFilter] = useState('all');
   const [daysFilter, setDaysFilter] = useState('all'); // all | today | last_7 | over_30
   const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
-  const [bulkSmsOpen, setBulkSmsOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [smsTargets, setSmsTargets] = useState<string[] | null>(null);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEYS.tableLayout);
-      if (saved === 'centered' || saved === 'full') return saved;
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.tableLayout);
+        if (saved === 'centered' || saved === 'full') return saved;
+      } catch {
+        /* storage unavailable */
+      }
     }
     return globalTableLayout || 'full';
   });
@@ -81,86 +82,35 @@ export function ExpiredCustomersPage() {
 
   const handleLayoutModeChange = (mode: 'full' | 'centered') => {
     setLayoutMode(mode);
-    if (typeof window !== 'undefined') {
+    try {
       localStorage.setItem(STORAGE_KEYS.tableLayout, mode);
+    } catch {
+      /* storage unavailable */
     }
   };
 
-  const [smsBody, setSmsBody] = useState(
-    'Dear subscriber, your ISP internet line has expired. Please recharge your account to resume high-speed browsing.'
+  const scopeFilters = useMemo<CustomerListFilters>(
+    () => ({ search: debouncedSearch || undefined, areaId: areaFilter !== 'all' ? areaFilter : undefined }),
+    [debouncedSearch, areaFilter],
+  );
+  // Expired = will_expire passed (server-side), optionally narrowed to an expiry bucket.
+  const listFilters = useMemo<CustomerListFilters>(
+    () => ({ ...scopeFilters, status: 'expired', expiry: DAYS_BUCKET[daysFilter] }),
+    [scopeFilters, daysFilter],
   );
 
-  const expiredList = useMemo(() => data?.items ?? [], [data?.items]);
+  const pageKey = `${JSON.stringify(listFilters)}|${pageSize}`;
+  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
+  const currentPage = pageState.key === pageKey ? pageState.page : 1;
 
-  const totalDueBdt = useMemo(
-    () => expiredList.reduce((acc, c) => acc + (c.balanceBdt || c.packagePrice || 800), 0),
-    [expiredList]
-  );
+  const { data, isLoading, isError, isFetching, refetch } = useCustomers({ ...listFilters, page: currentPage, perPage: pageSize });
+  const summaryQuery = useCustomerSummary(scopeFilters);
+  const areasQuery = useAreaOptions();
+  const exportMutation = useExportCustomers();
 
-  const filtered = useMemo(() => {
-    return expiredList.filter((c) => {
-      if (search) {
-        const q = search.toLowerCase();
-        const matches =
-          c.name.toLowerCase().includes(q) ||
-          c.username.toLowerCase().includes(q) ||
-          c.phone.includes(q) ||
-          c.packageName.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-
-      if (areaFilter !== 'all' && c.areaId !== areaFilter) {
-        return false;
-      }
-
-      if (daysFilter !== 'all') {
-        const now = new Date();
-        const exp = new Date(c.expiryDate);
-        const daysAgo = Math.floor((now.getTime() - exp.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysFilter === 'today' && daysAgo > 1) return false;
-        if (daysFilter === 'last_7' && (daysAgo < 0 || daysAgo > 7)) return false;
-        if (daysFilter === 'over_30' && daysAgo < 30) return false;
-      }
-
-      return true;
-    });
-  }, [expiredList, search, areaFilter, daysFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const paginatedExpired = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, safeCurrentPage, pageSize]);
-
-  const handleExportCsv = () => {
-    const headers = ['Name', 'Username', 'Phone', 'Package', 'Area', 'Expired Date', 'Due BDT'];
-    const rows = filtered.map((c) => [
-      c.name,
-      c.username,
-      c.phone,
-      c.packageName,
-      c.areaName,
-      c.expiryDate,
-      c.balanceBdt || c.packagePrice || 800,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `expired_customers_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Exported expired customer list to CSV');
-  };
-
-  const handleSendBulkSms = () => {
-    toast.success(`Dispatched expiry reminder SMS to ${filtered.length} customers`);
-    setBulkSmsOpen(false);
-  };
+  const rows = useMemo(() => data?.items ?? [], [data?.items]);
+  const summary = summaryQuery.data;
+  const count = (n: number | undefined) => (summary ? n ?? 0 : '…');
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} layoutMode={layoutMode} />;
   if (isError) {
@@ -173,6 +123,8 @@ export function ExpiredCustomersPage() {
       />
     );
   }
+
+  const areaOptions = areasQuery.data ?? [];
 
   return (
     <div
@@ -227,88 +179,48 @@ export function ExpiredCustomersPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportCsv}
+              disabled={exportMutation.isPending}
+              onClick={() => exportMutation.mutate(listFilters)}
               className="text-xs h-8 border-border/80 hover:bg-accent"
             >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              {exportMutation.isPending ? 'Exporting…' : 'Export'}
             </Button>
             <Button
               size="sm"
-              onClick={() => setBulkSmsOpen(true)}
+              disabled={rows.length === 0}
+              onClick={() => setSmsTargets(rows.map((c) => c.id))}
               className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm"
             >
-              <Send className="h-3.5 w-3.5" /> Bulk SMS Alert
+              <Send className="h-3.5 w-3.5" /> SMS This Page
             </Button>
           </div>
         }
       />
 
-      {/* KPI Metric Strips */}
+      {/* KPI Metric Strips (backend summary) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Expired
-            </span>
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500">
-              <AlertTriangle className="h-4 w-4" />
+        {(
+          [
+            { label: 'Total Expired', value: count(summary?.expired), unit: 'subscribers', icon: AlertTriangle, tone: 'bg-rose-500/10 text-rose-500', valueTone: 'text-rose-600 dark:text-rose-400' },
+            { label: 'Expired Today', value: count(summary?.expiredToday), unit: 'accounts', icon: Clock, tone: 'bg-blue-500/10 text-blue-500', valueTone: 'text-foreground' },
+            { label: 'Last 7 Days', value: count(summary?.expired7), unit: 'accounts', icon: History, tone: 'bg-amber-500/10 text-amber-500', valueTone: 'text-amber-500' },
+            { label: 'Over 30 Days', value: count(summary?.expiredOver30), unit: 'dormant', icon: Calendar, tone: 'bg-muted text-muted-foreground', valueTone: 'text-muted-foreground' },
+          ] as const
+        ).map((kpi) => (
+          <Card key={kpi.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{kpi.label}</span>
+              <div className={cn('p-2 rounded-lg', kpi.tone)}>
+                <kpi.icon className="h-4 w-4" />
+              </div>
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
-              {expiredList.length}
-            </span>
-            <span className="text-xs text-muted-foreground">subscribers</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Cumulative Due
-            </span>
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-              <Receipt className="h-4 w-4" />
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className={cn('text-2xl font-bold tracking-tight tabular-nums', kpi.valueTone)}>{kpi.value}</span>
+              <span className="text-xs text-muted-foreground">{kpi.unit}</span>
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={totalDueBdt} className="text-2xl font-bold tracking-tight text-amber-500" />
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Expired Today
-            </span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-              <Clock className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
-              {expiredList.slice(0, 3).length}
-            </span>
-            <span className="text-xs text-muted-foreground">accounts</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Over 30 Days
-            </span>
-            <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-muted-foreground tabular-nums">
-              {expiredList.slice(3, 7).length}
-            </span>
-            <span className="text-xs text-muted-foreground">dormant</span>
-          </div>
-        </Card>
+          </Card>
+        ))}
       </div>
 
       {/* Toolbar & Filters */}
@@ -317,7 +229,7 @@ export function ExpiredCustomersPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search by name, username, or phone..."
+              placeholder="Search by name, mobile, email or PPPoE username..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 pr-8 h-9 text-xs bg-background border-border/60 shadow-inner"
@@ -334,14 +246,18 @@ export function ExpiredCustomersPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={areaFilter} onValueChange={(v) => setAreaFilter(v || 'all')}>
+            <Select
+              value={areaFilter}
+              onValueChange={(v) => setAreaFilter(v || 'all')}
+              items={{ all: 'All Areas', ...Object.fromEntries(areaOptions.map((a) => [a.id, a.name])) }}
+            >
               <SelectTrigger className="h-9 text-xs w-[140px] bg-background border-border/60">
                 <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                 <SelectValue placeholder="All Areas" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Areas</SelectItem>
-                {areas.map((a) => (
+                {areaOptions.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.name}
                   </SelectItem>
@@ -349,7 +265,11 @@ export function ExpiredCustomersPage() {
               </SelectContent>
             </Select>
 
-            <Select value={daysFilter} onValueChange={(v) => setDaysFilter(v || 'all')}>
+            <Select
+              value={daysFilter}
+              onValueChange={(v) => setDaysFilter(v || 'all')}
+              items={{ all: 'All Durations', today: 'Expired Today', last_7: 'Last 7 Days', over_30: 'Over 30 Days' }}
+            >
               <SelectTrigger className="h-9 text-xs w-[150px] bg-background border-border/60">
                 <Calendar className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                 <SelectValue placeholder="All Durations" />
@@ -366,7 +286,7 @@ export function ExpiredCustomersPage() {
       </Card>
 
       {/* Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50">
+      <Card className={cn('border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50', isFetching && 'opacity-80')}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -375,26 +295,26 @@ export function ExpiredCustomersPage() {
                 <th className="py-3.5 px-4">Package & Rate</th>
                 <th className="py-3.5 px-4">Coverage Area</th>
                 <th className="py-3.5 px-4">Expired On</th>
-                <th className="py-3.5 px-4">Due Balance</th>
+                <th className="py-3.5 px-4">Balance</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {paginatedExpired.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-muted-foreground">
                     <div className="max-w-xs mx-auto space-y-2">
                       <CheckCircle2 className="h-8 w-8 mx-auto text-emerald-500" />
                       <p className="font-semibold text-foreground">No expired customers found</p>
                       <p className="text-xs text-muted-foreground">
-                        All subscribers in this filter set are currently up to date with active cycles.
+                        Nobody in this filter set has a lapsed cycle.
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                paginatedExpired.map((c) => (
+                rows.map((c) => (
                   <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
@@ -409,21 +329,21 @@ export function ExpiredCustomersPage() {
                             {c.name}
                           </Link>
                           <div className="text-[11px] text-muted-foreground font-mono">
-                            {c.username} • {c.phone}
+                            {c.username || '—'} • {c.phone || '—'}
                           </div>
                         </div>
                       </div>
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-foreground">{c.packageName}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">
-                        ৳{c.packagePrice || 800}/month
-                      </div>
+                      <div className="font-semibold text-foreground">{c.packageName || '—'}</div>
+                      {c.packagePrice !== null && (
+                        <div className="text-[10px] text-muted-foreground font-mono">৳{c.packagePrice}</div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4 text-foreground font-medium">
-                      {c.areaName}
+                      {c.areaName || '—'}
                       {c.subAreaName && (
                         <div className="text-[10px] text-muted-foreground">{c.subAreaName}</div>
                       )}
@@ -432,12 +352,13 @@ export function ExpiredCustomersPage() {
                     <td className="py-3.5 px-4">
                       <div className="font-mono text-xs font-semibold text-rose-500 flex items-center gap-1">
                         <AlertTriangle className="h-3 w-3" />
-                        <span>{c.expiryDate}</span>
+                        <span>{c.expiryDate ? c.expiryDate.slice(0, 10) : '—'}</span>
                       </div>
+                      {c.paymentSummary && <div className="text-[10px] text-muted-foreground">{c.paymentSummary}</div>}
                     </td>
 
                     <td className="py-3.5 px-4 font-mono font-bold text-xs text-amber-500">
-                      <CurrencyDisplay amount={c.balanceBdt || c.packagePrice || 800} />
+                      <CurrencyDisplay amount={c.balanceBdt} />
                     </td>
 
                     <td className="py-3.5 px-4">
@@ -458,7 +379,8 @@ export function ExpiredCustomersPage() {
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs border-border/80 hover:bg-muted/80"
-                          onClick={() => toast.success(`Reminder SMS sent to ${c.phone}`)}
+                          title="Send SMS"
+                          onClick={() => setSmsTargets([c.id])}
                         >
                           <Send className="h-3 w-3" />
                         </Button>
@@ -471,54 +393,24 @@ export function ExpiredCustomersPage() {
           </table>
         </div>
 
-        {/* Global Pagination Controls */}
+        {/* Server Pagination Controls */}
         <TablePagination
-          currentPage={safeCurrentPage}
+          currentPage={currentPage}
           pageSize={pageSize}
-          totalItems={filtered.length}
-          onPageChange={setCurrentPage}
+          totalItems={data?.meta.total ?? 0}
+          onPageChange={(page) => setPageState({ key: pageKey, page })}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[10, 20, 50, 100]}
         />
       </Card>
 
-      {/* Bulk SMS Dialog */}
-      <Dialog open={bulkSmsOpen} onOpenChange={setBulkSmsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-amber-500" />
-              Send Expiry Reminders
-            </DialogTitle>
-            <DialogDescription>
-              Broadcast expiry alert to <strong className="text-foreground">{filtered.length}</strong> subscribers.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Message Text</Label>
-              <textarea
-                value={smsBody}
-                onChange={(e) => setSmsBody(e.target.value)}
-                rows={4}
-                className="w-full rounded-md border border-border/80 bg-background p-2.5 text-xs shadow-inner"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setBulkSmsOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSendBulkSms}
-              className="bg-amber-600 hover:bg-amber-700 text-white gap-1"
-            >
-              <Send className="h-3.5 w-3.5" /> Send Reminders
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* SMS to one customer or everyone on this page */}
+      <SendSmsDialog
+        open={smsTargets !== null}
+        onOpenChange={(o) => !o && setSmsTargets(null)}
+        ids={smsTargets ?? []}
+        title="Send Expiry Reminders"
+      />
     </div>
   );
 }

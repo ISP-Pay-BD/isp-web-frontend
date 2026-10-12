@@ -1,14 +1,12 @@
 import { z } from 'zod';
 
+/** Backend (AdvanceSalaryService::apply) requires amount > 0 and ≤ 10,000,000. */
 export const advanceRequestSchema = z.object({
-  amountBdt: z
+  amount: z
     .number({ message: 'Amount is required' })
-    .min(500, 'Minimum advance is ৳500')
-    .max(50000, 'Maximum advance is ৳50,000'),
-  reason: z
-    .string()
-    .min(10, 'Please describe the reason (at least 10 characters)')
-    .max(500, 'Reason is too long'),
+    .positive('Enter a valid amount')
+    .max(10_000_000, 'Amount is too large'),
+  reason: z.string().trim().min(3, 'Please describe the reason').max(500, 'Reason is too long'),
 });
 
 export type AdvanceRequestFormValues = z.infer<typeof advanceRequestSchema>;

@@ -1,6 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { Reveal } from '@/components/motion/Reveal';
+import { landingAssets } from '@/config/assets';
 import { useTranslations } from '@/features/marketing/shared';
 import { PluginsHighlight } from './PluginsHighlight';
 import { SectionTitle } from './SectionTitle';
@@ -12,9 +14,9 @@ interface IntegrationsOrbitProps {
 }
 
 const CORE_RAILS = [
-  { name: 'MikroTik', key: 'mikrotik' },
-  { name: 'bKash', key: 'bkash' },
-  { name: 'Nagad', key: 'nagad' },
+  { name: 'MikroTik', key: 'mikrotik', logo: landingAssets.logos.mikrotik },
+  { name: 'bKash', key: 'bkash', logo: landingAssets.logos.bkash },
+  { name: 'Nagad', key: 'nagad', logo: landingAssets.logos.nagad },
 ] as const;
 
 /** Everything ISP Pay BD connects to: the three core rails, the wider stack, then paid add-ons. */
@@ -33,10 +35,22 @@ export function IntegrationsOrbit({ integrations, plugins }: IntegrationsOrbitPr
           {CORE_RAILS.map((rail) => (
             <article
               key={rail.name}
-              className="bg-landing-panel/80 hover:border-landing-cta/30 rounded-2xl border border-white/10 p-5 transition-colors duration-200"
+              className="group bg-landing-panel/80 hover:border-landing-cta/30 relative overflow-hidden rounded-2xl border border-white/10 p-5 transition-colors duration-200"
             >
-              <p className="text-[11px] font-medium tracking-wide text-white/45">{k('coreRail')}</p>
-              <h3 className="font-landing-display mt-2 text-xl font-semibold text-white">
+              {/* The partner's own logo on a white tile, as brand marks are shown on dark pages. */}
+              <div className="flex h-14 w-28 items-center justify-center rounded-xl bg-white p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:-translate-y-0.5">
+                <Image
+                  src={rail.logo}
+                  alt=""
+                  width={96}
+                  height={40}
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+              <p className="mt-5 text-[11px] font-medium tracking-wide text-white/45">
+                {k('coreRail')}
+              </p>
+              <h3 className="font-landing-display mt-1.5 text-xl font-semibold text-white">
                 {rail.name}
               </h3>
               <p className="mt-2 text-sm text-white/55">{k(rail.key)}</p>

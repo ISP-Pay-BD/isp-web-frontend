@@ -1,10 +1,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import {
+  Plus,
+  Download,
+  Router,
+  CheckCircle2,
+  UserCheck,
+  MoreHorizontal,
+  RotateCcw,
+  User,
+  MapPin,
+  Search,
+  X,
+  Boxes,
+} from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { Can } from '@/components/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,190 +36,173 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
 import {
-  Plus,
-  Download,
-  Router,
-  CheckCircle2,
-  Cpu,
-  UserCheck,
-  MoreHorizontal,
-  RotateCcw,
-  AlertTriangle,
-  Radio,
-  User,
-} from 'lucide-react';
-import { toast } from 'sonner';
+  INVENTORY_URL,
+  idParam,
+  mapCpeAssignment,
+  type CpeAssignment,
+  type CustomerOption,
+} from '@/features/admin/inventory/api';
+import {
+  useAssignCpe,
+  useCpeAssignments,
+  useCustomerOptions,
+  useReturnCpe,
+} from '@/features/admin/inventory/hooks/use-cpe-assignments';
+import { useInventoryItemOptions } from '@/features/admin/inventory/hooks/use-inventory-items';
+import { useStoreLocationOptions } from '@/features/admin/inventory/hooks/use-store-locations';
+import { useInventorySummary } from '@/features/admin/inventory/hooks/use-inventory-summary';
+import { KpiTile } from '@/features/admin/inventory/shared/KpiTile';
+import { ListState } from '@/features/admin/inventory/shared/ListState';
+import { OptionSelect } from '@/features/admin/inventory/shared/OptionSelect';
+import { FieldError, fieldError, fmtDateTime } from '@/features/admin/inventory/shared/form-utils';
+import { useDebouncedValue } from '@/features/admin/inventory/shared/hooks';
+import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '@/features/admin/inventory/shared/table-utils';
 
-type Row = IspOpsData['cpeAssignments'][number];
+const MENU = 'inventory_purchess';
 
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.serial).toLowerCase().includes(q) ||
-    String(r.model).toLowerCase().includes(q) ||
-    String(r.customerName).toLowerCase().includes(q) ||
-    String(r.assignedAt).toLowerCase().includes(q)
-  );
-};
+const STATUS_OPTIONS = [
+  { value: 'assigned', label: 'Assigned' },
+  { value: 'returned', label: 'Returned' },
+];
 
+/** CPE / ONU assignment registry = GET /v1/inventory/cpe-assignments (issue from stock, return to stock). */
 export function CpeAssignPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [cpeList, setCpeList] = useState<Row[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const table = useServerTable();
+  const [status, setStatus] = useState<'' | 'assigned' | 'returned'>('');
+  const query = useCpeAssignments({ page: table.page, pageSize: table.pageSize, search: table.search, status });
+  const summary = useInventorySummary();
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [returning, setReturning] = useState<CpeAssignment | null>(null);
+  const [exporting, setExporting] = useState(false);
 
-  // Form State
-  const [serial, setSerial] = useState('');
-  const [model, setModel] = useState('Huawei HG8546M GPON ONU');
-  const [customerName, setCustomerName] = useState('');
-  const [status, setStatus] = useState<'assigned' | 'spare'>('assigned');
+  const page = query.data;
+  const s = summary.data;
+  const issued = s ? s.cpeAssigned + s.cpeReturned : 0;
 
-  const initialRows = data?.cpeAssignments ?? [];
-  const rows = cpeList.length > 0 ? cpeList : initialRows;
-
-  const totalCpes = rows.length;
-  const assignedCount = rows.filter((r) => r.status === 'assigned').length;
-  const spareCount = rows.filter((r) => r.status === 'spare').length;
-  const deploymentRate = totalCpes > 0 ? Math.round((assignedCount / totalCpes) * 100) : 0;
-
-  const handleAssignCpe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!serial.trim()) {
-      toast.error('Please enter CPE device serial number');
-      return;
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = (
+        await fetchAllPages<unknown>(`${INVENTORY_URL}/cpe-assignments`, {
+          status: status || undefined,
+          search: table.search || undefined,
+        })
+      ).map(mapCpeAssignment);
+      downloadCsv(
+        `cpe_assignments_${todayYmd()}.csv`,
+        ['Serial No', 'MAC Address', 'Item', 'Customer', 'Customer Mobile', 'Location', 'Assigned At', 'Status', 'Returned At', 'Assigned By', 'Note'],
+        rows.map((r) => [
+          r.serialNo,
+          r.macAddress,
+          r.itemName,
+          r.customerName,
+          r.customerMobile,
+          r.locationName,
+          r.assignedAt,
+          r.status,
+          r.returnedAt ?? '',
+          r.assignedByName,
+          r.note,
+        ]),
+      );
+      toast.success(`Exported ${rows.length} CPE records`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(false);
     }
-
-    const newAssignment: Row = {
-      id: `cpe_${Date.now()}`,
-      serial: serial.toUpperCase(),
-      model,
-      customerName: status === 'assigned' ? (customerName.trim() || 'Direct Client') : 'Unassigned (Spare)',
-      assignedAt: new Date().toISOString().split('T')[0],
-      status,
-    };
-
-    setCpeList((prev) => [newAssignment, ...(prev.length > 0 ? prev : initialRows)]);
-    toast.success(`CPE Serial ${newAssignment.serial} registered (${status}).`);
-    setModalOpen(false);
-    setSerial('');
-    setCustomerName('');
   };
 
-  const handleExportCsv = () => {
-    const headers = ['Device Serial', 'Model Specification', 'Customer / Subscriber', 'Assigned Date', 'Status'];
-    const csvRows = rows.map((r) => [
-      r.serial,
-      `"${r.model}"`,
-      `"${r.customerName}"`,
-      r.assignedAt,
-      r.status,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `cpe_assignments_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('CPE registry exported to CSV');
-  };
-
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<CpeAssignment, unknown>[]>(
     () => [
       {
-        accessorKey: 'serial',
+        accessorKey: 'serialNo',
         header: 'CPE Serial Number',
         enableHiding: false,
-        size: 190,
+        size: 200,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary">
               <Router className="h-4 w-4" />
             </div>
-            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
-              {String(row.original.serial)}
-            </span>
+            <div className="min-w-0">
+              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
+                {row.original.serialNo}
+              </span>
+              {row.original.macAddress ? (
+                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{row.original.macAddress}</p>
+              ) : null}
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: 'model',
-        header: 'Device Model Specification',
-        size: 240,
-        cell: ({ row }) => (
-          <span className="text-sm font-medium text-foreground">{String(row.original.model)}</span>
-        ),
+        accessorKey: 'itemName',
+        header: 'Device Model',
+        size: 200,
+        cell: ({ row }) => <span className="text-sm font-medium text-foreground">{row.original.itemName}</span>,
       },
       {
         accessorKey: 'customerName',
         header: 'Assigned Subscriber',
-        size: 220,
-        cell: ({ row }) => {
-          const cust = String(row.original.customerName);
-          const isSpare = row.original.status === 'spare';
-          return (
-            <div className="flex items-center gap-2">
-              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className={`text-sm ${isSpare ? 'text-muted-foreground italic' : 'font-medium text-foreground'}`}>
-                {cust}
-              </span>
+        size: 200,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-foreground">{row.original.customerName || '—'}</span>
+              {row.original.customerMobile ? (
+                <p className="font-mono text-[11px] text-muted-foreground">{row.original.customerMobile}</p>
+              ) : null}
             </div>
-          );
-        },
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'locationName',
+        header: 'Source Location',
+        size: 160,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="truncate">{row.original.locationName || '—'}</span>
+          </div>
+        ),
       },
       {
         accessorKey: 'assignedAt',
-        header: 'Assignment Date',
+        header: 'Assigned',
         size: 140,
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{String(row.original.assignedAt)}</span>
+          <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.assignedAt)}</span>
         ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        size: 120,
-        cell: ({ row }) => {
-          const st = row.original.status;
-          if (st === 'assigned') {
-            return (
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
-                Assigned
-              </Badge>
-            );
-          }
-          if (st === 'spare') {
-            return (
-              <Badge variant="outline" className="bg-sky-500/10 text-sky-500 border-sky-500/30">
-                In Stock (Spare)
-              </Badge>
-            );
-          }
-          return (
-            <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/30">
-              Defective
+        size: 110,
+        cell: ({ row }) =>
+          row.original.status === 'assigned' ? (
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+              Assigned
             </Badge>
-          );
-        },
+          ) : (
+            <Badge variant="outline" className="bg-sky-500/10 text-sky-500 border-sky-500/30">
+              Returned
+            </Badge>
+          ),
+      },
+      {
+        accessorKey: 'returnedAt',
+        header: 'Returned',
+        size: 140,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.returnedAt)}</span>
+        ),
       },
       {
         id: 'actions',
@@ -213,35 +210,22 @@ export function CpeAssignPage() {
         size: 60,
         cell: ({ row }) => {
           const r = row.original;
+          if (r.status !== 'assigned') return null;
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Device Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.success(`Diagnostic ping sent to ${r.serial}`)}>
-                  <Radio className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                  Ping / Optical Test
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Reassign modal for ${r.serial}`)}>
-                  <UserCheck className="h-3.5 w-3.5 mr-2" />
-                  Reassign Subscriber
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Returned ${r.serial} to spare inventory`)}>
-                  <RotateCcw className="h-3.5 w-3.5 mr-2" />
-                  Return to Spare Pool
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`Device ${r.serial} marked defective`)}
-                >
-                  <AlertTriangle className="h-3.5 w-3.5 mr-2" />
-                  Mark as Defective
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Can menu={MENU} action="update">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+                  <MoreHorizontal className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Device Actions</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setReturning(r)}>
+                    <RotateCcw className="h-3.5 w-3.5 mr-2" />
+                    Return to Stock
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Can>
           );
         },
       },
@@ -249,16 +233,11 @@ export function CpeAssignPage() {
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load CPE records" actionLabel="Retry" onAction={() => refetch()} />;
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="CPE & Device Assignment"
-        subtitle="Manage optical network terminals, wireless routers, and subscriber CPE allocations."
+        subtitle="Issue ONUs / routers from stock to subscribers and take them back into stock."
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Inventory', href: '/admin/inventory/items' },
@@ -266,159 +245,380 @@ export function CpeAssignPage() {
         ]}
         actions={
           <div className="flex items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              Export Registry
+              {exporting ? 'Exporting…' : 'Export Registry'}
             </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Assign CPE
-            </Button>
+            <Can menu={MENU} action="create">
+              <Button size="sm" onClick={() => setAssignOpen(true)} className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                Assign CPE
+              </Button>
+            </Can>
           </div>
         }
       />
 
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total CPEs</span>
-            <Router className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalCpes}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Tracked in registry</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Assigned Online</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {assignedCount}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Customer in-service</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Spare Pool</span>
-            <Cpu className="h-4 w-4 text-sky-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {spareCount}
-          </div>
-          <p className="mt-1 text-xs text-sky-600 dark:text-sky-400 font-medium">Ready for dispatch</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Deployment Rate</span>
-            <UserCheck className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {deploymentRate}%
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Active utilization</p>
-        </div>
+        <KpiTile
+          label="Total Issued"
+          icon={<Router className="h-4 w-4 text-primary" />}
+          value={s ? issued.toLocaleString() : '—'}
+          hint="Assigned + returned"
+        />
+        <KpiTile
+          label="Currently Assigned"
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          value={s ? s.cpeAssigned.toLocaleString() : '—'}
+          hint="With subscribers"
+          hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
+        />
+        <KpiTile
+          label="Returned"
+          icon={<Boxes className="h-4 w-4 text-sky-500" />}
+          value={s ? s.cpeReturned.toLocaleString() : '—'}
+          hint="Back in stock"
+          hintClassName="text-sky-600 dark:text-sky-400 font-medium"
+        />
+        <KpiTile
+          label="Deployment Rate"
+          icon={<UserCheck className="h-4 w-4 text-primary" />}
+          value={s && issued > 0 ? `${Math.round((s.cpeAssigned / issued) * 100)}%` : '—'}
+          hint="Assigned ÷ issued"
+        />
       </div>
 
-      {/* Main Data Table */}
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchKey="serial"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search by serial #, model, or customer name..."
-      />
+      <ListState
+        isLoading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        isEmpty={!table.search && !status && page?.meta.total === 0}
+        errorTitle="Failed to load CPE records"
+        emptyTitle="No CPE assigned yet"
+        emptyDescription="Use Assign CPE to issue a device from stock to a subscriber."
+        icon={<Router className="h-5 w-5" />}
+      >
+        <DataTable
+          columns={columns}
+          data={page?.items ?? []}
+          getRowId={(r) => r.id}
+          searchPlaceholder="Search by serial, MAC, model or customer..."
+          emptyTitle="No CPE records match your filters"
+          server={{
+            page: table.page,
+            pageSize: table.pageSize,
+            total: page?.meta.total ?? 0,
+            onPageChange: table.setPage,
+            onPageSizeChange: table.onPageSizeChange,
+            search: table.search,
+            onSearchChange: table.onSearchChange,
+          }}
+          toolbarActions={
+            <OptionSelect
+              value={status}
+              onChange={(v) => {
+                setStatus(v === 'assigned' || v === 'returned' ? v : '');
+                table.resetPage();
+              }}
+              options={STATUS_OPTIONS}
+              noneLabel="All statuses"
+              className="h-9 w-36 text-xs"
+            />
+          }
+        />
+      </ListState>
 
-      {/* Assign CPE Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleAssignCpe}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Router className="h-5 w-5 text-primary" />
-                Register / Assign CPE Device
-              </DialogTitle>
-              <DialogDescription>
-                Assign an optical network terminal (ONU) or wireless router to a subscriber account.
-              </DialogDescription>
-            </DialogHeader>
+          {assignOpen ? <AssignForm onDone={() => setAssignOpen(false)} /> : null}
+        </DialogContent>
+      </Dialog>
 
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cpe-serial">Device Serial Number (PON SN) *</Label>
-                  <Input
-                    id="cpe-serial"
-                    placeholder="e.g. HWTC1A2B3C4D"
-                    value={serial}
-                    onChange={(e) => setSerial(e.target.value)}
-                    className="font-mono uppercase"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cpe-status">Allocation Status</Label>
-                  <Select
-                    value={status}
-                    onValueChange={(val) => {
-                      if (val === 'assigned' || val === 'spare') setStatus(val);
-                    }}
-                  >
-                    <SelectTrigger id="cpe-status">
-                      <SelectValue placeholder="Select Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="assigned">Assigned to Subscriber</SelectItem>
-                      <SelectItem value="spare">In Stock (Spare Pool)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="cpe-model">Model Specification *</Label>
-                <Select value={model} onValueChange={(val) => { if (val) setModel(val); }}>
-                  <SelectTrigger id="cpe-model">
-                    <SelectValue placeholder="Select Model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Huawei HG8546M GPON ONU">Huawei HG8546M GPON ONU (1GE+3FE+WiFi)</SelectItem>
-                    <SelectItem value="ZTE F660 V8.0 GPON Terminal">ZTE F660 V8.0 GPON Terminal</SelectItem>
-                    <SelectItem value="VSOL V2801SG 1GE XPON ONU">VSOL V2801SG 1GE XPON ONU</SelectItem>
-                    <SelectItem value="TP-Link Archer C6 Dual-Band Router">TP-Link Archer C6 Dual-Band Router</SelectItem>
-                    <SelectItem value="Mikrotik hAP ac2 Dual-Concurrent AP">Mikrotik hAP ac2 Dual-Concurrent AP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {status === 'assigned' && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="cpe-cust">Subscriber / Customer Name *</Label>
-                  <Input
-                    id="cpe-cust"
-                    placeholder="e.g. Tanvir Ahmed (CUST-1042)"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Complete Assignment</Button>
-            </DialogFooter>
-          </form>
+      <Dialog open={returning !== null} onOpenChange={(o) => !o && setReturning(null)}>
+        <DialogContent className="sm:max-w-md">
+          {returning ? <ReturnForm assignment={returning} onDone={() => setReturning(null)} /> : null}
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function CustomerPicker({
+  value,
+  onChange,
+  invalid,
+}: {
+  value: CustomerOption | null;
+  onChange: (c: CustomerOption | null) => void;
+  invalid?: boolean;
+}) {
+  const [search, setSearch] = useState('');
+  const debounced = useDebouncedValue(search.trim(), 350);
+  const options = useCustomerOptions(debounced, value === null);
+
+  if (value) {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2">
+        <div className="min-w-0 text-sm">
+          <span className="font-medium text-foreground">{value.name}</span>
+          <span className="text-xs text-muted-foreground">
+            {[value.mobile, value.pppoeId].filter(Boolean).map((v) => ` · ${v}`).join('')}
+          </span>
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Clear customer" onClick={() => onChange(null)}>
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
+  const results = options.data ?? [];
+  return (
+    <div className="space-y-1.5">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id="cpe-cust"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name, mobile or PPPoE ID…"
+          className="pl-8"
+          aria-invalid={invalid || undefined}
+          autoComplete="off"
+        />
+      </div>
+      <div className="max-h-44 overflow-y-auto rounded-lg border border-border/60">
+        {options.isLoading ? (
+          <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
+        ) : options.isError ? (
+          <p className="px-3 py-2 text-xs text-destructive">{options.error.message}</p>
+        ) : results.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-muted-foreground">No customers found.</p>
+        ) : (
+          results.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onChange(c)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent/60"
+            >
+              <span className="font-medium text-foreground">{c.name}</span>
+              <span className="font-mono text-[11px] text-muted-foreground">{[c.mobile, c.pppoeId].filter(Boolean).join(' · ')}</span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AssignForm({ onDone }: { onDone: () => void }) {
+  const [itemId, setItemId] = useState('');
+  const [locationId, setLocationId] = useState('');
+  const [customer, setCustomer] = useState<CustomerOption | null>(null);
+  const [serialNo, setSerialNo] = useState('');
+  const [macAddress, setMacAddress] = useState('');
+  const [note, setNote] = useState('');
+  const [localError, setLocalError] = useState<Record<string, string>>({});
+
+  const items = useInventoryItemOptions();
+  const locations = useStoreLocationOptions();
+  const assign = useAssignCpe();
+  const err = assign.error;
+  const errorFor = (key: string) => localError[key] ?? fieldError(err, key);
+
+  const itemOptions = useMemo(
+    () => (items.data ?? []).map((i) => ({ value: i.id, label: [i.itemName, i.subcategory || i.category].filter(Boolean).join(' · ') })),
+    [items.data],
+  );
+  const locationOptions = useMemo(
+    () => (locations.data ?? []).map((l) => ({ value: l.id, label: l.locationName })),
+    [locations.data],
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!itemId) errors.item_id = 'Select the device item';
+    if (!locationId) errors.location_id = 'Select the source location';
+    if (!customer) errors.customer_id = 'Select a customer';
+    if (!serialNo.trim()) errors.serial_no = 'Serial number is required';
+    setLocalError(errors);
+    if (Object.keys(errors).length > 0 || !customer) return;
+
+    assign.mutate(
+      {
+        item_id: idParam(itemId),
+        location_id: idParam(locationId),
+        customer_id: idParam(customer.id),
+        serial_no: serialNo.trim(),
+        mac_address: macAddress.trim() || undefined,
+        note: note.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`CPE ${serialNo.trim()} assigned to ${customer.name}`);
+          onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Router className="h-5 w-5 text-primary" />
+          Assign CPE Device
+        </DialogTitle>
+        <DialogDescription>Issues one unit from the selected location&apos;s stock to the subscriber.</DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="cpe-item">Device Item *</Label>
+            <OptionSelect
+              id="cpe-item"
+              value={itemId}
+              onChange={setItemId}
+              options={itemOptions}
+              placeholder={items.isLoading ? 'Loading…' : 'Select item'}
+              disabled={items.isLoading}
+              invalid={Boolean(errorFor('item_id'))}
+            />
+            <FieldError message={errorFor('item_id')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cpe-loc">Source Location *</Label>
+            <OptionSelect
+              id="cpe-loc"
+              value={locationId}
+              onChange={setLocationId}
+              options={locationOptions}
+              placeholder={locations.isLoading ? 'Loading…' : 'Select location'}
+              disabled={locations.isLoading}
+              invalid={Boolean(errorFor('location_id'))}
+            />
+            <FieldError message={errorFor('location_id') ?? fieldError(err, 'quantity')} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cpe-cust">Customer *</Label>
+          <CustomerPicker value={customer} onChange={setCustomer} invalid={Boolean(errorFor('customer_id'))} />
+          <FieldError message={errorFor('customer_id')} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="cpe-serial">Serial Number (PON SN) *</Label>
+            <Input
+              id="cpe-serial"
+              value={serialNo}
+              onChange={(e) => setSerialNo(e.target.value)}
+              className="font-mono uppercase"
+              aria-invalid={Boolean(errorFor('serial_no')) || undefined}
+              required
+            />
+            <FieldError message={errorFor('serial_no')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cpe-mac">MAC Address</Label>
+            <Input id="cpe-mac" value={macAddress} onChange={(e) => setMacAddress(e.target.value)} className="font-mono" />
+            <FieldError message={fieldError(err, 'mac_address')} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cpe-note">Note</Label>
+          <Input id="cpe-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          <FieldError message={fieldError(err, 'note')} />
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={assign.isPending}>
+          {assign.isPending ? 'Assigning…' : 'Assign CPE'}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function ReturnForm({ assignment, onDone }: { assignment: CpeAssignment; onDone: () => void }) {
+  const [locationId, setLocationId] = useState(assignment.locationId);
+  const [note, setNote] = useState('');
+  const locations = useStoreLocationOptions();
+  const returnCpe = useReturnCpe();
+  const locationOptions = useMemo(
+    () => (locations.data ?? []).map((l) => ({ value: l.id, label: l.locationName })),
+    [locations.data],
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    returnCpe.mutate(
+      {
+        id: assignment.id,
+        body: {
+          location_id: locationId && locationId !== assignment.locationId ? idParam(locationId) : undefined,
+          note: note.trim() || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(`CPE ${assignment.serialNo} returned to stock`);
+          onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <RotateCcw className="h-5 w-5 text-primary" />
+          Return CPE to Stock?
+        </DialogTitle>
+        <DialogDescription>
+          {assignment.itemName} · SN {assignment.serialNo} from {assignment.customerName || 'customer'} goes back into stock (+1).
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-4 py-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="ret-loc">Return to Location</Label>
+          <OptionSelect
+            id="ret-loc"
+            value={locationId}
+            onChange={(v) => setLocationId(v || assignment.locationId)}
+            options={locationOptions}
+            placeholder={assignment.locationName || 'Original location'}
+            disabled={locations.isLoading}
+          />
+          <FieldError message={fieldError(returnCpe.error, 'location_id')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ret-note">Note</Label>
+          <Input id="ret-note" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={returnCpe.isPending}>
+          {returnCpe.isPending ? 'Returning…' : 'Return to Stock'}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

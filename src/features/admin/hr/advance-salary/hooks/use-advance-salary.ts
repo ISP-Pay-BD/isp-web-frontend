@@ -1,107 +1,104 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
-import type { AdvanceSalaryItem, GrantAdvanceFormData } from '../types';
+'use client';
 
-export function useAdvanceSalary() {
-  const queryClient = useQueryClient();
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { hrService, type RawRow } from '@/lib/api/services/employee.service';
+import { num, str } from '@/lib/api/case';
+import { hrKeys } from '../../shared/keys';
+import type { AdvanceDecision, AdvanceSalaryItem, AdvanceStatus, AdvanceSummary, GrantAdvanceFormData } from '../types';
 
-  const query = useQuery({
-    queryKey: ['admin', 'hr', 'advance-salary'],
+const STATUSES: AdvanceStatus[] = ['pending', 'approved', 'rejected', 'deducted'];
+
+export function mapAdvance(r: RawRow): AdvanceSalaryItem {
+  const status = str(r.status) as AdvanceStatus;
+  return {
+    id: str(r.id),
+    employeeId: str(r.employee_id),
+    employeeName: str(r.employee_name),
+    amount: num(r.amount),
+    reason: str(r.reason),
+    status: STATUSES.includes(status) ? status : 'pending',
+    createdAt: str(r.created_at),
+    approvedAt: str(r.approved_at),
+    deductMonth: str(r.deduct_month),
+    rejectionReason: str(r.rejection_reason),
+    deductedAmount: num(r.deducted_amount),
+  };
+}
+
+export interface AdvanceFilters {
+  page: number;
+  perPage: number;
+  search: string;
+  status: string;
+}
+
+export function useAdvanceSalary(filters: AdvanceFilters) {
+  return useQuery({
+    queryKey: [...hrKeys.advances, 'list', filters],
     queryFn: async () => {
-      const [advRes, empRes] = await Promise.allSettled([
-        adminService.getAdvanceSalaryRequests(),
-        adminService.getEmployees(),
-      ]);
-
-      const rawRequests = advRes.status === 'fulfilled' && Array.isArray(advRes.value) ? (advRes.value as AdvanceSalaryItem[]) : [];
-      const rawEmps = empRes.status === 'fulfilled' && empRes.value && typeof empRes.value === 'object' && 'employees' in empRes.value && Array.isArray(empRes.value.employees)
-        ? (empRes.value.employees as { id: string; name: string }[])
-        : [];
-
-      if (rawRequests.length > 0) {
-        return { requests: rawRequests, employees: rawEmps };
-      }
-
-      const sampleRequests: AdvanceSalaryItem[] = rawEmps.slice(0, 4).map((emp, idx) => ({
-        id: `adv_${emp.id}_${idx}`,
-        employeeId: emp.id,
-        employeeName: emp.name,
-        amountBdt: 5000 + (idx * 2000),
-        reason: idx === 0 ? 'Medical emergency' : (idx === 1 ? 'Home repair' : (idx === 2 ? 'Family event' : 'Festival expenses')),
-        status: idx === 0 ? 'approved' : (idx === 1 ? 'pending' : (idx === 2 ? 'approved' : 'rejected')),
-        requestedAt: new Date().toISOString().split('T')[0]!,
-        deductMonth: '2026-03',
-      }));
-
-      return { requests: sampleRequests, employees: rawEmps };
+      const res = await hrService.listAdvances({
+        page: filters.page,
+        per_page: filters.perPage,
+        search: filters.search || undefined,
+        status: filters.status !== 'all' ? filters.status : undefined,
+      });
+      return { items: res.items.map(mapAdvance), meta: res.meta };
     },
+    placeholderData: keepPreviousData,
   });
+}
 
-  const grantMutation = useMutation({
-    mutationFn: async (payload: GrantAdvanceFormData & { employeeName: string }) => {
-      try {
-        await adminService.applyAdvanceSalary({
-          employee_id: payload.employeeId,
-          amount: payload.amountBdt,
-          reason: payload.reason,
-        });
-      } catch {
-        // Fallback gracefully
-      }
+export function useAdvanceSummary() {
+  return useQuery({
+    queryKey: [...hrKeys.advances, 'summary'],
+    queryFn: async (): Promise<AdvanceSummary> => {
+      const r = await hrService.advanceSummary();
       return {
-        id: `adv_${Date.now()}`,
-        employeeId: payload.employeeId,
-        employeeName: payload.employeeName,
-        amountBdt: payload.amountBdt,
-        reason: payload.reason,
-        status: 'approved' as const,
-        requestedAt: new Date().toISOString().split('T')[0]!,
-        deductMonth: payload.deductMonth,
+        totalCount: num(r.total_count),
+        pendingCount: num(r.pending_count),
+        approvedCount: num(r.approved_count),
+        rejectedCount: num(r.rejected_count),
+        deductedCount: num(r.deducted_count),
+        approvedTotal: num(r.approved_total),
+        pendingTotal: num(r.pending_total),
       };
     },
-    onSuccess: (newAdv) => {
-      queryClient.setQueryData<{ requests: AdvanceSalaryItem[]; employees: { id: string; name: string }[] }>(
-        ['admin', 'hr', 'advance-salary'],
-        (prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            requests: [newAdv, ...prev.requests],
-          };
-        },
-      );
-    },
   });
+}
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: AdvanceSalaryItem['status'] }) => {
-      try {
-        await adminService.updateAdvanceSalaryStatus(id, status === 'approved' ? 'approved' : 'rejected');
-      } catch {
-        // Fallback gracefully
-      }
-      return { id, status };
-    },
-    onSuccess: ({ id, status }) => {
-      queryClient.setQueryData<{ requests: AdvanceSalaryItem[]; employees: { id: string; name: string }[] }>(
-        ['admin', 'hr', 'advance-salary'],
-        (prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            requests: prev.requests.map((r) => (r.id === id ? { ...r, status } : r)),
-          };
-        },
-      );
-    },
-  });
-
-  return {
-    ...query,
-    requests: query.data?.requests ?? [],
-    employees: query.data?.employees ?? [],
-    grantAdvance: grantMutation.mutateAsync,
-    isGranting: grantMutation.isPending,
-    updateStatus: updateStatusMutation.mutateAsync,
+export function useAdvanceMutations() {
+  const qc = useQueryClient();
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: hrKeys.advances });
+    qc.invalidateQueries({ queryKey: hrKeys.accounts });
   };
+
+  const grant = useMutation({
+    mutationFn: (v: GrantAdvanceFormData) =>
+      hrService.grantAdvance({
+        employee_id: Number(v.employeeId),
+        amount: v.amount,
+        reason: v.reason.trim(),
+        deduct_month: v.deductMonth || undefined,
+      }),
+    onSuccess: refresh,
+  });
+
+  const decide = useMutation({
+    mutationFn: (d: AdvanceDecision) =>
+      hrService.decideAdvance(
+        d.id,
+        d.status === 'approved'
+          ? { status: 'approved', deduct_month: d.deductMonth || undefined }
+          : { status: 'rejected', rejection_reason: d.rejectionReason.trim() },
+      ),
+    onSuccess: refresh,
+  });
+
+  const deduct = useMutation({
+    mutationFn: (id: string) => hrService.deductAdvance(id),
+    onSuccess: refresh,
+  });
+
+  return { grant, decide, deduct };
 }

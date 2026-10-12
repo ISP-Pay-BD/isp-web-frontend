@@ -1,42 +1,30 @@
-import { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import type { UseFormSetError, FieldValues, Path } from 'react-hook-form';
-import type { ApiErrorResponse } from '../types';
+import { ApiError } from '../client';
 
+/**
+ * Toast the backend's message and, when a form is given, map validation
+ * `details` onto its fields. Returns the message shown.
+ */
 export function handleApiError<TFieldValues extends FieldValues = FieldValues>(
   error: unknown,
   setError?: UseFormSetError<TFieldValues>,
   defaultFallbackMessage = 'Something went wrong. Please try again.',
 ): string {
-  let errorMessage = defaultFallbackMessage;
+  const message = error instanceof Error && error.message ? error.message : defaultFallbackMessage;
 
-  if (error instanceof AxiosError) {
-    const errorData = error.response?.data as ApiErrorResponse | undefined;
-
-    if (errorData?.error?.message) {
-      errorMessage = errorData.error.message;
-    } else if (typeof errorData?.error === 'string') {
-      errorMessage = errorData.error;
-    } else if (error.message) {
-      errorMessage = error.message;
+  if (setError && error instanceof ApiError && error.details) {
+    for (const [field, messages] of Object.entries(error.details)) {
+      const msg = Array.isArray(messages) ? messages[0] : messages;
+      if (msg) setError(field as Path<TFieldValues>, { type: 'server', message: String(msg) });
     }
-
-    // Map validation error details to React Hook Form fields
-    if (setError && errorData?.error?.details && typeof errorData.error.details === 'object') {
-      Object.entries(errorData.error.details).forEach(([field, messages]) => {
-        const msg = Array.isArray(messages) ? messages[0] : messages;
-        if (msg) {
-          setError(field as Path<TFieldValues>, {
-            type: 'server',
-            message: String(msg),
-          });
-        }
-      });
-    }
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
   }
 
-  toast.error(errorMessage);
-  return errorMessage;
+  toast.error(message);
+  return message;
+}
+
+/** Human message for an unknown error (for inline error states). */
+export function errorMessage(error: unknown, fallback = 'Something went wrong.'): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }

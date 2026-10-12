@@ -1,99 +1,67 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useCallback, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared';
-import { useIpPools } from '../hooks/useIpPools';
-import type { IpPoolItem } from '@/data/admin/network-ops.data';
+import { useDeleteIpPool, useIpPools } from '../hooks/useIpPools';
+import { utilisationPct, type IpPool, type IpPoolType } from '../types';
 import { IpPoolModal } from '../components/IpPoolModal';
+import { SyncPoolsMenu } from '../components/SyncPoolsMenu';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Globe2, Layers, CheckCircle2, ShieldCheck, Trash2, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Globe2, Layers, CheckCircle2, ShieldCheck, Trash2, Pencil } from 'lucide-react';
 
-const poolSearchFilter = (row: LegacyRow<IpPoolItem>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const p = row.original;
-  return (
-    p.name.toLowerCase().includes(q) ||
-    p.startIp.includes(q) ||
-    p.endIp.includes(q) ||
-    (p.routerName?.toLowerCase().includes(q) ?? false)
-  );
-};
+const DEFAULT_PAGE_SIZE = 20;
 
 export function IpPoolsPage() {
-  const { data, isLoading, isError, refetch } = useIpPools();
-  const [pools, setPools] = useState<IpPoolItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [search, setSearch] = useState('');
+  const [type, setType] = useState<IpPoolType | ''>('');
+  const { data, isLoading, isError, error, refetch } = useIpPools({ page, pageSize, search, type: type || undefined });
+  const deletePool = useDeleteIpPool();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [editing, setEditing] = useState<IpPool | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<IpPool | null>(null);
 
-  const initialPools = data?.pools ?? [];
-  const routers = data?.routers ?? [];
+  const pools = data?.items ?? [];
+  const summary = data?.summary;
+  const totalIps = summary?.totalIps ?? 0;
+  const usedIps = summary?.usedIps ?? 0;
 
-  if (pools.length === 0 && initialPools.length > 0) {
-    setPools(initialPools);
-  }
+  // Stable identity: DataTable re-runs its debounce effect when this changes.
+  const onSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
 
-  const list = pools.length > 0 ? pools : initialPools;
-  const totalPools = list.length;
-  const totalIps = list.reduce((sum, p) => sum + p.total, 0);
-  const totalUsedIps = list.reduce((sum, p) => sum + p.used, 0);
-  const publicIpsCount = list.filter((p) => p.type === 'public').reduce((sum, p) => sum + p.total, 0);
-
-  const handleSyncFromMikrotik = () => {
-    setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
-      toast.success('Synced /ip pool from all connected MikroTik routers.');
-    }, 800);
+  const openCreate = () => {
+    setEditing(null);
+    setModalOpen(true);
   };
 
   const handleDelete = () => {
-    if (!deleteId) return;
-    setPools((prev) => prev.filter((p) => p.id !== deleteId));
-    toast.success('IP pool removed.');
-    setDeleteId(null);
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    deletePool.mutate(target.id, {
+      onSuccess: ({ routerSynced }) =>
+        routerSynced
+          ? toast.success(`IP pool ${target.name} deleted`)
+          : toast.warning(`IP pool ${target.name} deleted, but it could not be removed from the router`),
+    });
   };
 
-  const handleAddPool = (values: {
-    name: string;
-    routerId: string;
-    routerName: string;
-    defineBy: 'range' | 'cidr';
-    startIp: string;
-    endIp: string;
-    cidr?: string;
-    gateway: string;
-    type: 'public' | 'private';
-    total: number;
-  }) => {
-    const newPool: IpPoolItem = {
-      id: `pool_${Date.now()}`,
-      name: values.name,
-      routerId: values.routerId,
-      routerName: values.routerName,
-      defineBy: values.defineBy,
-      startIp: values.startIp,
-      endIp: values.endIp,
-      cidr: values.cidr,
-      gateway: values.gateway,
-      type: values.type,
-      used: 0,
-      total: values.total,
-      status: 'active',
-    };
-    setPools((prev) => [newPool, ...prev]);
-  };
-
-  const columns = useMemo<LegacyColumnDef<IpPoolItem, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<IpPool, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -110,11 +78,9 @@ export function IpPoolsPage() {
       },
       {
         accessorKey: 'routerName',
-        header: 'Router Gateway',
+        header: 'Router',
         cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">
-            {row.original.routerName ?? 'Default Gateway'}
-          </span>
+          <span className="text-xs font-medium text-foreground">{row.original.routerName || '—'}</span>
         ),
       },
       {
@@ -132,18 +98,30 @@ export function IpPoolsPage() {
       {
         accessorKey: 'gateway',
         header: 'Gateway',
-        cell: ({ row }) => <code className="font-mono text-xs">{row.original.gateway}</code>,
+        cell: ({ row }) =>
+          row.original.gateway ? (
+            <code className="font-mono text-xs">{row.original.gateway}</code>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          ),
       },
       {
         accessorKey: 'type',
         header: 'Type',
         cell: ({ row }) => (
-          <Badge
-            variant={row.original.type === 'public' ? 'default' : 'secondary'}
-            className="capitalize text-xs"
-          >
-            {row.original.type}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge
+              variant={row.original.type === 'public' ? 'default' : 'secondary'}
+              className="capitalize text-xs"
+            >
+              {row.original.type}
+            </Badge>
+            {row.original.status === 'inactive' ? (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                Inactive
+              </Badge>
+            ) : null}
+          </div>
         ),
       },
       {
@@ -151,12 +129,13 @@ export function IpPoolsPage() {
         accessorKey: 'used',
         header: 'Utilization',
         cell: ({ row }) => {
-          const usagePercent = Math.round((row.original.used / (row.original.total || 1)) * 100);
+          const { used, size } = row.original;
+          const usagePercent = utilisationPct(used, size);
           return (
             <div className="min-w-[160px] space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium">
-                  {row.original.used} / {row.original.total}
+                  {used} / {size ?? '—'}
                 </span>
                 <span className="text-muted-foreground">{usagePercent}%</span>
               </div>
@@ -175,8 +154,19 @@ export function IpPoolsPage() {
             <Button
               variant="ghost"
               size="icon"
+              title="Edit IP Pool"
+              onClick={() => {
+                setEditing(row.original);
+                setModalOpen(true);
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               title="Delete IP Pool"
-              onClick={() => setDeleteId(row.original.id)}
+              onClick={() => setDeleteTarget(row.original)}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -187,15 +177,15 @@ export function IpPoolsPage() {
     [],
   );
 
-  if (isLoading && pools.length === 0) {
+  if (isLoading && !data) {
     return <PageSkeleton variant="table" rows={5} />;
   }
-  if (isError && pools.length === 0) {
+  if (isError && !data) {
     return (
       <div className="p-6">
         <EmptyState
           title="Failed to load IP pools"
-          description="Could not fetch address pools."
+          description={errorMessage(error, 'Could not fetch address pools.')}
           actionLabel="Retry"
           onAction={() => refetch()}
         />
@@ -215,11 +205,8 @@ export function IpPoolsPage() {
         ]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={handleSyncFromMikrotik} disabled={isSyncing}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sync Pools
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
+            <SyncPoolsMenu />
+            <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4 mr-1.5" />
               Add IP Pool
             </Button>
@@ -234,8 +221,10 @@ export function IpPoolsPage() {
             <Globe2 className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{totalPools}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Subnets & address pools</p>
+            <div className="text-2xl font-bold text-foreground tabular-nums">{summary?.pools ?? 0}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {summary?.privatePools ?? 0} private / {(summary?.pools ?? 0) - (summary?.privatePools ?? 0)} public
+            </p>
           </div>
         </div>
 
@@ -246,7 +235,9 @@ export function IpPoolsPage() {
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{totalIps.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">{publicIpsCount} public routable IPs</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(summary?.publicIps ?? 0).toLocaleString()} public routable IPs
+            </p>
           </div>
         </div>
 
@@ -256,8 +247,8 @@ export function IpPoolsPage() {
             <ShieldCheck className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{totalUsedIps.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Active PPPoE & Hotspot leases</p>
+            <div className="text-2xl font-bold text-foreground tabular-nums">{usedIps.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Active & reserved static assignments</p>
           </div>
         </div>
 
@@ -268,7 +259,7 @@ export function IpPoolsPage() {
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {totalIps > 0 ? `${Math.round((totalUsedIps / totalIps) * 100)}%` : '0%'}
+              {utilisationPct(usedIps, totalIps)}%
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">Pool capacity assigned</p>
           </div>
@@ -277,34 +268,64 @@ export function IpPoolsPage() {
 
       <DataTable
         columns={columns}
-        data={list}
+        data={pools}
         getRowId={(row) => row.id}
-        searchKey="name"
         searchPlaceholder="Search by pool name, IP range, router..."
-        searchFilterFn={poolSearchFilter}
-        facetFilters={[{ columnId: 'type', title: 'Type' }]}
-        emptyTitle="No IP pools configured"
+        emptyTitle={search || type ? 'No IP pools match your filters' : 'No IP pools configured'}
         emptyDescription="Add an IP pool to allocate static or dynamic addresses for PPPoE and Hotspot users."
+        server={{
+          page,
+          pageSize,
+          total: data?.meta.total ?? 0,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+          search,
+          onSearchChange,
+        }}
         toolbarActions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add IP Pool
-          </Button>
+          <>
+            <Select
+              value={type || 'all'}
+              onValueChange={(val) => {
+                setType(val === 'public' || val === 'private' ? val : '');
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[140px] text-xs">
+                <SelectValue>
+                  {(value: string | null) =>
+                    value === 'public' ? 'Public pools' : value === 'private' ? 'Private pools' : 'All types'
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="public">Public pools</SelectItem>
+                <SelectItem value="private">Private pools</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add IP Pool
+            </Button>
+          </>
         }
       />
 
       <IpPoolModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        routers={routers}
-        onSuccess={handleAddPool}
+        pool={editing}
       />
 
       <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete IP Pool?"
-        description="Are you sure you want to delete this pool from the database? Allocated IPs will remain until released by router."
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete IP pool ${deleteTarget?.name ?? ''}?`}
+        description="The pool is removed from the database and from its MikroTik router. Pools with active or reserved assignments cannot be deleted."
         confirmLabel="Delete Pool"
         destructive
         onConfirm={handleDelete}

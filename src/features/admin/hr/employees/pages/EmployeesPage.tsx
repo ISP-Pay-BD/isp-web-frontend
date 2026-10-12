@@ -1,10 +1,13 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useEmployees } from '../hooks/use-employees';
-import type { EmployeeItem } from '../types';
+import { useState, useEffect } from 'react';
+import { useEmployees, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
+import type { EmployeeItem, EmployeeListParams } from '../types';
 import type { EmployeeFormValues } from '../schemas';
+import { useHrMeta } from '../../shared/use-hr-meta';
+import { useDebouncedValue } from '../../shared/use-debounced-value';
+import { datePart, initials } from '../../shared/format';
 import { PageSkeleton, EmptyState, CurrencyDisplay, ConfirmDialog, TablePagination } from '@/components/shared';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
@@ -43,11 +46,10 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-type SortField = 'name' | 'salary' | 'joinedAt';
-type SortDir = 'asc' | 'desc';
+type SortField = EmployeeListParams['sort'];
+type SortDir = EmployeeListParams['dir'];
 
 export function EmployeesPage() {
-  const { employees, isLoading, isError, refetch, createEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
   const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
   const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
@@ -64,6 +66,7 @@ export function EmployeesPage() {
   };
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search.trim());
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>('name');
@@ -76,42 +79,28 @@ export function EmployeesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
 
-  const filteredEmployees = useMemo(() => {
-    let result = employees.filter((emp) => {
-      const matchesSearch =
-        emp.name.toLowerCase().includes(search.toLowerCase()) ||
-        emp.phone.includes(search) ||
-        (emp.role && emp.role.toLowerCase().includes(search.toLowerCase()));
-      const matchesRole = roleFilter === 'all' || emp.role === roleFilter;
-      const matchesStatus = statusFilter === 'all' || emp.status === statusFilter;
-      return matchesSearch && matchesRole && matchesStatus;
-    });
+  // Any filter change goes back to page 1.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, roleFilter, statusFilter, sortField, sortDir, pageSize]);
 
-    result = [...result].sort((a, b) => {
-      let comparison = 0;
-      if (sortField === 'name') comparison = a.name.localeCompare(b.name);
-      else if (sortField === 'salary') comparison = (a.salaryBdt || 0) - (b.salaryBdt || 0);
-      else if (sortField === 'joinedAt') comparison = a.joinedAt.localeCompare(b.joinedAt);
-      return sortDir === 'asc' ? comparison : -comparison;
-    });
+  const list = useEmployees({
+    page: currentPage,
+    perPage: pageSize,
+    search: debouncedSearch,
+    designation: roleFilter,
+    status: statusFilter,
+    sort: sortField,
+    dir: sortDir,
+  });
+  const summary = useEmployeeSummary();
+  const meta = useHrMeta();
+  const { create, update, remove } = useEmployeeMutations();
 
-    return result;
-  }, [employees, search, roleFilter, statusFilter, sortField, sortDir]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const paginatedEmployees = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filteredEmployees.slice(start, start + pageSize);
-  }, [filteredEmployees, safeCurrentPage, pageSize]);
-
-  const totalPayroll = useMemo(
-    () => employees.filter((e) => e.status === 'active').reduce((sum, e) => sum + (e.salaryBdt || 0), 0),
-    [employees]
-  );
-
-  const activeCount = useMemo(() => employees.filter((e) => e.status === 'active').length, [employees]);
-  const departmentCount = useMemo(() => new Set(employees.map((e) => e.role)).size, [employees]);
+  const employees = list.data?.items ?? [];
+  const total = list.data?.meta.total ?? 0;
+  const designations = meta.data?.designations ?? [];
+  const designationItems = Object.fromEntries([['all', 'All Roles'], ...designations.map((d) => [d.value, d.label])]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir((p) => (p === 'asc' ? 'desc' : 'asc'));
@@ -127,30 +116,31 @@ export function EmployeesPage() {
   const handleOpenEdit = (emp: EmployeeItem) => { setSelectedEmployee(emp); setModalOpen(true); };
   const handleOpenDelete = (emp: EmployeeItem) => { setEmployeeToDelete(emp); setDeleteConfirmOpen(true); };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!employeeToDelete) return;
-    try {
-      await deleteEmployee(employeeToDelete.id);
-      toast.success(`Employee ${employeeToDelete.name} deleted`);
-      setDeleteConfirmOpen(false);
-    } catch { toast.error('Failed to delete employee'); }
+    // Failures are toasted by the global mutation handler.
+    remove.mutate(employeeToDelete.id, {
+      onSuccess: () => {
+        toast.success(`Employee ${employeeToDelete.name} deleted`);
+        setDeleteConfirmOpen(false);
+      },
+    });
   };
 
-  const handleSaveEmployee = async (values: EmployeeFormValues) => {
-    if (selectedEmployee) await updateEmployee({ id: selectedEmployee.id, data: values });
-    else await createEmployee(values);
-  };
+  const handleSaveEmployee = (values: EmployeeFormValues) =>
+    selectedEmployee ? update.mutateAsync({ id: selectedEmployee.id, values }) : create.mutateAsync(values);
 
-  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
-  if (isError) {
+  if (list.isLoading) return <PageSkeleton variant="table" rows={8} />;
+  if (list.isError) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load staff list" description="There was an error communicating with the staff registry." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState title="Failed to load staff list" description={list.error?.message ?? 'There was an error communicating with the staff registry.'} actionLabel="Retry" onAction={() => list.refetch()} />
       </div>
     );
   }
 
-  const roles = ['Support Agent', 'Field Technician', 'Network Engineer', 'Accountant', 'Sales Executive', 'Office Admin'];
+  const hasFilters = !!debouncedSearch || roleFilter !== 'all' || statusFilter !== 'all';
+  const safeCurrentPage = list.data?.meta.page ?? currentPage;
 
   return (
     <div className="space-y-6">
@@ -163,7 +153,7 @@ export function EmployeesPage() {
           </p>
         </div>
         <div>
-          <Button onClick={handleOpenCreate} className="gap-1.5 bg-primary font-semibold shadow-sm hover:bg-primary/90">
+          <Button onClick={handleOpenCreate} disabled={!meta.data} className="gap-1.5 bg-primary font-semibold shadow-sm hover:bg-primary/90">
             <UserPlus className="h-4 w-4" /> New Employee
           </Button>
         </div>
@@ -177,11 +167,11 @@ export function EmployeesPage() {
 
       <OpsSummaryStrip
         items={[
-          { value: employees.length, label: 'staff' },
-          { value: activeCount, label: 'active' },
-          { value: departmentCount, label: 'roles' },
+          { value: summary.data?.total ?? '—', label: 'staff' },
+          { value: summary.data?.active ?? '—', label: 'active' },
+          { value: summary.data?.designationCount ?? '—', label: 'roles' },
           {
-            value: <CurrencyDisplay amount={totalPayroll} className="inline font-semibold" />,
+            value: summary.data ? <CurrencyDisplay amount={summary.data.activePayroll} className="inline font-semibold" /> : '—',
             label: 'payroll',
           },
         ]}
@@ -195,7 +185,7 @@ export function EmployeesPage() {
               <div className="relative flex-1 min-w-[200px] sm:min-w-[300px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, phone, or role..."
+                  placeholder="Search by name, mobile, or email..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 h-9 bg-background border-border/60 text-sm shadow-sm"
@@ -207,16 +197,16 @@ export function EmployeesPage() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v ?? 'all')}>
+                <Select items={designationItems} value={roleFilter} onValueChange={(v) => setRoleFilter(v ?? 'all')}>
                   <SelectTrigger className="w-[160px] h-9 text-xs border-border/60">
                     <SelectValue placeholder="All Roles" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Roles</SelectItem>
-                    {roles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    {designations.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? 'all')}>
+                <Select items={{ all: 'All Status', active: 'Active', inactive: 'Inactive' }} value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? 'all')}>
                   <SelectTrigger className="w-[130px] h-9 text-xs border-border/60">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
@@ -260,20 +250,20 @@ export function EmployeesPage() {
                 </div>
 
                 <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1">
-                  {filteredEmployees.length} result{filteredEmployees.length !== 1 ? 's' : ''}
+                  {total} result{total !== 1 ? 's' : ''}
                 </Badge>
               </div>
             </div>
           </div>
 
-          {filteredEmployees.length === 0 ? (
+          {employees.length === 0 ? (
             <div className="py-16">
               <EmptyState
                 icon={<Users className="h-10 w-10" />}
-                title={search || roleFilter !== 'all' || statusFilter !== 'all' ? 'No employees found' : 'No employees yet'}
-                description={search || roleFilter !== 'all' || statusFilter !== 'all' ? 'Try adjusting your search or filters.' : 'Add your first employee to get started.'}
-                actionLabel="New Employee"
-                onAction={handleOpenCreate}
+                title={hasFilters ? 'No employees found' : 'No employees yet'}
+                description={hasFilters ? 'Try adjusting your search or filters.' : 'Add your first employee to get started.'}
+                actionLabel={meta.data ? 'New Employee' : undefined}
+                onAction={meta.data ? handleOpenCreate : undefined}
               />
             </div>
           ) : (
@@ -284,7 +274,7 @@ export function EmployeesPage() {
                     <TableHead className="w-12 text-[11px] font-medium tracking-wide text-muted-foreground">#</TableHead>
                     <TableHead>
                       <button type="button" onClick={() => toggleSort('name')} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors">
-                        Name & Role {sortIcon('name')}
+                        Name & Designation {sortIcon('name')}
                       </button>
                     </TableHead>
                     <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Contact</TableHead>
@@ -294,13 +284,17 @@ export function EmployeesPage() {
                         Salary {sortIcon('salary')}
                       </button>
                     </TableHead>
-                    <TableHead className="hidden md:table-cell text-[11px] font-medium tracking-wide text-muted-foreground">Joined At</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      <button type="button" onClick={() => toggleSort('created_at')} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground hover:text-foreground transition-colors">
+                        Joined At {sortIcon('created_at')}
+                      </button>
+                    </TableHead>
                     <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Status</TableHead>
                     <TableHead className="text-right text-[11px] font-medium tracking-wide text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedEmployees.map((emp, idx) => {
+                  {employees.map((emp, idx) => {
                     const globalIdx = (safeCurrentPage - 1) * pageSize + idx + 1;
                     return (
                       <tr
@@ -311,34 +305,36 @@ export function EmployeesPage() {
                         <TableCell>
                           <Link href={`/admin/hr/employees/${emp.id}`} className="flex items-center gap-3 group/item">
                             <div className="relative flex h-9 w-9 items-center justify-center rounded-xl font-semibold text-xs border border-border/60 bg-muted/50 text-muted-foreground group-hover/item:border-primary/50 group-hover/item:text-primary transition-colors">
-                              {emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              {initials(emp.name)}
                             </div>
                             <div>
                               <div className="font-semibold text-sm group-hover/item:text-primary transition-colors">{emp.name}</div>
-                              <Badge variant="secondary" className="text-[10px] font-medium mt-0.5 border border-border/50 bg-muted/40 text-muted-foreground">
-                                {emp.role}
-                              </Badge>
+                              {emp.designationLabel ? (
+                                <Badge variant="secondary" className="text-[10px] font-medium mt-0.5 border border-border/50 bg-muted/40 text-muted-foreground">
+                                  {emp.designationLabel}
+                                </Badge>
+                              ) : null}
                             </div>
                           </Link>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <Phone className="h-3.5 w-3.5" />
-                            <span className="font-mono text-xs">{emp.phone}</span>
+                            <span className="font-mono text-xs">{emp.mobile || '—'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <MapPin className="h-3.5 w-3.5" />
-                            <span className="text-xs">{emp.area ?? 'Central'}</span>
+                            <span className="text-xs">{emp.areaLabel || '—'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <span className="font-mono font-bold text-sm">
-                            <CurrencyDisplay amount={emp.salaryBdt} />
+                            {emp.salary !== null ? <CurrencyDisplay amount={emp.salary} /> : '—'}
                           </span>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground text-xs font-mono">{emp.joinedAt}</TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground text-xs font-mono">{datePart(emp.joinedAt) || '—'}</TableCell>
                         <TableCell>
                           {emp.status === 'active' ? (
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
@@ -400,7 +396,7 @@ export function EmployeesPage() {
           <TablePagination
             currentPage={safeCurrentPage}
             pageSize={pageSize}
-            totalItems={filteredEmployees.length}
+            totalItems={total}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
             pageSizeOptions={[10, 20, 50, 100]}
@@ -410,11 +406,12 @@ export function EmployeesPage() {
 
       </PageContent>
 
-      {modalOpen && (
+      {modalOpen && meta.data && (
         <EmployeeModal
           open={modalOpen}
           onOpenChange={setModalOpen}
           employee={selectedEmployee}
+          meta={meta.data}
           onSave={handleSaveEmployee}
         />
       )}

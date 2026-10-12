@@ -1,94 +1,43 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
-import { useAuditLogs } from '../hooks/use-audit-logs';
-import { toast } from 'sonner';
-import { 
-  FileText, 
-  ShieldAlert, 
-  Users, 
-  Activity, 
-  Download, 
-  RotateCw, 
-  Filter, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
-  Flame,
-  Search
-} from 'lucide-react';
-import type { AuditLogEntry } from '@/data/admin/extras.data';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { FileText, Users, Download, RotateCw, Filter, Clock, ListTree, CalendarClock } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuditLogs, type AuditLogEntry } from '../hooks/use-audit-logs';
 
-const searchFilter = (
-  row: LegacyRow<AuditLogEntry>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const e = row.original;
-  return (
-    e.actor.toLowerCase().includes(q) ||
-    e.action.toLowerCase().includes(q) ||
-    e.entity.toLowerCase().includes(q) ||
-    e.detail.toLowerCase().includes(q)
-  );
-};
+const fmt = (iso: string) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleString() : '—');
 
 export function AuditLogsPage() {
-  const { data, isLoading, isError, refetch } = useAuditLogs();
-  const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
-  const [selectedEntity, setSelectedEntity] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [action, setAction] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const { data, isLoading, isError, error, refetch, isFetching } = useAuditLogs({ page, pageSize, search, action, from, to });
 
-  const rawLogs = data?.items ?? [];
-
-  const filteredLogs = useMemo(() => {
-    return rawLogs.filter((item) => {
-      const matchSeverity = selectedSeverity === 'all' || item.severity === selectedSeverity;
-      const matchEntity = selectedEntity === 'all' || item.entity === selectedEntity;
-      return matchSeverity && matchEntity;
-    });
-  }, [rawLogs, selectedSeverity, selectedEntity]);
-
-  const uniqueEntities = useMemo(() => {
-    return Array.from(new Set(rawLogs.map((l) => l.entity)));
-  }, [rawLogs]);
-
-  const stats = useMemo(() => {
-    const total = rawLogs.length;
-    const critical = rawLogs.filter((l) => l.severity === 'critical').length;
-    const warning = rawLogs.filter((l) => l.severity === 'warning').length;
-    const uniqueActors = new Set(rawLogs.map((l) => l.actor)).size;
-    return { total, critical, warning, uniqueActors };
-  }, [rawLogs]);
+  const rows = useMemo(() => data?.items ?? [], [data?.items]);
+  const pageActors = useMemo(() => new Set(rows.map((l) => l.actorId || l.actor)).size, [rows]);
 
   const exportCsv = () => {
-    const headers = ['Timestamp', 'Actor', 'Action', 'Entity', 'Entity ID', 'Severity', 'Detail'];
-    const rows = filteredLogs.map((l) => [
-      `"${new Date(l.at).toISOString()}"`,
-      `"${l.actor}"`,
-      `"${l.action}"`,
-      `"${l.entity}"`,
-      `"${l.entityId}"`,
-      `"${l.severity}"`,
-      `"${l.detail.replace(/"/g, '""')}"`,
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const headers = ['Timestamp', 'Actor', 'Action', 'Entity', 'IP', 'Detail'];
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const lines = rows.map((l) => [l.at, l.actor, l.action, l.entity, l.ip, l.detail].map(esc).join(','));
+    const blob = new Blob([[headers.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `audit_logs_page${page}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    document.body.removeChild(link);
-    toast.success('Audit log report exported to CSV');
+    URL.revokeObjectURL(url);
   };
 
   const columns = useMemo<LegacyColumnDef<AuditLogEntry, unknown>[]>(
@@ -99,13 +48,13 @@ export function AuditLogsPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground whitespace-nowrap">
             <Clock className="h-3 w-3 text-muted-foreground/70" />
-            {new Date(row.original.at).toLocaleString()}
+            {fmt(row.original.at)}
           </div>
         ),
       },
       {
         accessorKey: 'actor',
-        header: 'Operator / Actor',
+        header: 'Actor',
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 font-medium text-sm text-foreground">
@@ -118,7 +67,7 @@ export function AuditLogsPage() {
       },
       {
         accessorKey: 'action',
-        header: 'Action Performed',
+        header: 'Action',
         cell: ({ row }) => (
           <span className="font-mono text-xs px-2.5 py-1 rounded bg-muted/60 border border-border/60 text-foreground font-semibold">
             {row.original.action}
@@ -127,46 +76,18 @@ export function AuditLogsPage() {
       },
       {
         accessorKey: 'entity',
-        header: 'Target Entity',
-        cell: ({ row }) => (
-          <div>
-            <div className="text-sm font-medium text-foreground">{row.original.entity}</div>
-            <div className="font-mono text-xs text-muted-foreground">{row.original.entityId}</div>
-          </div>
-        ),
+        header: 'Entity',
+        cell: ({ row }) => <span className="text-sm text-foreground">{row.original.entity || '—'}</span>,
       },
       {
-        accessorKey: 'severity',
-        header: 'Severity',
-        cell: ({ row }) => {
-          const s = row.original.severity;
-          return (
-            <Badge
-              variant="outline"
-              className={`capitalize font-medium text-xs px-2.5 py-0.5 ${
-                s === 'critical'
-                  ? 'border-red-500/30 bg-red-500/10 text-red-400'
-                  : s === 'warning'
-                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-                    : 'border-blue-500/30 bg-blue-500/10 text-blue-400'
-              }`}
-            >
-              {s === 'critical' && <Flame className="mr-1 h-3 w-3 inline text-red-400" />}
-              {s === 'warning' && <AlertTriangle className="mr-1 h-3 w-3 inline text-amber-400" />}
-              {s === 'info' && <CheckCircle className="mr-1 h-3 w-3 inline text-blue-400" />}
-              {s}
-            </Badge>
-          );
-        },
+        accessorKey: 'ip',
+        header: 'IP',
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.ip || '—'}</span>,
       },
       {
         accessorKey: 'detail',
-        header: 'Change Detail',
-        cell: ({ row }) => (
-          <div className="text-sm text-foreground/90 max-w-md line-clamp-2">
-            {row.original.detail}
-          </div>
-        ),
+        header: 'Detail',
+        cell: ({ row }) => <div className="text-xs text-foreground/90 max-w-md line-clamp-2 break-all">{row.original.detail || '—'}</div>,
       },
     ],
     [],
@@ -174,140 +95,111 @@ export function AuditLogsPage() {
 
   if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
-    return <EmptyState title="Failed to load audit logs" actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState title="Failed to load audit logs" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
+
+  const resetPage = () => setPage(1);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit Logs & System Trail"
-        subtitle="Immutable security trail of staff actions across customers, billing, routers, and RBAC permissions"
+        title="Audit Logs"
+        subtitle="Recorded actions by you, your staff and your customers"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Audit Logs' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                refetch();
-                toast.success('Audit trail refreshed');
-              }}
-              className="border-border/70 hover:border-border hover:bg-card/80 text-xs"
-            >
-              <RotateCw className="mr-1.5 h-3.5 w-3.5" />
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="border-border/70 hover:border-border hover:bg-card/80 text-xs">
+              <RotateCw className={cn('mr-1.5 h-3.5 w-3.5', isFetching && 'animate-spin')} />
               Refresh
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportCsv}
-              className="border-border/70 hover:border-border hover:bg-card/80 text-xs text-foreground"
-            >
+            <Button variant="outline" size="sm" onClick={exportCsv} disabled={rows.length === 0} className="border-border/70 hover:border-border hover:bg-card/80 text-xs text-foreground">
               <Download className="mr-1.5 h-3.5 w-3.5 text-primary" />
-              Export CSV
+              Export page (CSV)
             </Button>
           </div>
         }
       />
 
-      {/* KPI Stats Ribbon */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden group hover:border-primary/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Total Audited Events</span>
-            <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <FileText className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">{stats.total}</div>
-          <p className="mt-1 text-xs text-muted-foreground">Logged actions & mutations</p>
-        </div>
-
-        <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden group hover:border-red-500/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Critical Operations</span>
-            <div className="p-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20">
-              <ShieldAlert className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-red-400">{stats.critical}</div>
-          <p className="mt-1 text-xs text-muted-foreground">Deletions, overrides & re-syncs</p>
-        </div>
-
-        <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden group hover:border-amber-500/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Warning Severity</span>
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-amber-400">{stats.warning}</div>
-          <p className="mt-1 text-xs text-muted-foreground">Suspensions and batch edits</p>
-        </div>
-
-        <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden group hover:border-blue-500/40 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Active Staff Actors</span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              <Users className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-blue-400">{stats.uniqueActors}</div>
-          <p className="mt-1 text-xs text-muted-foreground">Distinct users recorded</p>
-        </div>
+        <Kpi label="Matching events" value={String(data.meta.total)} hint="With the current filters" icon={<FileText className="h-4 w-4" />} />
+        <Kpi label="Action types" value={String(data.actions.length)} hint="Distinct actions recorded" icon={<ListTree className="h-4 w-4" />} />
+        <Kpi label="Actors on this page" value={String(pageActors)} hint="Distinct accounts" icon={<Users className="h-4 w-4" />} />
+        <Kpi label="Latest event" value={rows[0] ? fmt(rows[0].at) : '—'} hint="Newest first" icon={<CalendarClock className="h-4 w-4" />} small />
       </div>
 
-      {/* Filter and Table Card */}
       <div className="rounded-xl border border-border/70 bg-card/60 p-5 backdrop-blur-md shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-border/50">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mr-1">
-              <Filter className="h-3.5 w-3.5" /> Severity:
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pb-2 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5" /> Action:
             </span>
-            {['all', 'critical', 'warning', 'info'].map((sev) => (
-              <Button
-                key={sev}
-                size="sm"
-                variant={selectedSeverity === sev ? 'default' : 'outline'}
-                onClick={() => setSelectedSeverity(sev)}
-                className={`h-7 text-xs capitalize ${
-                  selectedSeverity === sev
-                    ? 'bg-primary text-primary-foreground font-medium'
-                    : 'border-border/60 hover:bg-muted/50'
-                }`}
-              >
-                {sev}
-              </Button>
-            ))}
+            <select
+              value={action}
+              onChange={(e) => {
+                setAction(e.target.value);
+                resetPage();
+              }}
+              className="h-8 rounded-lg border border-border/70 bg-background/80 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">All actions</option>
+              {data.actions.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
           </div>
-
-          {uniqueEntities.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">Entity:</span>
-              <select
-                value={selectedEntity}
-                onChange={(e) => setSelectedEntity(e.target.value)}
-                className="h-8 rounded-lg border border-border/70 bg-background/80 px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="all">All Entity Types</option>
-                {uniqueEntities.map((ent) => (
-                  <option key={ent} value={ent}>
-                    {ent}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>From</span>
+            <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); resetPage(); }} className="h-8 w-36 text-xs" />
+            <span>to</span>
+            <Input type="date" value={to} onChange={(e) => { setTo(e.target.value); resetPage(); }} className="h-8 w-36 text-xs" />
+            {(from || to || action) && (
+              <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setFrom(''); setTo(''); setAction(''); resetPage(); }}>
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
 
         <DataTable
           columns={columns}
-          data={filteredLogs}
-          searchKey="actor"
-          searchPlaceholder="Filter audit trail by actor, entity or action..."
-          searchFilterFn={searchFilter}
+          data={rows}
+          isLoading={isFetching && !rows.length}
+          searchPlaceholder="Search action, entity, actor, IP or detail..."
+          emptyTitle="No audit events"
+          emptyDescription="Nothing matches these filters."
+          getRowId={(row) => row.id}
+          server={{
+            page,
+            pageSize,
+            total: data.meta.total,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+            search,
+            onSearchChange: (value) => {
+              setSearch(value);
+              setPage(1);
+            },
+          }}
         />
       </div>
+    </div>
+  );
+}
+
+function Kpi({ label, value, hint, icon, small }: { label: string; value: string; hint: string; icon: React.ReactNode; small?: boolean }) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md hover:border-primary/40 transition-colors">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">{icon}</div>
+      </div>
+      <div className={cn('mt-3 font-bold tracking-tight text-foreground', small ? 'text-sm' : 'text-2xl')}>{value}</div>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
     </div>
   );
 }

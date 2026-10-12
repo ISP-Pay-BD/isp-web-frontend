@@ -1,66 +1,39 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Package } from '@/data/shared/types';
-import { getAuthUserId } from '@/lib/api/auth-utils';
-import { http } from '@/lib/api/client';
+import { packagesApi } from '../api/packages.api';
+import type { PackageFormValues } from '../schemas/package.schema';
 
-export function usePackages() {
+const PACKAGES = ['admin', 'packages'] as const;
+
+export function usePackages(params: { page: number; perPage: number; search?: string; status?: string }) {
   return useQuery({
-    queryKey: ['admin', 'domain', 'packages'],
-    queryFn: async () => {
-      const items = await adminService.getPackages();
-      return {
-        items: items || [],
-        popPackages: items || [],
-      };
-    },
+    queryKey: [...PACKAGES, 'list', params],
+    queryFn: () => packagesApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
-export function useCreatePackage() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: Partial<Package>) => {
-      const resellerId = getAuthUserId();
-      return await http.post(`/v1/reseller/packages/${resellerId}`, payload);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package created');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to create package'),
-  });
+export function usePackageSummary() {
+  return useQuery({ queryKey: [...PACKAGES, 'summary'], queryFn: packagesApi.summary });
 }
 
-export function useUpdatePackage() {
+/** Package writes; the form maps validation errors itself (meta.silent). */
+export function usePackageMutations() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Partial<Package> }) => {
-      const resellerId = getAuthUserId();
-      return await http.put(`/v1/reseller/packages/${resellerId}/${id}`, payload);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package updated');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to update package'),
-  });
-}
-
-export function useDeletePackage() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const resellerId = getAuthUserId();
-      return await http.delete(`/v1/reseller/packages/${resellerId}/${id}`);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package deleted');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to delete package'),
-  });
+  const refresh = (message: string) => () => {
+    qc.invalidateQueries({ queryKey: PACKAGES });
+    qc.invalidateQueries({ queryKey: ['admin', 'options', 'packages'] });
+    toast.success(message);
+  };
+  return {
+    create: useMutation({ mutationFn: (v: PackageFormValues) => packagesApi.create(v), meta: { silent: true }, onSuccess: refresh('Package created') }),
+    update: useMutation({
+      mutationFn: (v: { id: string; values: PackageFormValues }) => packagesApi.update(v.id, v.values),
+      meta: { silent: true },
+      onSuccess: refresh('Package updated'),
+    }),
+    remove: useMutation({ mutationFn: (id: string) => packagesApi.remove(id), onSuccess: refresh('Package deleted') }),
+  };
 }

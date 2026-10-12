@@ -1,127 +1,111 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-import {
-  Plus,
-  Download,
-  Server,
-  Layers,
-  CheckCircle2,
-  RefreshCw,
-  Cpu,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Zap,
-} from 'lucide-react';
+import { useOltCatalog } from '@/features/admin/olt/hooks/useOltDevices';
+import { parseBackendDate, type OltBrandOption, type OltBrandUsage } from '@/features/admin/olt/types';
+import { formatDateTime } from '@/lib/format/date';
+import { Download, Server, Layers, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-type Row = IspOpsData['oltVendors'][number];
+/** One vendor: the form's brand catalogue joined with this tenant's usage. */
+interface VendorRow {
+  id: string;
+  name: string;
+  code: string;
+  inCatalog: boolean;
+  syncSupported: boolean;
+  olts: number;
+  onusTotal: number;
+  onusOnline: number;
+  lastSyncedAt: string | null;
+}
 
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
+function buildRows(brands: OltBrandOption[], usage: OltBrandUsage[]): VendorRow[] {
+  const used = new Map(usage.map((u) => [u.brand.toLowerCase(), u]));
+  const rows: VendorRow[] = brands.map((b) => {
+    const u = used.get(b.value.toLowerCase());
+    used.delete(b.value.toLowerCase());
+    return {
+      id: b.value,
+      name: b.label,
+      code: b.value,
+      inCatalog: true,
+      syncSupported: b.syncSupported,
+      olts: u?.olts ?? 0,
+      onusTotal: u?.onusTotal ?? 0,
+      onusOnline: u?.onusOnline ?? 0,
+      lastSyncedAt: u?.lastSyncedAt ?? null,
+    };
+  });
+  // Brands stored on older OLT rows that the current form no longer offers.
+  for (const u of used.values()) {
+    rows.push({
+      id: `legacy:${u.brand}`,
+      name: u.label,
+      code: u.brand,
+      inCatalog: false,
+      syncSupported: u.syncSupported,
+      olts: u.olts,
+      onusTotal: u.onusTotal,
+      onusOnline: u.onusOnline,
+      lastSyncedAt: u.lastSyncedAt,
+    });
+  }
+  return rows.sort((a, b) => b.olts - a.olts || a.name.localeCompare(b.name));
+}
+
+const searchFilter = (row: LegacyRow<VendorRow>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.name).toLowerCase().includes(q) ||
-    String(r.models).toLowerCase().includes(q) ||
-    String(r.profileCount).toLowerCase().includes(q) ||
-    String(r.lastSync).toLowerCase().includes(q)
-  );
+  return row.original.name.toLowerCase().includes(q) || row.original.code.toLowerCase().includes(q);
 };
 
+const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+function syncedLabel(value: string | null): string {
+  const d = parseBackendDate(value);
+  return d ? formatDateTime(d) : '—';
+}
+
 export function OltVendorsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [vendors, setVendors] = useState<Row[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const { data, isLoading, isError, refetch } = useOltCatalog();
+  const rows = useMemo(() => (data ? buildRows(data.brands, data.usage) : []), [data]);
 
-  // Form State
-  const [name, setName] = useState('');
-  const [models, setModels] = useState('');
-  const [profileCount, setProfileCount] = useState('8');
-
-  const initialRows = data?.oltVendors ?? [];
-  const rows = vendors.length > 0 ? vendors : initialRows;
-
-  const totalVendors = rows.length;
-  const totalProfiles = rows.reduce((s, r) => s + (r.profileCount || 0), 0);
-
-  const handleAddVendor = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Please enter vendor name');
-      return;
-    }
-
-    const newVendor: Row = {
-      id: `ov_${Date.now()}`,
-      name,
-      models: models.trim() || 'GPON / EPON Standard Series',
-      profileCount: Number(profileCount) || 5,
-      lastSync: new Date().toISOString().split('T')[0],
-    };
-
-    setVendors((prev) => [newVendor, ...(prev.length > 0 ? prev : initialRows)]);
-    toast.success(`OLT Vendor profile "${newVendor.name}" registered.`);
-    setModalOpen(false);
-    setName('');
-    setModels('');
-  };
+  const catalogCount = rows.filter((r) => r.inCatalog).length;
+  const vendorsInUse = rows.filter((r) => r.olts > 0).length;
+  const driverCount = rows.filter((r) => r.inCatalog && r.syncSupported).length;
 
   const handleExportCsv = () => {
-    const headers = ['Vendor Name', 'Supported Models', 'Configured Profiles', 'Last Telemetry Sync'];
-    const csvRows = rows.map((r) => [
-      `"${r.name}"`,
-      `"${r.models}"`,
-      r.profileCount,
-      r.lastSync,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const headers = ['Vendor', 'Code', 'Sync Driver', 'OLTs', 'Online ONUs', 'Total ONUs', 'Last Sync'];
+    const lines = rows.map((r) =>
+      [r.name, r.code, r.syncSupported ? 'installed' : 'missing', r.olts, r.onusOnline, r.onusTotal, r.lastSyncedAt ?? '']
+        .map(csvCell)
+        .join(','),
+    );
+    const blob = new Blob([[headers.map(csvCell).join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const href = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `olt_vendors_${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = href;
+    link.download = `olt_vendors_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('OLT vendor profiles exported to CSV');
+    URL.revokeObjectURL(href);
+    toast.success('OLT vendors exported to CSV');
   };
 
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<VendorRow, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Vendor & Brand Template',
+        header: 'Vendor / Brand',
         enableHiding: false,
         size: 240,
         cell: ({ row }) => (
@@ -130,74 +114,60 @@ export function OltVendorsPage() {
               <Server className="h-4 w-4" />
             </div>
             <div>
-              <span className="font-semibold text-foreground text-sm">{String(row.original.name)}</span>
-              <span className="text-xs text-muted-foreground block font-mono">SNMP / Telnet MIB</span>
+              <span className="font-semibold text-foreground text-sm">{row.original.name}</span>
+              <span className="text-xs text-muted-foreground block font-mono">
+                {row.original.code}
+                {!row.original.inCatalog && ' · not in the OLT form'}
+              </span>
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'models',
-        header: 'Supported Hardware Models',
-        size: 280,
-        cell: ({ row }) => (
-          <span className="text-sm text-foreground font-mono">{String(row.original.models)}</span>
-        ),
+        accessorKey: 'syncSupported',
+        header: 'Sync / Diagnostics Driver',
+        size: 200,
+        cell: ({ row }) =>
+          row.original.syncSupported ? (
+            <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+              <CheckCircle2 className="h-3 w-3" />
+              Installed
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="gap-1 bg-muted text-muted-foreground">
+              <XCircle className="h-3 w-3" />
+              Not available
+            </Badge>
+          ),
       },
       {
-        accessorKey: 'profileCount',
-        header: 'Profiles Configured',
-        size: 160,
+        accessorKey: 'olts',
+        header: 'OLTs',
+        size: 100,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background font-mono tabular-nums font-semibold">
-            {String(row.original.profileCount)} profiles
+            {row.original.olts}
           </Badge>
         ),
       },
       {
-        accessorKey: 'lastSync',
-        header: 'Last Telemetry Sync',
-        size: 160,
+        accessorKey: 'onusTotal',
+        header: 'ONUs (online / total)',
+        size: 170,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-            <span>{String(row.original.lastSync)}</span>
-          </div>
+          <span className="font-mono text-xs tabular-nums">
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{row.original.onusOnline}</span>
+            <span className="text-muted-foreground"> / {row.original.onusTotal}</span>
+          </span>
         ),
       },
       {
-        id: 'actions',
-        header: '',
-        size: 60,
-        cell: ({ row }) => {
-          const r = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Vendor Options</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.success(`MIB tables refreshed for ${r.name}`)}>
-                  <RefreshCw className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                  Sync MIB Definitions
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Editing template for ${r.name}`)}>
-                  <Edit className="h-3.5 w-3.5 mr-2" />
-                  Edit Vendor Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`Vendor ${r.name} removed`)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Delete Template
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
+        accessorKey: 'lastSyncedAt',
+        header: 'Last Sync',
+        size: 180,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{syncedLabel(row.original.lastSyncedAt)}</span>
+        ),
       },
     ],
     [],
@@ -211,8 +181,8 @@ export function OltVendorsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="OLT Multi-Vendor Drivers & Templates"
-        subtitle="Manage hardware templates, SNMP MIB drivers, optical threshold profiles for Huawei, ZTE, BDCOM, and VSOL."
+        title="OLT Multi-Vendor Drivers"
+        subtitle="Brands the OLT form supports, which have a sync / diagnostics driver on this server, and how many of your OLTs use each."
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'OLT', href: '/admin/olt' },
@@ -220,13 +190,9 @@ export function OltVendorsPage() {
         ]}
         actions={
           <div className="flex items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={!rows.length} className="h-9">
               <Download className="mr-2 h-4 w-4" />
               Export Directory
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Onboard Vendor
             </Button>
           </div>
         }
@@ -240,99 +206,48 @@ export function OltVendorsPage() {
             <Server className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalVendors}
+            {catalogCount}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Multi-vendor drivers</p>
+          <p className="mt-1 text-xs text-muted-foreground">Brands the OLT form accepts</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Configured Profiles</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Vendors In Use</span>
             <Layers className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalProfiles}
+            {vendorsInUse}
           </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Provisioning templates</p>
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            Across {data.summary.olts} OLTs
+          </p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Driver Status</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Sync Drivers</span>
             <CheckCircle2 className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            100% Sync
+            {driverCount}
+            <span className="text-sm font-medium text-muted-foreground"> / {catalogCount}</span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">MIB telemetry active</p>
+          <p className="mt-1 text-xs text-muted-foreground">Installed on this server</p>
         </div>
       </div>
 
-      {/* Main Data Table */}
+      {/* Main Data Table — the catalogue is a fixed, small list */}
       <DataTable
         columns={columns}
         data={rows}
+        getRowId={(row) => row.id}
         searchKey="name"
         searchFilterFn={searchFilter}
-        searchPlaceholder="Search vendor by name, model, or sync status..."
+        searchPlaceholder="Search vendor by name or code..."
+        emptyTitle="No OLT vendors"
+        emptyDescription="The server returned no OLT brand catalogue."
       />
-
-      {/* Onboard Vendor Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleAddVendor}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Server className="h-5 w-5 text-primary" />
-                Add OLT Vendor Template
-              </DialogTitle>
-              <DialogDescription>
-                Configure hardware series MIB definitions and auto-provisioning parameters.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="ov-name">Vendor / Brand Name *</Label>
-                <Input
-                  id="ov-name"
-                  placeholder="e.g. Huawei SmartAX or ZTE C320"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="ov-models">Supported Model Series</Label>
-                <Input
-                  id="ov-models"
-                  placeholder="e.g. MA5608T, MA5800-X7, MA5800-X15"
-                  value={models}
-                  onChange={(e) => setModels(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="ov-prof">Initial Profiles Count</Label>
-                <Input
-                  id="ov-prof"
-                  type="number"
-                  value={profileCount}
-                  onChange={(e) => setProfileCount(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save Template</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,56 +1,90 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Wifi,
-  Lock,
-  ArrowLeft,
-  ShieldCheck,
-} from 'lucide-react';
+import { Wifi, Lock, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CustomerPageShell } from '@/features/customer/shared';
-import { useCustomerRouter } from '../hooks/use-customer-router';
-import { updateWifiSchema, type UpdateWifiInput } from '@/features/customer/shared';
-import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  CustomerPageShell,
+  CustomerLoadingSkeleton,
+  CustomerErrorState,
+  updateWifiSchema,
+  WIFI_BANDS,
+  type UpdateWifiInput,
+} from '@/features/customer/shared';
+import { useChangeWifi, useRouterTargets } from '../hooks/use-customer-router';
+import { RouterActionResultPanel } from '../components/RouterActionResultPanel';
+import type { RouterActionResult } from '@/lib/api/adapters/customer.adapter';
+
+/** Labels for the backend's `band` values (both | 2g | 5g). */
+const BAND_LABELS: Record<(typeof WIFI_BANDS)[number], string> = {
+  both: 'Both bands',
+  '2g': '2.4 GHz only',
+  '5g': '5 GHz only',
+};
 
 export function CustomerWifiSettingsPage() {
-  const router = useRouter();
-  const { data, updateWifiMutation } = useCustomerRouter();
+  const targets = useRouterTargets();
+  const changeWifi = useChangeWifi();
+  const [result, setResult] = useState<RouterActionResult | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
+    reset,
     formState: { errors },
   } = useForm<UpdateWifiInput>({
     resolver: zodResolver(updateWifiSchema),
-    defaultValues: {
-      ssid: String(data?.router?.wifiSsid ?? 'Rahim-Home-5G'),
-      password: '',
-      securityMode: 'WPA2-PSK [AES]',
-      hideSsid: false,
-    },
+    // The backend never returns the current SSID/password, so the form starts empty.
+    defaultValues: { ssid: '', password: '', band: 'both', targetId: undefined },
   });
 
-  const onSubmit = async (values: UpdateWifiInput) => {
-    try {
-      await updateWifiMutation.mutateAsync(values);
-      toast.success('WiFi settings updated successfully! Please re-connect with your new password.');
-      router.push('/customer/router');
-    } catch {
-      toast.error('Failed to update WiFi settings. Please try again.');
-    }
+  const targetId = watch('targetId');
+
+  const onSubmit = (values: UpdateWifiInput) => {
+    changeWifi.mutate(
+      { ssid: values.ssid, password: values.password, band: values.band, targetId: values.targetId },
+      {
+        onSuccess: (res) => {
+          setResult(res);
+          if (res.status === 'success') reset({ ssid: '', password: '', band: values.band, targetId: values.targetId });
+        },
+      },
+    );
   };
+
+  if (targets.isLoading) {
+    return (
+      <CustomerPageShell title="WiFi Settings" subtitle="Loading your router...">
+        <CustomerLoadingSkeleton variant="form" />
+      </CustomerPageShell>
+    );
+  }
+
+  if (targets.isError || !targets.data) {
+    return (
+      <CustomerPageShell title="WiFi Settings" subtitle="Wireless network settings">
+        <CustomerErrorState message={targets.error?.message || undefined} onRetry={() => targets.refetch()} />
+      </CustomerPageShell>
+    );
+  }
+
+  const list = targets.data;
+  const selected = list.find((t) => t.id === targetId) ?? list[0];
+  const isAuto = selected?.actions.changeWifi === 'auto';
 
   return (
     <CustomerPageShell
       title="WiFi Settings"
-      subtitle="Modify your wireless network broadcast name (SSID) and security passphrase."
+      subtitle="Change your wireless network name (SSID) and password."
       breadcrumbs={[
         { label: 'Customer', href: '/customer/dashboard' },
         { label: 'Router', href: '/customer/router' },
@@ -65,7 +99,7 @@ export function CustomerWifiSettingsPage() {
         </Link>
       }
     >
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto space-y-6">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pb-4">
@@ -74,47 +108,76 @@ export function CustomerWifiSettingsPage() {
                 Wireless Network Configuration
               </CardTitle>
               <CardDescription className="text-xs">
-                Changes will be provisioned directly to your connected ONT / ONU gateway router.
+                {isAuto
+                  ? 'The change is sent to your router remotely.'
+                  : 'Your router cannot be changed remotely — you will get step-by-step instructions instead.'}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {list.length > 1 && (
+                <div className="space-y-1.5">
+                  <Label>Router</Label>
+                  <Select
+                    items={Object.fromEntries(list.map((t) => [t.id, t.label || 'My router']))}
+                    value={selected?.id ?? ''}
+                    onValueChange={(val) => setValue('targetId', val ? String(val) : undefined)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select router" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {list.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.label || 'My router'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="ssid">WiFi Network Name (SSID)</Label>
-                <Input
-                  id="ssid"
-                  placeholder="e.g. Rahim-Home-5G"
-                  {...register('ssid')}
-                />
-                {errors.ssid && (
-                  <p className="text-xs text-destructive">{errors.ssid.message}</p>
-                )}
+                <Input id="ssid" autoComplete="off" {...register('ssid')} />
+                {errors.ssid && <p className="text-xs text-destructive">{errors.ssid.message}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">New WiFi Passphrase (WPA2)</Label>
+                <Label htmlFor="password">New WiFi Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Minimum 8 characters (letters, numbers)"
+                  autoComplete="new-password"
+                  placeholder="Minimum 8 characters"
                   {...register('password')}
                 />
-                {errors.password && (
-                  <p className="text-xs text-destructive">{errors.password.message}</p>
-                )}
-                <span className="text-[11px] text-muted-foreground block">
-                  Must be at least 8 characters. Avoid simple patterns like 12345678.
-                </span>
+                {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
               </div>
 
-              <div className="p-3.5 rounded-xl border bg-muted/40 text-xs space-y-2 text-muted-foreground">
-                <div className="flex items-center gap-2 font-semibold text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                  Security: WPA2-PSK [AES] (Recommended)
-                </div>
-                <p>
-                  After saving, all currently connected phones, tablets, and smart TVs will be disconnected and will need to enter the new password.
-                </p>
+              <div className="space-y-1.5">
+                <Label>Band</Label>
+                <Select
+                  items={BAND_LABELS}
+                  value={watch('band')}
+                  onValueChange={(val) => val && setValue('band', val as UpdateWifiInput['band'])}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WIFI_BANDS.map((band) => (
+                      <SelectItem key={band} value={band}>
+                        {BAND_LABELS[band]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="p-3.5 rounded-xl border bg-muted/40 text-xs flex items-start gap-2 text-muted-foreground">
+                <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                <p>After a successful change, devices on your WiFi must reconnect with the new password.</p>
               </div>
 
               <div className="pt-3 border-t flex justify-end gap-3">
@@ -123,18 +186,16 @@ export function CustomerWifiSettingsPage() {
                     Cancel
                   </Button>
                 </Link>
-                <Button
-                  type="submit"
-                  disabled={updateWifiMutation.isPending}
-                  className="font-bold gap-2 shadow-sm"
-                >
+                <Button type="submit" disabled={changeWifi.isPending} className="font-bold gap-2 shadow-sm">
                   <Lock className="h-4 w-4" />
-                  {updateWifiMutation.isPending ? 'Saving to Router...' : 'Save & Restart WiFi'}
+                  {changeWifi.isPending ? 'Sending…' : 'Save WiFi Settings'}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </form>
+
+        {result && <RouterActionResultPanel title="WiFi change" result={result} />}
       </div>
     </CustomerPageShell>
   );

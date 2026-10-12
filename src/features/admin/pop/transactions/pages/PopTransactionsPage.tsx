@@ -1,285 +1,197 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
-  Search,
   ArrowDownCircle,
   ArrowUpCircle,
-  ArrowLeftRight,
-  TrendingUp,
-  TrendingDown,
-  X,
   Download,
   Building2,
   Calendar,
   Receipt,
   Printer,
   FileText,
-  Copy,
-  Wallet,
 } from 'lucide-react';
-import { usePopData } from '../../hooks/use-pop';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { usePopFunding, usePops, type PopFundingEntry, type PopReseller } from '../../hooks/use-pop';
+import { PopSelect } from '../../components/PopSelect';
+import { TableSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import type { PopTransaction } from '../../hooks/use-pop';
+import { downloadCsv } from '@/features/admin/accounting/shared/table-utils';
 
-type FilterType = 'all' | 'credit' | 'debit';
+type FilterType = '' | 'credit' | 'debit';
 
 export function PopTransactionsPage() {
-  const { data, isLoading, isError, refetch } = usePopData();
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [selectedTx, setSelectedTx] = useState<PopTransaction | null>(null);
+  const [pop, setPop] = useState<PopReseller | null>(null);
+  const [filterType, setFilterType] = useState<FilterType>('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selectedTx, setSelectedTx] = useState<PopFundingEntry | null>(null);
+  const { data, isLoading, isError, error, refetch, isFetching } = usePopFunding(pop?.id ?? null, {
+    page,
+    pageSize,
+    type: filterType,
+  });
 
-  const transactions = data?.transactions ?? [];
+  // Same query (and cache entry) as the PopSelect options — tells us when the tenant has no POPs.
+  const popsQuery = usePops({ page: 1, pageSize: 100 });
+  const noPops = popsQuery.isSuccess && popsQuery.data.meta.total === 0;
 
-  const stats = useMemo(() => {
-    const credit = transactions.filter((t) => t.type === 'credit');
-    const debit = transactions.filter((t) => t.type === 'debit');
-    const totalCredit = credit.reduce((a, t) => a + t.amountBdt, 0);
-    const totalDebit = debit.reduce((a, t) => a + Math.abs(t.amountBdt), 0);
-    const net = totalCredit - totalDebit;
-    return {
-      creditCount: credit.length,
-      debitCount: debit.length,
-      totalCredit,
-      totalDebit,
-      net,
-    };
-  }, [transactions]);
+  const transactions = data?.items ?? [];
+  const summary = data?.summary;
 
-  const filtered = useMemo(() => {
-    return transactions.filter((t) => {
-      const matchesSearch =
-        search === '' ||
-        t.popName.toLowerCase().includes(search.toLowerCase()) ||
-        t.note.toLowerCase().includes(search.toLowerCase()) ||
-        t.id?.toLowerCase().includes(search.toLowerCase());
-      const matchesType = filterType === 'all' || t.type === filterType;
-      return matchesSearch && matchesType;
-    });
-  }, [transactions, search, filterType]);
-
-  const handleExportCsv = () => {
-    const headers = ['Transaction ID', 'Date', 'POP Reseller', 'Type', 'Amount (BDT)', 'Note'];
-    const rows = filtered.map((t) => [
-      t.id || 'N/A',
-      t.date,
-      t.popName,
-      t.type,
-      t.amountBdt,
-      t.note,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `pop_transactions_${new Date().toISOString().split('T')[0]}.csv`,
+  const handleExportCsv = () =>
+    downloadCsv(
+      `pop_transactions_${pop?.name ?? 'pop'}_${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Entry ID', 'Received Date', 'Type', 'Amount (BDT)', 'Paid Via', 'Invoice', 'Status', 'Comments'],
+      transactions.map((t) => [t.id, t.receivedDate, t.type, t.amountBdt, t.paidVia, t.invoiceNumber, t.status, t.comments]),
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('POP transactions exported to CSV');
-  };
-
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
-  };
-
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError) {
-    return (
-      <EmptyState
-        title="Failed to load transactions"
-        description="Could not fetch POP transaction ledger."
-        actionLabel="Retry"
-        onAction={() => refetch()}
-      />
-    );
-  }
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="POP Transactions"
-        subtitle="Comprehensive double-entry audit ledger for funding credits and debit settlements across all POP reseller hubs"
+        subtitle="Funding credits and debit settlements recorded against each POP reseller wallet"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'POP Suite' },
           { label: 'POP Transactions' },
         ]}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Ledger
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={transactions.length === 0}
+            className="text-xs border-border/80 hover:bg-accent"
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Page
+          </Button>
         }
       />
 
-      {/* KPI Stats Ribbon */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">{transactions.length}</span>{' '}
-          <span className="text-muted-foreground">total ledger entries</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={stats.totalCredit} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">funding inflows ({stats.creditCount})</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-destructive">
-            <CurrencyDisplay amount={stats.totalDebit} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">settlement outflows ({stats.debitCount})</span>
-        </p>
-        <p>
-          <span
-            className={cn(
-              'font-semibold tabular-nums',
-              stats.net >= 0
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-destructive',
-            )}
-          >
-            <CurrencyDisplay amount={stats.net} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">net cash position</span>
-        </p>
-      </div>
-
-      {/* Filter & Search Toolbar */}
-      <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search POP reseller or memo note..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 h-9 bg-background border-border/60 text-sm shadow-sm"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
-              {(['all', 'credit', 'debit'] as const).map((t) => (
-                <Button
-                  key={t}
-                  type="button"
-                  size="sm"
-                  variant={filterType === t ? 'default' : 'ghost'}
-                  onClick={() => setFilterType(t)}
-                  className="text-xs h-7 px-2.5 capitalize"
-                >
-                  {t === 'all'
-                    ? `All (${transactions.length})`
-                    : t === 'credit'
-                      ? `Inflows (${stats.creditCount})`
-                      : `Outflows (${stats.debitCount})`}
-                </Button>
-              ))}
-            </div>
-            <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1 bg-muted/50">
-              {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-            </Badge>
-          </div>
-        </CardContent>
+      {/* Filter Toolbar */}
+      <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <PopSelect
+          value={pop}
+          onChange={(p) => {
+            setPop(p);
+            setPage(1);
+          }}
+        />
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
+          {(['', 'credit', 'debit'] as const).map((t) => (
+            <Button
+              key={t || 'all'}
+              type="button"
+              size="sm"
+              variant={filterType === t ? 'default' : 'ghost'}
+              onClick={() => {
+                setFilterType(t);
+                setPage(1);
+              }}
+              className="text-xs h-7 px-2.5"
+            >
+              {t === '' ? 'All' : t === 'credit' ? 'Inflows' : 'Outflows'}
+            </Button>
+          ))}
+        </div>
       </Card>
 
-      {/* Main Transactions Table */}
+      {/* KPI Stats Ribbon (totals over the whole filtered ledger) */}
+      {summary && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums text-foreground">{data?.meta.total ?? 0}</span>{' '}
+            <span className="text-muted-foreground">ledger entries</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+              <CurrencyDisplay amount={summary.creditTotal} className="inline font-semibold" />
+            </span>{' '}
+            <span className="text-muted-foreground">funding inflows</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-destructive">
+              <CurrencyDisplay amount={summary.debitTotal} className="inline font-semibold" />
+            </span>{' '}
+            <span className="text-muted-foreground">settlement outflows</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-foreground">
+              <CurrencyDisplay amount={summary.balance} className="inline font-semibold" />
+            </span>{' '}
+            <span className="text-muted-foreground">current wallet balance</span>
+          </p>
+        </div>
+      )}
+
       <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-        {filtered.length === 0 ? (
+        {noPops ? (
+          <div className="py-16">
+            <EmptyState title="No POP resellers yet" description="Register a POP to start recording wallet funding." />
+          </div>
+        ) : popsQuery.isError ? (
+          <div className="py-16">
+            <EmptyState
+              title="Failed to load POPs"
+              description={popsQuery.error?.message}
+              actionLabel="Retry"
+              onAction={() => popsQuery.refetch()}
+            />
+          </div>
+        ) : !pop || isLoading ? (
+          <div className="p-6">
+            <TableSkeleton />
+          </div>
+        ) : isError ? (
+          <div className="py-16">
+            <EmptyState
+              title="Failed to load transactions"
+              description={error?.message ?? 'Could not fetch the POP funding ledger.'}
+              actionLabel="Retry"
+              onAction={() => refetch()}
+            />
+          </div>
+        ) : transactions.length === 0 ? (
           <div className="py-16">
             <EmptyState
               title="No transactions found"
-              description="No POP funding or remittance history matches your filters."
-              actionLabel="Reset Search"
-              onAction={() => {
-                setSearch('');
-                setFilterType('all');
-              }}
+              description={`No ${filterType ? `${filterType} ` : ''}funding entries recorded for ${pop.name}.`}
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className={cn('overflow-x-auto transition-opacity', isFetching && 'opacity-60')}>
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="w-[120px]">
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">Date</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">POP Reseller</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">Type</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">Amount (BDT)</span>
-                  </TableHead>
-                  <TableHead>
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">Transaction Note / Memo</span>
-                  </TableHead>
-                  <TableHead className="w-[80px] text-right">
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground">Receipt</span>
-                  </TableHead>
+                  <TableHead className="w-[120px] text-xs">Date</TableHead>
+                  <TableHead className="text-xs">POP Reseller</TableHead>
+                  <TableHead className="text-xs">Type</TableHead>
+                  <TableHead className="text-xs">Amount (BDT)</TableHead>
+                  <TableHead className="text-xs">Paid Via</TableHead>
+                  <TableHead className="text-xs">Memo</TableHead>
+                  <TableHead className="w-[80px] text-right text-xs">Receipt</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((tx, idx) => (
-                  <tr
-                    key={`${tx.date}-${tx.popName}-${idx}`}
+                {transactions.map((tx) => (
+                  <TableRow
+                    key={tx.id}
                     className="group border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => setSelectedTx(tx)}
                   >
                     <TableCell className="py-3.5">
                       <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
-                        <span>{tx.date}</span>
+                        <span>{tx.receivedDate || tx.createdAt.slice(0, 10)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-3.5">
@@ -288,7 +200,7 @@ export function PopTransactionsPage() {
                           <Building2 className="h-3.5 w-3.5" />
                         </div>
                         <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                          {tx.popName}
+                          {pop.name}
                         </span>
                       </div>
                     </TableCell>
@@ -315,19 +227,16 @@ export function PopTransactionsPage() {
                       <span
                         className={cn(
                           'font-mono text-sm font-bold',
-                          tx.type === 'credit'
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-destructive',
+                          tx.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive',
                         )}
                       >
                         {tx.type === 'credit' ? '+' : '-'}
-                        <CurrencyDisplay amount={Math.abs(tx.amountBdt)} />
+                        <CurrencyDisplay amount={tx.amountBdt} />
                       </span>
                     </TableCell>
+                    <TableCell className="py-3.5 text-xs text-muted-foreground">{tx.paidVia || '—'}</TableCell>
                     <TableCell className="py-3.5">
-                      <span className="text-xs text-muted-foreground line-clamp-1 max-w-[320px]">
-                        {tx.note}
-                      </span>
+                      <span className="text-xs text-muted-foreground line-clamp-1 max-w-[320px]">{tx.comments || '—'}</span>
                     </TableCell>
                     <TableCell className="py-3.5 text-right">
                       <Button
@@ -338,14 +247,26 @@ export function PopTransactionsPage() {
                           setSelectedTx(tx);
                         }}
                         className="h-7 px-2 text-xs text-primary hover:bg-primary/10"
+                        aria-label="Open voucher"
                       >
                         <FileText className="h-3.5 w-3.5" />
                       </Button>
                     </TableCell>
-                  </tr>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              className="border-t border-border/50 px-4 py-3"
+              currentPage={page}
+              pageSize={pageSize}
+              totalItems={data?.meta.total ?? 0}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
           </div>
         )}
       </Card>
@@ -361,9 +282,7 @@ export function PopTransactionsPage() {
                 </div>
                 <div>
                   <DialogTitle className="text-base font-bold">Transaction Voucher</DialogTitle>
-                  <DialogDescription className="text-xs font-mono">
-                    {selectedTx?.id || 'POP-TX-REC'}
-                  </DialogDescription>
+                  <DialogDescription className="text-xs font-mono">Entry #{selectedTx?.id}</DialogDescription>
                 </div>
               </div>
               {selectedTx && (
@@ -385,22 +304,23 @@ export function PopTransactionsPage() {
           {selectedTx && (
             <div className="space-y-4 pt-2 text-xs">
               <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">POP Reseller:</span>
-                  <span className="font-bold text-foreground">{selectedTx.popName}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Posting Date:</span>
-                  <span className="font-mono text-foreground">{selectedTx.date}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Transaction Direction:</span>
-                  <span className="font-semibold capitalize text-foreground">{selectedTx.type}</span>
-                </div>
+                {[
+                  ['POP Reseller', pop?.name ?? '—'],
+                  ['Received Date', selectedTx.receivedDate || '—'],
+                  ['Paid Via', selectedTx.paidVia || '—'],
+                  ['Invoice Number', selectedTx.invoiceNumber || '—'],
+                  ['Status', selectedTx.status || '—'],
+                  ['Recorded At', selectedTx.createdAt || '—'],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between items-center py-0.5 border-b border-border/40">
+                    <span className="text-muted-foreground">{label}:</span>
+                    <span className="font-semibold text-foreground capitalize">{value}</span>
+                  </div>
+                ))}
                 <div className="flex flex-col gap-1 pt-1">
                   <span className="text-muted-foreground">Narration / Memo:</span>
                   <p className="text-foreground p-2 rounded-lg bg-background border border-border/50 font-mono text-[11px]">
-                    {selectedTx.note}
+                    {selectedTx.comments || '—'}
                   </p>
                 </div>
               </div>
@@ -415,8 +335,8 @@ export function PopTransactionsPage() {
               >
                 <span>Transaction Value:</span>
                 <span className="font-mono text-base">
-                  {selectedTx.type === 'credit' ? '+' : '-'}৳
-                  {Math.abs(selectedTx.amountBdt).toLocaleString()}
+                  {selectedTx.type === 'credit' ? '+' : '-'}
+                  <CurrencyDisplay amount={selectedTx.amountBdt} />
                 </span>
               </div>
 
@@ -424,15 +344,8 @@ export function PopTransactionsPage() {
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="text-xs">
                   <Printer className="mr-1.5 h-3.5 w-3.5" /> Print Voucher
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    toast.success('Voucher copied and downloaded');
-                    setSelectedTx(null);
-                  }}
-                  className="text-xs font-semibold"
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" /> Close
+                <Button size="sm" onClick={() => setSelectedTx(null)} className="text-xs font-semibold">
+                  Close
                 </Button>
               </div>
             </div>

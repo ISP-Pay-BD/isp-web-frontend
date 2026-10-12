@@ -54,16 +54,18 @@ USE/DO NOT →  docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
 ```
 src/app/           → thin routes only
 src/features/      → one module = one folder (pages, components, hooks, schemas, types)
-src/data/          → ALL static dummy data
-src/lib/mock-api/  → ONLY data access
+src/lib/api/       → zapi client (http, getPage, ApiError), services, adapters, case mappers
+src/data/marketing → marketing site copy ONLY (portals never import src/data)
 tests/             → outside src/app
 ```
 
 Reference backend (read-only): `../isppaybd_isp` — path map in **`docs/REFERENCE-MAP.md`**
 
-## Phase 1 scope
+## Data rule
 
-Static mock UI only. No backend API. All data from `src/data/` via mock-api.
+Every portal screen reads the real `zapi/` backend — no mock API, no dummy
+datasets, no `setTimeout` fakes, no hardcoded business numbers. Enforced by
+`tests/architecture/folder-structure.test.ts`. See `docs/API-INTEGRATION-TRACKER.md`.
 
 ## Current status
 
@@ -71,7 +73,7 @@ Static mock UI only. No backend API. All data from `src/data/` via mock-api.
 - **P0:** ✅ Complete — see `docs/P0-READY.md`
 - **Plan docs (MD):** ✅ Complete — see `docs/PLAN-STATUS.md`
 - **Phases 1–7:** ✅ Mock UI complete (dummy data) — inventory synced
-- **Phase 8:** ✅ **API integration complete** — all services wired to real `zapi/` backend
+- **Phase 8:** ✅ **API integration complete (verified 2026-10-11)** — every screen live on `zapi/`; mock layer deleted. Status, deploy steps (migrations/env/cron) and open decisions: `docs/API-INTEGRATION-TRACKER.md`
 - **Permissions nav filter:** ✅ `useFilteredNav` wired
 
 ## Git

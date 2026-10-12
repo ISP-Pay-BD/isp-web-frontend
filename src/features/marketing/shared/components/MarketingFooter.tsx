@@ -6,6 +6,9 @@ import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { useTranslations } from '../context/LocaleContext';
 import { ShieldCheck, Phone, Mail, MapPin, Sparkles, ArrowUpRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { http } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 
 const footerColumns = {
   product: [
@@ -28,13 +31,24 @@ const footerColumns = {
     { label: 'About Us', href: '/contact' },
     { label: 'Live Sandbox Demos', href: '/#try-it' },
     { label: 'Contact Support', href: '/contact' },
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
   ],
 };
 
+/** Legal pages the platform owner has published (GET /api/v1/public/legal) — only those are linked. */
+function useLegalLinks() {
+  return useQuery({
+    queryKey: ['marketing', 'legal'],
+    staleTime: 5 * 60_000,
+    queryFn: async ({ signal }) => {
+      const raw = await http.get<{ documents?: { slug: string; title: string }[] }>('/v1/public/legal', undefined, signal);
+      return (raw.documents ?? []).map((d) => ({ label: d.title, href: `/${d.slug}` }));
+    },
+  });
+}
+
 export function MarketingFooter() {
   const t = useTranslations();
+  const legalLinks = useLegalLinks().data ?? [];
 
   return (
     <footer className="bg-landing-bg relative z-[1] overflow-hidden border-t border-white/10 text-white">
@@ -68,7 +82,7 @@ export function MarketingFooter() {
             <div className="space-y-2 pt-1 font-mono text-xs text-white/60">
               <div className="flex items-center gap-2.5">
                 <Phone className="text-landing-cta h-3.5 w-3.5 shrink-0" />
-                <span>+880 1800-000000 (24/7 Hotline)</span>
+                <span>+880 1781-808231 (Support &amp; Sales)</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="text-landing-cta h-3.5 w-3.5 shrink-0" />
@@ -80,14 +94,8 @@ export function MarketingFooter() {
               </div>
             </div>
 
-            {/* Status Indicator */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              All Systems Operational · 99.9% Uptime
-            </div>
+            {/* Live status (GET /api/v1/public/status) — links to the status page */}
+            <FooterStatusBadge />
           </div>
 
           {/* Product Links */}
@@ -134,7 +142,7 @@ export function MarketingFooter() {
           <div className="lg:col-span-2">
             <h3 className="mb-4 text-xs font-bold tracking-wider text-white uppercase">Company</h3>
             <ul className="space-y-2.5 text-sm text-white/60">
-              {footerColumns.company.map((l) => (
+              {[...footerColumns.company, ...legalLinks].map((l) => (
                 <li key={l.label}>
                   <Link
                     href={l.href}
@@ -170,5 +178,34 @@ export function MarketingFooter() {
         </div>
       </div>
     </footer>
+  );
+}
+
+const STATUS_STYLE = {
+  operational: { dot: 'bg-emerald-500', ring: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400', label: 'All systems operational' },
+  degraded: { dot: 'bg-amber-500', ring: 'border-amber-500/20 bg-amber-500/10 text-amber-400', label: 'Some systems degraded' },
+  outage: { dot: 'bg-red-500', ring: 'border-red-500/20 bg-red-500/10 text-red-400', label: 'Service disruption' },
+} as const;
+
+/** Real platform health from the public status endpoint; hidden until it answers. */
+function FooterStatusBadge() {
+  const { data } = useQuery({
+    queryKey: ['marketing', 'status', 'footer'],
+    queryFn: ({ signal }) => http.get<{ overall?: string }>('/v1/public/status', undefined, signal),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const overall = data?.overall as keyof typeof STATUS_STYLE | undefined;
+  if (!overall || !STATUS_STYLE[overall]) return null;
+  const style = STATUS_STYLE[overall];
+
+  return (
+    <Link
+      href="/status"
+      className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80', style.ring)}
+    >
+      <span className={cn('relative inline-flex h-2 w-2 rounded-full', style.dot)} />
+      {style.label}
+    </Link>
   );
 }

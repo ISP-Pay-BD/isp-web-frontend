@@ -1,26 +1,12 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerService } from '@/lib/api/services/customer.service';
-
-export function useCustomerSubscription() {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ['customer', 'subscription'],
-    queryFn: () => customerService.getSubscription(),
-  });
-
-  const renewMutation = useMutation({
-    mutationFn: (packageId?: string) => customerService.renewSubscription(packageId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'subscription'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });
-    },
-  });
-
-  return {
-    ...query,
-    renewMutation,
-  };
-}
+/**
+ * The subscription payload (GET /v1/customer/subscription/index) is shared by
+ * the subscription, packages, profile, pay and auto-pay screens under one
+ * query key — the hooks live in the customer shared module.
+ */
+export {
+  useCustomerSubscription,
+  useRenewSubscription,
+  openPaymentPage,
+} from '@/features/customer/shared/hooks/use-customer-account';

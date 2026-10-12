@@ -1,332 +1,248 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
-import { toast } from 'sonner';
-import {
-  ShieldAlert,
-  AlertTriangle,
-  CheckCircle2,
-  ShieldCheck,
-  RefreshCw,
-  Eye,
-  PowerOff,
-  Radio,
-  FileCode,
-} from 'lucide-react';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
+import { ShieldAlert, CheckCircle2, RefreshCw, Eye, PowerOff, EyeOff, RotateCcw } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useFraudFlags, useRunFraudScan, useSetFraudStatus, type FraudCustomer, type FraudFlag, type FraudRule } from '../hooks/use-fraud';
+import { useDisconnectSession } from '../hooks/use-network-ops';
+import { useServerTable } from '../hooks/use-server-table';
+import { OptionSelect, fmtDateTime } from '../components/NetOpsControls';
 
-type Row = IspOpsData['fraudEvents'][number];
-
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.at).toLowerCase().includes(q) ||
-    String(r.customerName).toLowerCase().includes(q) ||
-    String(r.score).toLowerCase().includes(q) ||
-    String(r.reason).toLowerCase().includes(q) ||
-    String(r.status).toLowerCase().includes(q)
-  );
+const ruleLabel: Record<FraudRule, string> = {
+  duplicate_mac: 'Shared CPE MAC',
+  duplicate_nid: 'Multiple accounts on one NID',
+  duplicate_phone: 'Multiple accounts on one phone',
 };
 
+const statusClass: Record<string, string> = {
+  open: 'bg-destructive/10 text-destructive border-destructive/30',
+  resolved: 'bg-emerald-600 text-white border-transparent',
+  ignored: 'bg-muted text-muted-foreground',
+};
+
+/** Fraud / account-sharing flags from rule scans over the tenant's customers. */
 export function FraudPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [events, setEvents] = useState<Row[]>([]);
-  const [inspectEvent, setInspectEvent] = useState<Row | null>(null);
-  const [disconnectTarget, setDisconnectTarget] = useState<Row | null>(null);
+  const table = useServerTable();
+  const [statusFilter, setStatusFilter] = useState('open');
+  const { data, isLoading, isError, error, refetch } = useFraudFlags({ page: table.page, pageSize: table.pageSize, search: table.search, status: statusFilter });
+  const scan = useRunFraudScan();
+  const setStatus = useSetFraudStatus();
+  const disconnect = useDisconnectSession();
+  const [inspect, setInspect] = useState<FraudFlag | null>(null);
+  const [disconnectTarget, setDisconnectTarget] = useState<FraudCustomer | null>(null);
 
-  useMemo(() => {
-    if (data?.fraudEvents && events.length === 0) {
-      setEvents(data.fraudEvents);
-    }
-  }, [data?.fraudEvents, events.length]);
-
-  const rows = events.length > 0 ? events : (data?.fraudEvents ?? []);
-
-  const handleUpdateStatus = (index: number, newStatus: 'open' | 'cleared' | 'blocked') => {
-    setEvents((prev) =>
-      prev.map((e, i) => (i === index ? { ...e, status: newStatus } : e))
-    );
-    toast.success(`Fraud event status marked as "${newStatus}"`);
-  };
-
-  const handleDisconnectSession = () => {
-    if (!disconnectTarget) return;
-    toast.success(`RADIUS CoA disconnect packet sent for ${disconnectTarget.customerName}`);
-    setDisconnectTarget(null);
-  };
-
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
-    () => [
-      {
-        accessorKey: 'customerName',
-        header: 'Subscriber Account',
-        size: 200,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center shrink-0">
-              <ShieldAlert className="h-4 w-4" />
-            </div>
-            <div>
-              <span className="font-semibold text-xs text-foreground block">{String(row.original.customerName)}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">PPPoE ID #{row.index + 201}</span>
-            </div>
+  const columns: LegacyColumnDef<FraudFlag, unknown>[] = [
+    {
+      accessorKey: 'matchValue',
+      header: 'Matched Signature',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center shrink-0">
+            <ShieldAlert className="h-4 w-4" />
           </div>
-        ),
-      },
-      {
-        accessorKey: 'score',
-        header: 'Risk Score',
-        size: 140,
-        cell: ({ row }) => {
-          const s = Number(row.original.score);
-          return (
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={s >= 80 ? 'destructive' : s >= 50 ? 'outline' : 'secondary'}
-                className={`text-[10px] font-mono gap-1 ${
-                  s >= 80 ? 'animate-pulse' : s >= 50 ? 'border-amber-400 text-amber-500 bg-amber-50/10' : ''
-                }`}
-              >
-                <AlertTriangle className="h-3 w-3" />
-                Score: {s}/100
-              </Badge>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'reason',
-        header: 'Detected Anomaly Signature',
-        size: 280,
-        cell: ({ row }) => (
-          <span className="text-xs text-foreground/90 font-mono line-clamp-2 leading-relaxed bg-muted/20 p-1.5 rounded border border-border/40">
-            {String(row.original.reason)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'at',
-        header: 'Detection Time',
-        size: 140,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{String(row.original.at)}</span>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        size: 120,
-        cell: ({ row }) => {
-          const s = String(row.original.status);
-          return (
-            <Badge
-              variant={s === 'open' ? 'destructive' : s === 'investigating' ? 'outline' : 'default'}
-              className={`capitalize text-[10px] font-mono ${
-                s === 'resolved' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''
-              }`}
-            >
-              {s}
-            </Badge>
-          );
-        },
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
-        size: 140,
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => (
+          <div>
+            <span className="font-semibold text-xs text-foreground block">{ruleLabel[row.original.rule] ?? row.original.rule}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{row.original.matchValue}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'userCount',
+      header: 'Accounts',
+      cell: ({ row }) => (
+        <div className="text-xs">
+          <Badge variant="outline" className="text-[10px] font-mono">
+            {row.original.userCount} accounts
+          </Badge>
+          <p className="mt-1 text-muted-foreground line-clamp-2 max-w-[260px]">{row.original.customers.map((c) => c.name).join(', ') || '—'}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'lastDetectedAt',
+      header: 'Detected',
+      cell: ({ row }) => (
+        <div className="font-mono text-xs text-muted-foreground">
+          <div>First: {fmtDateTime(row.original.firstDetectedAt)}</div>
+          <div>Last: {fmtDateTime(row.original.lastDetectedAt)}</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant="outline" className={cn('capitalize text-[10px] font-mono', statusClass[row.original.status])}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const f = row.original;
+        return (
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-primary hover:bg-primary/10"
-              onClick={() => setInspectEvent(row.original)}
-              title="Inspect Telemetry"
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10" onClick={() => setInspect(f)} title="Inspect accounts">
               <Eye className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-destructive hover:bg-destructive/10"
-              onClick={() => setDisconnectTarget(row.original)}
-              title="Disconnect PPPoE Session"
-            >
-              <PowerOff className="h-3.5 w-3.5" />
-            </Button>
-            {row.original.status === 'open' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[11px] text-emerald-500 hover:bg-emerald-50/10"
-                onClick={() => handleUpdateStatus(row.index, 'cleared')}
-              >
-                Clear
+            {f.status === 'open' ? (
+              <>
+                <Button variant="ghost" size="sm" className="h-7 text-[11px] text-emerald-500" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ id: f.id, status: 'resolved' })}>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Resolve
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 text-[11px] text-muted-foreground" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ id: f.id, status: 'ignored' })}>
+                  <EyeOff className="h-3.5 w-3.5 mr-1" /> Ignore
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-7 text-[11px]" disabled={setStatus.isPending} onClick={() => setStatus.mutate({ id: f.id, status: 'open' })}>
+                <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reopen
               </Button>
             )}
           </div>
-        ),
+        );
       },
-    ],
-    [events],
-  );
+    },
+  ];
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load fraud events" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isLoading && !data) return <PageSkeleton variant="table" />;
+  if (isError && !data) {
+    return <EmptyState title="Failed to load fraud flags" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
 
-  const openCount = rows.filter((r) => r.status === 'open').length;
+  const summary = data?.summary;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Fraud Detection & MAC Sharing"
-        subtitle="Automated anomaly detection for concurrent MAC sessions, credential sharing, and abnormal traffic bursts"
-        breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Engagement' },
-          { label: 'Fraud Detection' },
-        ]}
+        title="Fraud Detection & Account Sharing"
+        subtitle="Accounts that share a CPE MAC, NID or phone number across your customers"
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Engagement' }, { label: 'Fraud Detection' }]}
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => {
-              toast.promise(new Promise((res) => setTimeout(res, 600)), {
-                loading: 'Scanning RADIUS session logs for MAC sharing...',
-                success: 'Audit complete: No new concurrent credentials detected',
-                error: 'Audit failed',
-              });
-            }}
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-            Run Deep Audit
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" disabled={scan.isPending} onClick={() => scan.mutate()}>
+            <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', scan.isPending && 'animate-spin')} />
+            {scan.isPending ? 'Scanning…' : 'Run Scan'}
           </Button>
         }
       />
 
       <OpsSummaryStrip
         items={[
-          { label: 'Monitored Subscribers', value: '3,420 Active' },
-          { label: 'Active Fraud Incidents', value: `${openCount} Open Cases` },
-          { label: 'Resolved Anomalies', value: `${rows.length - openCount} Cleared` },
-          { label: 'System Threat Level', value: 'LOW (Nominal)' },
-          { label: 'Auto-Block Protection', value: 'RADIUS CoA Active' },
+          { label: 'Monitored customers', value: (summary?.monitoredCustomers ?? 0).toLocaleString() },
+          { label: 'Open flags', value: summary?.open ?? 0 },
+          { label: 'Resolved', value: summary?.resolved ?? 0 },
+          { label: 'Ignored', value: summary?.ignored ?? 0 },
+          { label: 'Last scan', value: fmtDateTime(summary?.lastScanAt) },
         ]}
       />
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-destructive" />
-                Suspicious Activity & Anomaly Alerts
-              </CardTitle>
-              <CardDescription>
-                Telemetry flags triggered by concurrent MAC addresses and abnormal upload ratios
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-destructive" />
+            Flagged Accounts
+          </CardTitle>
+          <CardDescription>Each flag groups the customers matching one rule value. Run a scan to refresh.</CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns}
-            data={rows}
-            searchKey="customerName"
-            searchFilterFn={searchFilter}
-            searchPlaceholder="Search customer or reason..."
-            facetFilters={[{ columnId: 'status', title: 'Status' }]}
+            data={data?.items ?? []}
+            getRowId={(row) => row.id}
+            searchPlaceholder="Search MAC, NID, phone or note..."
+            emptyTitle={summary?.lastScanAt ? 'No flags in this view' : 'No scan has run yet'}
+            emptyDescription={summary?.lastScanAt ? undefined : 'Run a scan to check your customers for shared MACs, NIDs and phones.'}
+            toolbarActions={
+              <OptionSelect
+                value={statusFilter}
+                onChange={(v) => {
+                  setStatusFilter(v);
+                  table.setPage(1);
+                }}
+                options={[
+                  { value: 'open', label: 'Open' },
+                  { value: 'resolved', label: 'Resolved' },
+                  { value: 'ignored', label: 'Ignored' },
+                ]}
+                placeholder="All"
+                noneLabel="All"
+                className="h-8 w-[120px] text-xs"
+              />
+            }
+            server={table.server(data?.meta.total ?? 0)}
           />
         </CardContent>
       </Card>
 
-      {/* Inspect Modal */}
-      <Dialog open={!!inspectEvent} onOpenChange={(open) => !open && setInspectEvent(null)}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={!!inspect} onOpenChange={(open) => !open && setInspect(null)}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileCode className="h-5 w-5 text-primary" />
-              Fraud Anomaly Telemetry Details
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              {inspect ? ruleLabel[inspect.rule] : ''}
             </DialogTitle>
-            <DialogDescription>
-              Forensic evidence captured by RADIUS auth listener
-            </DialogDescription>
+            <DialogDescription className="font-mono">{inspect?.matchValue}</DialogDescription>
           </DialogHeader>
-          {inspectEvent && (
-            <div className="space-y-3 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3 bg-muted/20 rounded-lg border border-border/50">
-                <div>
-                  <span className="text-muted-foreground block">Customer:</span>
-                  <span className="font-semibold">{inspectEvent.customerName}</span>
+          {inspect && (
+            <div className="space-y-2 py-2 text-xs">
+              {inspect.customers.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 rounded-lg border border-border/60 p-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground">{c.name}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">{[c.pppoeId, c.mobile, c.status].filter(Boolean).join(' · ')}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-[11px] text-destructive"
+                    disabled={!c.routerId || !c.pppoeId || disconnect.isPending}
+                    onClick={() => setDisconnectTarget(c)}
+                    title={c.routerId && c.pppoeId ? 'Disconnect the live PPPoE session' : 'No router/PPPoE username on file'}
+                  >
+                    <PowerOff className="h-3.5 w-3.5 mr-1" /> Disconnect
+                  </Button>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block">Risk Score:</span>
-                  <Badge variant="destructive" className="font-mono text-[10px] mt-0.5">
-                    {inspectEvent.score}/100 High Risk
-                  </Badge>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Detection Time:</span>
-                  <span className="font-mono">{inspectEvent.at}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Status:</span>
-                  <Badge variant="outline" className="font-mono text-[10px] uppercase mt-0.5">
-                    {inspectEvent.status}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-muted-foreground font-semibold">Anomaly Details:</span>
-                <p className="p-3 bg-background border border-border/60 rounded-lg font-mono text-xs text-foreground/90 leading-relaxed">
-                  {inspectEvent.reason}
-                </p>
-              </div>
+              ))}
+              {inspect.note && <p className="text-muted-foreground">Note: {inspect.note}</p>}
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setInspectEvent(null)}>Close</Button>
+            <Button onClick={() => setInspect(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Disconnect Confirm */}
       <ConfirmDialog
         open={!!disconnectTarget}
         onOpenChange={(open) => !open && setDisconnectTarget(null)}
-        title="Force Terminate PPPoE Session"
-        description={`Send RADIUS disconnect packet (PoD) to immediately drop live session for subscriber "${disconnectTarget?.customerName}"?`}
-        confirmLabel="Disconnect Session"
+        title="Disconnect session"
+        description={`Drop the live PPPoE session of "${disconnectTarget?.name ?? ''}" (${disconnectTarget?.pppoeId ?? ''})?`}
+        confirmLabel="Disconnect"
         destructive
-        onConfirm={handleDisconnectSession}
+        onConfirm={() => {
+          if (disconnectTarget?.routerId && disconnectTarget.pppoeId) {
+            disconnect.mutate({ routerId: disconnectTarget.routerId, username: disconnectTarget.pppoeId });
+          }
+          setDisconnectTarget(null);
+        }}
       />
     </div>
   );

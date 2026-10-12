@@ -1,24 +1,63 @@
-import { useQuery } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
+'use client';
+
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { http } from '@/lib/api/client';
+import { num, str } from '@/lib/api/case';
+import { accountingKeys } from '../../shared/query-keys';
+
+export interface BalanceSheetRow {
+  code: string;
+  name: string;
+  balance: number;
+}
 
 export interface BalanceSheetData {
   asOf: string;
-  assets: { totalBdt: number; items: Array<{ name: string; amountBdt: number }> };
-  liabilities: { totalBdt: number; items: Array<{ name: string; amountBdt: number }> };
-  equity: { totalBdt: number };
+  assets: BalanceSheetRow[];
+  liabilities: BalanceSheetRow[];
+  equity: BalanceSheetRow[];
+  totals: { assets: number; liabilities: number; equity: number };
+  totalLiabilitiesAndEquity: number;
+  /** assets − (liabilities + equity) */
+  difference: number;
+  isBalanced: boolean;
 }
 
-export function useBalanceSheet() {
-  const query = useQuery({
-    queryKey: ['admin', 'accounting', 'balance-sheet'],
-    queryFn: async () => {
-      const data = await adminService.getAccountingDomain('balance-sheet');
-      if (data && typeof data === 'object' && 'balanceSheet' in data) {
-        return (data as { balanceSheet: BalanceSheetData }).balanceSheet;
-      }
-      return data as BalanceSheetData;
-    },
-  });
+type Row = Record<string, unknown>;
 
+const rows = (v: unknown): BalanceSheetRow[] =>
+  Array.isArray(v)
+    ? (v as Row[]).map((r) => ({ code: str(r.code), name: str(r.name), balance: num(r.balance) }))
+    : [];
+
+function mapBalanceSheet(d: Row): BalanceSheetData {
+  const sheet = (d.sheet ?? {}) as Row;
+  const totals = (sheet.totals ?? {}) as Row;
+  return {
+    asOf: str(d.as_of),
+    assets: rows(sheet.assets),
+    liabilities: rows(sheet.liabilities),
+    equity: rows(sheet.equity),
+    totals: {
+      assets: num(totals.assets),
+      liabilities: num(totals.liabilities),
+      equity: num(totals.equity),
+    },
+    totalLiabilitiesAndEquity: num(d.total_liabilities_and_equity),
+    difference: num(d.difference),
+    isBalanced: d.is_balanced === true || d.is_balanced === 1 || d.is_balanced === '1',
+  };
+}
+
+/** Balance sheet as of a date (YYYY-MM-DD; empty = backend default, today). */
+export function useBalanceSheet(asOf: string) {
+  const query = useQuery({
+    queryKey: [...accountingKeys.balanceSheet, { asOf }],
+    queryFn: async () =>
+      mapBalanceSheet(
+        (await http.get<Row>('/v1/accounting/balance-sheet', { as_of: asOf || undefined })) ?? {},
+      ),
+    placeholderData: keepPreviousData,
+  });
   return { ...query, balanceSheet: query.data };
 }

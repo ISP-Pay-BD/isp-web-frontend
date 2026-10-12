@@ -1,34 +1,24 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/lib/api/services/customer.service';
-import { toast } from 'sonner';
+import { customerKeys, useCustomerSubscription } from '@/features/customer/shared/hooks/use-customer-account';
 
-export function useCustomerPackages() {
+/** The package catalogue comes from the shared subscription payload. */
+export const useCustomerPackages = useCustomerSubscription;
+
+/**
+ * POST /v1/customer/subscription/activate-package — queues the change behind
+ * a pending invoice and returns the payment page to settle it.
+ */
+export function useActivatePackage() {
   const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ['customer', 'packages'],
-    queryFn: () => customerService.getPackages(),
-  });
-
-  /**
-   * POST /v1/customer/subscription/activate-package — switches the customer's
-   * package (backend validates access + package ownership).
-   */
-  const activateMutation = useMutation({
-    mutationFn: (packageId: string | number) => customerService.activatePackage(packageId),
+  return useMutation({
+    mutationFn: (packageId: string) => customerService.activatePackage(packageId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'packages'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'subscription'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'dashboard'] });
-      toast.success('Package activation request submitted');
+      queryClient.invalidateQueries({ queryKey: customerKeys.subscription });
+      queryClient.invalidateQueries({ queryKey: customerKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: customerKeys.payments });
     },
-    onError: (err: Error) => toast.error(err.message || 'Failed to activate package'),
   });
-
-  return {
-    ...query,
-    activateMutation,
-  };
 }

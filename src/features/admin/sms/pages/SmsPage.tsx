@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,182 +21,218 @@ import {
 import { toast } from 'sonner';
 import {
   Send,
-  RotateCcw,
   MessageSquare,
   Users,
   CheckCircle2,
   Sparkles,
-  CreditCard,
   Radio,
   Clock,
   Search,
-  Check,
-  Zap,
+  RefreshCw,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
-import type { SmsLog } from '@/data/admin/comms.data';
-import type { Customer } from '@/data/shared/types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
-import { useSmsData } from '../hooks/use-sms';
+import { DataTable } from '@/features/shared/data-table';
+import { formatDateTime } from '@/lib/format';
+import {
+  useMessageBatches,
+  useRefreshGateway,
+  useSendSms,
+  useSmsLogs,
+  useSmsOverview,
+  useSmsPreview,
+  useSmsRecipients,
+} from '../hooks/use-sms';
+import { useDebouncedValue } from '../hooks/use-debounced-value';
+import { smsParts, type SmsLogRow, type SmsRecipient } from '../types';
 
-const VARIABLE_TAGS = [
-  { tag: '{name}', desc: 'Customer Name' },
-  { tag: '{month}', desc: 'Current Month' },
-  { tag: '{amount}', desc: 'Bill Amount' },
-  { tag: '{due_date}', desc: 'Due Date' },
-  { tag: '{package}', desc: 'Package Name' },
-  { tag: '{area}', desc: 'Service Area' },
-  { tag: '{trx_id}', desc: 'Transaction ID' },
-];
+const RECIPIENT_PAGE_SIZE = 20;
+
+const statusBadge = (status: SmsLogRow['status']) =>
+  status === 'sent' ? ('default' as const) : status === 'pending' ? ('secondary' as const) : ('destructive' as const);
 
 export function SmsPage() {
-  const { data, isLoading, isError, refetch } = useSmsData();
-  const smsTemplatesData = data?.templates ?? [];
-  const serverLogs = data?.logs ?? [];
-  const areas = data?.areas ?? [];
-  const customers = data?.customers ?? [];
-  const packages = data?.packages ?? [];
-  const getPackageById = (id: string) => packages.find((p) => p.id === id);
+  const overview = useSmsOverview();
+  const refreshGateway = useRefreshGateway();
+  const sendSms = useSendSms();
 
-  const [sentLogs, setSentLogs] = useState<SmsLog[]>([]);
-  const logs = useMemo(() => [...sentLogs, ...serverLogs], [sentLogs, serverLogs]);
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [targetType, setTargetType] = useState<'all' | 'specific'>('all');
-  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Record<string, SmsRecipient>>({});
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [smsContent, setSmsContent] = useState<string>(
-    'Dear {name}, your monthly internet bill for {month} of BDT {amount} is due by {due_date}. Please pay via bKash to avoid disconnection. ISP Pay BD.'
-  );
+  const [smsContent, setSmsContent] = useState<string>('');
   const [customerSearch, setCustomerSearch] = useState<string>('');
-  const [customPreviews, setCustomPreviews] = useState<Record<string, string>>({});
-  const [isSending, setIsSending] = useState(false);
-  const [topUpModalOpen, setTopUpModalOpen] = useState(false);
-  const [topUpAmount, setTopUpAmount] = useState('1000');
-  const [selectedLog, setSelectedLog] = useState<SmsLog | null>(null);
+  const [recipientPage, setRecipientPage] = useState(1);
+  const [selectedLog, setSelectedLog] = useState<SmsLogRow | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyStatus, setHistoryStatus] = useState('all');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const debouncedSearch = useDebouncedValue(customerSearch);
+  const debouncedContent = useDebouncedValue(smsContent);
 
-  const availableCustomers = useMemo(() => {
-    let list = customers;
-    if (selectedArea !== 'all') {
-      list = list.filter((c) => c.areaId === selectedArea);
-    }
-    if (customerSearch.trim()) {
-      const q = customerSearch.toLowerCase();
-      list = list.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.username.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [customers, selectedArea, customerSearch]);
+  const recipients = useSmsRecipients({
+    page: recipientPage,
+    pageSize: RECIPIENT_PAGE_SIZE,
+    search: debouncedSearch,
+    areaId: selectedArea,
+  });
+  const batches = useMessageBatches('sms');
+  const logs = useSmsLogs({ page: historyPage, pageSize: historyPageSize, search: historySearch, status: historyStatus });
 
-  // Selected recipients for preview and delivery
-  const targetRecipients = useMemo(() => {
-    if (targetType === 'all') {
-      return selectedArea === 'all'
-        ? customers
-        : customers.filter((c) => c.areaId === selectedArea);
-    }
-    return customers.filter((c) => selectedCustomerIds.includes(c.id));
-  }, [customers, targetType, selectedArea, selectedCustomerIds]);
+  const selectedIds = useMemo(() => Object.keys(selected), [selected]);
+  const previewIds = targetType === 'specific' ? selectedIds.slice(0, 6) : [];
+  const previewEnabled = targetType === 'all' || previewIds.length > 0;
+  const preview = useSmsPreview(previewEnabled ? debouncedContent : '', previewIds, selectedArea);
 
-  // Handle template selection
+  const areas = recipients.data?.areas ?? [];
+  const templates = recipients.data?.templates ?? [];
+  const pageCustomers = recipients.data?.items ?? [];
+  const recipientMeta = recipients.data?.meta;
+  const audienceTotal = recipients.data?.audienceTotal ?? 0;
+  const variables = overview.data?.variables ?? [];
+  const gateway = overview.data?.gateway;
+
+  const targetCount = targetType === 'all' ? audienceTotal : selectedIds.length;
+  const partsCount = smsParts(smsContent);
+
   const handleTemplateChange = (tplId: string) => {
     setSelectedTemplateId(tplId);
-    const tpl = smsTemplatesData.find((t) => t.id === tplId);
-    if (tpl) {
-      setSmsContent(tpl.messageBody);
-      setCustomPreviews({});
-    }
+    const tpl = templates.find((t) => t.id === tplId);
+    if (tpl) setSmsContent(tpl.content);
   };
 
   const insertVariable = (tag: string) => {
     const textarea = textareaRef.current;
     if (!textarea) {
-      setSmsContent((prev) => prev + ' ' + tag);
+      setSmsContent((prev) => `${prev}${prev ? ' ' : ''}${tag}`);
       return;
     }
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const current = smsContent;
-    const updated = current.substring(0, start) + tag + current.substring(end);
-    setSmsContent(updated);
-    setTimeout(() => {
+    setSmsContent((current) => current.substring(0, start) + tag + current.substring(end));
+    requestAnimationFrame(() => {
       textarea.focus();
       textarea.setSelectionRange(start + tag.length, start + tag.length);
-    }, 0);
+    });
   };
 
-  // Generate personalized text for a customer
-  const renderMessageForCustomer = (cust: Customer) => {
-    if (customPreviews[cust.id]) return customPreviews[cust.id];
-    let body = smsContent;
-    body = body.replace(/{name}/g, cust.name);
-    body = body.replace(/{month}/g, 'September');
-    body = body.replace(/{amount}/g, `${getPackageById(cust.packageId)?.priceBdt ?? cust.balanceBdt ?? 1200}`);
-    body = body.replace(/{due_date}/g, '10 Sep 2026');
-    body = body.replace(/{package}/g, cust.packageName);
-    body = body.replace(/{area}/g, cust.areaName);
-    body = body.replace(/{trx_id}/g, `TX${cust.id.replace(/\D/g, '').slice(-6).padStart(6, '0')}`);
-    return body;
+  const toggleCustomer = (cust: SmsRecipient, checked: boolean) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (checked) next[cust.id] = cust;
+      else delete next[cust.id];
+      return next;
+    });
   };
 
-  const charCount = smsContent.length;
-  const partsCount = Math.ceil(charCount / 160) || 1;
+  const selectPage = () =>
+    setSelected((prev) => {
+      const next = { ...prev };
+      pageCustomers.forEach((c) => {
+        next[c.id] = c;
+      });
+      return next;
+    });
 
   const handleSend = () => {
     if (!smsContent.trim()) {
-      toast.error('SMS Content cannot be empty');
+      toast.error('SMS content cannot be empty');
       return;
     }
-    if (targetRecipients.length === 0) {
+    if (targetCount === 0) {
       toast.error('Please select at least one recipient customer');
       return;
     }
-
-    setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
-      const newLog: SmsLog = {
-        id: `sms_${Date.now()}`,
-        recipient: targetRecipients.length === 1 ? targetRecipients[0]!.phone : `${targetRecipients.length} recipients`,
-        customerName: targetRecipients.length === 1 ? targetRecipients[0]!.name : `Bulk (${targetRecipients.length} users)`,
-        message: smsContent,
-        sentAt: new Date().toISOString(),
-        status: 'delivered',
-        parts: partsCount,
-      };
-      setSentLogs((prev) => [newLog, ...prev]);
-      toast.success(`Dispatched ${targetRecipients.length} SMS broadcast(s) successfully via MIM SMS!`);
-      setCustomPreviews({});
-    }, 600);
+    sendSms.mutate(
+      { content: smsContent, sendTo: targetType === 'all' ? ['all'] : selectedIds, areaId: selectedArea },
+      {
+        onSuccess: (res) => {
+          toast.success(
+            res.queued
+              ? `${res.count} SMS queued for delivery — progress is shown under Delivery Batches`
+              : 'SMS sent successfully',
+          );
+          setSelected({});
+        },
+      },
+    );
   };
 
-  const handleResetPreviews = () => {
-    setCustomPreviews({});
-    toast.info('Individual message previews reset to template defaults');
-  };
+  const historyColumns = useMemo<LegacyColumnDef<SmsLogRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'sentTo',
+        header: 'Recipient',
+        size: 200,
+        enableHiding: false,
+        cell: ({ row }) => <span className="font-semibold text-xs text-foreground">{row.original.sentTo || '—'}</span>,
+      },
+      {
+        accessorKey: 'content',
+        header: 'Message',
+        size: 360,
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground font-mono line-clamp-2 max-w-md">{row.original.content}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 100,
+        cell: ({ row }) => (
+          <Badge variant={statusBadge(row.original.status)} className="text-[10px] h-5 capitalize">
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'sentAt',
+        header: 'Sent',
+        size: 160,
+        cell: ({ row }) => (
+          <span className="text-xs font-mono text-muted-foreground">
+            {row.original.sentAt ? formatDateTime(row.original.sentAt) : '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Details</span>,
+        size: 80,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSelectedLog(row.original)}>
+            Details
+          </Button>
+        ),
+      },
+    ],
+    [],
+  );
 
-  const handleSelectAllFiltered = () => {
-    setSelectedCustomerIds(availableCustomers.map((c) => c.id));
-  };
-
-  const handleClearSelectedCustomers = () => {
-    setSelectedCustomerIds([]);
-  };
-
-  if (isLoading) return <PageSkeleton variant="form" />;
-  if (isError) {
+  if (recipients.isLoading && overview.isLoading) return <PageSkeleton variant="form" />;
+  if (recipients.isError && !recipients.data) {
     return (
       <EmptyState
         title="Failed to load SMS data"
-        description="Could not fetch templates and delivery logs."
+        description="Could not fetch customers, areas and templates."
         actionLabel="Retry"
-        onAction={() => refetch()}
+        onAction={() => recipients.refetch()}
       />
     );
   }
+
+  const deliveryRate = overview.data?.last30.deliveryRate;
+  const gatewayOnline = gateway?.status === 'online';
 
   return (
     <div className="space-y-6">
@@ -208,45 +245,34 @@ export function SmsPage() {
           { label: 'SMS Broadcast' },
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => {
-                toast.promise(
-                  new Promise((res) => setTimeout(res, 500)),
-                  {
-                    loading: 'Pinging SMS gateway...',
-                    success: 'MIM SMS Gateway is online (Latency: 42ms)',
-                    error: 'Gateway error',
-                  }
-                );
-              }}
-            >
-              <Zap className="h-4 w-4 text-emerald-500" />
-              Gateway Ping
-            </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setTopUpModalOpen(true)}
-            >
-              <CreditCard className="h-4 w-4" />
-              Top Up Balance
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={refreshGateway.isPending}
+            onClick={() =>
+              refreshGateway.mutate(undefined, {
+                onSuccess: (data) =>
+                  data.gateway.status === 'online'
+                    ? toast.success(`${data.gateway.name ?? 'Gateway'} is online`)
+                    : toast.error(data.gateway.message ?? 'Gateway is not reachable'),
+              })
+            }
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshGateway.isPending ? 'animate-spin' : 'text-emerald-500'}`} />
+            Check Gateway
+          </Button>
         }
       />
 
       <OpsSummaryStrip
         items={[
-          { label: 'Gateway Route', value: 'MIM SMS (Primary DLR)' },
-          { label: 'Sender ID', value: 'ISPPAYBD' },
-          { label: 'Credit Balance', value: '৳4,250.75' },
-          { label: 'Today Dispatched', value: `${logs.length * 18 + 120} SMS` },
-          { label: 'Delivery Rate', value: '99.4%' },
-          { label: 'Target Audience', value: `${targetRecipients.length} Subscribers` },
+          { label: 'Gateway', value: gateway?.name ?? 'Not configured' },
+          { label: 'Credit Balance', value: gateway?.balance ?? '—' },
+          { label: 'Sent Today', value: overview.data ? `${overview.data.today.sent} SMS` : '—' },
+          { label: 'Failed Today', value: overview.data ? overview.data.today.failed : '—' },
+          { label: 'Delivery Rate (30d)', value: deliveryRate === null || deliveryRate === undefined ? '—' : `${deliveryRate}%` },
+          { label: 'Target Audience', value: `${targetCount} Subscribers` },
         ]}
       />
 
@@ -271,43 +297,48 @@ export function SmsPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* Service Area & Template Picker */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Target Service Area
                   </Label>
-                  <Select value={selectedArea} onValueChange={(v) => { if (v) setSelectedArea(v); }}>
+                  <Select
+                    value={selectedArea}
+                    onValueChange={(v) => {
+                      if (v) {
+                        setSelectedArea(v);
+                        setRecipientPage(1);
+                      }
+                    }}
+                  >
                     <SelectTrigger className="h-10">
                       <SelectValue placeholder="All Areas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Service Areas ({customers.length} total)</SelectItem>
-                      {areas.map((a) => {
-                        const count = customers.filter((c) => c.areaId === a.id).length;
-                        return (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.name} ({count} users)
-                          </SelectItem>
-                        );
-                      })}
+                      <SelectItem value="all">
+                        All Service Areas ({areas.reduce((s, a) => s + a.activeCustomers, 0)} active)
+                      </SelectItem>
+                      {areas.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} ({a.activeCustomers} active)
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Template picker */}
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Load Predefined Template
                   </Label>
                   <Select value={selectedTemplateId} onValueChange={(v) => { if (v) handleTemplateChange(v); }}>
                     <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select template..." />
+                      <SelectValue placeholder={templates.length ? 'Select template...' : 'No templates yet'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {smsTemplatesData.map((t) => (
+                      {templates.map((t) => (
                         <SelectItem key={t.id} value={t.id}>
-                          {t.templateName} ({t.templateType})
+                          {t.title} ({t.templateType === 'default' ? 'system' : 'custom'})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -334,9 +365,9 @@ export function SmsPage() {
                       <Radio className={`h-4 w-4 ${targetType === 'all' ? 'text-primary' : 'text-muted-foreground'}`} />
                     </div>
                     <div>
-                      <div className="font-semibold text-sm">All Area Subscribers</div>
+                      <div className="font-semibold text-sm">All Active Subscribers</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Broadcasts to {targetRecipients.length} subscriber(s) currently filtered
+                        Broadcasts to {audienceTotal} active subscriber(s) in the selected area
                       </div>
                     </div>
                   </button>
@@ -356,7 +387,7 @@ export function SmsPage() {
                     <div>
                       <div className="font-semibold text-sm">Specific Customer List</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Select specific customers manually ({selectedCustomerIds.length} chosen)
+                        Select specific customers manually ({selectedIds.length} chosen)
                       </div>
                     </div>
                   </button>
@@ -368,27 +399,24 @@ export function SmsPage() {
                       <div className="relative flex-1">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                          placeholder="Search customer by name, phone or username..."
+                          placeholder="Search customer by name or phone..."
                           value={customerSearch}
-                          onChange={(e) => setCustomerSearch(e.target.value)}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setRecipientPage(1);
+                          }}
                           className="pl-9 h-9 text-xs bg-background"
                         />
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectAllFiltered}
-                          className="h-8 text-xs"
-                        >
-                          Select All ({availableCustomers.length})
+                        <Button type="button" variant="outline" size="sm" onClick={selectPage} className="h-8 text-xs">
+                          Select Page ({pageCustomers.length})
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={handleClearSelectedCustomers}
+                          onClick={() => setSelected({})}
                           className="h-8 text-xs text-muted-foreground"
                         >
                           Clear
@@ -397,49 +425,71 @@ export function SmsPage() {
                     </div>
 
                     <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 divide-y divide-border/40">
-                      {availableCustomers.length === 0 ? (
+                      {recipients.isFetching && pageCustomers.length === 0 ? (
+                        <div className="text-center py-4 text-xs text-muted-foreground">Loading subscribers…</div>
+                      ) : pageCustomers.length === 0 ? (
                         <div className="text-center py-4 text-xs text-muted-foreground">
                           No matching subscribers found in selected scope.
                         </div>
                       ) : (
-                        availableCustomers.map((cust) => {
-                          const isChecked = selectedCustomerIds.includes(cust.id);
-                          return (
-                            <label
-                              key={cust.id}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer text-xs transition-colors"
-                            >
-                              <div className="flex items-center gap-3">
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedCustomerIds([...selectedCustomerIds, cust.id]);
-                                    } else {
-                                      setSelectedCustomerIds(selectedCustomerIds.filter((id) => id !== cust.id));
-                                    }
-                                  }}
-                                  className="accent-primary rounded h-4 w-4"
-                                />
-                                <div>
-                                  <span className="font-semibold text-foreground">{cust.name}</span>
-                                  <span className="text-muted-foreground font-mono ml-2">({cust.phone})</span>
-                                </div>
+                        pageCustomers.map((cust) => (
+                          <label
+                            key={cust.id}
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer text-xs transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(selected[cust.id])}
+                                onChange={(e) => toggleCustomer(cust, e.target.checked)}
+                                className="accent-primary rounded h-4 w-4"
+                              />
+                              <div>
+                                <span className="font-semibold text-foreground">{cust.name}</span>
+                                <span className="text-muted-foreground font-mono ml-2">({cust.mobile || 'no mobile'})</span>
                               </div>
-                              <div className="flex items-center gap-2">
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {cust.packageName && (
                                 <Badge variant="secondary" className="text-[10px] font-mono">
                                   {cust.packageName}
                                 </Badge>
-                                <span className="text-muted-foreground text-[11px] hidden sm:inline">
-                                  {cust.areaName}
-                                </span>
-                              </div>
-                            </label>
-                          );
-                        })
+                              )}
+                              <span className="text-muted-foreground text-[11px] hidden sm:inline">{cust.areaName}</span>
+                            </div>
+                          </label>
+                        ))
                       )}
                     </div>
+                    {recipientMeta && recipientMeta.totalPages > 1 && (
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>
+                          Page {recipientMeta.page} of {recipientMeta.totalPages} · {recipientMeta.total} customers
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={recipientPage <= 1}
+                            onClick={() => setRecipientPage((p) => Math.max(1, p - 1))}
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={recipientPage >= recipientMeta.totalPages}
+                            onClick={() => setRecipientPage((p) => p + 1)}
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -451,12 +501,12 @@ export function SmsPage() {
                     SMS Message Template
                   </Label>
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className={charCount > 160 ? 'text-amber-500 font-semibold' : 'text-muted-foreground'}>
-                      {charCount} chars
+                    <span className={partsCount > 1 ? 'text-amber-500 font-semibold' : 'text-muted-foreground'}>
+                      {smsContent.length} chars
                     </span>
                     <span className="text-muted-foreground">·</span>
                     <Badge variant={partsCount > 1 ? 'outline' : 'secondary'} className="text-[10px] h-5">
-                      {partsCount} part{partsCount > 1 ? 's' : ''} (160 ch/part)
+                      {partsCount} part{partsCount === 1 ? '' : 's'}
                     </Badge>
                   </div>
                 </div>
@@ -465,73 +515,68 @@ export function SmsPage() {
                   ref={textareaRef}
                   value={smsContent}
                   onChange={(e) => setSmsContent(e.target.value)}
-                  placeholder="Dear {name}, your monthly bill of {amount} is due on {due_date}..."
+                  placeholder="Dear {name}, your monthly bill of {amount} is due on {expire_date}..."
                   className="min-h-[110px] font-mono text-xs leading-relaxed resize-y bg-background/80"
-                  maxLength={480}
+                  maxLength={1000}
                 />
 
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span>Click variable chip to insert at cursor position:</span>
+                {variables.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span>Click variable chip to insert — resolved per customer on the server:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {variables.map((v) => (
+                        <button
+                          key={v.tag}
+                          type="button"
+                          onClick={() => insertVariable(v.tag)}
+                          className="text-xs px-2.5 py-1 rounded-md bg-secondary/80 hover:bg-secondary text-secondary-foreground font-mono border border-border/40 transition-colors flex items-center gap-1"
+                          title={v.label}
+                        >
+                          <span>{v.tag}</span>
+                          <span className="text-[10px] opacity-60 font-sans">({v.label})</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {VARIABLE_TAGS.map((v) => (
-                      <button
-                        key={v.tag}
-                        type="button"
-                        onClick={() => insertVariable(v.tag)}
-                        className="text-xs px-2.5 py-1 rounded-md bg-secondary/80 hover:bg-secondary text-secondary-foreground font-mono border border-border/40 transition-colors flex items-center gap-1"
-                        title={v.desc}
-                      >
-                        <span>{v.tag}</span>
-                        <span className="text-[10px] opacity-60 font-sans">({v.desc})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Live Preview List */}
-              {targetRecipients.length > 0 && smsContent.trim() && (
+              {/* Server-rendered preview */}
+              {smsContent.trim() && previewEnabled && (
                 <div className="pt-3 border-t border-border/60 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <span>Personalized Live Preview</span>
-                      <Badge variant="outline" className="text-xs">
-                        {targetRecipients.length} Recipient{targetRecipients.length > 1 ? 's' : ''}
-                      </Badge>
-                    </div>
-                    {Object.keys(customPreviews).length > 0 && (
-                      <Button variant="ghost" size="sm" onClick={handleResetPreviews} className="h-7 text-xs">
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        Reset Custom Previews
-                      </Button>
-                    )}
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <span>Personalized Live Preview</span>
+                    <Badge variant="outline" className="text-xs">
+                      {targetCount} Recipient{targetCount === 1 ? '' : 's'}
+                    </Badge>
+                    {preview.isFetching && <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                   </div>
                   <div className="max-h-60 overflow-y-auto space-y-2 p-3 rounded-xl border border-border/60 bg-muted/10">
-                    {targetRecipients.slice(0, 6).map((cust) => (
-                      <div key={cust.id} className="p-3 rounded-lg border border-border/60 bg-card text-xs space-y-1.5 shadow-sm">
-                        <div className="flex items-center justify-between font-medium">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-foreground">{cust.name}</span>
-                            <span className="text-muted-foreground font-mono">({cust.phone})</span>
+                    {preview.isError ? (
+                      <p className="text-xs text-destructive">Preview could not be rendered.</p>
+                    ) : (preview.data ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {preview.isFetching ? 'Rendering preview…' : 'No active subscribers to preview in this scope.'}
+                      </p>
+                    ) : (
+                      (preview.data ?? []).slice(0, 6).map((p) => (
+                        <div key={p.customerId} className="p-3 rounded-lg border border-border/60 bg-card text-xs space-y-1.5 shadow-sm">
+                          <div className="flex items-center gap-2 font-medium">
+                            <span className="font-semibold text-foreground">{p.name}</span>
+                            <span className="text-muted-foreground font-mono">({p.mobile})</span>
                           </div>
-                          <span className="text-[11px] text-muted-foreground">{cust.areaName}</span>
+                          <p className="w-full bg-muted/40 border border-border/60 rounded px-2.5 py-1.5 font-mono text-xs text-foreground whitespace-pre-wrap">
+                            {p.message}
+                          </p>
                         </div>
-                        <input
-                          type="text"
-                          value={renderMessageForCustomer(cust)}
-                          onChange={(e) =>
-                            setCustomPreviews({ ...customPreviews, [cust.id]: e.target.value })
-                          }
-                          className="w-full bg-muted/40 border border-border/60 rounded px-2.5 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                    ))}
-                    {targetRecipients.length > 6 && (
+                      ))
+                    )}
+                    {targetCount > 6 && (
                       <p className="text-center text-xs text-muted-foreground pt-1">
-                        + {targetRecipients.length - 6} more subscribers will receive their dynamic personalized SMS
+                        + {targetCount - 6} more subscribers will receive their own personalized SMS
                       </p>
                     )}
                   </div>
@@ -539,9 +584,11 @@ export function SmsPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="pt-3 flex items-center justify-between border-t border-border/60">
+              <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-border/60">
                 <div className="text-xs text-muted-foreground">
-                  Estimated cost: <span className="font-semibold text-foreground font-mono">৳{(targetRecipients.length * partsCount * 0.35).toFixed(2)}</span> (৳0.35/SMS)
+                  Estimated usage:{' '}
+                  <span className="font-semibold text-foreground font-mono">{targetCount * partsCount} SMS units</span>{' '}
+                  ({targetCount} × {partsCount} part{partsCount === 1 ? '' : 's'})
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -549,15 +596,14 @@ export function SmsPage() {
                     onClick={() => {
                       setSmsContent('');
                       setSelectedTemplateId('');
-                      setCustomPreviews({});
                     }}
-                    disabled={isSending}
+                    disabled={sendSms.isPending}
                   >
                     Clear Form
                   </Button>
-                  <Button onClick={handleSend} disabled={isSending} className="gap-2 bg-primary text-primary-foreground">
+                  <Button onClick={handleSend} disabled={sendSms.isPending} className="gap-2 bg-primary text-primary-foreground">
                     <Send className="h-4 w-4" />
-                    {isSending ? 'Dispatching...' : `Broadcast to ${targetRecipients.length} Recipient(s)`}
+                    {sendSms.isPending ? 'Dispatching...' : `Broadcast to ${targetCount} Recipient(s)`}
                   </Button>
                 </div>
               </div>
@@ -565,7 +611,7 @@ export function SmsPage() {
           </Card>
         </div>
 
-        {/* Right Col: Gateway Status & Recent Logs */}
+        {/* Right Col: Gateway Status & Batches */}
         <div className="space-y-6">
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
@@ -573,184 +619,205 @@ export function SmsPage() {
                 <Users className="h-4 w-4 text-primary" />
                 Gateway Health & Credits
               </CardTitle>
-              <CardDescription>MIM SMS Route 1 (DLR & High Priority)</CardDescription>
+              <CardDescription>Configured SMS gateway for this account</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Default Gateway</span>
-                <Badge variant="outline" className="font-mono text-xs">MIM SMS</Badge>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Sender Masking ID</span>
-                <span className="font-mono font-semibold text-foreground">ISPPAYBD</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Account Balance</span>
-                <span className="font-bold text-primary text-sm font-mono">৳4,250.75</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Approx. SMS Balance</span>
-                <span className="font-mono font-semibold text-foreground">~12,145 SMS</span>
-              </div>
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-muted-foreground">Gateway Status</span>
-                <span className="text-emerald-500 font-medium flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Active & Operational
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-2 text-xs h-9 gap-1.5"
-                onClick={() => setTopUpModalOpen(true)}
-              >
-                <CreditCard className="h-3.5 w-3.5 text-primary" />
-                Recharge Credits
-              </Button>
+              {overview.isError ? (
+                <EmptyState
+                  title="Gateway status unavailable"
+                  actionLabel="Retry"
+                  onAction={() => overview.refetch()}
+                  className="py-6"
+                />
+              ) : (
+                <>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">Default Gateway</span>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {gateway?.name ?? 'Not configured'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">Account Balance</span>
+                    <span className="font-bold text-primary text-sm font-mono">{gateway?.balance ?? '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">Queued Messages</span>
+                    <span className="font-mono font-semibold text-foreground">{overview.data?.queuePending ?? 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1.5">
+                    <span className="text-muted-foreground">Gateway Status</span>
+                    {gatewayOnline ? (
+                      <span className="text-emerald-500 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Online
+                      </span>
+                    ) : (
+                      <span className="text-amber-500 font-medium flex items-center gap-1 capitalize">
+                        <AlertTriangle className="h-3.5 w-3.5" /> {(gateway?.status ?? 'unknown').replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  {gateway?.message && !gatewayOnline && (
+                    <p className="text-[11px] text-muted-foreground bg-muted/40 rounded-md p-2">{gateway.message}</p>
+                  )}
+                  {gateway?.checkedAt && (
+                    <p className="text-[10px] text-muted-foreground">Checked {formatDateTime(gateway.checkedAt)}</p>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
-          {/* Quick Recent Log */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    Recent Outbound Dispatches
-                  </CardTitle>
-                  <CardDescription className="text-xs">Latest broadcast transmission telemetry</CardDescription>
-                </div>
-              </div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                Delivery Batches
+              </CardTitle>
+              <CardDescription className="text-xs">Bulk sends are queued and delivered in the background</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-border/50 text-xs">
-                {logs.slice(0, 5).map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-3.5 space-y-1.5 hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => setSelectedLog(log)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">{log.customerName}</span>
-                      <Badge
-                        variant={
-                          log.status === 'delivered'
-                            ? 'default'
-                            : log.status === 'sent'
-                              ? 'secondary'
-                              : 'destructive'
-                        }
-                        className="text-[10px] h-5"
-                      >
-                        {log.status}
-                      </Badge>
+              {batches.isError ? (
+                <div className="p-4">
+                  <EmptyState title="Could not load batches" actionLabel="Retry" onAction={() => batches.refetch()} className="py-6" />
+                </div>
+              ) : (batches.data?.items ?? []).length === 0 ? (
+                <p className="p-4 text-xs text-muted-foreground">No bulk sends yet.</p>
+              ) : (
+                <div className="divide-y divide-border/50 text-xs">
+                  {(batches.data?.items ?? []).map((b) => (
+                    <div key={b.id} className="p-3.5 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-foreground truncate">{b.title || `Batch #${b.id}`}</span>
+                        <Badge variant={b.status === 'completed' ? 'default' : 'secondary'} className="text-[10px] h-5 capitalize">
+                          {b.status}
+                        </Badge>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${b.progressPct}%` }} />
+                      </div>
+                      <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                        <span>
+                          {b.sent} sent · {b.failed} failed · {b.pending} pending
+                        </span>
+                        <span>{b.createdAt ? formatDateTime(b.createdAt) : ''}</span>
+                      </div>
                     </div>
-                    <p className="text-muted-foreground line-clamp-2 text-xs font-mono">{log.message}</p>
-                    <div className="flex justify-between text-[11px] text-muted-foreground font-mono pt-1">
-                      <span>{log.recipient}</span>
-                      <span>{new Date(log.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Top Up Modal */}
-      <Dialog open={topUpModalOpen} onOpenChange={setTopUpModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Recharge SMS Credits
-            </DialogTitle>
-            <DialogDescription>
-              Purchase bulk SMS balance for your gateway account via bKash / Nagad or Bank.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-3">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Select Top-Up Amount (BDT)</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {['500', '1000', '2500', '5000', '10000', '20000'].map((amt) => (
-                  <Button
-                    key={amt}
-                    type="button"
-                    variant={topUpAmount === amt ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTopUpAmount(amt)}
-                    className="text-xs font-mono"
-                  >
-                    ৳{Number(amt).toLocaleString()}
-                  </Button>
-                ))}
-              </div>
+      {/* SMS history */}
+      <Card className="border-border/60 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                Outbound SMS History
+              </CardTitle>
+              <CardDescription className="text-xs">Every SMS sent from this account with the gateway result</CardDescription>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Custom Amount</Label>
-              <Input
-                type="number"
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                placeholder="Enter amount..."
-                className="font-mono text-sm"
-              />
-              <p className="text-[11px] text-muted-foreground font-mono">
-                Estimated SMS count: ~{Math.floor(Number(topUpAmount || '0') / 0.35).toLocaleString()} SMS
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTopUpModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="gap-1.5"
-              onClick={() => {
-                toast.success(`Top-up request for ৳${Number(topUpAmount).toLocaleString()} submitted successfully!`);
-                setTopUpModalOpen(false);
+            <Select
+              value={historyStatus}
+              onValueChange={(v) => {
+                if (v) {
+                  setHistoryStatus(v);
+                  setHistoryPage(1);
+                }
               }}
             >
-              <Check className="h-4 w-4" />
-              Proceed to Gateway Payment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <SelectTrigger className="h-9 w-[140px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {logs.isError ? (
+            <EmptyState title="Could not load SMS history" actionLabel="Retry" onAction={() => logs.refetch()} />
+          ) : (
+            <DataTable
+              columns={historyColumns}
+              data={logs.data?.items ?? []}
+              isLoading={logs.isLoading}
+              getRowId={(row) => row.id}
+              searchKey="sentTo"
+              searchPlaceholder="Search by recipient or message..."
+              emptyTitle="No SMS sent yet"
+              emptyDescription="Messages you send will appear here with their delivery result."
+              enableColumnVisibility={false}
+              server={{
+                page: historyPage,
+                pageSize: historyPageSize,
+                total: logs.data?.meta.total ?? 0,
+                onPageChange: setHistoryPage,
+                onPageSizeChange: (size) => {
+                  setHistoryPageSize(size);
+                  setHistoryPage(1);
+                },
+                search: historySearch,
+                onSearchChange: (q) => {
+                  setHistorySearch(q);
+                  setHistoryPage(1);
+                },
+              }}
+            />
+          )}
+        </CardContent>
+      </Card>
 
       {/* Log Detail Modal */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>SMS Transmission Detail</DialogTitle>
-            <DialogDescription>Telemetry audit record from SMS gateway</DialogDescription>
+            <DialogDescription>Gateway response recorded for this message</DialogDescription>
           </DialogHeader>
           {selectedLog && (
             <div className="space-y-3 py-2 text-xs">
               <div className="flex justify-between py-1 border-b">
                 <span className="text-muted-foreground">Recipient</span>
-                <span className="font-semibold">{selectedLog.customerName} ({selectedLog.recipient})</span>
+                <span className="font-semibold">{selectedLog.sentTo || '—'}</span>
               </div>
               <div className="flex justify-between py-1 border-b">
                 <span className="text-muted-foreground">Status</span>
-                <Badge variant={selectedLog.status === 'delivered' ? 'default' : 'secondary'}>
-                  {selectedLog.status}
-                </Badge>
+                <Badge variant={statusBadge(selectedLog.status)}>{selectedLog.rawStatus || selectedLog.status}</Badge>
               </div>
               <div className="flex justify-between py-1 border-b">
                 <span className="text-muted-foreground">Sent Timestamp</span>
-                <span className="font-mono">{new Date(selectedLog.sentAt).toLocaleString()}</span>
+                <span className="font-mono">{selectedLog.sentAt ? formatDateTime(selectedLog.sentAt) : '—'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b">
+                <span className="text-muted-foreground">Gateway</span>
+                <span className="font-mono">{selectedLog.gateway || '—'}</span>
               </div>
               <div className="flex justify-between py-1 border-b">
                 <span className="text-muted-foreground">Segments / Parts</span>
-                <span className="font-mono">{selectedLog.parts ?? 1} part(s)</span>
+                <span className="font-mono">{smsParts(selectedLog.content)} part(s)</span>
               </div>
+              {selectedLog.logs && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground font-semibold">Gateway Response:</span>
+                  <div className="p-2 rounded-lg bg-muted/40 font-mono text-[11px] border border-border/50 break-words">
+                    {selectedLog.logs}
+                  </div>
+                </div>
+              )}
               <div className="space-y-1 pt-1">
                 <span className="text-muted-foreground font-semibold">Message Body:</span>
-                <div className="p-2.5 rounded-lg bg-muted/40 font-mono text-xs border border-border/50">
-                  {selectedLog.message}
+                <div className="p-2.5 rounded-lg bg-muted/40 font-mono text-xs border border-border/50 whitespace-pre-wrap">
+                  {selectedLog.content}
                 </div>
               </div>
             </div>

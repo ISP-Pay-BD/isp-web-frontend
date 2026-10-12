@@ -1,38 +1,37 @@
-/**
- * Utility to extract current authenticated user ID, tenant ID, and role safely across SSR and Client.
- */
-export function getAuthUserId(): number {
-  if (typeof window !== 'undefined') {
-    const storedAuth = localStorage.getItem('isp-auth-storage');
-    if (storedAuth) {
-      try {
-        const parsed = JSON.parse(storedAuth);
-        const id = parsed?.state?.user?.id || parsed?.state?.user?.tenantId;
-        if (id !== undefined && id !== null) {
-          const numId = Number(id);
-          if (!isNaN(numId) && numId > 0) {
-            return numId;
-          }
-        }
-      } catch {
-        // ignore parse error
-      }
-    }
+import { ApiError } from './client';
+
+type StoredUser = { id?: string | number; tenantId?: string | number; role?: string } | null;
+
+export function getAuthUser(): StoredUser {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('isp-auth-storage');
+    return raw ? (JSON.parse(raw)?.state?.user ?? null) : null;
+  } catch {
+    return null;
   }
-  return 369; // Default fallback admin ID
 }
 
-export function getAuthUser() {
-  if (typeof window !== 'undefined') {
-    const storedAuth = localStorage.getItem('isp-auth-storage');
-    if (storedAuth) {
-      try {
-        const parsed = JSON.parse(storedAuth);
-        return parsed?.state?.user || null;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
+function positive(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** The signed-in user's own id (customer `user_id`, employee id, admin id). */
+export function getAuthUserId(): number {
+  const id = positive(getAuthUser()?.id);
+  if (!id) throw new ApiError('You are not signed in.', 401, 'UNAUTHORIZED');
+  return id;
+}
+
+/**
+ * The tenant (reseller/admin) id that scopes `/v1/reseller/{id}/…` routes.
+ * Admins and reseller admins own their tenant; staff act for their employer.
+ */
+export function getResellerId(): number {
+  const user = getAuthUser();
+  const ownsTenant = user?.role === 'admin' || user?.role === 'resellerAdmin' || user?.role === 'super_admin';
+  const id = ownsTenant ? positive(user?.id) : (positive(user?.tenantId) ?? positive(user?.id));
+  if (!id) throw new ApiError('You are not signed in.', 401, 'UNAUTHORIZED');
+  return id;
 }

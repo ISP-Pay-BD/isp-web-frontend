@@ -1,271 +1,209 @@
-# ISP Pay BD — Frontend API Integration & Progress Tracker
+# ISP Pay BD — Frontend ↔ zapi Integration Tracker
 
-> **Status of frontend ↔ `zapi` backend integration, verified against the real
-> route table (`php spark routes`) and the frontend source — not against intent.**
->
-> Verification method and raw numbers: see §5. Last verified: 2026-09-14
-> (gap-closure pass — see §4 and §7).
+> Last verified: **2026-10-12** (web-completion pass). Verified against the code
+> and the test suites, not against intent. The previous version of this file
+> claimed "0 pure-mock screens" from a grep for `http.` calls; a screen-by-screen
+> audit on 2026-10-11 found only ~10 of 208 screens were genuinely live. This
+> file replaces it.
 
----
+## 1. Current state
 
-## 7. Mock-fallback audit pass (2026-09-14)
-
-> **2026-09-14 gap-closure verification:** lint 0 errors (653 warnings) ·
-> typecheck clean · vitest **38/38** (4 new) · build succeeds · backend phpunit
-> **233 tests / 653 assertions OK** (PlatformCatalogApiTest: 21 tests incl.
-> metering, SLA, recycle-bin restore/purge contracts) · api-crosscheck
-> **0 unmatched** of 197 call sites · screen-coverage check **0 pure-mock**.
-> New: `GET platform/metering`, `GET platform/sla`,
-> `GET/POST/DELETE platform/recycle-bin*`.
-
-The crosscheck proves a call site *exists*; this pass proves its **response is
-actually used**. Two hooks called the API, discarded the result, and always
-returned mock data (invisible to every route-based check):
-
-| File | Was | Now |
-|---|---|---|
-| `use-marketing-pricing.ts` | `http.get('/v1/platform/subscriptions')` then unconditional `return mock` | static pricing dataset imported directly — marketing pricing is site content, not tenant data; `/v1/platform/subscriptions` returns platform-tenant billing rows (admin surface), semantically wrong for public tiers |
-| `use-marketing-plugins.ts` | `http.get('/v1/engines/catalog')` (phantom route) then unconditional `return mock` | real `GET /v1/platform/plugins` (`{items:[{id,name,category,desc,priceBdt,installs}]}`) mapped into the marketplace card shape; falls back to static marketplace content on error/shape mismatch |
-
-Verified state after the pass:
-
-- Files importing `mock-api`: **23** (down from 35 — was under-counted in §1)
-- Files where mock is the **primary** data source: **0**
-- All remaining `mockFetch` uses are inside a `catch` block (API-first,
-  static/mock fallback only on backend failure)
-
-## 6. Reverse-check pass (2026-09-13): backend routes → frontend consumers
-
-The original verification only proved every *frontend call* resolves to a real
-backend route. This pass adds the reverse check: every backend `api/v1/*` route
-must be matched by some frontend call (prefix-aware, CodeIgniter regex params
-normalised). Tool: `scripts/api-crosscheck.mjs` (run with the dumped route
-table, see §5).
-
-### 6.1 Real call-site bugs found & fixed
-
-| Bug | Was | Now |
-|---|---|---|
-| Admin news list | `GET /api/common/news` — axios baseURL already ends in `/api`, so the request went to `/api/api/common/news` (404) | `GET /common/news` |
-| Customer reward redeem | `POST /v1/customer/reward/redeem-preview` — backend only registers **GET**; also required `package_id` which was never sent | `GET /v1/customer/reward/redeem-preview?package_id=&points=` |
-| Customer reward wallet | returned raw backend wallet; UI shape mismatch (`pointsBalance` vs `balance`) and referral code/counts never fetched | composes `reward/wallet` + `referral/overview` (`Promise.allSettled`) into the UI shape |
-| Customer autofix tools | `quickFixPing` called `/autofix/quick-fix` for every tool; backend reads `user_id` from the **query string** even on POST, and each tool has its own endpoint | per-tool mapping: `quick_fix→quick-fix`, `reset_session→reset-session`, `reconnect→reconnect`, `dns_flush→flush-dns`, with `user_id` + `issue` query params |
-| Admin rewards screen | hook cast the API payload to the *mock* shape (`data.config.pointsPerReferral` — always `undefined` on live data); approve/reject/config-save were local state only | composes `rewards/{id}/config` + `referrals/{id}` + `rewards/{id}/report`; real mutations `PUT rewards/{id}/config`, `POST referrals/{id}/{rid}/approve|reject` |
-
-### 6.2 Backend v1 routes newly wired
-
-| Domain | Routes now consumed |
+| Area | State |
 |---|---|
-| Rewards (reseller) | `GET/PUT rewards/{id}/config`, `GET rewards/{id}/report`, `GET rewards/{id}/wallets`, `GET/PUT rewards/global-config` |
-| Referrals (reseller) | `GET referrals/{id}`, `GET referrals/{id}/{rid}`, `POST referrals/{id}/{rid}/approve`, `POST referrals/{id}/{rid}/reject` |
-| Reseller billing | `GET payments/{id}`, `GET make-reseller-payment/{id}` (+ `json/` variants) |
-| Areas | `GET areas/edit/{id}`, `DELETE areas/delete` (bulk) |
-| Reports / inventory | `GET reports/export?type=`, `POST inventory/transactions` |
-| Customer extras | `GET notifications`, `POST notifications/read`, `GET subscription/quota`, `GET usage`, `GET reward/transactions`, `GET referral/history` |
-| Customer actions | `POST autofix/{reboot,reconnect,flush-dns,reset-session,quick-fix}`, `POST router-control/reboot`, `GET router-control/devices` |
-| Customer gateway | `GET make-payment/{id}`, `GET make-reseller-payment/{id}` (+ `json/` variants) |
+| Admin portal (network, customers, billing, accounting, inventory, HR, comms, settings, isp-ops) | Live — every list/KPI/chart from zapi, every action calls the backend |
+| Customer self-care portal (19 screens) | Live |
+| Employee portal (6 screens) | Live — uses `/api/v1/employee-portal/*` (employee role) |
+| Super-admin platform portal (25 screens) + engines | Live |
+| Public: login, forgot/reset password, register, pricing, plugins, status, captive, contact | Live (public `/api/v1/public/*` endpoints) |
+| Landing proof numbers (ISPs, subscribers, payments) | Live — `GET /api/v1/public/stats` (aggregate counts, cached 10 min; the page revalidates every 10 min and hides a figure it cannot load) |
+| Sidebar "Engines" entries | Live — "All Engines" plus the real engine catalog (`GET /v1/engines/catalog`); the 16 hardcoded engine links and the "ONUs (sample)" link to a fake OLT id are gone |
+| Privacy Policy / Terms of Service (`/privacy`, `/terms`) | Live, owner-managed — written in **Platform → Software Settings → Legal pages**, served by `GET /api/v1/public/legal[/{slug}]`; a page is published once it has text and the footer links only published ones. There is no legal copy in the codebase. |
+| Reward points for auto-pay, feedback and support-ticket ratings | Awarded — the tenant settings (`autopay_points`, `feedback_points` + monthly cap, `ticket_rating_points`) existed but nothing ever awarded them (`CustomerActionRewards`, idempotent, in-app notice only) |
+| Marketing landing copy (headlines, testimonials, FAQ, illustrative demo visuals, 99.9% SLA) | Static by design — `src/data/marketing` |
 
-### 6.3 Remaining known-unconsumed v1 routes (accepted gaps)
+Guard rails (enforced by `tests/architecture/folder-structure.test.ts`):
+- `src/lib/mock-api` and all dummy datasets are deleted; nothing may import `mock-api`/`mockFetch`.
+- Only `src/data/marketing/*` may be imported, and never from a portal, `lib/api` or `stores`.
 
-| Route | Why not wired |
+## 2. Client conventions (src/lib/api)
+
+- `http.get` / `http.getPage` (keeps backend pagination `meta`) / `post` / `put` / `patch` / `delete` / `download` + `saveBlob`.
+- Failures reject with `ApiError` carrying the backend message, status and field `details`.
+- 401 → one transparent refresh via `POST /api/v1/auth/refresh` (was broken: missing `/api` prefix, so every session died after 60 min). Anonymous 401s no longer redirect public pages to `/login`.
+- `getResellerId()` / `getAuthUserId()` — no hardcoded tenant id (the old `369` fallback is gone).
+- `camelizeKeys` / `snakeizeKeys` / `num` / `str` in `src/lib/api/case.ts` — map snake_case once per feature.
+- Single `queryClient` (`src/lib/query-client.ts`): retries only network/5xx, mutation errors toast the backend message, cache cleared on login/logout/impersonation switch.
+- `DataTable` `server` prop for server pagination + debounced search.
+
+## 3. Deploying this pass
+
+Step-by-step runbook (backup → migrate → env → verify → crontab → frontend → smoke test → rollback):
+**`isppaybd_isp/deploy/WEB_COMPLETION_RELEASE.md`**. After `php spark migrate`, run **`php spark deploy:check`**:
+it reports PASS / WARN / FAIL for pending migrations, the 40 tables this release creates (read from the
+migration files), required secrets, `WEB_APP_URL` / CORS / `app.baseURL` / `CI_ENVIRONMENT` / `CRON_ENABLED` /
+GenieACS, cache read-write and writable dirs, and exits non-zero on any FAIL (`--strict`: on WARN too).
+
+### Backend migrations (new) — `php spark migrate`
+```
+2026-10-11-240001_CreateCustomerKycDocumentsTable
+2026-10-11-240002_CreateCustomerGroupTables
+2026-10-11-410001_CreateInstallationsTable
+2026-10-11-415001_CreateCommsQueueTables
+2026-10-11-415002_AddNewsNoticeMetaColumns
+2026-10-11-470001_CreateBillingConfigTables
+2026-10-11-470002_CreateBillingPolicyChargesTable
+2026-10-11-480001_AddBillingLedgerIndexes
+2026-10-11-560001_CreateInventoryLedgerTables
+2026-10-11-640001_CreateNetworkOpsTables
+2026-10-11-650001_CreateResellerCatalogTables
+2026-10-11-710001_AddPlatformTenantAndCatalogColumns
+2026-10-11-710002_CreateEngineInstancesTable
+2026-10-11-820001_CreateRouterDisconnectLogsTable
+2026-10-11-930001_CreateUserTwoFactorTable
+2026-10-11-930002_CreateTenantDeveloperTables
+2026-10-11-930003_CreateTenantExportsTable
+2026-10-11-961001_CreateCustomerPreferenceTables
+2026-10-11-975001_AddWebhookDeliveryQueueColumns
+2026-10-11-975002_AddAcsJobDispatchColumns
+2026-10-11-985001_CreateRouterControlTables
+```
+`985001` creates `router_control_targets` + `cpe_param_maps`: the customer router-control code (targets, TR-069
+onboarding) used both tables but no migration ever created them, so `/customer/router-control/*` answered 500.
+Until they run, the affected endpoints answer `503` with a "run the migrations" message instead of SQL errors.
+`zapi/Tests/Support/WebCompletionMigrationsTest.php` applies all of them, re-runs them (no-op) and rolls them back to
+the exact original schema on SQLite. On MySQL they were applied to the local `isp_v2` copy (all 24 pending
+migrations, 62 total / 144 tables, no errors); the local `isp` database was not touched. Staging and production
+still need `php spark migrate`.
+
+`admin_packages.duration_days` is the **free preview days** a new signup gets when the package's `trial_days` is 0
+(not the billing period). The API exposes it as `preview_days` (registration plans also send the resolved
+`free_days`); the renewal period comes from `pricing_type`.
+
+### Backend env (`.env.example` documents them)
+| Key | Purpose |
 |---|---|
-| `POST auth/login`, `POST auth/refresh` | called via `API_ENDPOINTS` constants, not string literals — false positive |
-| `POST autofix/*` | called via dynamic `` `/v1/customer/autofix/${action}` `` — false positive |
-| `GET features`, `GET features/{id}` | feature-flag surface with no screen yet |
-| `GET/POST subscription/activate-package`, `POST subscription/update` | admin-side subscription ops; customer portal does renew only |
-| `POST router-control/onboard-tr069` | TR-069 onboarding is an installer flow, not customer self-care |
-| `GET ping-user`, `GET routers/load-traffic/{id}`, `GET users-load-traffic/{id}` | live-traffic probes not surfaced in customer UI |
-| `GET invoice-print`, `GET permission` (both portals) | print view / raw permission dump not consumed |
-| Package create/update (`POST/PUT reseller/packages/*`) | ✅ **Resolved 2026-09-14** — routes **do exist** (`POST packages/{id}`, `PUT packages/{id}/{pkgId}`, `DELETE packages/{id}/{pkgId}` → `Zapi\Modules\Reseller\Package`) and the frontend consumes them via `use-packages.ts` mutations; tracker entry was stale |
+| `BKASH_SMS_FORWARDER_TOKEN` | **Required** for `/api/bkash/get_bkash_sendmoney` — unset = endpoint disabled (it was open to anyone) |
+| `BKASH_WEBHOOK_TOKEN` | Optional; without it every bKash IPN must carry a valid AWS SNS signature |
+| `WEB_APP_URL` | Password-reset emails link to `<WEB_APP_URL>/reset-password` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated origins allowed with credentials; unset = any origin, never with credentials |
+| `GENIEACS_NBI_URL` / `_USER` / `_PASS` | GenieACS NBI for the ACS job worker (unset = jobs stay queued, worker answers `ACS_NOT_CONFIGURED`) |
+| `GENIEACS_MAC_FILTER_PARAM` | Optional CPE parameter path for customer device block (default `Device.WiFi.AccessPoint.1.X_ISP_BlockedMACAddresses`) |
+| `zapi.apiKeyRateLimit` | Integration API requests per key per minute (default 120) |
+| `zapi.impersonationRequirePassword` | `true` = "Log in as POP" requires the admin's password (default `false`, like the web app) |
+| `reward.cronSecret` | **Required** for every `api/cron/*` worker below — unset or a `CHANGE_ME…` placeholder = they all answer 403. (It was missing from `.env.example`.) |
 
----
+`.env.example` used to ship real values for `zapi.jwtSecret`, `security.sessionBridgeKey`, `cron.secret`,
+`recaptcha.secretKey` and `ISP_INTERNAL_KEY`; they are placeholders now, but the old values remain in git
+history. Run **`php spark secrets:check`** on each install: it lists every secret as OK / MISSING / PLACEHOLDER /
+PUBLISHED (a value that older `.env.example` revisions published) and exits non-zero while a required one is not
+OK. Values are never printed. A placeholder is treated as "not configured" everywhere it is read (tokens are not
+issued or accepted, cron and internal-API calls are refused), so a copied-but-unedited file cannot run with a
+publicly known key. Rotating `zapi.jwtSecret` signs every user out once.
 
-## 1. Verified Metrics
+### Cron (secret: `reward.cronSecret`; ready-to-paste crontab lines: `corn_job.md` items 13–24)
+- `api/cron/sms-queue` — every minute (bulk SMS/voice are queued now, not sent in-request)
+- `api/cron/dunning` — daily
+- `api/cron/usage-alerts` — hourly
+- `api/cron/billing-policies` — every 15 min (grace / auto-suspend / late & reconnection fees; live runs need `CRON_ENABLED = true`; `&dry_run=1` previews)
+- `api/cron/webhooks` — every minute (signed integration webhook deliveries with retry)
+- `api/cron/acs-jobs` — every minute (pushes queued ACS jobs to GenieACS)
+- `api/cron/autopay-reminders` — daily (SMS with the bill and a pay link to customers with auto-pay on, `notify_days_before` days before expiry; once per expiry date)
 
-| Metric | Value | How measured |
-|---|:---:|---|
-| Backend registered routes (all) | **1068** rows | `php spark routes` |
-| Backend `api/*` routes | **499** | filtered route table (465 before this work, **+34 added**) |
-| `api/v1/*` routes | **263** | filtered route table |
-| Frontend real `http.*()` call sites | **122** | every `http.get/post/put/patch/delete/upload` in `src/` |
-| **Call sites that resolve to a real backend route** | **122 / 122** | automated cross-check (§5) |
-| Frontend `*Page.tsx` screens | **203** | `find src/features -name '*Page.tsx'` |
-| Screens backed by pure mock data | **0** | verified by dependency scan (§5) |
-| Files still referencing `mock-api` | 26 | API-first with a mock **fallback** on error (graceful degradation, not a dependency) |
+The dunning, usage-alert, auto-pay and billing-policy workers hold a `CronLock`, so an overlapping hit answers
+`{"skipped": true}` instead of running twice; the queue workers (sms-queue, webhooks, acs-jobs) claim rows with
+tokens and are safe to overlap.
 
-**Overall: complete. Every live call resolves and no screen reads mock data as
-its source of truth.**
-
-### Verify commands
+## 4. Verification
 
 ```bash
 # Frontend
-pnpm lint && pnpm typecheck && pnpm test && pnpm build
+npx tsc --noEmit && npx eslint src tests --quiet && npx vitest run
 # Backend
-cd ../isppaybd_isp && php vendor/bin/phpunit && php spark routes
+php vendor/bin/phpunit --testsuite Zapi
+php vendor/bin/phpunit --testsuite App
+php spark routes
 ```
+2026-10-12 results: tsc 0 errors · eslint 0 errors · vitest 46/46 · `next build` succeeds (215 routes — 21
+static engine pages folded into `engines/[slug]`, plus `/privacy` and `/terms` — no warnings; built from a copy so
+the running dev server's `.next` was untouched) · Zapi suite 1,064 tests OK · App suite 286 tests OK ·
+`php spark routes` loads 1,334 API routes with no errors · `php spark deploy:check` on the `isp_v2` copy: database,
+migrations (63 applied, none pending) and the 40 release tables PASS.
 
-Last run: lint **0 errors** (654 warnings) · typecheck **clean** · tests
-**34/34 pass** · build **succeeds** · backend phpunit **194 tests, 517 assertions, OK**.
+Final logged-in crawl, run once, uninterrupted, against the finished code: customer 18 pages, employee 6,
+platform owner 24 (+ settings/plugins/engines focus pages), ISP admin 142 (+ 16 focus pages: customer detail,
+router, hotspot, queues, RADIUS), POP 138 — **0 JS exceptions, 0 server errors from our backend, 0 failed
+requests apart from plugin images that do not exist in the local checkout** (which now fall back to an icon).
+Flagged lines are all expected: redirects, WhatsApp not enabled for that tenant (403) and its external chatbot
+service blocked on purpose (503), and 66 permission refusals for the POP visiting URLs its sidebar does not offer.
 
-Screen-coverage check (must report **0**):
+Live smoke run against the local `isp_v2` MySQL (backend on `php -S`, frontend production build): 443 GET
+endpoints across every portal → 0 × 500 (the run found and fixed MySQL-8 reserved aliases `manual`/`terminated`/
+`empty` and a 500 on `makeResellerPayment` without an id); steady-state latency 150–230 ms. Public pages
+(pricing, status, plugins, contact) were checked in the browser against that backend.
 
-```bash
-cd isp-web-frontend
-for f in $(grep -rl mockFetch src --include=*.ts --include=*.tsx \
-  | grep -v 'src/lib/mock-api/client.ts' | grep -v 'src/data/index.ts'); do
-  grep -qE 'http\.(get|post|put|patch|delete)|apiClient\.|Service\.|/v1/|/common/' "$f" || echo "PURE-MOCK: $f"
-done
-```
+Session fix: `getSession()` (`app/Helpers/utility_helper.php`) and `TrafficEndFilter` (actor id, type and label)
+no longer start a PHP/Redis session for a Bearer request without a session cookie (each one used to persist a
+new 30-day session key). Cookie-based web pages and CLI are unchanged; `CookielessSessionTest` covers both.
 
----
+**Logged-in browser crawl** (every portal page, headless Chrome over the DevTools protocol, signed in with
+locally minted tokens for an ISP admin, a POP, a customer, an employee and the platform owner; router circuit
+breakers open and all outbound HTTP blocked so no real router or outside service is contacted). It found and
+fixed:
+- `router_control_targets` / `cpe_param_maps` never migrated, `CpeParamMapModel` missing, the router-control
+  ACS client ignoring `GENIEACS_NBI_URL`, and an undefined `getSubscriberActiveSession()` — customer router pages
+  answered 500;
+- route-filter 401/403 and unknown-path 404 responses had no CORS headers, so the browser showed a network error
+  (and an expired token never reached the refresh logic); they now carry CORS (`ApiErrorCorsTest`);
+- the admin sidebar ignored `roles` and gave a POP every page, and `can()` passed every check for a POP so the
+  104 `<Can>` wrappers did nothing for them — a POP is now judged by its own permission rows (the rows the API's
+  gate reads; a menu `/auth/me` cannot express stays with the API), in the sidebar, the dashboard buttons and the
+  command palette (`canSee` in `src/lib/permissions/can.ts`, covered by `tests/unit/permissions/can.test.ts`);
+- the command palette's "Sync MikroTik Gateways" only showed a success toast and "BTRC reports" pointed at a
+  missing page — the fake action is gone, the BTRC link goes to `/admin/reports/btrc`, and the quick actions are
+  a permission-gated list;
+- a POP's router management list showed its parent ISP's router, whose detail pages it may not open;
+- dead links: 16 hard-coded engine pages, "ONUs (sample)" to a fake OLT id, a breadcrumb to a missing
+  corporate page, footer links to non-existent Privacy/Terms pages;
+- an offline router reported as a server error (`/customer/usage` now 503 `ROUTER_UNREACHABLE`).
 
-## 2. Backend surface
+**Router-dependent pages against a RouterOS-speaking endpoint.** The first crawl ran with every router
+deliberately unreachable, which proves the error states but not the happy paths (usage, live router details,
+hotspot, corporate queues). A local server that speaks the real RouterOS API wire protocol (login, `?filters`,
+`.id` lookups, `add` → `=ret=`) was then wired in with no database change, and the crawl was re-run for all five
+logins: customer 18 pages, employee 6, platform owner 24, ISP admin 142 (+14 focus pages: customer detail,
+router, hotspot, queues), POP 139 — **0 JS exceptions, 0 failed network requests, 0 server errors from the
+backend**; every hotspot / router / queue / usage page returns data. What is left in the logs is environmental:
+WhatsApp not enabled for that tenant (403 → "WhatsApp is not enabled" state), the external chatbot service blocked
+on purpose (503 `PROVIDER_UNAVAILABLE`), and the POP being refused pages its permission rows do not include
+(68 × 403, which its sidebar no longer offers). It also found two real bugs the mocked tests could not:
+- `getSimpleQueues()` passed `['?dynamic' => 'false']` where the library takes `[key, value]` tuples → `TypeError`,
+  so corporate queues could never load on any router; the legacy RADIUS setup (`CronJob`, `MikrotikSetup`) had
+  the same mistake on `/radius/add`, `/ppp/aaa/set`, `/radius/incoming/set` and, worse, caught only `\Exception`
+  so the `TypeError` escaped as a 500. All fixed; `RouterOsProtocolTest` drives the real helpers through the real
+  client over TCP (mutation-checked: it fails against the old code);
+- a POP's RADIUS and corporate-queue pickers offered its parent ISP's router, which the API then refuses to
+  manage — those two pages now list only routers the caller owns.
 
-The backend exposes **two generations** of routes. Use the `v1` forms.
+Also fixed in this pass: outbound chatbot/WhatsApp cURL calls had no connect timeout (a dead host pinned a PHP
+worker for the full 20 s); a time-of-day flaky test (`CustomerParityTest`, "due today" crossed midnight after
+22:00); the `CronController` locks above; tracked OLT driver session files (`olt_brands/token_*.txt`,
+`dbcsessions/`) are now git-ignored.
 
-| Generation | Count | Example |
-|---|:---:|---|
-| `api/v1/*` (current) | 229 | `api/v1/reseller/customers/{id}/index` |
-| `api/*` legacy (no version) | ~257 | `api/common/news` |
+Note: backend tests read `.env`, whose cache handler is the local Redis; some pre-existing tests call
+`cache()->clean()`, which flushes local Redis DB 0. Run them against a dev Redis only.
 
-> **`/api/v1/admin/*` does not exist.** The backend's tenant-admin surface is
-> `/api/v1/reseller/*` and the customer surface is `/api/v1/customer/*`.
-> `src/lib/api/endpoints.ts` previously declared ~94 `/v1/admin/*` paths that
-> were never implemented; they have been removed.
+## 5. Still open (needs your decision or environment)
 
----
+Nothing below is unfinished code; each item needs access, an external service, a business decision or content.
 
-## 3. Fixed in this pass (call-site ↔ route mismatches)
-
-Each of these previously hit a route the backend does not have.
-
-### 3.1 Frontend remapped onto existing routes
-
-| Service | Was | Now |
-|---|---|---|
-| `customerService.getDashboard` | `GET /v1/customer/dashboard` ✗ | `GET /v1/customer/users/{id}` (returns the full self-care payload) |
-| `customerService.getProfile` | `GET /v1/customer/profile` ✗ | `GET /v1/customer/users/{id}` |
-| `customerService.getNews` | `GET /v1/common/news` ✗ | `GET /common/news` |
-| `customerService.getNewsById` | `GET /v1/common/news/{id}` ✗ | `GET /common/news/view/{id}` |
-| `customerService.getPackages` | missing `user_id` (400) | `GET /v1/customer/packages?user_id=` |
-| `customerService.getPayments` | missing `user_id` (400) | `GET /v1/customer/payment-fetch?user_id=` |
-| `CorporateQueuesPage` | `.../corporate-queues/1` (hardcoded router) | `.../corporate-queues` |
-| `AiChatPage` | `POST /api/chat` (double-prefixed → `/api/api/chat`) | `POST /v1/ai/chat` |
-| `platformService.getAdmins` | pointed at `/v1/platform/tenants` (wrong data) | `GET /v1/platform/admins` |
-| `platformService.getSupportTickets` | pointed at `/v1/platform/system-health` (wrong data) | `GET /v1/platform/support-tickets` |
-
-### 3.2 Screen coverage — 16 pure-mock screens wired (now 0)
-
-| Screen | Now backed by |
+| Item | Status |
 |---|---|
-| `MovieServersPage` | `GET /common/movieservers` |
-| `PaymentGatewaysPage`, `PaymentGatewayDetailPage` | `GET /v1/reseller/payment-gateways/{id}` (config + settlement figures from the payments ledger) |
-| `AdminsListPage` | `GET /v1/platform/admins` |
-| `AdminPackagesPage` | `GET /v1/platform/admin-packages` |
-| `PluginsPage` | `GET /v1/platform/plugins` |
-| `ShowcasePage`, `AdminProductShowcasePage` | `GET /v1/platform/showcase` |
-| `ContactsPage` | `GET /v1/platform/contacts`, `PATCH /v1/platform/contacts/{id}/status` |
-| `RevenuePage` | `GET /v1/platform/revenue` |
-| `SidebarPinsPage` | `GET /v1/platform/sidebar-pins` |
-| `MaintenancePage` | `GET/POST /v1/platform/settings` |
-| `RedisLogsPage` | `GET /v1/platform/redis-logs` (real framework log files + live Redis stats) |
-| `FileManagerPage` | `GET /v1/platform/file-manager` (read-only, path-confined) |
-| `UserAccessPage` (admin) | `GET/POST /v1/reseller/role-permissions/{role}`, `GET /v1/reseller/custom-access` |
-| `ForgotPasswordPage` | `POST /api/common/forgot-password` (real reset link + email) |
-| `DemoUserPicker` | Local seeded demo credentials (not API data — demo affordance) |
-
-### 3.3 Dead code deleted
-
-| Item | Why |
-|---|---|
-| `endpoints.ts` → `/v1/admin`, `/v1/customer`, `/v1/employee`, `/v1/platform` blocks (~94 paths) | Routes never existed; only `auth` was ever imported |
-| `platformService.getContacts` | 0 callers |
-| `platformService.updateContactStatus` | 0 callers; `contacts` table has no status column |
-| `platformService.getRedisLogs` | 0 callers |
-
-### 3.4 Backend routes added (34)
-
-| Domain | Routes |
-|---|---|
-| Router live ops | `GET routers/{id}/sessions`, `POST routers/{id}/disconnect`, `GET routers/{id}/dhcp-leases`, `GET routers/{id}/queues` |
-| Reseller extras | `GET settings/{id}`, `GET payment-gateways/{id}`, `GET customers/{id}/audit-logs`, `GET customers/{id}/corporate-queues`, `GET subscription/{id}`, `POST subscription/{id}/recharge` |
-| Reports | `GET reports/btrc/{id}` |
-| Platform | `GET tenants/{id}`, `DELETE tenants/{id}`, `GET tenants/{id}/health`, `GET admins`, `GET support-tickets`, `GET settings`, `POST settings` |
-| Customer | `POST payments`, `POST profile/change-password` |
-| AI | `POST v1/ai/chat` |
-| Platform catalog | `GET admin-packages`, `GET plugins`, `GET showcase`, `GET contacts`, `PATCH contacts/{id}/status`, `GET revenue`, `GET sidebar-pins`, `GET redis-logs`, `GET file-manager` |
-| Permissions | `GET/POST role-permissions/{role}`, `GET custom-access` |
-| Auth | `POST /api/common/forgot-password` |
-
-Implementation notes:
-- Router live ops use the existing MikroTik helpers (`getactive_user`,
-  `getSimpleQueues`, `\RouterOS\Query`) and answer with
-  `{ router_online: false, items: [] }` when a router is unreachable — an empty
-  state, never a 404.
-- Payment and recharge endpoints record a **pending** row only; settlement stays
-  with the payment-gateway callback. They never mark a payment successful.
-- `password_hash` / `password_verify` are used for password changes, matching
-  the existing auth flow.
-- `POST /v1/ai/chat` is a data-backed ops assistant reading the tenant's own
-  tables — it is intentionally not a free-form LLM proxy.
-
----
-
-## 4. Known data limitations (honest gaps, not broken calls)
-
-> **2026-09-14 — gap-closure pass.** All schema/semantic gaps below were closed
-> (migration `2026-09-14-000001_CloseCatalogApiGaps`, new Zapi endpoints, new
-> frontend wiring + tests). Remaining notes are genuinely informational.
-
-| Field | Status |
-|---|---|
-| Plugin `priceBdt` / `installs` | ✅ **Closed** — real `plugins.price` (existed via 2026-08-30 migration) + new `plugins.installs` counter column; controller now reads both |
-| Showcase `views` | ✅ **Closed** — new `product_showcase_categories.views` column; controller reads it |
-| Contact `company` | ✅ **Closed** — new `contacts.company` column; controller maps it |
-| `revenue.growthPercentage`, `chartData` | ✅ **Closed** — computed from 6 months of real `payments` ledger sums (month-over-month growth) |
-| `adminPackages.tenantCount` | ✅ **Closed** — counted from active `tenants.plan` matching the package name |
-| `redisLogs.stats` sessions | Only populated when the cache handler is Redis (inherent — no Redis, no session store) |
-
-### Semantic (was generic — now real)
-
-- ✅ `platformService.getMetering` → dedicated **`GET /v1/platform/metering`**
-  (per-tenant users/SMS row counts, real period).
-- ✅ `platformService.getSla` → dedicated **`GET /v1/platform/sla`** (router
-  uptime %, open tickets, derived severity vs 99.5% target).
-
-### Tables without a controller — status
-
-| Table | Status |
-|---|---|
-| `recycle_bin` | ✅ **Closed** — new `GET /v1/platform/recycle-bin`, `POST .../{id}/restore`, `DELETE .../{id}`; frontend hook + page wired to real API with mutations |
-| `news_notice` | Not consumed by any screen; legacy `common/news` surface covers announcements — no route invented |
-| `network_diagrams` | No such data exists in the deployed schema (OLT topology is served live from `olt/topology`); no route invented |
-
----
-
-## 5. Verification method
-
-1. Dump the authoritative route table:
-   `cd ../isppaybd_isp && php spark routes`
-2. Extract `METHOD<TAB>api/path` rows, normalise every `(:segment)` /
-   `([0-9]+)` parameter to `:id`.
-3. Parse every `http.get|post|put|patch|delete|upload(...)` call site in
-   `src/**/*.ts(x)`, normalise `${...}` interpolations to `:id`, and diff
-   against the backend set.
-4. Result: **122 call sites, 0 real unmatched.**
-
-One path is reported by a naive textual scan but is **not** a mismatch:
-`admin.service.ts` builds
-`` `/v1/reseller/accounting/${id}/${endpoint}` `` where `endpoint` is one of
-`balance-sheet` | `chart-of-accounts` | `journal-entries` — all three exist.
-
-### Re-run the check
-
-```bash
-cd ../isppaybd_isp && php spark routes | grep '^| ' \
-  | awk -F'|' '{gsub(/^ +| +$/,"",$3); print $3}' | grep '^api/' | sort -u
-```
-
-Then grep the frontend for `http.` call sites and compare. The pass/fail
-condition for this tracker is **0 unmatched call sites**.
+| Staging/production migrations | Applied and tested on local `isp_v2` only (63 migrations, `deploy:check` PASS). Run the runbook on staging, then production — a deploy step that needs server access. |
+| Server configuration | Set `reward.cronSecret` and the other keys in `.env.example`, add the crontab lines from `corn_job.md`, then run `php spark deploy:check` and `php spark secrets:check` until they exit 0. |
+| Secret rotation | `php spark secrets:check` reports any secret that still equals a value once published in `.env.example`. On the local install `security.sessionBridgeKey` and `recaptcha.secretKey` are such values, so check production the same way. |
+| Unattended auto-debit | **Closed by decision (2026-10-12): keep reminders + pay link.** Not buildable on what the product has: customers have **no stored balance** — `users.fund` is only ever credited for reseller top-ups, and in the production-like copy all 13,073 customers sit at 0.00 while the fund ledger has rows for resellers only — and every gateway integration needs the customer to approve each payment. Auto-pay therefore sends the bill + pay link before expiry (`autopay-reminders`) and earns the tenant's `autopay_points`. True auto-debit needs a recurring-payment product from a gateway (merchant onboarding) or a customer wallet feature — a business decision. |
+| GenieACS server | Worker and customer TR-069 onboarding are tested over real HTTP against a local NBI stub (`GenieAcsLiveHttpTest`); they act on real CPEs once `GENIEACS_NBI_URL` points at a GenieACS server. |
+| OLT drivers for c_data, ecom, hsgq, fucascom; Rocket gateway | The repository (and the legacy web) ships no driver script / integration for them, so sync and payment answer an honest 501. They need vendor protocol documentation or an agreement, not a port. |
+| Privacy Policy / Terms text | The pages and editor exist, and starter drafts grounded in what the platform collects are in `docs/legal/` (unpublished). Counsel reviews them, fills the `[PLACEHOLDER]`s, and the owner pastes them into Software Settings → Legal pages. |
+| Tenant portal detail pages in the browser | `isp_v2` has no tenant portals, so `/platform/tenants/{id}/*` were covered by the API tests only. |
+| Two stale OLT session files in git history | `app/Views/olt_brands/token_103.112.131.44_44.txt` and `dbcsessions/session_160_187_159_48.json` are untracked (staged deletion, files kept on disk, now git-ignored) but remain in history since Aug 18 — they are OLT device session tokens, so treat them as exposed if still valid on the device. |

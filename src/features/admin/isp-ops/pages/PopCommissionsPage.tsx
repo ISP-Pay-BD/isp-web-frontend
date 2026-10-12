@@ -1,125 +1,152 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import {
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Download,
-  Percent,
-  Plus,
-  TrendingUp,
-  Wallet,
-  DollarSign,
-  ArrowUpRight,
-  Receipt,
-  FileCheck,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { Building2, Calendar, Download, Percent, Pencil, Trash2, Receipt } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { handleApiError } from '@/lib/api/utils/error-handler';
+import { downloadCsv } from '@/features/admin/accounting/shared/table-utils';
+import { useDeleteCommissionRule, usePopCommissionStatement, useSaveCommissionRule } from '../hooks/use-catalog';
+import type { CommissionRule, CommissionType, PopCommissionRow } from '../catalog.types';
 
-type Row = IspOpsData['popCommissions'][number];
-
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.popName).toLowerCase().includes(q) ||
-    String(r.period).toLowerCase().includes(q) ||
-    String(r.status).toLowerCase().includes(q)
-  );
+const currentPeriod = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
+const ruleLabel = (rule: CommissionRule | null) =>
+  !rule ? 'No rule' : rule.type === 'percent' ? `${rule.value}% of collections` : `৳${rule.value.toLocaleString()} / paying customer`;
+
+interface RuleForm {
+  commission_type: CommissionType;
+  commission_value: string;
+  notes: string;
+}
+
+function RuleDialog({ row, onClose }: { row: PopCommissionRow | null; onClose: () => void }) {
+  const save = useSaveCommissionRule();
+  const { register, handleSubmit, setValue, watch, reset, setError, formState: { errors } } = useForm<RuleForm>({
+    defaultValues: { commission_type: 'percent', commission_value: '', notes: '' },
+  });
+  useEffect(() => {
+    if (row)
+      reset({
+        commission_type: row.rule?.type ?? 'percent',
+        commission_value: row.rule ? String(row.rule.value) : '',
+        notes: row.rule?.notes ?? '',
+      });
+  }, [row, reset]);
+  const type = watch('commission_type');
+
+  const onSubmit = (v: RuleForm) =>
+    row &&
+    save.mutate(
+      { popId: row.popId, body: { commission_type: v.commission_type, commission_value: Number(v.commission_value), notes: v.notes } },
+      {
+        onSuccess: () => {
+          toast.success(`Commission rule saved for ${row.name}`);
+          onClose();
+        },
+        onError: (err) => handleApiError(err, setError),
+      },
+    );
+
+  return (
+    <Dialog open={!!row} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md p-6">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Percent className="h-4 w-4 text-primary" /> Commission Rule · {row?.name}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Applied to the POP&apos;s customers&apos; successful payments in each statement period.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Rule Type *</Label>
+              <Select value={type} onValueChange={(v) => setValue('commission_type', v === 'fixed' ? 'fixed' : 'percent')}>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue>{(v: string | null) => (v === 'fixed' ? 'Fixed per paying customer' : 'Percent of collections')}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent" className="text-xs">Percent of collections</SelectItem>
+                  <SelectItem value="fixed" className="text-xs">Fixed per paying customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rule-value" className="text-xs font-semibold">{type === 'fixed' ? 'Amount (BDT) *' : 'Rate (%) *'}</Label>
+              <Input
+                id="rule-value"
+                type="number"
+                min={0}
+                max={type === 'percent' ? 100 : undefined}
+                step="0.01"
+                className="h-9 text-xs font-mono"
+                {...register('commission_value', { required: 'Value is required' })}
+              />
+              {errors.commission_value && <p className="text-[11px] text-destructive">{errors.commission_value.message}</p>}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="rule-notes" className="text-xs font-semibold">Notes</Label>
+            <Input id="rule-notes" className="h-9 text-xs" {...register('notes')} />
+            {errors.notes && <p className="text-[11px] text-destructive">{errors.notes.message}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t">
+            <Button type="button" variant="outline" size="sm" className="text-xs" onClick={onClose}>Cancel</Button>
+            <Button type="submit" size="sm" className="text-xs font-semibold" disabled={save.isPending}>Save Rule</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function PopCommissionsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [selectedCommission, setSelectedCommission] = useState<Row | null>(null);
+  const [period, setPeriod] = useState(currentPeriod);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, isError, error, refetch } = usePopCommissionStatement({ page, pageSize, search, period });
+  const removeRule = useDeleteCommissionRule();
+  const [editing, setEditing] = useState<PopCommissionRow | null>(null);
+  const [removing, setRemoving] = useState<PopCommissionRow | null>(null);
 
-  const rows = data?.popCommissions ?? [];
+  const onSearchChange = useCallback((v: string) => {
+    setSearch(v);
+    setPage(1);
+  }, []);
 
-  const stats = useMemo(() => {
-    const totalCommissions = rows.reduce((s, r) => s + r.commissionBdt, 0);
-    const paidCommissions = rows
-      .filter((r) => r.status === 'paid')
-      .reduce((s, r) => s + r.commissionBdt, 0);
-    const pendingCommissions = rows
-      .filter((r) => r.status === 'pending')
-      .reduce((s, r) => s + r.commissionBdt, 0);
-    const totalCollected = rows.reduce((s, r) => s + r.collectedBdt, 0);
-    const avgRate = rows.length
-      ? (rows.reduce((s, r) => s + r.ratePct, 0) / rows.length).toFixed(1)
-      : '0.0';
-    return {
-      totalCommissions,
-      paidCommissions,
-      pendingCommissions,
-      totalCollected,
-      avgRate,
-    };
-  }, [rows]);
+  const rows = useMemo(() => data?.items ?? [], [data?.items]);
+  const summary = data?.summary;
 
-  const handleExportCsv = () => {
-    const headers = [
-      'POP Reseller',
-      'Period',
-      'Total Collections (BDT)',
-      'Commission Rate (%)',
-      'Commission Payout (BDT)',
-      'Status',
-    ];
-    const csvRows = rows.map((r) => [
-      r.popName,
-      r.period,
-      r.collectedBdt,
-      r.ratePct,
-      r.commissionBdt,
-      r.status,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `pop_commissions_${new Date().toISOString().split('T')[0]}.csv`,
+  const handleExportCsv = () =>
+    downloadCsv(
+      `pop_commissions_${period}.csv`,
+      ['POP ID', 'POP', 'Period', 'Collections (BDT)', 'Payments', 'Paying Customers', 'Rule', 'Commission (BDT)'],
+      rows.map((r) => [r.popId, r.name, r.period, r.collected, r.payments, r.payingCustomers, ruleLabel(r.rule), r.commission]),
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('POP commission statement exported to CSV');
-  };
 
-  const handleSettlePayout = (comm: Row) => {
-    toast.success(
-      `Commission payout of ৳${comm.commissionBdt.toLocaleString()} for ${comm.popName} disbursed successfully`,
-    );
-    setSelectedCommission(null);
-  };
-
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<PopCommissionRow, unknown>[]>(
     () => [
       {
-        accessorKey: 'popName',
+        accessorKey: 'name',
         header: 'POP Reseller Hub',
         enableHiding: false,
         size: 220,
@@ -129,10 +156,8 @@ export function PopCommissionsPage() {
               <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <div className="font-bold text-sm text-foreground">{row.original.popName}</div>
-              <div className="text-[10px] text-muted-foreground font-mono">
-                {row.original.id}
-              </div>
+              <div className="font-bold text-sm text-foreground">{row.original.name}</div>
+              <div className="text-[10px] text-muted-foreground font-mono">{row.original.mobile || `#${row.original.popId}`}</div>
             </div>
           </div>
         ),
@@ -140,7 +165,7 @@ export function PopCommissionsPage() {
       {
         accessorKey: 'period',
         header: 'Billing Cycle',
-        size: 130,
+        size: 110,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 font-mono text-xs text-foreground">
             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
@@ -149,102 +174,76 @@ export function PopCommissionsPage() {
         ),
       },
       {
-        accessorKey: 'collectedBdt',
+        accessorKey: 'collected',
         header: 'Subscriber Collection',
-        size: 150,
+        size: 160,
         cell: ({ row }) => (
-          <div className="font-mono text-xs font-semibold text-foreground">
-            <CurrencyDisplay amount={row.original.collectedBdt} />
+          <div>
+            <div className="font-mono text-xs font-semibold text-foreground">
+              <CurrencyDisplay amount={row.original.collected} />
+            </div>
+            <div className="text-[10px] text-muted-foreground">
+              {row.original.payments} payments · {row.original.payingCustomers} customers
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: 'ratePct',
-        header: 'Tier Rate',
-        size: 110,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50 text-xs font-mono font-bold text-foreground">
-              {row.original.ratePct}%
+        id: 'rule',
+        header: 'Rule',
+        size: 170,
+        cell: ({ row }) =>
+          row.original.rule ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50 text-[11px] font-mono font-bold text-foreground">
+              {ruleLabel(row.original.rule)}
             </span>
-          </div>
-        ),
+          ) : (
+            <Badge variant="outline" className="text-[10px] text-muted-foreground">No rule</Badge>
+          ),
       },
       {
-        accessorKey: 'commissionBdt',
-        header: 'Net Commission',
-        size: 140,
+        accessorKey: 'commission',
+        header: 'Commission',
+        size: 130,
         cell: ({ row }) => (
           <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={row.original.commissionBdt} />
+            <CurrencyDisplay amount={row.original.commission} />
           </div>
         ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Disbursement',
-        size: 120,
-        cell: ({ row }) => {
-          const isPaid = row.original.status === 'paid';
-          return isPaid ? (
-            <Badge
-              variant="outline"
-              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-semibold gap-1"
-            >
-              <CheckCircle2 className="h-3 w-3" />
-              Paid
-            </Badge>
-          ) : (
-            <Badge
-              variant="outline"
-              className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-semibold gap-1"
-            >
-              <Clock className="h-3 w-3" />
-              Pending
-            </Badge>
-          );
-        },
       },
       {
         id: 'actions',
         header: '',
-        size: 110,
-        cell: ({ row }) => {
-          const r = row.original;
-          return (
-            <div className="flex justify-end">
-              {r.status === 'pending' ? (
-                <Button
-                  size="sm"
-                  onClick={() => setSelectedCommission(r)}
-                  className="h-7 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-2xs gap-1"
-                >
-                  <Wallet className="h-3 w-3" /> Settle
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedCommission(r)}
-                  className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1"
-                >
-                  <Receipt className="h-3 w-3" /> Voucher
-                </Button>
-              )}
-            </div>
-          );
-        },
+        size: 130,
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(row.original)} className="h-7 text-xs gap-1 text-primary hover:bg-primary/10">
+              <Pencil className="h-3 w-3" /> {row.original.rule ? 'Edit rule' : 'Set rule'}
+            </Button>
+            {row.original.rule && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setRemoving(row.original)}
+                className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                aria-label={`Remove rule for ${row.original.name}`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        ),
       },
     ],
     [],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError || !data) {
+  if (isError) {
     return (
       <EmptyState
         title="Failed to load POP commissions"
-        description="Could not fetch reseller commission accounting records."
+        description={error?.message ?? 'Could not compute the commission statement.'}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -255,7 +254,7 @@ export function PopCommissionsPage() {
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="POP Commissions"
-        subtitle="Reseller commission settlement ledger calculated from verified downstream subscriber collections"
+        subtitle="Commission rules per POP and a read-only statement computed from each POP's customer collections"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'POP Suite' },
@@ -263,169 +262,99 @@ export function PopCommissionsPage() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="commission-period" className="text-xs text-muted-foreground">Period</Label>
+              <Input
+                id="commission-period"
+                type="month"
+                value={period}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setPeriod(e.target.value);
+                    setPage(1);
+                  }
+                }}
+                className="h-8 w-[150px] text-xs"
+              />
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
+              disabled={rows.length === 0}
               className="text-xs border-border/80 hover:bg-accent"
             >
               <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Statement
-            </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                toast.success('All pending commission vouchers queued for batch bank disburse')
-              }
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
-            >
-              <FileCheck className="h-3.5 w-3.5" /> Batch Settle Pending
             </Button>
           </div>
         }
       />
 
-      {/* KPI Stats Ribbon */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">
-            <CurrencyDisplay amount={stats.totalCommissions} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">total commissions ({rows.length} cycles)</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={stats.paidCommissions} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">disbursed to wallets</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-            <CurrencyDisplay amount={stats.pendingCommissions} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">awaiting clearance</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-primary">{stats.avgRate}%</span>{' '}
-          <span className="text-muted-foreground">average commission tier</span>
-        </p>
-      </div>
+      {summary && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums text-foreground">
+              <CurrencyDisplay amount={summary.collected} className="inline font-semibold" />
+            </span>{' '}
+            <span className="text-muted-foreground">collected in {summary.period} ({summary.payments} payments)</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+              <CurrencyDisplay amount={summary.commission} className="inline font-semibold" />
+            </span>{' '}
+            <span className="text-muted-foreground">commission due</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-primary">
+              {summary.popsWithRule} / {summary.pops}
+            </span>{' '}
+            <span className="text-muted-foreground">POPs with a commission rule</span>
+          </p>
+          <p className="flex items-center gap-1 text-muted-foreground">
+            <Receipt className="h-3.5 w-3.5" /> Statement only — payouts are not recorded here
+          </p>
+        </div>
+      )}
 
-      {/* DataTable */}
       <DataTable
         columns={columns}
         data={rows}
-        getRowId={(row) => row.id}
-        searchKey="popName"
-        searchPlaceholder="Search POP partner name, period (e.g. 2026-08)..."
-        searchFilterFn={searchFilter}
-        facetFilters={[
-          { columnId: 'status', title: 'Disbursement Status' },
-        ]}
-        emptyTitle="No commission records found"
-        emptyDescription="Commission statements will generate automatically after monthly collection cycles."
+        getRowId={(row) => row.popId}
+        searchPlaceholder="Search POP name or mobile..."
+        emptyTitle={search ? 'No POPs match your search' : 'No POP resellers yet'}
+        emptyDescription="Commission statements are computed for every POP under your ISP."
+        server={{
+          page,
+          pageSize,
+          total: data?.meta.total ?? 0,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+          search,
+          onSearchChange,
+        }}
       />
 
-      {/* Settlement Voucher Modal */}
-      <Dialog
-        open={!!selectedCommission}
-        onOpenChange={(open) => !open && setSelectedCommission(null)}
-      >
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-                  <Receipt className="h-4 w-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base font-bold">Commission Voucher</DialogTitle>
-                  <DialogDescription className="text-xs font-mono">
-                    {selectedCommission?.period} &middot; {selectedCommission?.id}
-                  </DialogDescription>
-                </div>
-              </div>
-              {selectedCommission && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'text-[10px] font-semibold capitalize',
-                    selectedCommission.status === 'paid'
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-                  )}
-                >
-                  {selectedCommission.status}
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
-
-          {selectedCommission && (
-            <div className="space-y-4 pt-2 text-xs">
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">POP Partner:</span>
-                  <span className="font-bold text-foreground">{selectedCommission.popName}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Period:</span>
-                  <span className="font-mono text-foreground">{selectedCommission.period}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Subscriber Total Collections:</span>
-                  <span className="font-mono font-semibold text-foreground">
-                    ৳{selectedCommission.collectedBdt.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-muted-foreground">Commission Split Rate:</span>
-                  <span className="font-mono font-bold text-primary">
-                    {selectedCommission.ratePct}%
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm font-bold">
-                <span>Calculated Net Payout:</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-base">
-                  ৳{selectedCommission.commissionBdt.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedCommission(null)}
-                  className="text-xs"
-                >
-                  Close
-                </Button>
-                {selectedCommission.status === 'pending' ? (
-                  <Button
-                    size="sm"
-                    onClick={() => handleSettlePayout(selectedCommission)}
-                    className="text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Disburse to Wallet
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      toast.success('Statement voucher printed');
-                      setSelectedCommission(null);
-                    }}
-                    className="text-xs font-semibold"
-                  >
-                    Print Statement
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <RuleDialog row={editing} onClose={() => setEditing(null)} />
+      <ConfirmDialog
+        open={!!removing}
+        onOpenChange={(o) => !o && setRemoving(null)}
+        title={`Remove the commission rule for ${removing?.name ?? 'this POP'}?`}
+        description="Its statement commission becomes zero until a new rule is set."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() =>
+          removing &&
+          removeRule.mutate(removing.popId, {
+            onSuccess: () => {
+              toast.success('Commission rule removed');
+              setRemoving(null);
+            },
+          })
+        }
+      />
     </div>
   );
 }

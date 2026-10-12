@@ -1,92 +1,64 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import {
-  Smartphone,
-  Laptop,
-  Tv,
-  ArrowLeft,
-  RefreshCw,
-} from 'lucide-react';
+import { Smartphone, ArrowLeft, RefreshCw, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  CustomerPageShell,
-  CustomerLoadingSkeleton,
-  CustomerErrorState,
-} from '@/features/customer/shared';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { DataTable } from '@/features/shared/data-table';
-import { useCustomerRouter } from '../hooks/use-customer-router';
-import { formatDate } from '@/lib/format';
-import { toast } from 'sonner';
-import type { RouterDevice } from '@/data/shared/types';
+import { useDeviceAccess, useRouterDevices } from '../hooks/use-customer-router';
+import { RouterActionResultPanel } from '../components/RouterActionResultPanel';
+import type { RouterActionResult, RouterDevice } from '@/lib/api/adapters/customer.adapter';
 
-type DeviceRow = RouterDevice & { accessStatus: 'Online' | 'Blocked' };
-
-const deviceSearchFilter = (
-  row: LegacyRow<DeviceRow>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
+const deviceSearchFilter = (row: LegacyRow<RouterDevice>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
   const d = row.original;
-  return (
-    d.name.toLowerCase().includes(q) ||
-    d.ip.toLowerCase().includes(q) ||
-    d.mac.toLowerCase().includes(q)
-  );
+  return d.hostname.toLowerCase().includes(q) || d.ip.toLowerCase().includes(q) || d.mac.toLowerCase().includes(q);
 };
 
-function getDeviceIcon(name: string) {
-  const lower = name.toLowerCase();
-  if (lower.includes('laptop') || lower.includes('pc') || lower.includes('dell')) {
-    return <Laptop className="h-4 w-4" />;
-  }
-  if (lower.includes('tv') || lower.includes('smart')) {
-    return <Tv className="h-4 w-4" />;
-  }
-  return <Smartphone className="h-4 w-4" />;
-}
-
+/**
+ * GET /v1/customer/router-control/devices. The provider router only sees the
+ * PPPoE session; home devices are listed when the CPE is TR-069 managed.
+ * Block / unblock (POST /v1/customer/device/{block|unblock}) shows the real
+ * outcome: `queued` with the ACS job id when the router is remotely managed,
+ * otherwise `pending` with router-admin steps.
+ */
 export function CustomerDevicesPage() {
-  const { data, isLoading, isError, refetch } = useCustomerRouter();
-  const [blockedDevices, setBlockedDevices] = useState<string[]>([]);
+  const { data, isLoading, isError, error, refetch, isFetching } = useRouterDevices();
+  const { mutate: changeAccess, isPending: accessPending } = useDeviceAccess();
+  const [mac, setMac] = useState('');
+  const [accessResult, setAccessResult] = useState<{ title: string; result: RouterActionResult } | null>(null);
 
-  const toggleBlock = (id: string, name: string) => {
-    if (blockedDevices.includes(id)) {
-      setBlockedDevices((prev) => prev.filter((d) => d !== id));
-      toast.success(`${name} unblocked. Access restored.`);
-    } else {
-      setBlockedDevices((prev) => [...prev, id]);
-      toast.error(`${name} blocked from accessing broadband.`);
-    }
-  };
-
-  const deviceRows: DeviceRow[] = useMemo(
-    () =>
-      (data?.connectedDevices ?? []).map((dev) => ({
-        ...dev,
-        accessStatus: blockedDevices.includes(dev.id) ? 'Blocked' : 'Online',
-      })),
-    [data?.connectedDevices, blockedDevices],
+  const runAccess = useCallback(
+    (target: string, block: boolean) => {
+      const value = target.trim();
+      if (!value) return;
+      changeAccess(
+        { mac: value, block },
+        { onSuccess: (result) => setAccessResult({ title: `${block ? 'Block' : 'Unblock'} ${value}`, result }) },
+      );
+    },
+    [changeAccess],
   );
 
-  const columns = useMemo<LegacyColumnDef<DeviceRow, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<RouterDevice, unknown>[]>(
     () => [
       {
-        accessorKey: 'name',
+        accessorKey: 'hostname',
         header: 'Device Name',
         size: 220,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-2.5">
             <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              {getDeviceIcon(row.original.name)}
+              <Smartphone className="h-4 w-4" />
             </div>
-            <span className="font-bold text-foreground">{row.original.name}</span>
+            <span className="font-bold text-foreground">{row.original.hostname || 'Unnamed device'}</span>
           </div>
         ),
       },
@@ -94,70 +66,49 @@ export function CustomerDevicesPage() {
         accessorKey: 'ip',
         header: 'IP Address',
         size: 140,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.ip}</span>
-        ),
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.ip || '—'}</span>,
       },
       {
         accessorKey: 'mac',
-        header: 'Physical MAC',
+        header: 'MAC',
         size: 160,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{row.original.mac}</span>
-        ),
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.mac || '—'}</span>,
       },
       {
-        accessorKey: 'connectedAt',
-        header: 'Connected Since',
-        size: 140,
-        cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground">
-            {formatDate(row.original.connectedAt)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'accessStatus',
+        accessorKey: 'online',
         header: 'Status',
         size: 100,
-        cell: ({ row }) => {
-          const isBlocked = row.original.accessStatus === 'Blocked';
-          return (
-            <Badge variant={isBlocked ? 'destructive' : 'default'} className="text-[11px]">
-              {row.original.accessStatus}
-            </Badge>
-          );
-        },
+        cell: ({ row }) => (
+          <Badge variant={row.original.online ? 'default' : 'outline'} className="text-[11px]">
+            {row.original.online ? 'Online' : 'Offline'}
+          </Badge>
+        ),
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Access Control</span>,
-        size: 160,
-        enableSorting: false,
+        header: '',
+        size: 90,
         enableHiding: false,
-        cell: ({ row }) => {
-          const isBlocked = row.original.accessStatus === 'Blocked';
-          return (
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant={isBlocked ? 'outline' : 'destructive'}
-                onClick={() => toggleBlock(row.original.id, row.original.name)}
-                className="h-8 text-xs font-semibold"
-              >
-                {isBlocked ? 'Restore Access' : 'Block Device'}
-              </Button>
-            </div>
-          );
-        },
+        cell: ({ row }) =>
+          row.original.mac ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-destructive"
+              disabled={accessPending}
+              onClick={() => runAccess(row.original.mac, true)}
+            >
+              Block
+            </Button>
+          ) : null,
       },
     ],
-    [blockedDevices],
+    [accessPending, runAccess],
   );
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="Connected Devices" subtitle="Scanning local network ARP table...">
+      <CustomerPageShell title="Connection & Devices" subtitle="Reading your connection...">
         <CustomerLoadingSkeleton />
       </CustomerPageShell>
     );
@@ -165,20 +116,23 @@ export function CustomerDevicesPage() {
 
   if (isError || !data) {
     return (
-      <CustomerPageShell title="Connected Devices" subtitle="Active DHCP Clients">
-        <CustomerErrorState onRetry={() => refetch()} />
+      <CustomerPageShell title="Connection & Devices" subtitle="Session and devices">
+        <CustomerErrorState message={error?.message || undefined} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
 
+  const { connection } = data;
+  const online = connection.online;
+
   return (
     <CustomerPageShell
-      title="Connected Devices"
-      subtitle="Inspect all active smartphones, laptops, smart TVs, and IoT hardware assigned an IP address by your router."
+      title="Connection & Devices"
+      subtitle="Your live session on the provider network and, where supported, the devices on your home network."
       breadcrumbs={[
         { label: 'Customer', href: '/customer/dashboard' },
         { label: 'Router', href: '/customer/router' },
-        { label: 'Connected Devices' },
+        { label: 'Connection & Devices' },
       ]}
       actions={
         <div className="flex gap-2">
@@ -188,24 +142,87 @@ export function CustomerDevicesPage() {
               Back to Router
             </Button>
           </Link>
-          <Button size="sm" variant="outline" onClick={() => refetch()} className="gap-2 text-xs">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh List
+          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isFetching} className="gap-2 text-xs">
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
       }
     >
-      <DataTable
-        columns={columns}
-        data={deviceRows}
-        getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search device name, IP address, MAC..."
-        searchFilterFn={deviceSearchFilter}
-        facetFilters={[{ columnId: 'accessStatus', title: 'Status' }]}
-        emptyTitle="No devices found"
-        emptyDescription="No active clients matching your search criteria."
-      />
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              Session
+              <Badge variant={online ? 'default' : online === false ? 'destructive' : 'outline'} className="text-xs">
+                {online ? 'Online' : online === false ? 'Offline' : 'Unknown'}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-x-8 gap-y-3 text-xs">
+              <div>
+                <span className="text-muted-foreground font-medium">IP</span>
+                <div className="font-mono font-semibold text-sm mt-0.5">{connection.ip || '—'}</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground font-medium">MAC</span>
+                <div className="font-mono font-semibold text-sm mt-0.5">{connection.mac || '—'}</div>
+              </div>
+              <div>
+                <span className="text-muted-foreground font-medium">Uptime</span>
+                <div className="font-mono font-semibold text-sm mt-0.5">{connection.uptime || '—'}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {data.homeDevicesSupported ? (
+          <DataTable
+            columns={columns}
+            data={data.devices}
+            getRowId={(row, i) => row.mac || row.ip || String(i)}
+            searchKey="hostname"
+            searchPlaceholder="Search device name, IP address, MAC..."
+            searchFilterFn={deviceSearchFilter}
+            emptyTitle="No devices found"
+            emptyDescription={data.message || 'No devices are connected to your router right now.'}
+          />
+        ) : (
+          <RouterActionResultPanel title="Home devices" result={data} />
+        )}
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Ban className="h-4 w-4 text-destructive" />
+              Block a device
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Block or unblock a phone or laptop on your home Wi-Fi by its MAC address. A remotely managed router applies the change at its
+              next check-in; otherwise you get the steps for your router&apos;s admin page.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={mac}
+                onChange={(e) => setMac(e.target.value)}
+                placeholder="AA:BB:CC:DD:EE:FF"
+                aria-label="Device MAC address"
+                className="font-mono text-xs sm:max-w-xs"
+              />
+              <Button size="sm" onClick={() => runAccess(mac, true)} disabled={!mac.trim() || accessPending}>
+                {accessPending ? 'Sending…' : 'Block'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => runAccess(mac, false)} disabled={!mac.trim() || accessPending}>
+                Unblock
+              </Button>
+            </div>
+            {accessResult && <RouterActionResultPanel title={accessResult.title} result={accessResult.result} />}
+          </CardContent>
+        </Card>
+      </div>
     </CustomerPageShell>
   );
 }

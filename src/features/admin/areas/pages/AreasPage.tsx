@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 import {
   Plus,
@@ -17,27 +17,20 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
-  ShieldAlert,
-  ArrowRight,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  useAreas,
-  useCreateArea,
-  useUpdateArea,
-  useDeleteArea,
-  useAddSubArea,
-  useUpdateSubArea,
-  useDeleteSubArea,
-} from '../hooks/use-areas';
+import { useAreaMutations, useAreaSummary, useAreas, useSubAreas } from '../hooks/use-areas';
+import type { ServiceArea, SubArea } from '../types';
+import { useDebouncedValue } from '@/features/admin/customers/hooks/use-debounced-value';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
 import { TablePagination } from '@/components/shared/TablePagination';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { handleApiError, errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,197 +58,126 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Area, SubArea } from '@/data/shared/types';
 
+/** Backend field names so server validation errors map onto the inputs. */
 const areaSchema = z.object({
-  name: z.string().min(2, 'Area name required'),
-  subareas: z.string().optional(),
+  area_name: z.string().trim().min(2, 'Name is required'),
+  area_code: z.string().trim().min(1, 'Code is required').max(10, 'Up to 10 characters'),
+  status: z.enum(['active', 'inactive']),
+});
+const subAreaSchema = areaSchema.extend({
+  area_code: z.string().trim().min(1, 'Code is required').max(50, 'Up to 50 characters'),
 });
 
 type AreaFormValues = z.infer<typeof areaSchema>;
 
-const subAreaSchema = z.object({
-  name: z.string().min(2, 'Sub-area name required'),
-  areaCode: z.string().min(2, 'Area code required'),
-  status: z.enum(['active', 'inactive']),
-});
-
-type SubAreaFormValues = z.infer<typeof subAreaSchema>;
-
 type StatusFilter = 'all' | 'active' | 'inactive';
 
-export function AreasPage() {
-  const { data, isLoading, isError, refetch } = useAreas();
-  const createMutation = useCreateArea();
-  const updateMutation = useUpdateArea();
-  const deleteMutation = useDeleteArea();
-  const addSubAreaMutation = useAddSubArea();
-  const updateSubAreaMutation = useUpdateSubArea();
-  const deleteSubAreaMutation = useDeleteSubArea();
+const AREA_PAGE_SIZE = 25;
+const STATUS_ITEMS = { active: 'Active', inactive: 'Inactive' };
 
-  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+export function AreasPage() {
+  const [areaPage, setAreaPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const search = useDebouncedValue(searchQuery.trim());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const areaParams = { page: areaPage, perPage: AREA_PAGE_SIZE, search, status: statusFilter };
+
+  const { data, isLoading, isError, error, refetch } = useAreas(areaParams);
+  const summaryQuery = useAreaSummary();
+  const m = useAreaMutations();
+
+  const [pickedAreaId, setPickedAreaId] = useState<string | null>(null);
 
   // Dialogs
   const [areaDialogOpen, setAreaDialogOpen] = useState(false);
-  const [editArea, setEditArea] = useState<Area | null>(null);
-  const [deleteAreaId, setDeleteAreaId] = useState<string | null>(null);
+  const [editArea, setEditArea] = useState<ServiceArea | null>(null);
+  const [deleteArea, setDeleteArea] = useState<ServiceArea | null>(null);
 
   const [subAreaDialogOpen, setSubAreaDialogOpen] = useState(false);
-  const [editingSubArea, setEditingSubArea] = useState<{ areaId: string; sub: SubArea } | null>(null);
-  const [creatingSubAreaFor, setCreatingSubAreaFor] = useState<string | null>(null);
-  const [deleteSubAreaInfo, setDeleteSubAreaInfo] = useState<{ areaId: string; subId: string } | null>(null);
+  const [editingSubArea, setEditingSubArea] = useState<SubArea | null>(null);
+  const [deleteSubArea, setDeleteSubArea] = useState<SubArea | null>(null);
 
-  const {
-    register: registerArea,
-    handleSubmit: handleSubmitArea,
-    reset: resetArea,
-    formState: { errors: areaErrors, isSubmitting: isSubmittingArea },
-  } = useForm<AreaFormValues>({
+  const areaForm = useForm<AreaFormValues>({
     resolver: zodResolver(areaSchema),
-    defaultValues: { name: '', subareas: '' },
+    defaultValues: { area_name: '', area_code: '', status: 'active' },
   });
-
-  const {
-    register: registerSub,
-    handleSubmit: handleSubmitSub,
-    reset: resetSub,
-    setValue: setSubValue,
-    watch: watchSub,
-    formState: { errors: subErrors, isSubmitting: isSubmittingSub },
-  } = useForm<SubAreaFormValues>({
+  const subForm = useForm<AreaFormValues>({
     resolver: zodResolver(subAreaSchema),
-    defaultValues: { name: '', areaCode: '', status: 'active' },
+    defaultValues: { area_name: '', area_code: '', status: 'active' },
   });
 
   const items = useMemo(() => data?.items ?? [], [data?.items]);
-
-  // Set default selected area on initial load or if selected is deleted
-  useEffect(() => {
-    if (items.length > 0) {
-      if (!selectedAreaId || !items.some((a) => a.id === selectedAreaId)) {
-        setSelectedAreaId(items[0].id);
-      }
-    } else {
-      setSelectedAreaId(null);
-    }
-  }, [items, selectedAreaId]);
-
-  const filteredAreas = useMemo(() => {
-    let result = items;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.id.toLowerCase().includes(q) ||
-          a.subareas.some(
-            (s) =>
-              s.name.toLowerCase().includes(q) ||
-              s.areaCode.toLowerCase().includes(q)
-          )
-      );
-    }
-    if (statusFilter === 'inactive') {
-      result = []; // In mock schema all parent areas are active
-    }
-    return result;
-  }, [items, searchQuery, statusFilter]);
-
+  // The picked area, else the first one on the page.
   const selectedArea = useMemo(
-    () => items.find((a) => a.id === selectedAreaId) || null,
-    [items, selectedAreaId]
+    () => items.find((a) => a.id === pickedAreaId) ?? items[0] ?? null,
+    [items, pickedAreaId],
   );
+  const selectedAreaId = selectedArea?.id ?? null;
 
-  // Subarea Pagination
-  const [subCurrentPage, setSubCurrentPage] = useState(1);
+  // Sub-area pagination (server side)
+  const [subPage, setSubPage] = useState({ areaId: '', page: 1 });
   const [subPageSize, setSubPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  const subCurrentPage = subPage.areaId === selectedAreaId ? subPage.page : 1;
+  const subQuery = useSubAreas(selectedAreaId, subCurrentPage, subPageSize);
+  const subareas = subQuery.data?.items ?? [];
+  const subTotal = subQuery.data?.meta.total ?? selectedArea?.subareaCount ?? 0;
 
-  const subareasList = useMemo(() => selectedArea?.subareas ?? [], [selectedArea?.subareas]);
-  const subTotalPages = Math.max(1, Math.ceil(subareasList.length / subPageSize));
-  const safeSubPage = Math.min(Math.max(1, subCurrentPage), subTotalPages);
-
-  const paginatedSubareas = useMemo(() => {
-    const start = (safeSubPage - 1) * subPageSize;
-    return subareasList.slice(start, start + subPageSize);
-  }, [subareasList, safeSubPage, subPageSize]);
-
-  // High-level KPI Stats like the old PHP system
-  const totalAreas = items.length;
-  const activeAreas = items.length; // all active in default mock
-  const totalSubAreas = items.reduce((acc, a) => acc + a.subareas.length, 0);
-  const areasWithoutSubareas = items.filter((a) => a.subareas.length === 0).length;
+  const summary = summaryQuery.data;
+  const kpi = (n: number | undefined) => (summary ? n ?? 0 : '…');
 
   // Handlers for Area Modals
   const openCreateArea = () => {
     setEditArea(null);
-    resetArea({ name: '', subareas: '' });
+    areaForm.reset({ area_name: '', area_code: '', status: 'active' });
     setAreaDialogOpen(true);
   };
 
-  const openEditArea = (area: Area) => {
+  const openEditArea = (area: ServiceArea) => {
     setEditArea(area);
-    resetArea({
-      name: area.name,
-      subareas: area.subareas.map((s) => s.name).join(', '),
-    });
+    areaForm.reset({ area_name: area.name, area_code: area.code, status: area.status });
     setAreaDialogOpen(true);
   };
 
   const onSubmitArea = async (values: AreaFormValues) => {
-    const subareas = values.subareas
-      ? values.subareas
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : undefined;
-
-    if (editArea) {
-      await updateMutation.mutateAsync({ id: editArea.id, name: values.name });
-    } else {
-      const res = await createMutation.mutateAsync({
-        name: values.name,
-        subareas,
-      });
-      if (res?.id) {
-        setSelectedAreaId(res.id);
+    try {
+      if (editArea) {
+        await m.update.mutateAsync({ id: editArea.id, body: values });
+      } else {
+        const created = await m.create.mutateAsync(values);
+        if (created.id) setPickedAreaId(created.id);
       }
+      setAreaDialogOpen(false);
+    } catch (err) {
+      handleApiError(err, areaForm.setError);
     }
-    setAreaDialogOpen(false);
   };
 
   // Handlers for SubArea Modals
-  const openCreateSubArea = (areaId: string) => {
+  const openCreateSubArea = () => {
     setEditingSubArea(null);
-    setCreatingSubAreaFor(areaId);
-    resetSub({ name: '', areaCode: '', status: 'active' });
+    subForm.reset({ area_name: '', area_code: '', status: 'active' });
     setSubAreaDialogOpen(true);
   };
 
-  const openEditSubArea = (areaId: string, sub: SubArea) => {
-    setEditingSubArea({ areaId, sub });
-    setCreatingSubAreaFor(null);
-    resetSub({ name: sub.name, areaCode: sub.areaCode, status: sub.status });
+  const openEditSubArea = (sub: SubArea) => {
+    setEditingSubArea(sub);
+    subForm.reset({ area_name: sub.name, area_code: sub.code, status: sub.status });
     setSubAreaDialogOpen(true);
   };
 
-  const onSubmitSubArea = async (values: SubAreaFormValues) => {
-    if (editingSubArea) {
-      await updateSubAreaMutation.mutateAsync({
-        areaId: editingSubArea.areaId,
-        subId: editingSubArea.sub.id,
-        payload: values,
-      });
-    } else if (creatingSubAreaFor) {
-      await addSubAreaMutation.mutateAsync({
-        areaId: creatingSubAreaFor,
-        payload: { name: values.name, areaCode: values.areaCode },
-      });
+  const onSubmitSubArea = async (values: AreaFormValues) => {
+    try {
+      if (editingSubArea) {
+        await m.updateSub.mutateAsync({ id: editingSubArea.id, body: values });
+      } else if (selectedAreaId) {
+        await m.createSub.mutateAsync({ areaId: selectedAreaId, body: values });
+      }
+      setSubAreaDialogOpen(false);
+      setEditingSubArea(null);
+    } catch (err) {
+      handleApiError(err, subForm.setError);
     }
-    setSubAreaDialogOpen(false);
-    setEditingSubArea(null);
-    setCreatingSubAreaFor(null);
   };
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
@@ -263,7 +185,7 @@ export function AreasPage() {
     return (
       <EmptyState
         title="Failed to load areas"
-        description="Could not fetch service area workspace data."
+        description={errorMessage(error, 'Could not fetch service areas.')}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -282,7 +204,7 @@ export function AreasPage() {
             Service Areas
           </h1>
           <p className="text-muted-foreground text-sm mt-1.5">
-            Geographic coverage zones, point-of-presence regions, and sub-area network routing.
+            Geographic coverage zones and their sub-areas used for customer assignment.
           </p>
         </div>
         <Can menu="area" action="create">
@@ -297,75 +219,29 @@ export function AreasPage() {
       </PageHero>
 
       <PageContent className="space-y-6">
-        {/* KPI Metric Strips (From PHP All.php) */}
+        {/* KPI Metric Strips (backend summary) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-primary/40 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Total Areas
-              </span>
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <Globe className="h-4 w-4" />
+          {(
+            [
+              { label: 'Total Areas', value: kpi(summary?.totalAreas), unit: 'zones', icon: Globe, tone: 'bg-primary/10 text-primary', valueTone: '' },
+              { label: 'Active Areas', value: kpi(summary?.activeAreas), unit: 'operational', icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-500', valueTone: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Total Sub-areas', value: kpi(summary?.totalSubareas), unit: 'sectors', icon: Layers, tone: 'bg-blue-500/10 text-blue-500', valueTone: 'text-blue-600 dark:text-blue-400' },
+              { label: 'Without Sub-areas', value: kpi(summary?.areasWithoutSubareas), unit: 'pending breakdown', icon: AlertTriangle, tone: 'bg-amber-500/10 text-amber-500', valueTone: 'text-amber-600 dark:text-amber-400' },
+            ] as const
+          ).map((k) => (
+            <Card key={k.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm transition-all duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</span>
+                <div className={`p-2 rounded-lg ${k.tone}`}>
+                  <k.icon className="h-4 w-4" />
+                </div>
               </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight tabular-nums">
-                {totalAreas}
-              </span>
-              <span className="text-xs text-muted-foreground">zones</span>
-            </div>
-          </Card>
-
-          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-emerald-500/40 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Active Areas
-              </span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                <CheckCircle2 className="h-4 w-4" />
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className={`text-2xl font-bold tracking-tight tabular-nums ${k.valueTone}`}>{k.value}</span>
+                <span className="text-xs text-muted-foreground">{k.unit}</span>
               </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
-                {activeAreas}
-              </span>
-              <span className="text-xs text-muted-foreground">operational</span>
-            </div>
-          </Card>
-
-          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-blue-500/40 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Total Sub-areas
-              </span>
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-                <Layers className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight tabular-nums text-blue-600 dark:text-blue-400">
-                {totalSubAreas}
-              </span>
-              <span className="text-xs text-muted-foreground">sectors</span>
-            </div>
-          </Card>
-
-          <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm hover:border-amber-500/40 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Without Sub-areas
-              </span>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-                <AlertTriangle className="h-4 w-4" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight tabular-nums text-amber-600 dark:text-amber-400">
-                {areasWithoutSubareas}
-              </span>
-              <span className="text-xs text-muted-foreground">pending breakdown</span>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
 
         {/* Master-Detail 2-Pane Workspace */}
@@ -376,11 +252,9 @@ export function AreasPage() {
               <div className="p-3.5 border-b border-border/60 bg-muted/20 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Coverage Zones
-                    </span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">Coverage Zones</span>
                     <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 bg-primary/10 text-primary border border-primary/20">
-                      {filteredAreas.length}
+                      {data?.meta.total ?? 0}
                     </Badge>
                   </div>
                   <Can menu="area" action="create">
@@ -399,9 +273,12 @@ export function AreasPage() {
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Filter areas & sub-areas..."
+                      placeholder="Search name or code..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setAreaPage(1);
+                      }}
                       className="pl-8 pr-7 h-8 bg-background border-border/60 text-xs shadow-inner"
                     />
                     {searchQuery && (
@@ -416,7 +293,11 @@ export function AreasPage() {
                   </div>
                   <Select
                     value={statusFilter}
-                    onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+                    onValueChange={(v) => {
+                      setStatusFilter((v as StatusFilter) || 'all');
+                      setAreaPage(1);
+                    }}
+                    items={{ all: 'All', ...STATUS_ITEMS }}
                   >
                     <SelectTrigger className="w-[100px] h-8 bg-background border-border/60 text-xs">
                       <Filter className="h-3 w-3 mr-1 text-muted-foreground" />
@@ -433,23 +314,25 @@ export function AreasPage() {
 
               {/* Area List Items */}
               <div className="divide-y divide-border/40 max-h-[620px] overflow-y-auto p-1.5 space-y-1">
-                {filteredAreas.length === 0 ? (
+                {items.length === 0 ? (
                   <div className="py-12 px-4 text-center">
-                    <p className="text-xs text-muted-foreground">No areas match filter</p>
+                    <p className="text-xs text-muted-foreground">
+                      {search || statusFilter !== 'all' ? 'No areas match the filter' : 'No service areas yet'}
+                    </p>
                   </div>
                 ) : (
-                  filteredAreas.map((area) => {
+                  items.map((area) => {
                     const isSelected = selectedAreaId === area.id;
                     return (
                       <div
                         key={area.id}
                         role="button"
                         tabIndex={0}
-                        onClick={() => setSelectedAreaId(area.id)}
+                        onClick={() => setPickedAreaId(area.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            setSelectedAreaId(area.id);
+                            setPickedAreaId(area.id);
                           }
                         }}
                         className={`group relative flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all duration-200 text-left ${
@@ -473,10 +356,12 @@ export function AreasPage() {
                               <span className={`font-semibold text-sm truncate ${isSelected ? 'text-primary' : ''}`}>
                                 {area.name}
                               </span>
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${area.status === 'active' ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
+                              />
                             </div>
                             <div className="text-[11px] font-mono text-muted-foreground truncate">
-                              {area.id}
+                              {area.code || '—'} · {area.totalCustomers} customers
                             </div>
                           </div>
                         </div>
@@ -488,7 +373,7 @@ export function AreasPage() {
                               isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted/70 text-muted-foreground'
                             }`}
                           >
-                            {area.subareas.length} sub
+                            {area.subareaCount} sub
                           </Badge>
                           <ChevronRight
                             className={`h-4 w-4 transition-transform ${
@@ -501,6 +386,16 @@ export function AreasPage() {
                   })
                 )}
               </div>
+              {(data?.meta.totalPages ?? 1) > 1 && (
+                <TablePagination
+                  currentPage={areaPage}
+                  pageSize={AREA_PAGE_SIZE}
+                  totalItems={data?.meta.total ?? 0}
+                  onPageChange={setAreaPage}
+                  onPageSizeChange={() => undefined}
+                  pageSizeOptions={[AREA_PAGE_SIZE]}
+                />
+              )}
             </Card>
           </div>
 
@@ -517,21 +412,31 @@ export function AreasPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2.5 flex-wrap">
-                          <h2 className="text-xl font-bold tracking-tight text-foreground">
-                            {selectedArea.name}
-                          </h2>
+                          <h2 className="text-xl font-bold tracking-tight text-foreground">{selectedArea.name}</h2>
                           <Badge variant="outline" className="font-mono text-xs bg-background/80 border-border/80 text-muted-foreground">
-                            {selectedArea.id}
+                            {selectedArea.code || `#${selectedArea.id}`}
                           </Badge>
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                            Active Zone
-                          </Badge>
+                          {selectedArea.status === 'active' ? (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                              Active Zone
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground border-border/60 text-xs font-medium">
+                              Inactive
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                          <span>Contains <strong className="text-foreground">{selectedArea.subareas.length}</strong> defined sub-areas</span>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                          <span>
+                            <strong className="text-foreground">{selectedArea.subareaCount}</strong> sub-areas
+                          </span>
                           <span>•</span>
-                          <span>Ready for customer assignment</span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <strong className="text-foreground">{selectedArea.totalCustomers}</strong> customers (
+                            {selectedArea.activeCustomers} active)
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -551,7 +456,7 @@ export function AreasPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setDeleteAreaId(selectedArea.id)}
+                          onClick={() => setDeleteArea(selectedArea)}
                           className="h-8 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -572,11 +477,11 @@ export function AreasPage() {
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                           Sub-areas in {selectedArea.name}
                           <Badge variant="secondary" className="text-xs font-mono bg-primary/10 text-primary border border-primary/20">
-                            {selectedArea.subareas.length}
+                            {subTotal}
                           </Badge>
                         </h3>
                         <p className="text-[11px] text-muted-foreground">
-                          Specific sectors, streets, or local distribution blocks under this coverage zone.
+                          Sectors, streets or distribution blocks under this coverage zone.
                         </p>
                       </div>
                     </div>
@@ -584,7 +489,7 @@ export function AreasPage() {
                     <Can menu="area" action="create">
                       <Button
                         size="sm"
-                        onClick={() => openCreateSubArea(selectedArea.id)}
+                        onClick={openCreateSubArea}
                         className="h-8 text-xs font-semibold gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add Sub-area
@@ -592,7 +497,20 @@ export function AreasPage() {
                     </Can>
                   </div>
 
-                  {selectedArea.subareas.length === 0 ? (
+                  {subQuery.isLoading ? (
+                    <div className="p-6">
+                      <PageSkeleton variant="table" rows={3} />
+                    </div>
+                  ) : subQuery.isError ? (
+                    <div className="p-6">
+                      <EmptyState
+                        title="Could not load sub-areas"
+                        description={errorMessage(subQuery.error)}
+                        actionLabel="Retry"
+                        onAction={() => subQuery.refetch()}
+                      />
+                    </div>
+                  ) : subareas.length === 0 ? (
                     <div className="p-12 text-center">
                       <div className="max-w-sm mx-auto space-y-3">
                         <div className="mx-auto w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground border border-border/60">
@@ -600,13 +518,13 @@ export function AreasPage() {
                         </div>
                         <h4 className="text-sm font-semibold text-foreground">No sub-areas configured</h4>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Break down <strong className="text-foreground">{selectedArea.name}</strong> into sectors, blocks, or wards to streamline router routing and field technician tasks.
+                          Break down <strong className="text-foreground">{selectedArea.name}</strong> into sectors, blocks, or wards.
                         </p>
                         <Can menu="area" action="create">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openCreateSubArea(selectedArea.id)}
+                            onClick={openCreateSubArea}
                             className="mt-2 text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
                           >
                             <Plus className="h-3.5 w-3.5" /> Create First Sub-area
@@ -634,40 +552,29 @@ export function AreasPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {paginatedSubareas.map((sub) => (
-                            <TableRow
-                              key={sub.id}
-                              className="group border-border/40 hover:bg-muted/30 transition-colors"
-                            >
+                          {subareas.map((sub) => (
+                            <TableRow key={sub.id} className="group border-border/40 hover:bg-muted/30 transition-colors">
                               <TableCell>
                                 <div className="flex items-center gap-2.5">
                                   <div className="p-1.5 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                     <MapPin className="h-3.5 w-3.5" />
                                   </div>
-                                  <span className="font-semibold text-sm text-foreground">
-                                    {sub.name}
-                                  </span>
+                                  <span className="font-semibold text-sm text-foreground">{sub.name}</span>
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded border border-border/40">
-                                  {sub.areaCode}
+                                  {sub.code || '—'}
                                 </span>
                               </TableCell>
                               <TableCell>
                                 {sub.status === 'active' ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium gap-1"
-                                  >
+                                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium gap-1">
                                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
                                     Active
                                   </Badge>
                                 ) : (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-muted text-muted-foreground border-border/60 text-[11px] font-medium gap-1"
-                                  >
+                                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border/60 text-[11px] font-medium gap-1">
                                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground inline-block" />
                                     Inactive
                                   </Badge>
@@ -680,7 +587,7 @@ export function AreasPage() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
-                                      onClick={() => openEditSubArea(selectedArea.id, sub)}
+                                      onClick={() => openEditSubArea(sub)}
                                       title="Edit sub-area"
                                     >
                                       <Edit className="h-3.5 w-3.5" />
@@ -691,12 +598,7 @@ export function AreasPage() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-7 w-7 text-destructive hover:bg-destructive/10 transition-colors"
-                                      onClick={() =>
-                                        setDeleteSubAreaInfo({
-                                          areaId: selectedArea.id,
-                                          subId: sub.id,
-                                        })
-                                      }
+                                      onClick={() => setDeleteSubArea(sub)}
                                       title="Delete sub-area"
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -711,14 +613,16 @@ export function AreasPage() {
                     </div>
                   )}
 
-                  {/* Subareas Pagination */}
-                  {selectedArea.subareas.length > 0 && (
+                  {subTotal > 0 && (
                     <TablePagination
-                      currentPage={safeSubPage}
+                      currentPage={subCurrentPage}
                       pageSize={subPageSize}
-                      totalItems={selectedArea.subareas.length}
-                      onPageChange={setSubCurrentPage}
-                      onPageSizeChange={setSubPageSize}
+                      totalItems={subTotal}
+                      onPageChange={(page) => setSubPage({ areaId: selectedAreaId ?? '', page })}
+                      onPageSizeChange={(size) => {
+                        setSubPageSize(size);
+                        setSubPage({ areaId: selectedAreaId ?? '', page: 1 });
+                      }}
                       pageSizeOptions={[10, 20, 50, 100]}
                     />
                   )}
@@ -730,9 +634,9 @@ export function AreasPage() {
                   <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                     <Globe className="h-7 w-7" />
                   </div>
-                  <h3 className="text-base font-bold text-foreground">Select a Coverage Zone</h3>
+                  <h3 className="text-base font-bold text-foreground">No service areas yet</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Pick any service area from the left sidebar to inspect and configure its nested sub-areas, coverage codes, and operational status.
+                    Create a coverage zone to start assigning customers and sub-areas.
                   </p>
                 </div>
               </Card>
@@ -752,61 +656,30 @@ export function AreasPage() {
               {editArea ? 'Edit Coverage Zone' : 'Add Service Area'}
             </DialogTitle>
             <DialogDescription>
-              {editArea
-                ? 'Update the coverage zone designation.'
-                : 'Define a new master coverage zone and optional initial sub-areas.'}
+              {editArea ? 'Update the coverage zone name, code or status.' : 'Define a new coverage zone.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitArea(onSubmitArea)} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Area Name</Label>
-              <Input
-                {...registerArea('name')}
-                placeholder="e.g. Uttara / Dhanmondi"
-                className="h-10 shadow-sm"
-              />
-              {areaErrors.name && (
-                <p className="text-xs text-destructive">{areaErrors.name.message}</p>
-              )}
-            </div>
-            {!editArea && (
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Sub-areas (comma-separated, optional)
-                </Label>
-                <Input
-                  {...registerArea('subareas')}
-                  placeholder="Sector 7, Sector 11, Sector 13"
-                  className="h-10 shadow-sm"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  You can also add and manage individual sub-areas inside the workspace later.
-                </p>
-              </div>
-            )}
-            <Button
-              type="submit"
-              className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={isSubmittingArea}
-            >
-              {editArea ? 'Save Changes' : 'Create Service Area'}
-            </Button>
-          </form>
+          <AreaFormFields form={areaForm} onSubmit={onSubmitArea} codeHint="Up to 10 characters" submitLabel={editArea ? 'Save Changes' : 'Create Service Area'} />
         </DialogContent>
       </Dialog>
 
       {/* ── Area Delete Confirmation ────────────────────────────────── */}
       <ConfirmDialog
-        open={Boolean(deleteAreaId)}
-        onOpenChange={(open) => !open && setDeleteAreaId(null)}
+        open={deleteArea !== null}
+        onOpenChange={(open) => !open && setDeleteArea(null)}
         title="Delete Service Area"
-        description="Are you sure you want to delete this coverage zone? Sub-areas and customer associations will need reassignment."
+        description={
+          deleteArea && deleteArea.totalCustomers > 0
+            ? `${deleteArea.totalCustomers} customers are assigned to this area and will need reassignment. Delete it anyway?`
+            : 'Are you sure you want to delete this coverage zone?'
+        }
         confirmLabel="Delete Area"
         destructive
-        onConfirm={() => {
-          if (deleteAreaId) {
-            deleteMutation.mutate(deleteAreaId);
-            setDeleteAreaId(null);
+        onConfirm={async () => {
+          if (deleteArea) {
+            await m.remove.mutateAsync(deleteArea.id);
+            if (pickedAreaId === deleteArea.id) setPickedAreaId(null);
+            setDeleteArea(null);
           }
         }}
       />
@@ -823,74 +696,90 @@ export function AreasPage() {
             </DialogTitle>
             <DialogDescription>
               {editingSubArea
-                ? 'Update sub-area label, area code, or activation status.'
-                : `Create a dedicated sub-area inside ${selectedArea?.name || 'this zone'}.`}
+                ? 'Update sub-area label, code, or status.'
+                : `Create a sub-area inside ${selectedArea?.name ?? 'this zone'}.`}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmitSub(onSubmitSubArea)} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Sub-area Name</Label>
-              <Input
-                {...registerSub('name')}
-                placeholder="e.g. Sector 7 / Road 12"
-                className="h-10 shadow-sm"
-              />
-              {subErrors.name && (
-                <p className="text-xs text-destructive">{subErrors.name.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Area Code / Routing Prefix</Label>
-              <Input
-                {...registerSub('areaCode')}
-                placeholder="e.g. UTT-S7 / DHAN-R12"
-                className="h-10 shadow-sm font-mono"
-              />
-              {subErrors.areaCode && (
-                <p className="text-xs text-destructive">{subErrors.areaCode.message}</p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Status</Label>
-              <Select
-                value={watchSub('status')}
-                onValueChange={(v) => setSubValue('status', v as 'active' | 'inactive')}
-              >
-                <SelectTrigger className="h-10 shadow-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              type="submit"
-              className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={isSubmittingSub}
-            >
-              {editingSubArea ? 'Save Changes' : 'Add Sub-area'}
-            </Button>
-          </form>
+          <AreaFormFields form={subForm} onSubmit={onSubmitSubArea} codeHint="Up to 50 characters" submitLabel={editingSubArea ? 'Save Changes' : 'Add Sub-area'} />
         </DialogContent>
       </Dialog>
 
       {/* ── Sub-area Delete Confirmation ────────────────────────────── */}
       <ConfirmDialog
-        open={Boolean(deleteSubAreaInfo)}
-        onOpenChange={(open) => !open && setDeleteSubAreaInfo(null)}
+        open={deleteSubArea !== null}
+        onOpenChange={(open) => !open && setDeleteSubArea(null)}
         title="Delete Sub-area"
         description="Are you sure you want to delete this sub-area? Customers assigned here may need re-routing."
         confirmLabel="Delete Sub-area"
         destructive
-        onConfirm={() => {
-          if (deleteSubAreaInfo) {
-            deleteSubAreaMutation.mutate(deleteSubAreaInfo);
-            setDeleteSubAreaInfo(null);
+        onConfirm={async () => {
+          if (deleteSubArea) {
+            await m.removeSub.mutateAsync(deleteSubArea.id);
+            setDeleteSubArea(null);
           }
         }}
       />
     </div>
+  );
+}
+
+function AreaFormFields({
+  form,
+  onSubmit,
+  codeHint,
+  submitLabel,
+}: {
+  form: ReturnType<typeof useForm<AreaFormValues>>;
+  onSubmit: (values: AreaFormValues) => Promise<void>;
+  codeHint: string;
+  submitLabel: string;
+}) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2" noValidate>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold">Name</Label>
+        <Input {...register('area_name')} className="h-10 shadow-sm" />
+        {errors.area_name && <p className="text-xs text-destructive">{errors.area_name.message}</p>}
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold">Code</Label>
+        <Input {...register('area_code')} className="h-10 shadow-sm font-mono" />
+        {errors.area_code ? (
+          <p className="text-xs text-destructive">{errors.area_code.message}</p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">{codeHint}</p>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold">Status</Label>
+        <Select
+          value={watch('status')}
+          onValueChange={(v) => setValue('status', v === 'inactive' ? 'inactive' : 'active')}
+          items={STATUS_ITEMS}
+        >
+          <SelectTrigger className="h-10 shadow-sm w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button
+        type="submit"
+        className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? 'Saving…' : submitLabel}
+      </Button>
+    </form>
   );
 }

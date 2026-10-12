@@ -1,39 +1,43 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerService } from '@/lib/api/services/customer.service';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { customerService, type PageParams } from '@/lib/api/services/customer.service';
+import { customerKeys } from '@/features/customer/shared/hooks/use-customer-account';
 
-export function useCustomerRewards() {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: ['customer', 'rewards'],
-    queryFn: () => customerService.getRewards(),
+/** GET /v1/customer/reward/wallet */
+export function useRewardWallet() {
+  return useQuery({
+    queryKey: customerKeys.rewardWallet,
+    queryFn: () => customerService.getRewardWallet(),
   });
+}
 
-  // Points ledger from the backend (`GET /v1/customer/reward/transactions`).
-  const transactionsQuery = useQuery({
-    queryKey: ['customer', 'rewards', 'transactions'],
-    queryFn: () => customerService.getRewardTransactions(),
+/** GET /v1/customer/referral/overview */
+export function useReferralOverview() {
+  return useQuery({
+    queryKey: customerKeys.referral,
+    queryFn: () => customerService.getReferralOverview(),
   });
+}
 
-  /**
-   * Redemption preview (`GET /v1/customer/reward/redeem-preview`). The backend
-   * computes the caps (balance, package price, max %) without committing
-   * anything — the actual redemption settles with the renewal payment.
-   */
-  const redeemMutation = useMutation({
-    mutationFn: (vars: { packageId: string | number; points?: number }) =>
-      customerService.redeemPreview(vars.packageId, vars.points),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer', 'rewards'] });
-      queryClient.invalidateQueries({ queryKey: ['customer', 'rewards', 'transactions'] });
-    },
+/** GET /v1/customer/reward/transactions — paginated points ledger. */
+export function useRewardTransactions(params: PageParams) {
+  return useQuery({
+    queryKey: customerKeys.rewardTransactions(params),
+    queryFn: () => customerService.getRewardTransactions(params),
+    placeholderData: keepPreviousData,
   });
+}
 
-  return {
-    ...query,
-    transactions: transactionsQuery.data?.items ?? [],
-    redeemMutation,
-  };
+/**
+ * GET /v1/customer/reward/redeem-preview — caps for redeeming on a package
+ * renewal (commits nothing; points are held when the renewal invoice is created).
+ */
+export function useRedeemPreview(packageId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: customerKeys.redeemPreview(packageId),
+    queryFn: () => customerService.getRedeemPreview(packageId),
+    enabled: enabled && Boolean(packageId),
+    staleTime: 0,
+  });
 }

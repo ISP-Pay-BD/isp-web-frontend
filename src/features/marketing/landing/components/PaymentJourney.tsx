@@ -4,9 +4,19 @@ import { useEffect, useRef, useState } from 'react';
 import { Reveal } from '@/components/motion/Reveal';
 import { useLocale } from '@/features/marketing/shared';
 import { cn } from '@/lib/utils';
+import { PhonePayIllustration, RouterIllustration, ShieldIllustration } from './illustrations';
 import { PaymentMatchedCard } from './PaymentMatchedCard';
 import { SectionTitle } from './SectionTitle';
+import { TiltCard } from './TiltCard';
 import type { ReconcileStep, StagePayment } from '../types';
+
+/** One isometric scene per chapter: the payment arrives, it is matched, the router comes back. */
+function ChapterArt({ index, lit }: { index: number; lit: boolean }) {
+  const className = 'hidden size-24 shrink-0 sm:block lg:size-28';
+  if (index === 0) return <PhonePayIllustration className={className} />;
+  if (index === 1) return <ShieldIllustration className={className} />;
+  return <RouterIllustration className={className} lit={lit} />;
+}
 
 interface PaymentJourneyProps {
   steps: ReconcileStep[];
@@ -41,8 +51,17 @@ export function PaymentJourney({ steps, payment }: PaymentJourneyProps) {
   }, []);
 
   return (
-    <section id="how-it-works" className="relative z-[1] border-t border-white/10 py-24 md:py-36">
-      <div className="mx-auto max-w-6xl px-4 md:px-6">
+    <section
+      id="how-it-works"
+      className="bg-landing-panel/40 relative z-[1] overflow-clip border-y border-white/10 py-24 md:py-36"
+    >
+      {/* The band: a fiber-circuit motif and a lit top edge mark the page's main story. */}
+      <div className="lp-circuit text-white opacity-[0.07]" aria-hidden />
+      <div
+        className="via-landing-cta/60 absolute inset-x-[15%] top-0 h-px bg-gradient-to-r from-transparent to-transparent"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-6xl px-4 md:px-6">
         <Reveal>
           <SectionTitle title={k('title')} description={k('desc')} />
         </Reveal>
@@ -50,11 +69,9 @@ export function PaymentJourney({ steps, payment }: PaymentJourneyProps) {
         <div className="mt-14 grid gap-10 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-32">
-              <PaymentMatchedCard
-                payment={payment}
-                activeStep={active}
-                className="mx-auto max-w-sm"
-              />
+              <TiltCard className="mx-auto max-w-sm rounded-2xl">
+                <PaymentMatchedCard payment={payment} activeStep={active} />
+              </TiltCard>
             </div>
           </div>
 
@@ -68,23 +85,30 @@ export function PaymentJourney({ steps, payment }: PaymentJourneyProps) {
                   i > active && 'lg:opacity-40',
                 )}
               >
-                <p className="text-landing-cta font-mono text-xs">
-                  {k('step').replace('{n}', String(i + 1))}
-                </p>
-                <h3 className="font-landing-display mt-3 text-2xl font-semibold tracking-tight text-white">
-                  {bn && step.titleBn ? step.titleBn : step.title}
-                </h3>
-                <p className="mt-3 max-w-lg text-base leading-relaxed text-white/60">
-                  {bn && step.descBn ? step.descBn : step.desc}
-                </p>
-                <p className="mt-5 flex items-baseline gap-2 text-sm">
-                  <span className="font-landing-display text-xl font-semibold text-white">
-                    {step.metric}
-                  </span>
-                  <span className="text-white/45">
-                    {bn && step.metricHighlightBn ? step.metricHighlightBn : step.metricHighlight}
-                  </span>
-                </p>
+                <div className="flex items-start justify-between gap-6">
+                  <div className="min-w-0">
+                    <p className="text-landing-cta font-mono text-xs">
+                      {k('step').replace('{n}', String(i + 1))}
+                    </p>
+                    <h3 className="font-landing-display mt-3 text-2xl font-semibold tracking-tight text-white">
+                      {bn && step.titleBn ? step.titleBn : step.title}
+                    </h3>
+                    <p className="mt-3 max-w-lg text-base leading-relaxed text-white/60">
+                      {bn && step.descBn ? step.descBn : step.desc}
+                    </p>
+                    <p className="mt-5 flex items-baseline gap-2 text-sm">
+                      <span className="font-landing-display text-xl font-semibold text-white">
+                        {step.metric}
+                      </span>
+                      <span className="text-white/45">
+                        {bn && step.metricHighlightBn
+                          ? step.metricHighlightBn
+                          : step.metricHighlight}
+                      </span>
+                    </p>
+                  </div>
+                  <ChapterArt index={i} lit={active >= i} />
+                </div>
               </li>
             ))}
           </ol>

@@ -1,216 +1,222 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Sparkles,
-  Palette,
-  Globe,
-  Mail,
-  Phone,
-  Building,
-  Save,
-  RefreshCw,
-  Eye,
-  CheckCircle2,
-} from 'lucide-react';
+import { useRef, useState } from 'react';
+import Link from 'next/link';
+import { Palette, Mail, Phone, Building, Save, RefreshCw, Eye, Upload, Quote, MapPin, ImageIcon } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Can } from '@/components/shared/Can';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useIspOps } from '../hooks/use-isp-ops';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import {
+  sameGeneralText,
+  useSoftwareSettings,
+  useUpdateGeneralSettings,
+  useUploadBrandingImage,
+} from '@/features/admin/settings/hooks/use-settings';
+import { useTenantTheme } from '@/features/admin/theme-studio/hooks/use-theme-studio';
+import type { GeneralSettings } from '@/features/admin/settings/types';
 
 export function BrandingPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-
-  const b = data?.brandingSettings;
-  const [companyName, setCompanyName] = useState(b?.companyName ?? 'Dhaka CyberNet Ltd');
-  const [primaryColor, setPrimaryColor] = useState(b?.primaryColor ?? '#f75803');
-  const [logoUrl, setLogoUrl] = useState(b?.logoUrl ?? 'https://cdn.isppaybd.com/logos/cybernet.svg');
-  const [supportPhone, setSupportPhone] = useState(b?.supportPhone ?? '+880 1711-000000');
-  const [supportEmail, setSupportEmail] = useState(b?.supportEmail ?? 'support@dhakacyber.net');
-  const [customDomain, setCustomDomain] = useState(b?.customDomain ?? 'portal.dhakacyber.net');
-
-  const handleSave = () => {
-    toast.success('Custom white-label branding saved and dispatched to customer edge!');
-  };
+  const { data, isLoading, isError, error, refetch, isFetching } = useSoftwareSettings();
 
   if (isLoading) return <PageSkeleton variant="dashboard" />;
-  if (isError || !data || !b) {
-    return <EmptyState title="Failed to load branding" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isError || !data) {
+    return <EmptyState title="Failed to load branding" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
+
+  return <BrandingEditor initial={data} onRefresh={() => refetch()} refreshing={isFetching} />;
+}
+
+function BrandingEditor({ initial, onRefresh, refreshing }: { initial: GeneralSettings; onRefresh: () => void; refreshing: boolean }) {
+  const [b, setB] = useState<GeneralSettings>(initial);
+  const update = useUpdateGeneralSettings();
+  const upload = useUploadBrandingImage();
+  const theme = useTenantTheme();
+  const logoInput = useRef<HTMLInputElement>(null);
+  const iconInput = useRef<HTMLInputElement>(null);
+  const accent = theme.data?.primary ?? 'var(--primary)';
+  const dirty = !sameGeneralText(b, initial);
+
+  const handleSave = () => {
+    if (b.webmasterEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.webmasterEmail)) {
+      toast.error('Enter a valid support email address');
+      return;
+    }
+    update.mutate(b, { onSuccess: () => toast.success('Branding saved') });
+  };
+
+  const handleUpload = (file: File | undefined, kind: 'logo' | 'icon') => {
+    if (!file) return;
+    upload.mutate(
+      { file, kind },
+      {
+        onSuccess: (res) => {
+          setB((prev) => ({ ...prev, [kind === 'logo' ? 'logoUrl' : 'iconUrl']: res.url }));
+          toast.success(kind === 'logo' ? 'Logo updated' : 'Icon updated');
+        },
+      },
+    );
+    const input = kind === 'logo' ? logoInput.current : iconInput.current;
+    if (input) input.value = '';
+  };
+
+  const text = (key: 'appName' | 'appSlogan' | 'companyCell' | 'webmasterEmail' | 'companyAddress', label: string, icon: React.ReactNode, mono = false) => (
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+        {icon} {label}
+      </Label>
+      <Input value={b[key]} onChange={(e) => setB({ ...b, [key]: e.target.value })} className={cn('h-9 text-xs', mono && 'font-mono')} />
+    </div>
+  );
 
   return (
     <div className="space-y-6 w-full pb-12">
-      {/* Top Header */}
       <PageHeader
-        title="White-Label Branding & Domain Mapping"
-        subtitle="Customize subscriber self-care portal branding, primary color accents, corporate logo, and CNAME DNS mapping."
+        title="Branding"
+        subtitle="Company name, contacts and logo shown on subscriber bills, receipts and the customer portal."
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Branding' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
+            <Button variant="outline" size="sm" onClick={onRefresh} className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5">
+              <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} />
               Refresh
             </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5"
-            >
-              <Save className="h-4 w-4" />
-              Save Branding
-            </Button>
+            <Can menu="software_settings" action="update">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={!dirty || update.isPending}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5"
+              >
+                <Save className="h-4 w-4" />
+                {update.isPending ? 'Saving…' : 'Save Branding'}
+              </Button>
+            </Can>
           </div>
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* Form Card */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-7 space-y-6">
           <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm">
             <CardHeader className="p-5 border-b border-border/60">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Palette className="h-4 w-4 text-primary" /> Tenant Portal Identity
+                <Palette className="h-4 w-4 text-primary" /> Portal Identity
               </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                Configure your public-facing subscriber portal details.
-              </CardDescription>
+              <CardDescription className="text-xs mt-0.5">Shown to your subscribers.</CardDescription>
             </CardHeader>
             <CardContent className="p-5 space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">ISP / Organization Legal Name</Label>
-                <Input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="h-9 text-xs"
-                />
-              </div>
-
+              {text('appName', 'ISP / Organization Name', <Building className="h-3.5 w-3.5" />)}
+              {text('appSlogan', 'Slogan', <Quote className="h-3.5 w-3.5" />)}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">Primary Accent Color</Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-9 w-10 rounded border border-border/80 cursor-pointer bg-transparent p-0.5"
-                    />
-                    <Input
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-9 text-xs font-mono uppercase"
-                    />
+                {text('companyCell', 'Helpline Phone', <Phone className="h-3.5 w-3.5" />, true)}
+                {text('webmasterEmail', 'Support Email', <Mail className="h-3.5 w-3.5" />, true)}
+              </div>
+              {text('companyAddress', 'Office Address', <MapPin className="h-3.5 w-3.5" />)}
+              <p className="text-[11px] text-muted-foreground">
+                Brand colours are managed in{' '}
+                <Link href="/admin/theme-studio" className="text-primary hover:underline">
+                  Theme Studio
+                </Link>
+                .
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm">
+            <CardHeader className="p-5 border-b border-border/60">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" /> Logo & Icon
+              </CardTitle>
+              <CardDescription className="text-xs mt-0.5">PNG, JPG, WEBP or SVG up to 2 MB.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(['logo', 'icon'] as const).map((kind) => {
+                const url = kind === 'logo' ? b.logoUrl : b.iconUrl;
+                const ref = kind === 'logo' ? logoInput : iconInput;
+                return (
+                  <div key={kind} className="rounded-lg border border-border/60 bg-background/60 p-3 space-y-3">
+                    <div className="h-20 rounded-md bg-muted/40 flex items-center justify-center overflow-hidden">
+                      {url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={url} alt={kind} className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">No {kind} uploaded</span>
+                      )}
+                    </div>
+                    <Can menu="software_settings" action="update">
+                      <input
+                        ref={ref}
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.webp,.svg"
+                        className="hidden"
+                        onChange={(e) => handleUpload(e.target.files?.[0], kind)}
+                      />
+                      <Button size="sm" variant="outline" className="w-full text-xs" disabled={upload.isPending} onClick={() => ref.current?.click()}>
+                        <Upload className="mr-1.5 h-3.5 w-3.5" /> {url ? `Replace ${kind}` : `Upload ${kind}`}
+                      </Button>
+                    </Can>
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">Customer Portal CNAME Domain</Label>
-                  <Input
-                    value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
-                    className="h-9 text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-muted-foreground">SVG / High-Res Logo URL</Label>
-                <Input
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  className="h-9 text-xs font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">Helpline Phone</Label>
-                  <Input
-                    value={supportPhone}
-                    onChange={(e) => setSupportPhone(e.target.value)}
-                    className="h-9 text-xs font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-muted-foreground">NOC Support Email</Label>
-                  <Input
-                    value={supportEmail}
-                    onChange={(e) => setSupportEmail(e.target.value)}
-                    className="h-9 text-xs font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/40 border border-border/50 text-xs text-muted-foreground">
-                  <Globe className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <span>
-                    SSL auto-provisions automatically once CNAME points to <code className="font-mono text-foreground font-semibold">cname.isppaybd.net</code>.
-                  </span>
-                </div>
-              </div>
+                );
+              })}
             </CardContent>
           </Card>
         </div>
 
-        {/* Live Preview Card */}
         <div className="lg:col-span-5">
           <Card className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm overflow-hidden sticky top-6">
             <CardHeader className="p-5 border-b border-border/60">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Eye className="h-4 w-4 text-primary" /> Live Portal Preview
+                <Eye className="h-4 w-4 text-primary" /> Portal Preview
               </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                Real-time subscriber login view simulation.
-              </CardDescription>
+              <CardDescription className="text-xs mt-0.5">Updates as you type.</CardDescription>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="p-5">
               <div className="rounded-xl border border-border/60 bg-background/90 p-5 space-y-4 shadow-inner">
-                <div className="flex items-center justify-between pb-3 border-b border-border/50">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-7 w-7 rounded-lg flex items-center justify-center font-bold text-xs text-white"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      {companyName.slice(0, 2).toUpperCase()}
+                <div className="flex items-center gap-2 pb-3 border-b border-border/50">
+                  {b.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={b.logoUrl} alt="" className="h-7 w-7 rounded-lg object-contain" />
+                  ) : (
+                    <div className="h-7 w-7 rounded-lg flex items-center justify-center font-bold text-xs text-white" style={{ backgroundColor: accent }}>
+                      {(b.appName || '··').slice(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-foreground leading-none">{companyName}</h4>
-                      <span className="font-mono text-[10px] text-muted-foreground">{customDomain}</span>
-                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-xs text-foreground leading-none truncate">{b.appName || 'Your ISP name'}</h4>
+                    {b.appSlogan && <span className="text-[10px] text-muted-foreground">{b.appSlogan}</span>}
                   </div>
-                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                    Active SSL
-                  </Badge>
                 </div>
-
-                <div className="p-4 rounded-xl text-white space-y-2 shadow-sm" style={{ backgroundColor: primaryColor }}>
-                  <p className="text-[11px] opacity-80 uppercase tracking-widest font-semibold">Subscriber Self-Care</p>
-                  <h3 className="text-base font-bold">Welcome to {companyName}</h3>
-                  <p className="text-xs opacity-90">Pay monthly bills, test optical power, and upgrade broadband speed instantly.</p>
+                <div className="p-4 rounded-xl text-white space-y-1 shadow-sm" style={{ backgroundColor: accent }}>
+                  <p className="text-[11px] opacity-80 uppercase tracking-widest font-semibold">Subscriber self-care</p>
+                  <h3 className="text-base font-bold">Welcome to {b.appName || 'your ISP'}</h3>
                 </div>
-
                 <div className="space-y-2 pt-1 text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5 text-primary" />
-                    <span>{supportPhone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-3.5 w-3.5 text-primary" />
-                    <span>{supportEmail}</span>
-                  </div>
+                  {b.companyCell && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 text-primary" />
+                      <span>{b.companyCell}</span>
+                    </div>
+                  )}
+                  {b.webmasterEmail && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 text-primary" />
+                      <span>{b.webmasterEmail}</span>
+                    </div>
+                  )}
+                  {b.companyAddress && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <span>{b.companyAddress}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

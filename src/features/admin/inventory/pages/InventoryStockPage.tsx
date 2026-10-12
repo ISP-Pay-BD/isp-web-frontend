@@ -1,23 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { Suspense, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import {
+  Plus,
+  Download,
+  AlertOctagon,
+  TrendingUp,
+  Boxes,
+  Layers,
+  MapPin,
+  MoreHorizontal,
+  ArrowRightLeft,
+  SlidersHorizontal,
+  PackageMinus,
+  PackagePlus,
+  ChevronDown,
+  History,
+  Warehouse,
+} from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useInventory, type InventoryStock } from '../hooks/use-inventory';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { Can, PageSkeleton } from '@/components/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,139 +34,264 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
+import { cn } from '@/lib/utils';
 import {
-  Plus,
-  Download,
-  Warehouse,
-  AlertOctagon,
-  CheckCircle2,
-  TrendingUp,
-  Boxes,
-  MapPin,
-  MoreHorizontal,
-  ArrowRightLeft,
-  SlidersHorizontal,
-  FileCheck,
-} from 'lucide-react';
-import { toast } from 'sonner';
+  INVENTORY_URL,
+  idParam,
+  mapStockRow,
+  type StockMovementType,
+  type StockRow,
+  type StockTransaction,
+  type StockTxnType,
+} from '../api';
+import { useStock, useStockTransactions } from '../hooks/use-stock';
+import { useStoreLocationOptions } from '../hooks/use-store-locations';
+import { useInventorySummary } from '../hooks/use-inventory-summary';
+import { StockMovementDialog, type StockMovementPrefill } from '../components/StockMovementDialog';
+import { KpiTile } from '../shared/KpiTile';
+import { ListState } from '../shared/ListState';
+import { OptionSelect, type SelectOption } from '../shared/OptionSelect';
+import { fmtDateTime } from '../shared/form-utils';
+import { useUrlParam } from '../shared/hooks';
+import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '../shared/table-utils';
 
-const stockSearchFilter = (
-  row: LegacyRow<InventoryStock>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const s = row.original;
-  return (
-    s.itemName.toLowerCase().includes(q) ||
-    s.itemCode.toLowerCase().includes(q) ||
-    s.locationName.toLowerCase().includes(q) ||
-    s.categoryName.toLowerCase().includes(q)
-  );
+const MENU = 'inventory_purchess';
+
+const TXN_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'in', label: 'Stock in' },
+  { value: 'out', label: 'Stock out' },
+  { value: 'adjust', label: 'Adjustment' },
+  { value: 'transfer', label: 'Transfer' },
+  { value: 'issue', label: 'CPE issue' },
+  { value: 'return', label: 'CPE return' },
+];
+
+const TXN_BADGE: Record<string, string> = {
+  in: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+  return: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+  out: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
+  issue: 'bg-rose-500/10 text-rose-500 border-rose-500/30',
+  adjust: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
+  transfer: 'bg-sky-500/10 text-sky-500 border-sky-500/30',
 };
 
+/** Movement quantity as a signed change at `location` (transfer = units moved). */
+function movementQty(t: StockTransaction): string {
+  const q = Math.abs(t.quantity);
+  if (t.type === 'in' || t.type === 'return') return `+${q}`;
+  if (t.type === 'out' || t.type === 'issue') return `−${q}`;
+  if (t.type === 'adjust') return t.quantity > 0 ? `+${t.quantity}` : t.quantity < 0 ? `−${q}` : '0';
+  return String(q);
+}
+
+type MovementState = { type: StockMovementType; prefill?: StockMovementPrefill };
+
 export function InventoryStockPage() {
-  const { stock: initialStock, isLoading, isError, refetch } = useInventory();
-  const [stockList, setStockList] = useState<InventoryStock[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  return (
+    <Suspense fallback={<PageSkeleton variant="table" rows={8} />}>
+      <InventoryStockView />
+    </Suspense>
+  );
+}
 
-  // Form State
-  const [selectedItemName, setSelectedItemName] = useState('Huawei GPON ONU HG8546M');
-  const [locationName, setLocationName] = useState('Central NOC Warehouse (Dhaka)');
-  const [quantity, setQuantity] = useState('25');
-  const [unitPrice, setUnitPrice] = useState('1450');
+function InventoryStockView() {
+  const [locationId, setLocationId] = useUrlParam('location_id');
+  const [tab, setTab] = useState('on-hand');
+  const [movement, setMovement] = useState<MovementState | null>(null);
+  const summary = useInventorySummary();
+  const locationsQuery = useStoreLocationOptions();
+  const locationOptions = useMemo(
+    () => (locationsQuery.data ?? []).map((l) => ({ value: l.id, label: l.locationName })),
+    [locationsQuery.data],
+  );
+  const s = summary.data;
 
-  const list = stockList.length > 0 ? stockList : initialStock;
+  const locationFilter = (onChange: () => void) => (
+    <OptionSelect
+      value={locationId}
+      onChange={(v) => {
+        setLocationId(v);
+        onChange();
+      }}
+      options={locationOptions}
+      noneLabel="All locations"
+      className="h-9 w-48 text-xs"
+    />
+  );
 
-  const totalValuation = list.reduce((acc, s) => acc + (s.totalValueBdt || 0), 0);
-  const totalPhysicalUnits = list.reduce((acc, s) => acc + (s.quantity || 0), 0);
-  const inStockCount = list.filter((s) => s.status === 'in_stock').length;
-  const lowStockCount = list.filter((s) => s.status === 'low_stock' || s.status === 'out_of_stock').length;
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Stock Levels & Warehouse Valuation"
+        subtitle="On-hand quantity per store location, valuation and every stock movement."
+        breadcrumb={[
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Inventory', href: '/admin/inventory/items' },
+          { label: 'Stock Levels' },
+        ]}
+        actions={
+          <Can menu={MENU} action="create">
+            <div className="flex items-center gap-2.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/80 bg-background px-3 text-sm font-medium hover:bg-accent/60 transition-colors">
+                  More Movements
+                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => setMovement({ type: 'out', prefill: { locationId } })}>
+                    <PackageMinus className="h-3.5 w-3.5 mr-2" />
+                    Stock Out
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setMovement({ type: 'adjust', prefill: { locationId } })}>
+                    <SlidersHorizontal className="h-3.5 w-3.5 mr-2" />
+                    Adjust / Audit Count
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setMovement({ type: 'transfer', prefill: { locationId } })}>
+                    <ArrowRightLeft className="h-3.5 w-3.5 mr-2" />
+                    Transfer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button size="sm" onClick={() => setMovement({ type: 'in', prefill: { locationId } })} className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                Stock In
+              </Button>
+            </div>
+          </Can>
+        }
+      />
 
-  const handleAdjustStock = (e: React.FormEvent) => {
-    e.preventDefault();
-    const qtyNum = Number(quantity) || 0;
-    const priceNum = Number(unitPrice) || 1000;
+      {/* KPI Ribbon */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <KpiTile
+          label="Total Valuation"
+          icon={<TrendingUp className="h-4 w-4 text-primary" />}
+          value={s ? formatBdtWithSymbol(s.stockValue) : '—'}
+          hint="On-hand quantity × unit price"
+        />
+        <KpiTile
+          label="Physical Units"
+          icon={<Boxes className="h-4 w-4 text-primary" />}
+          value={s ? s.stockQuantity.toLocaleString() : '—'}
+          hint="Items across all locations"
+        />
+        <KpiTile
+          label="Stock Lines"
+          icon={<Layers className="h-4 w-4 text-emerald-500" />}
+          value={s ? s.stockRows.toLocaleString() : '—'}
+          hint="Item × location records"
+        />
+        <KpiTile
+          label="Out of Stock"
+          icon={<AlertOctagon className="h-4 w-4 text-amber-500" />}
+          value={s ? s.outOfStockRows.toLocaleString() : '—'}
+          hint="Lines at zero or below"
+          hintClassName="text-amber-600 dark:text-amber-400 font-medium"
+        />
+      </div>
 
-    const newStockRow: InventoryStock = {
-      id: `stock_${Date.now()}`,
-      itemName: selectedItemName,
-      itemCode: selectedItemName.includes('Huawei') ? 'ONU-HW-01' : 'SKU-NEW-01',
-      categoryName: 'Hardware & Devices',
-      locationName,
-      quantity: qtyNum,
-      unitName: 'Pcs',
-      totalValueBdt: qtyNum * priceNum,
-      status: qtyNum > 10 ? 'in_stock' : qtyNum > 0 ? 'low_stock' : 'out_of_stock',
-    };
+      <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="on-hand" className="gap-1.5 text-xs">
+            <Warehouse className="h-3.5 w-3.5" /> On Hand
+          </TabsTrigger>
+          <TabsTrigger value="movements" className="gap-1.5 text-xs">
+            <History className="h-3.5 w-3.5" /> Movements
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="on-hand">
+          <OnHandTable locationId={locationId} locationFilter={locationFilter} onMovement={setMovement} />
+        </TabsContent>
+        <TabsContent value="movements">
+          <MovementsTable locationId={locationId} locationFilter={locationFilter} />
+        </TabsContent>
+      </Tabs>
 
-    setStockList((prev) => [newStockRow, ...(prev.length > 0 ? prev : initialStock)]);
-    toast.success(`Stock of ${qtyNum} units logged for "${selectedItemName}" at ${locationName}.`);
-    setModalOpen(false);
-    setQuantity('25');
+      <StockMovementDialog
+        open={movement !== null}
+        onOpenChange={(o) => !o && setMovement(null)}
+        type={movement?.type ?? 'in'}
+        prefill={movement?.prefill}
+      />
+    </div>
+  );
+}
+
+function OnHandTable({
+  locationId,
+  locationFilter,
+  onMovement,
+}: {
+  locationId: string;
+  locationFilter: (onChange: () => void) => React.ReactNode;
+  onMovement: (m: MovementState) => void;
+}) {
+  const table = useServerTable();
+  const query = useStock({ page: table.page, pageSize: table.pageSize, search: table.search, locationId });
+  const [exporting, setExporting] = useState(false);
+  const page = query.data;
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const rows = (
+        await fetchAllPages<unknown>(`${INVENTORY_URL}/stock`, {
+          search: table.search || undefined,
+          location_id: idParam(locationId),
+        })
+      ).map(mapStockRow);
+      downloadCsv(
+        `inventory_stock_${todayYmd()}.csv`,
+        ['Item', 'Category', 'Sub-category', 'Location', 'Quantity', 'Unit Price (BDT)', 'Value (BDT)', 'Updated'],
+        rows.map((r) => [r.itemName, r.category, r.subcategory, r.locationName, r.quantity, r.unitPrice, r.value, r.updatedAt]),
+      );
+      toast.success(`Exported ${rows.length} stock lines`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const handleExportCsv = () => {
-    const headers = ['Item SKU', 'Item Name', 'Warehouse Location', 'Quantity', 'Unit', 'Total Valuation (BDT)', 'Health Status'];
-    const rows = list.map((s) => [
-      s.itemCode,
-      `"${s.itemName.replace(/"/g, '""')}"`,
-      `"${s.locationName}"`,
-      s.quantity,
-      s.unitName,
-      s.totalValueBdt,
-      s.status,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `inventory_stock_valuation_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Stock valuation & on-hand inventory exported to CSV');
-  };
-
-  const columns = useMemo<LegacyColumnDef<InventoryStock, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<StockRow, unknown>[]>(
     () => [
       {
         accessorKey: 'itemName',
-        header: 'Stock Item & SKU',
+        header: 'Stock Item',
         enableHiding: false,
-        size: 260,
+        size: 240,
         cell: ({ row }) => {
-          const s = row.original;
+          const r = row.original;
           return (
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card/80 border border-border/60 text-primary shadow-xs">
                 <Boxes className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-semibold text-foreground text-sm line-clamp-1">{s.itemName}</span>
-                <span className="font-mono text-xs text-primary font-medium">{s.itemCode}</span>
+                <span className="font-semibold text-foreground text-sm line-clamp-1">{r.itemName}</span>
+                <span className="text-xs text-muted-foreground">
+                  {r.itemId ? r.subcategory || '—' : 'Removed from catalogue'}
+                </span>
               </div>
             </div>
           );
         },
       },
       {
+        accessorKey: 'category',
+        header: 'Category',
+        size: 140,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="bg-background/50 font-normal">
+            {row.original.category || '—'}
+          </Badge>
+        ),
+      },
+      {
         accessorKey: 'locationName',
         header: 'Store Location',
-        size: 200,
+        size: 180,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -169,252 +302,304 @@ export function InventoryStockPage() {
       {
         accessorKey: 'quantity',
         header: 'On-Hand Qty',
+        size: 110,
+        cell: ({ row }) => (
+          <span className="font-bold text-base tabular-nums text-foreground">{row.original.quantity.toLocaleString()}</span>
+        ),
+      },
+      {
+        accessorKey: 'unitPrice',
+        header: 'Unit Price',
+        size: 120,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">{formatBdtWithSymbol(row.original.unitPrice)}</span>
+        ),
+      },
+      {
+        accessorKey: 'value',
+        header: 'Valuation',
         size: 130,
         cell: ({ row }) => (
-          <div className="flex items-baseline gap-1">
-            <span className="font-bold text-base tabular-nums text-foreground">
-              {row.original.quantity}
-            </span>
-            <span className="text-xs text-muted-foreground font-mono">{row.original.unitName}</span>
-          </div>
+          <span className="font-semibold text-sm tabular-nums text-foreground">{formatBdtWithSymbol(row.original.value)}</span>
         ),
       },
       {
-        accessorKey: 'totalValueBdt',
-        header: 'Total Valuation',
-        size: 150,
-        cell: ({ row }) => (
-          <span className="font-semibold text-sm tabular-nums text-foreground">
-            {formatBdtWithSymbol(row.original.totalValueBdt)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'status',
+        id: 'status',
         header: 'Stock Health',
-        size: 130,
-        cell: ({ row }) => {
-          const st = row.original.status;
-          if (st === 'in_stock') {
-            return (
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
-                In Stock
-              </Badge>
-            );
-          }
-          if (st === 'low_stock') {
-            return (
-              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
-                Low Stock
-              </Badge>
-            );
-          }
-          return (
+        size: 120,
+        cell: ({ row }) =>
+          row.original.quantity <= 0 ? (
             <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/30">
               Out of Stock
             </Badge>
-          );
-        },
+          ) : (
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+              In Stock
+            </Badge>
+          ),
+      },
+      {
+        accessorKey: 'updatedAt',
+        header: 'Updated',
+        size: 140,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.updatedAt)}</span>
+        ),
       },
       {
         id: 'actions',
         header: '',
         size: 60,
         cell: ({ row }) => {
-          const s = row.original;
+          const r = row.original;
+          const prefill = { itemId: r.itemId, locationId: r.locationId };
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Stock Operations</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info(`Transfer initiated for ${s.itemName}`)}>
-                  <ArrowRightLeft className="h-3.5 w-3.5 mr-2" />
-                  Transfer to POP Store
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info(`Stock adjustment opened for ${s.itemName}`)}>
-                  <SlidersHorizontal className="h-3.5 w-3.5 mr-2" />
-                  Adjust Quantity
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => toast.success(`Audit reconciliation logged for ${s.itemCode}`)}>
-                  <FileCheck className="h-3.5 w-3.5 mr-2" />
-                  Record Stock Audit
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Can menu={MENU} action="create">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={!r.itemId}
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors disabled:opacity-40"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel>Stock Operations</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => onMovement({ type: 'in', prefill })}>
+                    <PackagePlus className="h-3.5 w-3.5 mr-2" />
+                    Stock In
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onMovement({ type: 'out', prefill })}>
+                    <PackageMinus className="h-3.5 w-3.5 mr-2" />
+                    Stock Out
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onMovement({ type: 'transfer', prefill })}>
+                    <ArrowRightLeft className="h-3.5 w-3.5 mr-2" />
+                    Transfer to Another Store
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onMovement({ type: 'adjust', prefill })}>
+                    <SlidersHorizontal className="h-3.5 w-3.5 mr-2" />
+                    Adjust / Audit Count
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Can>
           );
         },
+      },
+    ],
+    [onMovement],
+  );
+
+  return (
+    <ListState
+      isLoading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => query.refetch()}
+      isEmpty={!table.search && !locationId && page?.meta.total === 0}
+      errorTitle="Failed to load stock"
+      emptyTitle="No stock recorded yet"
+      emptyDescription="Use Stock In to receive items into a store location."
+      icon={<Warehouse className="h-5 w-5" />}
+    >
+      <DataTable
+        columns={columns}
+        data={page?.items ?? []}
+        getRowId={(r) => r.id}
+        searchPlaceholder="Search by item name..."
+        emptyTitle="No stock lines match your filters"
+        server={{
+          page: table.page,
+          pageSize: table.pageSize,
+          total: page?.meta.total ?? 0,
+          onPageChange: table.setPage,
+          onPageSizeChange: table.onPageSizeChange,
+          search: table.search,
+          onSearchChange: table.onSearchChange,
+        }}
+        toolbarActions={
+          <div className="flex flex-wrap items-center gap-2">
+            {locationFilter(table.resetPage)}
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
+              <Download className="mr-2 h-4 w-4" />
+              {exporting ? 'Exporting…' : 'Export CSV'}
+            </Button>
+          </div>
+        }
+      />
+    </ListState>
+  );
+}
+
+function MovementsTable({
+  locationId,
+  locationFilter,
+}: {
+  locationId: string;
+  locationFilter: (onChange: () => void) => React.ReactNode;
+}) {
+  const table = useServerTable();
+  const [type, setType] = useState('');
+  const query = useStockTransactions({
+    page: table.page,
+    pageSize: table.pageSize,
+    search: table.search,
+    locationId,
+    type: type as StockTxnType | '',
+  });
+  const page = query.data;
+
+  const columns = useMemo<LegacyColumnDef<StockTransaction, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'createdAt',
+        header: 'Date',
+        size: 140,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.createdAt)}</span>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: 'Type',
+        size: 110,
+        cell: ({ row }) => {
+          const t = row.original.type;
+          return (
+            <Badge variant="outline" className={cn('capitalize', TXN_BADGE[t] ?? 'bg-muted text-muted-foreground')}>
+              {TXN_TYPE_OPTIONS.find((o) => o.value === t)?.label ?? t}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: 'itemName',
+        header: 'Item',
+        enableHiding: false,
+        size: 220,
+        cell: ({ row }) => (
+          <span className="font-medium text-foreground text-sm line-clamp-1">{row.original.itemName}</span>
+        ),
+      },
+      {
+        accessorKey: 'locationName',
+        header: 'Location',
+        size: 220,
+        cell: ({ row }) => {
+          const t = row.original;
+          return (
+            <div className="space-y-0.5 text-xs">
+              <div className="flex items-center gap-1.5 text-foreground">
+                <span>{t.locationName || '—'}</span>
+                {t.type === 'transfer' ? (
+                  <>
+                    <ArrowRightLeft className="h-3 w-3 text-primary shrink-0" />
+                    <span>{t.toLocationName || '—'}</span>
+                  </>
+                ) : null}
+              </div>
+              {t.customerName ? (
+                <p className="text-muted-foreground">
+                  {t.customerName}
+                  {t.serialNo ? ` · SN ${t.serialNo}` : ''}
+                </p>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'quantity',
+        header: 'Qty',
+        size: 90,
+        cell: ({ row }) => (
+          <span className="font-bold text-sm font-mono tabular-nums text-foreground">{movementQty(row.original)}</span>
+        ),
+      },
+      {
+        accessorKey: 'balanceAfter',
+        header: 'Balance After',
+        size: 110,
+        cell: ({ row }) => <span className="text-sm tabular-nums text-muted-foreground">{row.original.balanceAfter}</span>,
+      },
+      {
+        accessorKey: 'unitCost',
+        header: 'Unit Cost',
+        size: 110,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {row.original.unitCost === null ? '—' : formatBdtWithSymbol(row.original.unitCost)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'reference',
+        header: 'Reference / Note',
+        size: 200,
+        cell: ({ row }) => {
+          const t = row.original;
+          return (
+            <div className="text-xs">
+              <span className="text-foreground">{t.reference || '—'}</span>
+              {t.note ? <p className="text-muted-foreground line-clamp-1">{t.note}</p> : null}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'createdByName',
+        header: 'By',
+        size: 130,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.createdByName || '—'}</span>,
       },
     ],
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
-  if (isError) {
-    return <EmptyState title="Failed to load stock" actionLabel="Retry" onAction={() => refetch()} />;
-  }
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Stock Levels & Warehouse Valuation"
-        subtitle="Live physical on-hand inventory counts, location distribution, and reserve thresholds."
-        breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Inventory', href: '/admin/inventory/items' },
-          { label: 'Stock Levels' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2.5">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
-              <Download className="mr-2 h-4 w-4" />
-              Export Stock CSV
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Stock Inflow / Inward
-            </Button>
+    <ListState
+      isLoading={query.isLoading}
+      isError={query.isError}
+      error={query.error}
+      onRetry={() => query.refetch()}
+      isEmpty={!table.search && !locationId && !type && page?.meta.total === 0}
+      errorTitle="Failed to load stock movements"
+      emptyTitle="No stock movements yet"
+      emptyDescription="Stock in, out, adjustments, transfers and CPE issues appear here."
+      icon={<History className="h-5 w-5" />}
+    >
+      <DataTable
+        columns={columns}
+        data={page?.items ?? []}
+        getRowId={(r) => r.id}
+        searchPlaceholder="Search item, reference, note..."
+        emptyTitle="No movements match your filters"
+        server={{
+          page: table.page,
+          pageSize: table.pageSize,
+          total: page?.meta.total ?? 0,
+          onPageChange: table.setPage,
+          onPageSizeChange: table.onPageSizeChange,
+          search: table.search,
+          onSearchChange: table.onSearchChange,
+        }}
+        toolbarActions={
+          <div className="flex flex-wrap items-center gap-2">
+            {locationFilter(table.resetPage)}
+            <OptionSelect
+              value={type}
+              onChange={(v) => {
+                setType(v);
+                table.resetPage();
+              }}
+              options={TXN_TYPE_OPTIONS}
+              noneLabel="All types"
+              className="h-9 w-36 text-xs"
+            />
           </div>
         }
       />
-
-      {/* KPI Ribbon */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Valuation</span>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {formatBdtWithSymbol(totalValuation)}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Physical warehouse assets</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Physical Units</span>
-            <Boxes className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalPhysicalUnits}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Items across all locations</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">In Stock Lines</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {inStockCount}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Optimal stock level</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Low / Out of Stock</span>
-            <AlertOctagon className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {lowStockCount}
-          </div>
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">Requires re-order</p>
-        </div>
-      </div>
-
-      {/* Main Data Table */}
-      <DataTable
-        columns={columns}
-        data={list}
-        searchKey="itemName"
-        searchFilterFn={stockSearchFilter}
-        searchPlaceholder="Search by item name, SKU, or location..."
-      />
-
-      {/* Stock Inflow Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleAdjustStock}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Warehouse className="h-5 w-5 text-primary" />
-                Record Stock Inflow / Adjustment
-              </DialogTitle>
-              <DialogDescription>
-                Receive new purchase batch or adjust inventory levels at a specific warehouse location.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="stock-item">Item Specification *</Label>
-                <Select value={selectedItemName} onValueChange={(val) => { if (val) setSelectedItemName(val); }}>
-                  <SelectTrigger id="stock-item">
-                    <SelectValue placeholder="Select Item" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Huawei GPON ONU HG8546M">Huawei GPON ONU HG8546M</SelectItem>
-                    <SelectItem value="ZTE F660 V8.0 GPON Terminal">ZTE F660 V8.0 GPON Terminal</SelectItem>
-                    <SelectItem value="2-Core FTTH Drop Cable Drum">2-Core FTTH Drop Cable Drum</SelectItem>
-                    <SelectItem value="SC/APC Fast Optical Connector">SC/APC Fast Optical Connector</SelectItem>
-                    <SelectItem value="1x8 PLC Optical Fiber Splitter">1x8 PLC Optical Fiber Splitter</SelectItem>
-                    <SelectItem value="Mikrotik CCR2004-16G-2S+ Core Router">Mikrotik CCR2004-16G-2S+ Core Router</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="stock-loc">Target Warehouse / Store *</Label>
-                <Select value={locationName} onValueChange={(val) => { if (val) setLocationName(val); }}>
-                  <SelectTrigger id="stock-loc">
-                    <SelectValue placeholder="Select Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Central NOC Warehouse (Dhaka)">Central NOC Warehouse (Dhaka)</SelectItem>
-                    <SelectItem value="Mirpur POP Store">Mirpur POP Store</SelectItem>
-                    <SelectItem value="Dhanmondi Sub-store">Dhanmondi Sub-store</SelectItem>
-                    <SelectItem value="Uttara Sector 7 Depot">Uttara Sector 7 Depot</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="stock-qty">Quantity to Inward *</Label>
-                  <Input
-                    id="stock-qty"
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="stock-price">Cost per Unit (BDT)</Label>
-                  <Input
-                    id="stock-price"
-                    type="number"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Confirm Stock Entry</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </ListState>
   );
 }

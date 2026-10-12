@@ -141,6 +141,11 @@ const PERMISSION_ID_TO_KEY: Record<number, string> = {
   109: 'payment_records.payment',
 };
 
+/** Menus `/auth/me` can express. A menu outside this set is never granted or withheld by the permission list. */
+export const KNOWN_PERMISSION_MENUS: ReadonlySet<string> = new Set(
+  Object.values(PERMISSION_ID_TO_KEY).map((key) => key.split('.')[0]),
+);
+
 export function transformPermissionIdsToMap(permissionIds?: number[]): PermissionMap {
   const map: PermissionMap = {};
   if (!permissionIds || !Array.isArray(permissionIds)) {
@@ -192,7 +197,7 @@ export function transformBackendAuthUser(data: BackendAuthData): User {
       ? data.role
       : data.role === 'customer'
         ? 'user'
-        : 'admin'
+        : 'employee' // unknown staff designations get the least-privileged portal
   ) as UserRole;
 
   return {
@@ -202,7 +207,7 @@ export function transformBackendAuthUser(data: BackendAuthData): User {
     phone: data.mobile || data.phone || '',
     role: roleNormalized,
     status: (data.status?.toLowerCase() === 'inactive' ? 'inactive' : 'active') as UserStatus,
-    tenantId: String(data.tenant_id ?? '1'),
+    tenantId: data.tenant_id === undefined || data.tenant_id === null ? '' : String(data.tenant_id),
     permissions,
   };
 }

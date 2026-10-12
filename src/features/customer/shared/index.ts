@@ -16,3 +16,11 @@ export {
   type CustomerLoadingSkeletonProps,
 } from './components/CustomerStates';
 export * from './schemas/customer-forms.schema';
+export {
+  customerKeys,
+  useCustomerDashboard,
+  useCustomerSubscription,
+  useSupportContact,
+  useRenewSubscription,
+  openPaymentPage,
+} from './hooks/use-customer-account';

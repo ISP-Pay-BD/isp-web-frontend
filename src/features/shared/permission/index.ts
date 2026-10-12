@@ -2,4 +2,5 @@
 export { PermissionGuard } from './components/PermissionGuard';
 export { ForbiddenPage } from './components/ForbiddenPage';
 export { ExpiredBanner } from './components/ExpiredBanner';
+export { ImpersonationBanner } from './components/ImpersonationBanner';
 export { useRequireAuth, useRequirePermission } from './hooks/useRequireAuth';

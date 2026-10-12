@@ -1,13 +1,10 @@
 export const landingData = {
+  // Published SLA; the ISP / subscriber / payment counts are live (GET /api/v1/public/stats).
   stats: {
-    trustedIsps: 149,
-    activeUsers: 85000,
-    activeAdmins: 450,
-    paymentsReconciled: '2M+',
     uptimeSla: '99.9%',
   },
   hero: {
-    badge: 'Trusted by 149+ ISPs across Bangladesh',
+    badge: 'Trusted by ISPs across Bangladesh',
     titleEn: "Run your whole ISP from one operator's console",
     titleBn: 'পুরো ISP চালান একটি অপারেটর কনসোল থেকে',
     subtitleEn:
@@ -175,56 +172,6 @@ export const landingData = {
   },
 };
 
-export const pricingPlans = [
-  {
-    id: 'plan_starter',
-    name: 'Starter',
-    priceBdt: 2999,
-    period: 'month',
-    customers: 'Up to 500',
-    features: [
-      'Up to 500 subscribers',
-      'Unlimited MikroTik routers',
-      'bKash & Nagad auto-match',
-      'Customer portal',
-      'SMS expiry alerts',
-      'Bangla + English support',
-    ],
-    highlighted: false,
-  },
-  {
-    id: 'plan_growth',
-    name: 'Growth',
-    priceBdt: 5999,
-    period: 'month',
-    customers: 'Up to 2,000',
-    features: [
-      'Up to 2,000 subscribers',
-      'Everything in Starter',
-      'Multi-POP reseller wallets',
-      'WhatsApp Business alerts',
-      'Staff HR & attendance',
-      'Priority onboarding help',
-    ],
-    highlighted: true,
-  },
-  {
-    id: 'plan_scale',
-    name: 'Scale',
-    priceBdt: 9999,
-    period: 'month',
-    customers: 'Unlimited',
-    features: [
-      'Unlimited subscribers',
-      'Everything in Growth',
-      'Huawei & ZTE OLT tools',
-      'Accounting suite',
-      'BTRC report exports',
-      'Dedicated success manager',
-    ],
-    highlighted: false,
-  },
-];
 
 export const pluginsMarketplace = [
   {

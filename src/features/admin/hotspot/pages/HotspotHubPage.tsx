@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useHotspotData } from '../hooks/useHotspotData';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useHotspotRouter } from '../hooks/useHotspotRouter';
+import { useHotspotDashboard } from '../hooks/useHotspotData';
+import { HotspotRouterSelect } from '../components/HotspotRouterSelect';
+import { HotspotQueryError, HotspotRouterGate } from '../components/HotspotStates';
+import { HotspotKpi, HotspotKpiRow, HotspotKpiSkeleton } from '../components/HotspotKpi';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Wifi,
   Users,
   Package,
   BarChart3,
@@ -18,9 +19,8 @@ import {
   Activity,
   Ticket,
   ShieldCheck,
-  Router,
   TrendingUp,
-  Zap,
+  CalendarDays,
 } from 'lucide-react';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
 
@@ -29,8 +29,8 @@ const QUICK_MODULES = [
     href: '/admin/hotspot/dashboard',
     label: 'Live Dashboard',
     icon: LayoutDashboard,
-    desc: 'Real-time active MAC sessions, bandwidth usage, and gateway router health.',
-    badge: 'Real-time',
+    desc: 'Active guest sessions, router health and the hotspot log, refreshed every 30 seconds.',
+    badge: 'Live',
     color: 'text-primary',
     bgColor: 'bg-primary/10 border-primary/20',
   },
@@ -38,26 +38,26 @@ const QUICK_MODULES = [
     href: '/admin/hotspot/packages',
     label: 'Hotspot Profiles & Packages',
     icon: Package,
-    desc: 'Configure bandwidth rate limits, duration quotas, burst rates, and pricing.',
-    badge: 'Rate Limits',
+    desc: 'User profiles on the router: rate limit, validity, expiry mode and voucher pricing.',
+    badge: 'Profiles',
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10 border-emerald-500/20',
   },
   {
     href: '/admin/hotspot/users',
-    label: 'Active Users & Sessions',
+    label: 'Hotspot Users',
     icon: Users,
-    desc: 'Monitor connected guest clients, MAC bindings, IP allocations, and traffic.',
-    badge: 'Clients',
+    desc: 'Hotspot logins on the router: bound MAC, time limit, traffic and enable/disable.',
+    badge: 'Accounts',
     color: 'text-sky-500',
     bgColor: 'bg-sky-500/10 border-sky-500/20',
   },
   {
     href: '/admin/hotspot/vouchers',
-    label: 'Voucher Code Batches',
+    label: 'Voucher Codes',
     icon: Ticket,
-    desc: 'Generate printable multi-digit voucher PINs with custom validity hours.',
-    badge: 'PIN Cards',
+    desc: 'Generate voucher codes for a profile and track which ones are unused, used or disabled.',
+    badge: 'Vouchers',
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 border-amber-500/20',
   },
@@ -65,59 +65,40 @@ const QUICK_MODULES = [
     href: '/admin/hotspot/walled-garden',
     label: 'Walled Garden Rules',
     icon: ShieldCheck,
-    desc: 'Whitelist domains, payment gateways, and portals accessible before authentication.',
-    badge: 'Bypass DNS',
+    desc: 'Hosts guests can reach before logging in, such as payment gateways and your portal.',
+    badge: 'Pre-login',
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10 border-purple-500/20',
   },
   {
     href: '/admin/hotspot/reports',
-    label: 'Voucher Sales & Analytics',
+    label: 'Voucher Sales Report',
     icon: BarChart3,
-    desc: 'Revenue breakdown by location, selling counter cashier, and payment gateway.',
-    badge: 'Accounting',
+    desc: 'Voucher sales recorded on the router, by date range, with totals and CSV export.',
+    badge: 'Sales',
     color: 'text-rose-500',
     bgColor: 'bg-rose-500/10 border-rose-500/20',
   },
 ] as const;
 
 export function HotspotHubPage() {
-  const { data, isLoading, isError, refetch } = useHotspotData();
-
-  if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
-  if (isError) {
-    return (
-      <div className="p-6">
-        <EmptyState
-          title="Failed to load hotspot hub"
-          description="Could not fetch hotspot overview data."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
-      </div>
-    );
-  }
-
-  const profiles = data?.profiles ?? [];
-  const users = data?.users ?? [];
-  const reports = data?.reports ?? [];
-  const routers = data?.routers ?? [];
-  const activeUsers = users.filter((u) => u.status === 'active').length;
-  const onlineRouters = routers.filter((r) => r.status === 'online').length;
-  const totalRevenue = reports.reduce((s, r) => s + (r.priceBdt || 0), 0);
+  const hs = useHotspotRouter();
+  const dashboard = useHotspotDashboard(hs.routerId);
+  const d = dashboard.data;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Hotspot & Captive Portal Hub"
-        subtitle="Manage MikroTik hotspot gateways, prepaid voucher card PINs, guest WiFi bandwidth, and sales."
+        subtitle="Manage MikroTik hotspot profiles, users, voucher codes, walled garden and sales."
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Hotspot', href: '/admin/hotspot' },
           { label: 'Hub' },
         ]}
         actions={
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <HotspotRouterSelect state={hs} />
             <Link href="/admin/hotspot/vouchers">
               <Button variant="outline" size="sm" className="h-9">
                 <Ticket className="mr-2 h-4 w-4" />
@@ -134,52 +115,47 @@ export function HotspotHubPage() {
         }
       />
 
-      {/* KPI Summary Ribbon */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Active Profiles</span>
-            <Wifi className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {profiles.length}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Bandwidth tiers defined</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Live Active Sessions</span>
-            <Activity className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-            {activeUsers}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Guest devices online</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Gateway Routers</span>
-            <Router className="h-4 w-4 text-sky-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {onlineRouters} / {routers.length}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">MikroTik APs synchronized</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Voucher Revenue</span>
-            <TrendingUp className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {formatBdtWithSymbol(totalRevenue)}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Cumulative voucher billing</p>
-        </div>
-      </div>
+      {/* KPI ribbon — live counters of the selected router */}
+      <HotspotRouterGate state={hs} skeleton={<HotspotKpiSkeleton />}>
+        {dashboard.isLoading ? (
+          <HotspotKpiSkeleton />
+        ) : dashboard.isError ? (
+          <HotspotQueryError
+            error={dashboard.error}
+            routerName={hs.router?.name}
+            title="Failed to load hotspot overview"
+            onRetry={() => void dashboard.refetch()}
+          />
+        ) : d ? (
+          <HotspotKpiRow>
+            <HotspotKpi
+              label="Live Sessions"
+              value={d.activeSessions}
+              hint="Guests online now"
+              icon={<Activity className="h-4 w-4 text-emerald-500" />}
+              positive
+            />
+            <HotspotKpi
+              label="Hotspot Users"
+              value={d.totalUsers}
+              hint="Accounts & vouchers on the router"
+              icon={<Users className="h-4 w-4 text-sky-500" />}
+            />
+            <HotspotKpi
+              label="Sales Today"
+              value={formatBdtWithSymbol(d.incomeToday)}
+              hint="Recorded voucher sales"
+              icon={<TrendingUp className="h-4 w-4 text-amber-500" />}
+            />
+            <HotspotKpi
+              label="Sales This Month"
+              value={formatBdtWithSymbol(d.incomeMonth)}
+              hint="Recorded voucher sales"
+              icon={<CalendarDays className="h-4 w-4 text-primary" />}
+            />
+          </HotspotKpiRow>
+        ) : null}
+      </HotspotRouterGate>
 
       {/* Module Navigation Cards */}
       <div>

@@ -3,23 +3,13 @@
 import Link from 'next/link';
 import { Check, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { FeatureValue } from '@/data/marketing/pricing.data';
 import { cn } from '@/lib/utils';
-import { useMarketingPricing } from '../hooks/use-marketing-pricing';
-
-type ComparisonPlan = {
-  id: string;
-  name: string;
-  subtitle: string;
-  priceBdt: number | null;
-  period: string;
-  highlighted?: boolean;
-  cta: string;
-};
-type ComparisonGroup = {
-  title: string;
-  features: { label: string; values: FeatureValue[] }[];
-};
+import {
+  useMarketingPricing,
+  type ComparisonGroup,
+  type ComparisonPlan,
+  type FeatureValue,
+} from '../hooks/use-marketing-pricing';
 
 /* ── Cell renderer ────────────────────────────────────────────────────── */
 
@@ -193,7 +183,10 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
       </div>
 
       {/* CTA row */}
-      <div className="mt-10 grid min-w-[640px] grid-cols-4 gap-4">
+      <div
+        className="mt-10 grid min-w-[640px] gap-4"
+        style={{ gridTemplateColumns: `260px repeat(${plans.length}, minmax(0, 1fr))` }}
+      >
         <div />
         {plans.map((plan) => (
           <div key={plan.id} className="flex justify-center px-4">
@@ -220,8 +213,8 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
 
 export default function ComparisonBlock() {
   const { data, isLoading } = useMarketingPricing();
-  const plans = data?.comparisonPlans as ComparisonPlan[] | undefined;
-  const groups = data?.comparisonGroups as ComparisonGroup[] | undefined;
+  const plans = data?.comparisonPlans;
+  const groups = data?.comparisonGroups;
 
   if (isLoading || !plans?.length || !groups?.length) {
     return (
@@ -249,8 +242,8 @@ export default function ComparisonBlock() {
         </div>
 
         <div className="mt-14 grid gap-6 md:hidden">
-          {[1, 0, 2].map((i) => (
-            <MobilePlanCard key={plans[i].id} planIndex={i} plans={plans} groups={groups} />
+          {plans.map((plan, i) => (
+            <MobilePlanCard key={plan.id} planIndex={i} plans={plans} groups={groups} />
           ))}
         </div>
 
@@ -269,7 +262,7 @@ function ComparisonGroup({ group, plans }: { group: ComparisonGroup; plans: Comp
     <>
       <tr>
         <td
-          colSpan={4}
+          colSpan={plans.length + 1}
           className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-cta"
         >
           {group.title}

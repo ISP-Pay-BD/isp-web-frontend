@@ -1,3 +1,4 @@
 export { NetworkDiagramPage } from './pages/NetworkDiagramPage';
 export { NetworkMapPage } from './pages/NetworkMapPage';
-export { useNetworkDiagram, useNetworkMap } from './hooks/useNetwork';
+export { useNetworkTopology, useNetworkNodes } from './hooks/useNetwork';
+export type { TopologyOnu, TopologyPort, MapNode } from './types';

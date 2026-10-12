@@ -1,208 +1,131 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { Can } from '@/components/shared/Can';
 import { DataTable } from '@/features/shared/data-table';
 import { toast } from 'sonner';
+import { RotateCcw, Trash2, Users, Package, LifeBuoy, UserCog, Clock, AlertTriangle, RotateCw, Network, Archive } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import {
-  RotateCcw,
-  Trash2,
-  Users,
-  Package,
-  FileText,
-  LifeBuoy,
-  UserCog,
-  Clock,
-  AlertTriangle,
-  RotateCw,
-  ArchiveRestore,
-  ShieldAlert,
-  Sparkles
-} from 'lucide-react';
-import type { RecycleBinItem } from '@/data/admin/recycle-bin.data';
-import {
-  useRecycleBin,
-  useRestoreRecycleBinItem,
-  usePurgeRecycleBinItem,
+  useDeleteRecycleBinItems,
   useEmptyRecycleBin,
+  useRecycleBin,
+  useRestoreRecycleBinItems,
+  type RecycleBinItem,
 } from '../hooks/use-recycle-bin';
 
-const entityConfig: Record<string, { icon: typeof Users; color: string; label: string }> = {
-  customer: { icon: Users, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20', label: 'Customers' },
-  package: { icon: Package, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', label: 'Packages' },
-  invoice: { icon: FileText, color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', label: 'Invoices' },
-  ticket: { icon: LifeBuoy, color: 'text-purple-400 bg-purple-500/10 border-purple-500/20', label: 'Support Tickets' },
-  employee: { icon: UserCog, color: 'text-primary bg-primary/10 border-primary/20', label: 'Staff' },
+/** Entities the backend TrashService can bin (app/Config/Trash.php). */
+const ENTITIES: Record<string, { label: string; icon: typeof Users }> = {
+  customer: { label: 'Customers', icon: Users },
+  reseller: { label: 'Resellers', icon: Network },
+  package: { label: 'Packages', icon: Package },
+  employee: { label: 'Employees', icon: UserCog },
+  support_ticket: { label: 'Support Tickets', icon: LifeBuoy },
 };
 
-const recycleSearchFilter = (
-  row: LegacyRow<RecycleBinItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const item = row.original;
-  return (
-    item.title.toLowerCase().includes(q) ||
-    item.identifier.toLowerCase().includes(q) ||
-    item.details.toLowerCase().includes(q) ||
-    item.entityType.toLowerCase().includes(q)
-  );
-};
+const fmt = (iso: string) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleString() : '—');
 
 export function RecycleBinPage() {
-  const { data, isLoading, isError, refetch } = useRecycleBin();
-  const restoreMutation = useRestoreRecycleBinItem();
-  const purgeMutation = usePurgeRecycleBinItem();
-  const emptyMutation = useEmptyRecycleBin();
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [confirmAction, setConfirmAction] = useState<{
-    type: 'restore' | 'delete' | 'emptyAll';
-    item?: RecycleBinItem;
-  } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [entity, setEntity] = useState('');
+  const { data, isLoading, isError, error, refetch, isFetching } = useRecycleBin({ page, pageSize, search, entity });
+  const restore = useRestoreRecycleBinItems();
+  const purge = useDeleteRecycleBinItems();
+  const empty = useEmptyRecycleBin();
+  const [confirmAction, setConfirmAction] = useState<{ type: 'restore' | 'delete' | 'emptyAll'; item?: RecycleBinItem } | null>(null);
 
-  const list = data ?? [];
-
-  const filteredList = useMemo(() => {
-    if (selectedType === 'all') return list;
-    return list.filter((item) => item.entityType === selectedType);
-  }, [list, selectedType]);
-
-  const stats = useMemo(() => {
-    const counts: Record<string, number> = {
-      customer: 0,
-      package: 0,
-      invoice: 0,
-      ticket: 0,
-      employee: 0,
-    };
-    for (const item of list) {
-      if (counts[item.entityType] !== undefined) counts[item.entityType]++;
-    }
-    return [
-      { key: 'customer', label: 'Customers', count: counts.customer, icon: Users },
-      { key: 'package', label: 'Packages', count: counts.package, icon: Package },
-      { key: 'invoice', label: 'Invoices', count: counts.invoice, icon: FileText },
-      { key: 'ticket', label: 'Tickets', count: counts.ticket, icon: LifeBuoy },
-      { key: 'employee', label: 'Employees', count: counts.employee, icon: UserCog },
-    ];
-  }, [list]);
-
-  const handleRestore = (item: RecycleBinItem) => {
-    restoreMutation.mutate(item.id, {
-      onSuccess: () => toast.success(`${item.title} restored successfully`),
-      onError: () => toast.error(`Failed to restore ${item.title}`),
-    });
-    setConfirmAction(null);
-  };
-
-  const handleDeleteForever = (item: RecycleBinItem) => {
-    purgeMutation.mutate(item.id, {
-      onSuccess: () => toast.success(`${item.title} permanently deleted`),
-      onError: () => toast.error(`Failed to delete ${item.title}`),
-    });
-    setConfirmAction(null);
-  };
-
-  const handleEmptyAll = () => {
-    emptyMutation.mutate(list.map((i) => i.id), {
-      onSuccess: () => toast.success('Recycle bin emptied permanently'),
-      onError: () => toast.error('Failed to empty recycle bin'),
-    });
-    setConfirmAction(null);
-  };
+  const counts = data?.counts ?? {};
+  const binTotal = Object.values(counts).reduce((a, b) => a + Number(b), 0);
+  const chips = useMemo(() => {
+    const keys = [...new Set([...Object.keys(ENTITIES), ...Object.keys(data?.counts ?? {})])];
+    return keys.map((key) => ({ key, label: ENTITIES[key]?.label ?? key.replace(/_/g, ' '), icon: ENTITIES[key]?.icon ?? Archive, count: Number(data?.counts?.[key] ?? 0) }));
+  }, [data?.counts]);
 
   const columns = useMemo<LegacyColumnDef<RecycleBinItem, unknown>[]>(
     () => [
       {
-        accessorKey: 'entityType',
-        header: 'Entity Type',
-        size: 130,
+        accessorKey: 'entity',
+        header: 'Type',
+        size: 140,
         cell: ({ row }) => {
-          const cfg = entityConfig[row.original.entityType] ?? entityConfig.customer;
-          const EntityIcon = cfg.icon;
+          const Icon = ENTITIES[row.original.entity]?.icon ?? Archive;
           return (
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border backdrop-blur-sm capitalize bg-muted/40 border-border/70 text-foreground">
-              <EntityIcon className="h-3.5 w-3.5 text-primary" />
-              <span>{row.original.entityType}</span>
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border capitalize bg-muted/40 border-border/70 text-foreground">
+              <Icon className="h-3.5 w-3.5 text-primary" />
+              <span>{row.original.entity.replace(/_/g, ' ')}</span>
             </div>
           );
         },
       },
       {
-        accessorKey: 'title',
-        header: 'Deleted Item Name',
-        size: 200,
+        accessorKey: 'label',
+        header: 'Deleted item',
         enableHiding: false,
         cell: ({ row }) => (
-          <div className="font-semibold text-sm text-foreground">{row.original.title}</div>
-        ),
-      },
-      {
-        accessorKey: 'identifier',
-        header: 'Unique Identifier',
-        size: 140,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs bg-muted/60 px-2 py-0.5 rounded border border-border/60 text-foreground">
-            {row.original.identifier}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'details',
-        header: 'Context & Details',
-        size: 220,
-        cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground line-clamp-1 block">
-            {row.original.details}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'deletedAt',
-        header: 'Deleted Timestamp',
-        size: 160,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-            <Clock className="h-3 w-3 text-muted-foreground/70" />
-            <span>{row.original.deletedAt}</span>
+          <div>
+            <div className="font-semibold text-sm text-foreground">{row.original.label}</div>
+            {row.original.sourceId && <div className="font-mono text-[11px] text-muted-foreground">ID {row.original.sourceId}</div>}
           </div>
         ),
       },
       {
+        accessorKey: 'deletedBy',
+        header: 'Deleted by',
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.deletedBy || '—'}</span>,
+      },
+      {
+        accessorKey: 'deletedAt',
+        header: 'Deleted',
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+            <Clock className="h-3 w-3 text-muted-foreground/70" />
+            <span>{fmt(row.original.deletedAt)}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'expiresAt',
+        header: 'Purged on',
+        cell: ({ row }) => <span className="text-xs text-muted-foreground font-mono">{fmt(row.original.expiresAt)}</span>,
+      },
+      {
         id: 'actions',
         header: () => <span className="text-xs font-medium text-muted-foreground text-right block">Actions</span>,
-        size: 120,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium"
-              onClick={() => setConfirmAction({ type: 'restore', item: row.original })}
-              title="Restore item"
-            >
-              <RotateCcw className="mr-1 h-3 w-3" />
-              Restore
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-destructive hover:bg-destructive/10 text-xs"
-              onClick={() => setConfirmAction({ type: 'delete', item: row.original })}
-              title="Delete forever"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            <Can menu="recycle_bin" action="restore">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium"
+                onClick={() => setConfirmAction({ type: 'restore', item: row.original })}
+              >
+                <RotateCcw className="mr-1 h-3 w-3" />
+                Restore
+              </Button>
+            </Can>
+            <Can menu="recycle_bin" action="delete_forever">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-destructive hover:bg-destructive/10 text-xs"
+                aria-label="Delete forever"
+                onClick={() => setConfirmAction({ type: 'delete', item: row.original })}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </Can>
           </div>
         ),
       },
@@ -214,115 +137,113 @@ export function RecycleBinPage() {
   if (isError || !data) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load recycle bin"
-          description="There was an error loading deleted items."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
+        <EmptyState title="Failed to load recycle bin" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />
       </div>
     );
   }
 
+  const runConfirmed = () => {
+    const action = confirmAction;
+    setConfirmAction(null);
+    if (!action) return;
+    if (action.type === 'emptyAll') {
+      empty.mutate(undefined, { onSuccess: (res) => toast.success(res.deleted > 0 ? `${res.deleted} item(s) permanently deleted` : 'Recycle bin is already empty') });
+    } else if (action.item && action.type === 'restore') {
+      const item = action.item;
+      restore.mutate([item.id], { onSuccess: () => toast.success(`${item.label} restored`) });
+    } else if (action.item) {
+      const item = action.item;
+      purge.mutate([item.id], { onSuccess: () => toast.success(`${item.label} permanently deleted`) });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Recycle Bin & Data Vault"
-        subtitle="Safe recovery area for soft-deleted customer profiles, packages, invoices, and service tickets"
-        breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Recycle Bin' },
-        ]}
+        title="Recycle Bin"
+        subtitle="Deleted customers, resellers, packages, staff and tickets — restore them before they are purged"
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Recycle Bin' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                refetch();
-                toast.success('Recycle bin synced');
-              }}
-              className="border-border/70 hover:border-border hover:bg-card/80 text-xs"
-            >
-              <RotateCw className="mr-1.5 h-3.5 w-3.5" />
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="border-border/70 hover:border-border hover:bg-card/80 text-xs">
+              <RotateCw className={cn('mr-1.5 h-3.5 w-3.5', isFetching && 'animate-spin')} />
               Refresh
             </Button>
-            {list.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmAction({ type: 'emptyAll' })}
-                className="border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-medium"
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Empty Recycle Bin
-              </Button>
+            {binTotal > 0 && (
+              <Can menu="recycle_bin" action="empty">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={empty.isPending}
+                  onClick={() => setConfirmAction({ type: 'emptyAll' })}
+                  className="border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-medium"
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  Empty Recycle Bin
+                </Button>
+              </Can>
             )}
           </div>
         }
       />
 
-      {/* KPI Cards / Type selector chips */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {stats.map((stat) => {
+        {chips.map((stat) => {
           const Icon = stat.icon;
-          const isActive = selectedType === stat.key;
+          const isActive = entity === stat.key;
           return (
             <button
               key={stat.key}
-              onClick={() => setSelectedType(selectedType === stat.key ? 'all' : stat.key)}
-              className={`rounded-xl border p-3.5 text-left transition-all backdrop-blur-md relative overflow-hidden group ${
-                isActive
-                  ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary'
-                  : 'border-border/70 bg-card/60 hover:border-primary/40'
+              onClick={() => {
+                setEntity(isActive ? '' : stat.key);
+                setPage(1);
+              }}
+              className={`rounded-xl border p-3.5 text-left transition-all backdrop-blur-md ${
+                isActive ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20 ring-1 ring-primary' : 'border-border/70 bg-card/60 hover:border-primary/40'
               }`}
             >
               <div className="flex items-center justify-between">
                 <Icon className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-muted/60 text-foreground border border-border/50">
-                  {stat.count}
-                </span>
+                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-muted/60 text-foreground border border-border/50">{stat.count}</span>
               </div>
-              <div className="mt-2 text-sm font-semibold text-foreground">{stat.label}</div>
-              <p className="text-[11px] text-muted-foreground">Click to filter</p>
+              <div className="mt-2 text-sm font-semibold text-foreground capitalize">{stat.label}</div>
+              <p className="text-[11px] text-muted-foreground">{isActive ? 'Click to clear filter' : 'Click to filter'}</p>
             </button>
           );
         })}
       </div>
 
-      {/* Table Container */}
       <div className="rounded-xl border border-border/70 bg-card/60 p-5 backdrop-blur-md shadow-sm space-y-4">
-        {selectedType !== 'all' && (
-          <div className="flex items-center justify-between pb-2 border-b border-border/50">
-            <span className="text-xs text-muted-foreground">
-              Showing filter: <strong className="text-foreground capitalize">{selectedType}s</strong>
-            </span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedType('all')}
-              className="h-6 text-xs text-primary hover:underline p-0"
-            >
-              Reset filter
-            </Button>
-          </div>
-        )}
-
         <DataTable
           columns={columns}
-          data={filteredList}
+          data={data.items}
           getRowId={(row) => row.id}
-          searchPlaceholder="Search deleted items by name, ID, or description..."
-          searchFilterFn={recycleSearchFilter}
+          searchPlaceholder="Search deleted items by name or who deleted them..."
           emptyTitle="Recycle bin is clean"
-          emptyDescription="No deleted records matching your filter. Soft-deleted entities will be retained here for 30 days."
+          emptyDescription={`Deleted records are kept here for ${data.retentionDays} days.`}
+          server={{
+            page,
+            pageSize,
+            total: data.meta.total,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+            search,
+            onSearchChange: (value) => {
+              setSearch(value);
+              setPage(1);
+            },
+          }}
         />
 
-        {list.length > 0 && (
+        {binTotal > 0 && (
           <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-muted-foreground">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
             <p className="text-xs text-foreground/80">
-              <strong className="text-amber-400">Retention Policy:</strong> Soft-deleted records are preserved for 30 calendar days before automated hard-purge. Restoring immediately returns items to their original tables with full relationship history intact.
+              <strong className="text-amber-400">Retention:</strong> deleted records are kept for {data.retentionDays} days, then purged automatically.
+              Restoring puts the record and its related rows back.
             </p>
           </div>
         )}
@@ -330,37 +251,19 @@ export function RecycleBinPage() {
 
       <ConfirmDialog
         open={Boolean(confirmAction)}
-        onOpenChange={() => setConfirmAction(null)}
-        title={
-          confirmAction?.type === 'emptyAll'
-            ? 'Empty entire recycle bin?'
-            : confirmAction?.type === 'restore'
-              ? 'Restore item?'
-              : 'Delete permanently?'
-        }
+        onOpenChange={(open) => !open && setConfirmAction(null)}
+        title={confirmAction?.type === 'emptyAll' ? 'Empty the recycle bin?' : confirmAction?.type === 'restore' ? 'Restore item?' : 'Delete permanently?'}
         description={
           confirmAction?.type === 'emptyAll'
-            ? 'This will permanently destroy all soft-deleted records across all categories. This operation cannot be rolled back.'
+            ? `All ${binTotal} deleted record(s) will be destroyed. This cannot be undone.`
             : confirmAction?.type === 'restore'
-              ? `Restore "${confirmAction.item?.title}" to the system with its active status?`
-              : `Permanently erase "${confirmAction?.item?.title}" from disk? This cannot be undone.`
+              ? `Restore "${confirmAction.item?.label}"?`
+              : `Permanently erase "${confirmAction?.item?.label}"? This cannot be undone.`
         }
-        confirmLabel={
-          confirmAction?.type === 'emptyAll'
-            ? 'Yes, Empty Bin'
-            : confirmAction?.type === 'restore'
-              ? 'Restore Record'
-              : 'Delete Forever'
-        }
-        destructive={confirmAction?.type === 'delete' || confirmAction?.type === 'emptyAll'}
-        onConfirm={() => {
-          if (!confirmAction) return;
-          if (confirmAction.type === 'emptyAll') handleEmptyAll();
-          else if (confirmAction.type === 'restore' && confirmAction.item) handleRestore(confirmAction.item);
-          else if (confirmAction.type === 'delete' && confirmAction.item) handleDeleteForever(confirmAction.item);
-        }}
+        confirmLabel={confirmAction?.type === 'emptyAll' ? 'Empty bin' : confirmAction?.type === 'restore' ? 'Restore' : 'Delete forever'}
+        destructive={confirmAction?.type !== 'restore'}
+        onConfirm={runConfirmed}
       />
     </div>
   );
 }
-

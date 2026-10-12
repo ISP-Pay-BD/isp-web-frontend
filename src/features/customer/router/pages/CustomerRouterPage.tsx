@@ -1,61 +1,101 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import {
-  Router,
-  Wifi,
-  RefreshCw,
-  Globe,
-  Zap,
-  Smartphone,
-  Activity,
-} from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Router, Wifi, RefreshCw, Globe, Zap, Smartphone, Activity, Power, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
-import { useCustomerRouter } from '../hooks/use-customer-router';
-import { toast } from 'sonner';
+import {
+  CustomerPageShell,
+  CustomerLoadingSkeleton,
+  CustomerErrorState,
+  CustomerEmptyState,
+} from '@/features/customer/shared';
+import {
+  useRouterTargets,
+  useRouterAction,
+  usePingConnection,
+  CAPABILITY_LABELS,
+  type RouterTool,
+} from '../hooks/use-customer-router';
+import { RouterActionResultPanel } from '../components/RouterActionResultPanel';
+import type { RouterActionResult } from '@/lib/api/adapters/customer.adapter';
+
+const TOOL_TITLES: Record<RouterTool, string> = {
+  'reset-session': 'Reset connection',
+  'flush-dns': 'Flush DNS',
+  reboot: 'Restart router',
+};
 
 export function CustomerRouterPage() {
-  const { data, isLoading, isError, refetch, quickFixMutation } = useCustomerRouter();
-  const [runningAction, setRunningAction] = useState<string | null>(null);
+  const { data: targets, isLoading, isError, error, refetch } = useRouterTargets();
+  const action = useRouterAction();
+  const ping = usePingConnection();
+  const [runningTool, setRunningTool] = useState<RouterTool | null>(null);
+  const [lastResult, setLastResult] = useState<{ title: string; result: RouterActionResult } | null>(null);
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="Router Tools" subtitle="Loading router telemetry...">
+      <CustomerPageShell title="Router Tools" subtitle="Loading your router...">
         <CustomerLoadingSkeleton variant="router" />
       </CustomerPageShell>
     );
   }
 
-  if (isError || !data) {
+  if (isError || !targets) {
     return (
       <CustomerPageShell title="Router Tools" subtitle="Self-Service Gateway Diagnostics">
-        <CustomerErrorState onRetry={() => refetch()} />
+        <CustomerErrorState message={error?.message || undefined} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
 
-  const { router, connectedDevices, ipAddress, macAddress, connectionStatus } = data;
+  const primary = targets[0];
 
-  const handleRunTool = async (actionId: string, label: string) => {
-    setRunningAction(actionId);
-    try {
-      const res = await quickFixMutation.mutateAsync(actionId);
-      toast.success(res.message);
-    } catch {
-      toast.error(`Failed to execute ${label}.`);
-    } finally {
-      setRunningAction(null);
-    }
+  const runTool = (tool: RouterTool) => {
+    setRunningTool(tool);
+    action.mutate(
+      { tool, targetId: tool === 'reboot' ? primary?.id || undefined : undefined },
+      {
+        onSuccess: (result) => setLastResult({ title: TOOL_TITLES[tool], result }),
+        onSettled: () => setRunningTool(null),
+      },
+    );
   };
+
+  const toolCard = (
+    tool: RouterTool,
+    icon: ReactNode,
+    title: string,
+    description: string,
+    cta: string,
+    busy: string,
+  ) => (
+    <Card className="hover:border-primary/50 transition-colors">
+      <CardHeader className="p-4 pb-2">
+        {icon}
+        <CardTitle className="text-sm font-bold mt-2">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="p-4 pt-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={action.isPending}
+          onClick={() => runTool(tool)}
+          className="w-full text-xs font-semibold"
+        >
+          {runningTool === tool ? busy : cta}
+        </Button>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <CustomerPageShell
       title="Router Diagnostics & Tools"
-      subtitle="Troubleshoot PPPoE line status, flush gateway DNS, and manage connected WiFi clients."
+      subtitle="Reset your connection, restart your router, and run a line check."
       breadcrumbs={[
         { label: 'Customer', href: '/customer/dashboard' },
         { label: 'Router' },
@@ -71,209 +111,143 @@ export function CustomerRouterPage() {
           <Link href="/customer/router/devices">
             <Button size="sm" className="gap-2">
               <Smartphone className="h-4 w-4" />
-              Connected Devices ({connectedDevices.length})
+              Connection & Devices
             </Button>
           </Link>
         </div>
       }
     >
       <div className="space-y-6">
-        {/* Router Status Hero */}
-        <div className="rounded-2xl border bg-card p-6 md:p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
-                <Router className="h-8 w-8" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold">{router.routerModel}</h2>
-                  <Badge variant={connectionStatus === 'online' ? 'default' : 'destructive'} className="text-xs">
-                    {connectionStatus.toUpperCase()}
-                  </Badge>
+        {targets.length === 0 ? (
+          <CustomerEmptyState
+            icon={<Router className="text-muted-foreground h-5 w-5" />}
+            title="No router linked"
+            description="Your provider has not linked a router to your account yet."
+          />
+        ) : (
+          targets.map((target, idx) => (
+            <div key={target.id || idx} className="rounded-2xl border bg-card p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-2xl bg-primary/10 p-3.5 text-primary">
+                    <Router className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-bold">{target.label || 'My router'}</h2>
+                      <Badge variant="outline" className="text-xs">
+                        {CAPABILITY_LABELS[target.capabilityType] ?? target.capabilityType}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Restart: {target.actions.reboot === 'auto' ? 'automatic' : 'guided steps'} · WiFi change:{' '}
+                      {target.actions.changeWifi === 'auto' ? 'automatic' : 'guided steps'} · Devices:{' '}
+                      {target.actions.listDevices === 'auto' ? 'automatic' : 'guided steps'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 font-mono">
-                  PPPoE User: {router.pppoeUsername} · Last Sync: {router.lastReconnect}
-                </p>
+
+                {target.webAdminUrl && (
+                  <a
+                    href={target.webAdminUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline self-start sm:self-auto"
+                  >
+                    Router admin page <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
             </div>
+          ))
+        )}
 
-            <Button
-              variant="outline"
-              disabled={quickFixMutation.isPending}
-              onClick={() => handleRunTool('quick_fix', 'Quick Fix')}
-              className="font-bold gap-2 self-start sm:self-auto"
-            >
-              <Activity className={`h-4 w-4 text-primary ${quickFixMutation.isPending ? 'animate-spin' : ''}`} />
-              Run Full Diagnostics
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-border/60 mt-6 pt-4 text-xs">
-            <div>
-              <span className="text-muted-foreground font-medium">IP</span>
-              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{ipAddress}</div>
-            </div>
-            <div>
-              <span className="text-muted-foreground font-medium">MAC</span>
-              <div className="font-mono font-semibold text-sm text-foreground mt-0.5">{macAddress}</div>
-            </div>
-            <div>
-              <span className="text-muted-foreground font-medium">Wi‑Fi</span>
-              <div className="font-semibold text-sm text-primary mt-0.5 flex items-center gap-1.5">
-                <Wifi className="h-3.5 w-3.5" />
-                {router.wifiSsid}
-              </div>
-              <Link href="/customer/router/wifi" className="text-primary hover:underline text-[11px] font-medium">
-                Change password →
-              </Link>
-            </div>
-            <div>
-              <span className="text-muted-foreground font-medium">Devices</span>
-              <div className="font-semibold text-sm text-foreground mt-0.5">
-                {connectedDevices.length} connected
-              </div>
-              <Link href="/customer/router/devices" className="text-muted-foreground hover:text-foreground hover:underline text-[11px] font-medium">
-                Inspect →
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Fix Interactive Actions Grid matching PHP router tools */}
         <div>
           <h3 className="text-base font-bold mb-3 flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            Interactive Quick Fix Actions
+            Quick Fix Actions
           </h3>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardHeader className="p-4 pb-2">
-                <div className="rounded-xl bg-primary/10 p-2.5 text-primary w-fit">
-                  <RefreshCw className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-sm font-bold mt-2">Reset PPPoE Session</CardTitle>
-                <CardDescription className="text-xs">
-                  Forces your router to re-authenticate with the MikroTik Bras router.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={runningAction === 'reset_session'}
-                  onClick={() => handleRunTool('reset_session', 'Reset Session')}
-                  className="w-full text-xs font-semibold"
-                >
-                  {runningAction === 'reset_session' ? 'Resetting...' : 'Execute Reset'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardHeader className="p-4 pb-2">
-                <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 w-fit">
-                  <Wifi className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-sm font-bold mt-2">Reconnect Fiber Line</CardTitle>
-                <CardDescription className="text-xs">
-                  Simulates optical link re-negotiation and resets routing state.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={runningAction === 'reconnect'}
-                  onClick={() => handleRunTool('reconnect', 'Reconnect Line')}
-                  className="w-full text-xs font-semibold"
-                >
-                  {runningAction === 'reconnect' ? 'Reconnecting...' : 'Reconnect Line'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:border-primary/50 transition-colors">
-              <CardHeader className="p-4 pb-2">
-                <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600 w-fit">
-                  <Globe className="h-5 w-5" />
-                </div>
-                <CardTitle className="text-sm font-bold mt-2">Flush Gateway DNS</CardTitle>
-                <CardDescription className="text-xs">
-                  Clears stale domain cache and resolves website loading timeouts.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={runningAction === 'dns_flush'}
-                  onClick={() => handleRunTool('dns_flush', 'Flush DNS')}
-                  className="w-full text-xs font-semibold"
-                >
-                  {runningAction === 'dns_flush' ? 'Flushing...' : 'Flush DNS Cache'}
-                </Button>
-              </CardContent>
-            </Card>
+            {toolCard(
+              'reset-session',
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary w-fit">
+                <RefreshCw className="h-5 w-5" />
+              </div>,
+              'Reset PPPoE Session',
+              'Drops and re-establishes your session on the provider network.',
+              'Execute Reset',
+              'Resetting...',
+            )}
+            {toolCard(
+              'flush-dns',
+              <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600 w-fit">
+                <Globe className="h-5 w-5" />
+              </div>,
+              'Flush DNS',
+              'Clears cached DNS lookups for your connection.',
+              'Flush DNS Cache',
+              'Flushing...',
+            )}
+            {toolCard(
+              'reboot',
+              <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 w-fit">
+                <Power className="h-5 w-5" />
+              </div>,
+              'Restart Router',
+              'Restarts your router remotely when supported, otherwise shows the steps.',
+              'Restart',
+              'Restarting...',
+            )}
 
             <Card className="hover:border-primary/50 transition-colors">
               <CardHeader className="p-4 pb-2">
                 <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 w-fit">
-                  <Zap className="h-5 w-5" />
+                  <Activity className="h-5 w-5" />
                 </div>
                 <CardTitle className="text-sm font-bold mt-2">Line Health Check</CardTitle>
-                <CardDescription className="text-xs">
-                  Runs ICMP ping and jitter test against Google and Cloudflare DNS.
-                </CardDescription>
+                <CardDescription className="text-xs">Pings your connection from the provider router.</CardDescription>
               </CardHeader>
-              <CardContent className="p-4 pt-2">
+              <CardContent className="p-4 pt-2 space-y-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={runningAction === 'quick_fix'}
-                  onClick={() => handleRunTool('quick_fix', 'Line Health Check')}
+                  disabled={ping.isPending}
+                  onClick={() => ping.mutate()}
                   className="w-full text-xs font-semibold"
                 >
-                  {runningAction === 'quick_fix' ? 'Testing...' : 'Run Diagnostics'}
+                  {ping.isPending ? 'Testing...' : 'Run Check'}
                 </Button>
+                {ping.data && (
+                  <div className="text-[11px] text-muted-foreground space-y-0.5">
+                    <div>
+                      Latency: <span className="font-mono text-foreground">{ping.data.averageLatency || '—'}</span>
+                    </div>
+                    <div>
+                      Packets: {ping.data.received}/{ping.data.sent}
+                      {ping.data.loss ? ` · loss ${ping.data.loss}` : ''}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* WiFi & Devices Quick Cards */}
+        {lastResult && <RouterActionResultPanel title={lastResult.title} result={lastResult.result} />}
+
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span>WiFi Network Configuration</span>
+                <span>WiFi Network</span>
                 <Wifi className="h-4 w-4 text-primary" />
               </CardTitle>
-              <CardDescription className="text-xs">
-                Quickly customize your wireless network name and security key
-              </CardDescription>
+              <CardDescription className="text-xs">Change your wireless network name and password</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-xl border p-4 bg-muted/20 space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Network Name (SSID):</span>
-                  <span className="font-bold">{router.wifiSsid}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Frequency Band:</span>
-                  <span className="font-bold">Dual-Band 2.4GHz / 5GHz</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Security Protocol:</span>
-                  <span className="font-bold">WPA2-Personal (AES)</span>
-                </div>
-              </div>
-
+            <CardContent>
               <Link href="/customer/router/wifi" className="block">
-                <Button className="w-full font-bold text-xs">
-                  Change WiFi Password
-                </Button>
+                <Button className="w-full font-bold text-xs">Change WiFi Name / Password</Button>
               </Link>
             </CardContent>
           </Card>
@@ -281,32 +255,15 @@ export function CustomerRouterPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span>Active Wireless Clients</span>
+                <span>Connection & Devices</span>
                 <Smartphone className="h-4 w-4 text-primary" />
               </CardTitle>
-              <CardDescription className="text-xs">
-                Currently connected smartphones, laptops, and smart devices
-              </CardDescription>
+              <CardDescription className="text-xs">Session status and devices on your network</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {connectedDevices.slice(0, 3).map((dev) => (
-                <div
-                  key={dev.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/20 text-xs"
-                >
-                  <div>
-                    <div className="font-bold">{dev.name}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground">{dev.ip}</div>
-                  </div>
-                  <Badge variant="outline" className="font-mono text-[10px]">
-                    {dev.mac}
-                  </Badge>
-                </div>
-              ))}
-
+            <CardContent>
               <Link href="/customer/router/devices" className="block">
                 <Button variant="outline" className="w-full text-xs">
-                  View All {connectedDevices.length} Connected Devices
+                  View Connection & Devices
                 </Button>
               </Link>
             </CardContent>

@@ -1,122 +1,81 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared';
-import { useRouters } from '../hooks/useRouters';
-import type { RouterItem } from '@/data/admin/network-ops.data';
+import { useRouterOptions, useRouters } from '../hooks/useRouters';
+import { useDeleteRouter, useTestRouterConnection } from '../hooks/useRouterMutations';
+import { useServerTable } from '../hooks/useServerTable';
+import type { RouterRow } from '../types';
 import { RouterModal } from '../components/RouterModal';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Plus, Router, RefreshCw, Activity, CheckCircle2, Edit, Trash2, Zap, Users } from 'lucide-react';
-import { toast } from 'sonner';
+import { Plus, Router, RefreshCw, CheckCircle2, Edit, Trash2, Zap, Users } from 'lucide-react';
 
-const routerSearchFilter = (row: LegacyRow<RouterItem>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    r.name.toLowerCase().includes(q) ||
-    r.ip.includes(q) ||
-    r.area.toLowerCase().includes(q)
-  );
-};
+function liveLabel(r: RouterRow) {
+  if (r.cachedStatus === 'online') return 'online';
+  if (r.cachedStatus === 'offline') return 'offline';
+  return null;
+}
 
 export function RoutersPage() {
-  const { data: initialRouters = [], isLoading, isError, refetch } = useRouters();
-  const [routers, setRouters] = useState<RouterItem[]>([]);
+  const table = useServerTable();
+  const { page, pageSize, search } = table;
+  const list = useRouters({ page, pageSize, search });
+  // Summary cards cover every active router, not just the visible page.
+  const options = useRouterOptions();
+  const { mutateAsync: testAsync } = useTestRouterConnection();
+  const deleteRouter = useDeleteRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedRouter, setSelectedRouter] = useState<RouterItem | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedRouter, setSelectedRouter] = useState<RouterRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RouterRow | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
 
-  if (routers.length === 0 && initialRouters.length > 0) {
-    setRouters(initialRouters);
-  }
+  const active = useMemo(() => options.data ?? [], [options.data]);
+  const totalRouters = list.data?.meta.total ?? 0;
+  const reachable = active.filter((r) => r.cachedStatus === 'online').length;
+  const polled = active.filter((r) => r.cachedStatus !== '').length;
+  const sessions = active.reduce((sum, r) => sum + (r.cachedActive ?? 0), 0);
+  const customers = active.reduce((sum, r) => sum + r.customers, 0);
 
-  const list = routers.length > 0 ? routers : initialRouters;
-  const totalRouters = list.length;
-  const onlineRouters = list.filter((r) => r.status === 'online').length;
-  const totalUsers = list.reduce((sum, r) => sum + r.users, 0);
-
-  const handleTestConnection = (router: RouterItem) => {
-    toast.promise(
-      new Promise((res, rej) => {
-        setTimeout(() => {
-          if (router.status === 'online') {
-            res({ ping: '2ms', version: router.routerOsVersion ?? 'v7.14' });
-          } else {
-            rej(new Error('Connection timed out to ' + router.ip));
-          }
-        }, 600);
-      }),
-      {
-        loading: `Pinging ${router.ip}:${router.port}...`,
-        success: (data) => `Connected to ${router.name} (${(data as { ping: string }).ping})`,
-        error: (err) => (err as Error).message,
-      },
-    );
-  };
-
-  const handleSyncAll = () => {
-    setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
-      toast.success('MikroTik interfaces, queues, and active users synced successfully.');
-    }, 900);
-  };
+  const handleTestConnection = useCallback(
+    async (router: RouterRow) => {
+      setTestingId(router.id);
+      try {
+        const res = await testAsync({ id: router.id, host: router.host, port: router.port, username: router.username });
+        const identity = typeof res?.info?.identity === 'string' ? res.info.identity : router.name;
+        toast.success(`Connected to ${identity} (${router.host}:${router.port})`);
+      } catch {
+        // the mutation cache already toasted the router's answer
+      } finally {
+        setTestingId(null);
+      }
+    },
+    [testAsync],
+  );
 
   const handleDelete = () => {
-    if (!deleteId) return;
-    setRouters((prev) => prev.filter((r) => r.id !== deleteId));
-    toast.success('Router removed from database.');
-    setDeleteId(null);
+    const target = deleteTarget;
+    if (!target) return;
+    deleteRouter.mutate(target.id, {
+      onSuccess: (res) => toast.success(res?.deleted ? `${target.name} deleted` : `${target.name} deactivated`),
+      onSettled: () => setDeleteTarget(null),
+    });
   };
 
-  const handleSaveRouter = (values: {
-    name: string;
-    ip: string;
-    port: number;
-    username: string;
-    model: string;
-    area: string;
-  }) => {
-    if (selectedRouter) {
-      setRouters((prev) =>
-        prev.map((r) => (r.id === selectedRouter.id ? { ...r, ...values } : r)),
-      );
-    } else {
-      const newItem: RouterItem = {
-        id: `rtr_${Date.now()}`,
-        name: values.name,
-        ip: values.ip,
-        port: values.port,
-        username: values.username,
-        model: values.model,
-        area: values.area,
-        status: 'online',
-        users: 0,
-        uptime: 'Just connected',
-        cpuLoad: 5,
-        freeRamMb: 850,
-        totalRamMb: 1024,
-        freeHddMb: 450,
-        totalHddMb: 512,
-        boardName: values.model,
-        routerOsVersion: 'v7.14.3',
-      };
-      setRouters((prev) => [newItem, ...prev]);
-    }
+  const openCreate = () => {
+    setSelectedRouter(null);
+    setModalOpen(true);
   };
 
-  const columns = useMemo<LegacyColumnDef<RouterItem, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<RouterRow, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -130,17 +89,19 @@ export function RoutersPage() {
             >
               {row.original.name}
             </Link>
-            <div className="text-xs text-muted-foreground">{row.original.area} POP</div>
+            {row.original.hotspotName ? (
+              <div className="text-xs text-muted-foreground">Hotspot: {row.original.hotspotName}</div>
+            ) : null}
           </div>
         ),
       },
       {
-        accessorKey: 'ip',
+        accessorKey: 'host',
         header: 'Host IP & Port',
         cell: ({ row }) => (
           <div>
-            <div className="font-mono text-xs font-medium text-foreground">{row.original.ip}</div>
-            <div className="font-mono text-xs text-muted-foreground">Port: {row.original.port}</div>
+            <div className="font-mono text-xs font-medium text-foreground">{row.original.host || '—'}</div>
+            <div className="font-mono text-xs text-muted-foreground">Port: {row.original.port || '—'}</div>
           </div>
         ),
       },
@@ -151,44 +112,47 @@ export function RoutersPage() {
         enableSorting: false,
         cell: ({ row }) => (
           <div>
-            <div className="text-xs font-mono">user: {row.original.username}</div>
+            <div className="text-xs font-mono">user: {row.original.username || '—'}</div>
             <div className="text-xs text-muted-foreground font-mono">pass: ••••••••</div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'model',
-        header: 'Model / OS',
-        cell: ({ row }) => (
-          <div>
-            <div className="text-xs font-medium">{row.original.model}</div>
-            <div className="text-xs text-muted-foreground font-mono">
-              {row.original.routerOsVersion ?? 'RouterOS'}
-            </div>
           </div>
         ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => {
+          const live = liveLabel(row.original);
+          return (
+            <div className="flex flex-col items-start gap-1">
+              <StatusBadge status={row.original.status} />
+              {live ? (
+                <span className="text-[11px] text-muted-foreground">
+                  last poll: {live}
+                  {row.original.cachedUpdatedAt ? ` · ${row.original.cachedUpdatedAt}` : ''}
+                </span>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
-        accessorKey: 'users',
-        header: 'Active Users',
-        cell: ({ row }) => (
-          <div>
-            <span className="font-semibold text-sm">{row.original.users}</span>
-            <span className="text-xs text-muted-foreground ml-1">users</span>
-          </div>
-        ),
+        id: 'sessions',
+        header: 'PPPoE Users',
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.cachedTotal === null ? (
+            <span className="text-xs text-muted-foreground">—</span>
+          ) : (
+            <div>
+              <span className="font-semibold text-sm">{row.original.cachedActive}</span>
+              <span className="text-xs text-muted-foreground ml-1">/ {row.original.cachedTotal} online</span>
+            </div>
+          ),
       },
       {
-        accessorKey: 'uptime',
-        header: 'Uptime',
-        cell: ({ row }) => (
-          <span className="text-xs font-mono text-muted-foreground">{row.original.uptime}</span>
-        ),
+        accessorKey: 'customers',
+        header: 'Customers',
+        cell: ({ row }) => <span className="font-semibold text-sm tabular-nums">{row.original.customers}</span>,
       },
       {
         id: 'actions',
@@ -209,10 +173,11 @@ export function RoutersPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                title="Ping / Test Connection"
+                title="Test Connection"
+                disabled={testingId === router.id}
                 onClick={() => handleTestConnection(router)}
               >
-                <Zap className="h-4 w-4 text-amber-500" />
+                <Zap className={cn('h-4 w-4 text-amber-500', testingId === router.id && 'animate-pulse')} />
               </Button>
               <Button
                 variant="ghost"
@@ -225,12 +190,7 @@ export function RoutersPage() {
               >
                 <Edit className="h-4 w-4 text-muted-foreground" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Delete Router"
-                onClick={() => setDeleteId(router.id)}
-              >
+              <Button variant="ghost" size="icon" title="Deactivate Router" onClick={() => setDeleteTarget(router)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
@@ -238,25 +198,27 @@ export function RoutersPage() {
         },
       },
     ],
-    [],
+    [testingId, handleTestConnection],
   );
 
-  if (isLoading && routers.length === 0) {
+  if (list.isLoading) {
     return <PageSkeleton variant="table" rows={6} />;
   }
 
-  if (isError) {
+  if (list.isError) {
     return (
       <div className="p-6">
         <EmptyState
           title="Failed to load routers"
-          description="Could not load MikroTik router inventory."
+          description={list.error?.message ?? 'Could not load MikroTik router inventory.'}
           actionLabel="Retry"
-          onAction={() => refetch()}
+          onAction={() => list.refetch()}
         />
       </div>
     );
   }
+
+  const refreshing = list.isFetching || options.isFetching;
 
   return (
     <div className="space-y-6">
@@ -270,17 +232,19 @@ export function RoutersPage() {
         ]}
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={handleSyncAll} disabled={isSyncing}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sync All
-            </Button>
             <Button
+              variant="outline"
               size="sm"
               onClick={() => {
-                setSelectedRouter(null);
-                setModalOpen(true);
+                list.refetch();
+                options.refetch();
               }}
+              disabled={refreshing}
             >
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button size="sm" onClick={openCreate}>
               <Plus className="h-4 w-4 mr-1.5" />
               New Router
             </Button>
@@ -296,18 +260,20 @@ export function RoutersPage() {
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-foreground tabular-nums">{totalRouters}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">RouterOS core & edge devices</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{active.length} active</p>
           </div>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Online Gateways</span>
+            <span>Reachable Gateways</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{onlineRouters} / {totalRouters}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">API port 8728 responding</p>
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {reachable} / {polled}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">At the last live poll</p>
           </div>
         </div>
 
@@ -317,60 +283,52 @@ export function RoutersPage() {
             <Users className="h-4 w-4 text-blue-500" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{totalUsers.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Authenticated subscribers</p>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{sessions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Last known, across active routers</p>
           </div>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>API Latency</span>
-            <Zap className="h-4 w-4 text-amber-500" />
+            <span>Assigned Customers</span>
+            <Users className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">4.2 ms</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Sub-second queue sync</p>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">{customers.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">Bound to active routers</p>
           </div>
         </div>
       </div>
 
       <DataTable
         columns={columns}
-        data={list}
+        data={list.data?.items ?? []}
+        isLoading={list.isFetching && !list.data}
         getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search by router name, IP, or POP area..."
-        searchFilterFn={routerSearchFilter}
-        facetFilters={[{ columnId: 'status', title: 'Status' }]}
-        emptyTitle="No MikroTik connected"
+        searchPlaceholder="Search by router name or host..."
+        emptyTitle={search ? 'No router matches your search' : 'No MikroTik connected'}
         emptyDescription="Connect a router to push PPPoE users, read live traffic, and monitor CPU."
+        server={table.server(list.data?.meta.total ?? 0)}
         toolbarActions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedRouter(null);
-              setModalOpen(true);
-            }}
-          >
+          <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1.5" />
             New Router
           </Button>
         }
       />
 
-      <RouterModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        initialData={selectedRouter}
-        onSuccess={handleSaveRouter}
-      />
+      <RouterModal open={modalOpen} onOpenChange={setModalOpen} router={selectedRouter} />
 
       <ConfirmDialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Disconnect Router?"
-        description="Are you sure you want to remove this MikroTik router? Customer line synchronization will pause for this gateway."
-        confirmLabel="Remove Router"
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Deactivate Router?"
+        description={
+          deleteTarget
+            ? `${deleteTarget.name} will be marked inactive and stop being polled. Its ${deleteTarget.customers} assigned customers stay in billing.`
+            : undefined
+        }
+        confirmLabel="Deactivate"
         destructive
         onConfirm={handleDelete}
       />

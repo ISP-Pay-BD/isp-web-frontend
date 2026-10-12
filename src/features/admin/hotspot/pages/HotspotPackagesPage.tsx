@@ -2,15 +2,27 @@
 
 import { useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useHotspotData } from '../hooks/useHotspotData';
-import type { HotspotProfileItem } from '@/data/admin/network-ops.data';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { useHotspotRouter } from '../hooks/useHotspotRouter';
+import {
+  useDeleteHotspotProfile,
+  useHotspotProfiles,
+  useSaveHotspotProfile,
+  type HotspotProfileInput,
+} from '../hooks/useHotspotData';
+import { HotspotRouterSelect } from '../components/HotspotRouterSelect';
+import { HotspotQueryError, HotspotRouterGate } from '../components/HotspotStates';
+import { HotspotKpi, HotspotKpiRow } from '../components/HotspotKpi';
+import { EXPIRED_MODES, type HotspotProfile } from '../types';
+import { downloadCsv } from '../utils';
 import { DataTable } from '@/features/shared/data-table';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -22,19 +34,13 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
 import {
   Plus,
@@ -49,103 +55,131 @@ import {
   Trash2,
   Clock,
   Wifi,
+  Lock,
+  Loader2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
-const profileSearchFilter = (
-  row: LegacyRow<HotspotProfileItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
+const VALIDITY_RE = /^(\d{1,4}[wdhm]){1,4}$/;
+const RATE_RE = /^[0-9A-Za-z/ .:-]{1,64}$/;
+
+const profileSearchFilter = (row: LegacyRow<HotspotProfile>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
   const p = row.original;
-  return p.name.toLowerCase().includes(q) || p.rateLimit.includes(q);
+  return p.name.toLowerCase().includes(q) || p.rateLimit.toLowerCase().includes(q) || p.addressPool.toLowerCase().includes(q);
 };
 
+const modeLabel = (mode: string) => EXPIRED_MODES.find((m) => m.value === mode)?.label ?? mode;
+
+type DialogState = { mode: 'create' | 'edit'; initial: HotspotProfileInput } | null;
+
+const blankProfile = (): HotspotProfileInput => ({
+  name: '',
+  rateLimit: '',
+  validity: '',
+  priceBdt: '',
+  sellingPriceBdt: '',
+  sharedUsers: '1',
+  addressPool: 'none',
+  parentQueue: 'none',
+  expiredMode: '0',
+  lockUser: false,
+});
+
+const toInput = (p: HotspotProfile): HotspotProfileInput => ({
+  id: p.id,
+  name: p.name,
+  rateLimit: p.rateLimit,
+  validity: p.validity,
+  priceBdt: p.priceBdt ? String(p.priceBdt) : '',
+  sellingPriceBdt: p.sellingPriceBdt ? String(p.sellingPriceBdt) : '',
+  sharedUsers: String(p.sharedUsers || 1),
+  addressPool: p.addressPool || 'none',
+  parentQueue: p.parentQueue || 'none',
+  expiredMode: p.expiredMode,
+  lockUser: p.lockUser,
+});
+
 export function HotspotPackagesPage() {
-  const { data, isLoading, isError, refetch } = useHotspotData();
-  const [profiles, setProfiles] = useState<HotspotProfileItem[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const hs = useHotspotRouter();
+  const [dialog, setDialog] = useState<DialogState>(null);
 
-  // Form State
-  const [name, setName] = useState('');
-  const [rateLimit, setRateLimit] = useState('10M/10M');
-  const [validityHours, setValidityHours] = useState('24');
-  const [priceBdt, setPriceBdt] = useState('50');
-  const [sellingPriceBdt, setSellingPriceBdt] = useState('60');
-  const [addressPool, setAddressPool] = useState('hs-pool-1');
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Hotspot Packages & Bandwidth Profiles"
+        subtitle="Hotspot user profiles on the selected router: speed, validity, expiry mode and voucher prices."
+        breadcrumb={[
+          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: 'Hotspot', href: '/admin/hotspot' },
+          { label: 'Packages' },
+        ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <HotspotRouterSelect state={hs} />
+            {hs.router ? (
+              <Button size="sm" onClick={() => setDialog({ mode: 'create', initial: blankProfile() })} className="h-9">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Package Profile
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
+      <HotspotRouterGate state={hs}>
+        {hs.router ? (
+          <ProfilesBody
+            key={hs.router.id}
+            routerId={hs.router.id}
+            routerName={hs.router.name}
+            dialog={dialog}
+            onDialogChange={setDialog}
+          />
+        ) : null}
+      </HotspotRouterGate>
+    </div>
+  );
+}
 
-  const initial = data?.profiles ?? [];
-  const list = profiles.length > 0 ? profiles : initial;
+function ProfilesBody({
+  routerId,
+  routerName,
+  dialog,
+  onDialogChange,
+}: {
+  routerId: string;
+  routerName: string;
+  dialog: DialogState;
+  onDialogChange: (next: DialogState) => void;
+}) {
+  const query = useHotspotProfiles(routerId);
+  const remove = useDeleteHotspotProfile(routerId);
+  const [deleteTarget, setDeleteTarget] = useState<HotspotProfile | null>(null);
 
-  const totalProfiles = list.length;
-  const activeCount = list.filter((p) => p.status === 'active').length;
-  const totalActiveUsers = list.reduce((s, p) => s + (p.activeUsers || 0), 0);
-  const avgPrice = totalProfiles > 0 ? Math.round(list.reduce((s, p) => s + (p.sellingPriceBdt || 0), 0) / totalProfiles) : 0;
-
-  const handleCreateProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Please enter package name');
-      return;
-    }
-
-    const newProf: HotspotProfileItem = {
-      id: `hp_${Date.now()}`,
-      name,
-      speedMbps: Number(validityHours) || 10,
-      rateLimit,
-      validityHours: Number(validityHours) || 24,
-      validityFormatted: `${validityHours} Hours`,
-      priceBdt: Number(priceBdt) || 0,
-      sellingPriceBdt: Number(sellingPriceBdt) || 0,
-      addressPool,
-      sharedUsers: 1,
-      parentQueue: 'default',
-      expiredMode: 'remove',
-      lockUser: false,
-      activeUsers: 0,
-      status: 'active',
-    };
-
-    setProfiles((prev) => [newProf, ...(prev.length > 0 ? prev : initial)]);
-    toast.success(`Hotspot profile "${newProf.name}" created.`);
-    setModalOpen(false);
-    setName('');
-    setRateLimit('10M/10M');
-    setValidityHours('24');
-    setPriceBdt('50');
-    setSellingPriceBdt('60');
-  };
+  const profiles = useMemo(() => query.data?.profiles ?? [], [query.data]);
+  const priced = profiles.filter((p) => p.sellingPriceBdt > 0);
+  const avgPrice = priced.length > 0 ? Math.round(priced.reduce((s, p) => s + p.sellingPriceBdt, 0) / priced.length) : 0;
+  const lockedCount = profiles.filter((p) => p.lockUser).length;
 
   const handleExportCsv = () => {
-    const headers = ['Profile Name', 'Rate Limit', 'Validity', 'Base Price (BDT)', 'Selling Price (BDT)', 'Address Pool', 'Active Users', 'Status'];
-    const rows = list.map((p) => [
-      `"${p.name.replace(/"/g, '""')}"`,
-      p.rateLimit,
-      p.validityFormatted,
-      p.priceBdt,
-      p.sellingPriceBdt,
-      p.addressPool,
-      p.activeUsers,
-      p.status,
-    ]);
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `hotspot_packages_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Hotspot packages exported to CSV');
+    downloadCsv(
+      `hotspot_profiles_${routerName || routerId}.csv`,
+      ['Profile', 'Rate Limit', 'Validity', 'Price (BDT)', 'Selling Price (BDT)', 'Shared Users', 'Address Pool', 'Expiry Mode', 'MAC Lock'],
+      profiles.map((p) => [
+        p.name,
+        p.rateLimit,
+        p.validity,
+        p.priceBdt,
+        p.sellingPriceBdt,
+        p.sharedUsers,
+        p.addressPool,
+        modeLabel(p.expiredMode),
+        p.lockUser ? 'Yes' : 'No',
+      ]),
+    );
   };
 
-  const columns = useMemo<LegacyColumnDef<HotspotProfileItem, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<HotspotProfile, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -160,7 +194,10 @@ export function HotspotPackagesPage() {
                 <Wifi className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <span className="font-semibold text-foreground text-sm line-clamp-1">{p.name}</span>
+                <span className="font-semibold text-foreground text-sm line-clamp-1">
+                  {p.name}
+                  {p.lockUser ? <Lock className="ml-1.5 inline h-3 w-3 text-muted-foreground" aria-label="MAC lock" /> : null}
+                </span>
                 <span className="text-xs text-muted-foreground block font-mono">Pool: {p.addressPool}</span>
               </div>
             </div>
@@ -171,21 +208,24 @@ export function HotspotPackagesPage() {
         accessorKey: 'rateLimit',
         header: 'Bandwidth Speed',
         size: 160,
-        cell: ({ row }) => (
-          <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 bg-background text-primary border-primary/30">
-            <Gauge className="mr-1 h-3 w-3" />
-            {row.original.rateLimit}
-          </Badge>
-        ),
+        cell: ({ row }) =>
+          row.original.rateLimit ? (
+            <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 bg-background text-primary border-primary/30">
+              <Gauge className="mr-1 h-3 w-3" />
+              {row.original.rateLimit}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">Unlimited</span>
+          ),
       },
       {
-        accessorKey: 'validityFormatted',
-        header: 'Validity Duration',
-        size: 150,
+        accessorKey: 'validity',
+        header: 'Validity',
+        size: 120,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
             <Clock className="h-3.5 w-3.5 text-primary" />
-            <span>{row.original.validityFormatted}</span>
+            <span>{row.original.validity || '—'}</span>
           </div>
         ),
       },
@@ -203,30 +243,20 @@ export function HotspotPackagesPage() {
         ),
       },
       {
-        accessorKey: 'activeUsers',
-        header: 'Active Sessions',
-        size: 140,
-        cell: ({ row }) => (
-          <Badge variant="outline" className="bg-background font-mono tabular-nums">
-            {row.original.activeUsers} clients
-          </Badge>
-        ),
+        accessorKey: 'sharedUsers',
+        header: 'Shared Users',
+        size: 110,
+        cell: ({ row }) => <span className="font-mono text-xs tabular-nums">{row.original.sharedUsers}</span>,
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
-        size: 110,
-        cell: ({ row }) => {
-          const active = row.original.status === 'active';
-          return (
-            <Badge
-              variant="outline"
-              className={active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-muted text-muted-foreground'}
-            >
-              {active ? 'Active' : 'Disabled'}
-            </Badge>
-          );
-        },
+        accessorKey: 'expiredMode',
+        header: 'On Expiry',
+        size: 160,
+        cell: ({ row }) => (
+          <Badge variant="outline" className="bg-background text-xs font-normal">
+            {modeLabel(row.original.expiredMode)}
+          </Badge>
+        ),
       },
       {
         id: 'actions',
@@ -236,223 +266,342 @@ export function HotspotPackagesPage() {
           const p = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger
+                aria-label={`Actions for ${p.name}`}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Profile Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info(`Editing ${p.name}`)}>
-                  <Edit className="h-3.5 w-3.5 mr-2" />
-                  Edit Package
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.success(`Duplicated ${p.name}`)}>
-                  <Copy className="h-3.5 w-3.5 mr-2" />
-                  Duplicate Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`Package ${p.name} deactivated`)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Deactivate Plan
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Profile Actions</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => onDialogChange({ mode: 'edit', initial: toInput(p) })}>
+                    <Edit className="h-3.5 w-3.5 mr-2" />
+                    Edit Package
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onDialogChange({ mode: 'create', initial: { ...toInput(p), id: undefined, name: `${p.name}-copy` } })}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-2" />
+                    Duplicate Profile
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                {!p.isDefault ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleteTarget(p)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Delete Profile
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    [],
+    [onDialogChange],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError) {
-    return <EmptyState title="Failed to load hotspot packages" actionLabel="Retry" onAction={() => refetch()} />;
+  if (query.isError) {
+    return (
+      <HotspotQueryError
+        error={query.error}
+        routerName={routerName}
+        title="Failed to load hotspot packages"
+        onRetry={() => void query.refetch()}
+      />
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Hotspot Packages & Bandwidth Profiles"
-        subtitle="Manage speed tiers, validity duration, burst limits, and retail prices for voucher cards."
-        breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Packages' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2.5">
+    <>
+      <HotspotKpiRow>
+        <HotspotKpi
+          label="Total Profiles"
+          value={query.isLoading ? '—' : profiles.length}
+          hint="User profiles on the router"
+          icon={<Package className="h-4 w-4 text-primary" />}
+        />
+        <HotspotKpi
+          label="Priced Packages"
+          value={query.isLoading ? '—' : priced.length}
+          hint="Have a retail selling price"
+          icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          positive
+        />
+        <HotspotKpi
+          label="Avg Retail Price"
+          value={query.isLoading ? '—' : formatBdtWithSymbol(avgPrice)}
+          hint="Across priced packages"
+          icon={<TrendingUp className="h-4 w-4 text-primary" />}
+        />
+        <HotspotKpi
+          label="MAC-Locked"
+          value={query.isLoading ? '—' : lockedCount}
+          hint="Lock users to their first device"
+          icon={<Lock className="h-4 w-4 text-sky-500" />}
+        />
+      </HotspotKpiRow>
+
+      <DataTable
+        columns={columns}
+        data={profiles}
+        isLoading={query.isLoading}
+        emptyTitle="No hotspot profiles"
+        emptyDescription="Create a package profile to start selling hotspot access."
+        searchKey="name"
+        searchFilterFn={profileSearchFilter}
+        searchPlaceholder="Search by package name, rate limit or pool..."
+        getRowId={(r) => r.id || r.name}
+        toolbarActions={
+          profiles.length > 0 ? (
             <Button variant="outline" size="sm" onClick={handleExportCsv} className="h-9">
               <Download className="mr-2 h-4 w-4" />
               Export CSV
             </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Package Profile
-            </Button>
-          </div>
+          ) : null
         }
       />
 
-      {/* KPI Ribbon */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Profiles</span>
-            <Package className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalProfiles}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Configured tiers</p>
-        </div>
+      {dialog ? (
+        <ProfileDialog
+          key={`${dialog.mode}-${dialog.initial.id ?? dialog.initial.name}`}
+          routerId={routerId}
+          state={dialog}
+          pools={query.data?.pools ?? []}
+          queues={query.data?.queues ?? []}
+          onClose={() => onDialogChange(null)}
+        />
+      ) : null}
 
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Active Tiers</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {activeCount}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Available for voucher generation</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Avg Retail Price</span>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {formatBdtWithSymbol(avgPrice)}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Per voucher package</p>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Active Users</span>
-            <Wifi className="h-4 w-4 text-sky-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalActiveUsers}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Clients on these profiles</p>
-        </div>
-      </div>
-
-      {/* Main Data Table */}
-      <DataTable
-        columns={columns}
-        data={list}
-        searchKey="name"
-        searchFilterFn={profileSearchFilter}
-        searchPlaceholder="Search by package name or rate limit..."
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete this hotspot profile?"
+        description={
+          deleteTarget ? `${deleteTarget.name} and its expiry scheduler are removed from the router. Users on it fall back to the default profile.` : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (!target) return;
+          remove.mutate(target.id, { onSuccess: () => toast.success(`Profile "${target.name}" deleted`) });
+        }}
       />
+    </>
+  );
+}
 
-      {/* Create Package Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleCreateProfile}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-primary" />
-                Create Hotspot Package Profile
-              </DialogTitle>
-              <DialogDescription>
-                Define MikroTik bandwidth limits, validity periods, and retail voucher pricing.
-              </DialogDescription>
-            </DialogHeader>
+function ProfileDialog({
+  routerId,
+  state,
+  pools,
+  queues,
+  onClose,
+}: {
+  routerId: string;
+  state: NonNullable<DialogState>;
+  pools: string[];
+  queues: string[];
+  onClose: () => void;
+}) {
+  const save = useSaveHotspotProfile(routerId);
+  const [form, setForm] = useState<HotspotProfileInput>(state.initial);
+  const set = (patch: Partial<HotspotProfileInput>) => setForm((f) => ({ ...f, ...patch }));
+  const editing = state.mode === 'edit';
 
-            <div className="grid gap-4 py-4">
+  const errors = {
+    name: !form.name.trim() || /[",]/.test(form.name) ? 'Name is required (no quotes or commas)' : '',
+    rateLimit: form.rateLimit && !RATE_RE.test(form.rateLimit) ? 'Use the RouterOS form, e.g. 10M/10M' : '',
+    validity: form.validity && !VALIDITY_RE.test(form.validity) ? 'Use a duration like 12h, 1d or 30d' : '',
+    sharedUsers: !/^[1-9]\d*$/.test(form.sharedUsers) ? 'At least 1' : '',
+  };
+  const invalid = Object.values(errors).some(Boolean);
+  // Keep a value that is no longer on the router selectable instead of silently dropping it.
+  const poolOptions = Array.from(new Set(['none', ...pools, form.addressPool]));
+  const queueOptions = Array.from(new Set(['none', ...queues, form.parentQueue]));
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (invalid) return;
+            save.mutate(
+              { ...form, name: form.name.trim() },
+              {
+                onSuccess: () => {
+                  toast.success(`Hotspot profile "${form.name.trim()}" ${editing ? 'updated' : 'created'}`);
+                  onClose();
+                },
+              },
+            );
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              {editing ? 'Edit Hotspot Package Profile' : 'Create Hotspot Package Profile'}
+            </DialogTitle>
+            <DialogDescription>Saved on the router as a hotspot user profile with its pricing and expiry settings.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pkg-name">Profile Name *</Label>
+              <Input
+                id="pkg-name"
+                placeholder="e.g. 1-Day"
+                value={form.name}
+                onChange={(e) => set({ name: e.target.value })}
+                aria-invalid={Boolean(errors.name) && form.name !== ''}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Spaces become dashes on the router.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="pkg-name">Profile Name *</Label>
+                <Label htmlFor="pkg-rate">Rate Limit (Rx/Tx)</Label>
                 <Input
-                  id="pkg-name"
-                  placeholder="e.g. 24 Hours Unlimited - 10 Mbps"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
+                  id="pkg-rate"
+                  placeholder="e.g. 10M/10M"
+                  value={form.rateLimit}
+                  onChange={(e) => set({ rateLimit: e.target.value.trim() })}
+                  className="font-mono"
+                  aria-invalid={Boolean(errors.rateLimit)}
+                />
+                {errors.rateLimit ? <p className="text-destructive text-xs">{errors.rateLimit}</p> : null}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-validity">Validity</Label>
+                <Input
+                  id="pkg-validity"
+                  placeholder="e.g. 1d or 30d"
+                  value={form.validity}
+                  onChange={(e) => set({ validity: e.target.value.trim() })}
+                  className="font-mono"
+                  aria-invalid={Boolean(errors.validity)}
+                />
+                {errors.validity ? <p className="text-destructive text-xs">{errors.validity}</p> : null}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-base">Base Cost (BDT)</Label>
+                <Input id="pkg-base" type="number" min={0} value={form.priceBdt} onChange={(e) => set({ priceBdt: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-sell">Retail Sell Price (BDT)</Label>
+                <Input
+                  id="pkg-sell"
+                  type="number"
+                  min={0}
+                  value={form.sellingPriceBdt}
+                  onChange={(e) => set({ sellingPriceBdt: e.target.value })}
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pkg-rate">Rate Limit (Rx/Tx) *</Label>
-                  <Select value={rateLimit} onValueChange={(val) => { if (val) setRateLimit(val); }}>
-                    <SelectTrigger id="pkg-rate">
-                      <SelectValue placeholder="Select Speed" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="2M/2M">2 Mbps (2M/2M)</SelectItem>
-                      <SelectItem value="5M/5M">5 Mbps (5M/5M)</SelectItem>
-                      <SelectItem value="10M/10M">10 Mbps (10M/10M)</SelectItem>
-                      <SelectItem value="15M/15M">15 Mbps (15M/15M)</SelectItem>
-                      <SelectItem value="20M/20M">20 Mbps (20M/20M)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="pkg-validity">Validity (Hours) *</Label>
-                  <Input
-                    id="pkg-validity"
-                    type="number"
-                    placeholder="e.g. 24"
-                    value={validityHours}
-                    onChange={(e) => setValidityHours(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pkg-base">Base Cost (BDT)</Label>
-                  <Input
-                    id="pkg-base"
-                    type="number"
-                    value={priceBdt}
-                    onChange={(e) => setPriceBdt(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pkg-sell">Retail Sell Price (BDT) *</Label>
-                  <Input
-                    id="pkg-sell"
-                    type="number"
-                    value={sellingPriceBdt}
-                    onChange={(e) => setSellingPriceBdt(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="pkg-pool">MikroTik Address Pool</Label>
-                <Select value={addressPool} onValueChange={(val) => { if (val) setAddressPool(val); }}>
-                  <SelectTrigger id="pkg-pool">
-                    <SelectValue placeholder="Select IP Pool" />
+                <Label htmlFor="pkg-pool">Address Pool</Label>
+                <Select value={form.addressPool} onValueChange={(v) => v && set({ addressPool: String(v) })}>
+                  <SelectTrigger id="pkg-pool" className="w-full">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hs-pool-1">hs-pool-1 (10.5.50.0/24)</SelectItem>
-                    <SelectItem value="hs-pool-vip">hs-pool-vip (10.5.60.0/24)</SelectItem>
-                    <SelectItem value="dhcp_pool_hotspot">dhcp_pool_hotspot</SelectItem>
+                    {poolOptions.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-queue">Parent Queue</Label>
+                <Select value={form.parentQueue} onValueChange={(v) => v && set({ parentQueue: String(v) })}>
+                  <SelectTrigger id="pkg-queue" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {queueOptions.map((q) => (
+                      <SelectItem key={q} value={q}>
+                        {q}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create Profile</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-mode">On Expiry</Label>
+                <Select
+                  value={form.expiredMode}
+                  onValueChange={(v) => v && set({ expiredMode: v as HotspotProfileInput['expiredMode'] })}
+                  items={EXPIRED_MODES}
+                >
+                  <SelectTrigger id="pkg-mode" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EXPIRED_MODES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pkg-shared">Shared Users</Label>
+                <Input
+                  id="pkg-shared"
+                  type="number"
+                  min={1}
+                  value={form.sharedUsers}
+                  onChange={(e) => set({ sharedUsers: e.target.value })}
+                  aria-invalid={Boolean(errors.sharedUsers)}
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2.5">
+              <span>
+                <span className="block text-sm font-medium">Lock to first MAC</span>
+                <span className="block text-xs text-muted-foreground">Bind each user to the device it first logs in from.</span>
+              </span>
+              <Switch checked={form.lockUser} onCheckedChange={(checked) => set({ lockUser: Boolean(checked) })} />
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={invalid || save.isPending}>
+              {save.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {editing ? 'Save Changes' : 'Create Profile'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

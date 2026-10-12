@@ -1,85 +1,49 @@
-import { useQuery } from '@tanstack/react-query';
-import { adminService } from '@/lib/api/services/admin.service';
-import type { NetworkTopologyItem, NetworkMapNodeItem, OltDeviceItem } from '@/data/admin/network-ops.data';
-import { networkTopologyData, oltDevices } from '@/data/admin/network-ops.data';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { http } from '@/lib/api/client';
+import { oltKeys } from '@/features/admin/olt/hooks/useOltDevices';
+import { asList } from '@/features/admin/olt/types';
+import { buildMapNodes, mapTopologyOnu, mapTopologyPort } from '../types';
 
-export function useNetworkDiagram() {
+/** ONU leaves drawn per request; port totals always cover every ONU. */
+export const TOPOLOGY_LEAF_LIMIT = 300;
+
+export const networkKeys = {
+  nodes: ['admin', 'network', 'nodes'] as const,
+};
+
+/**
+ * GET /v1/olts/{id|all}/topology — complete per-PON totals plus a capped
+ * list of ONU leaves (narrow with `ponPort` to see every ONU of a port).
+ */
+export function useNetworkTopology(oltId: string, ponPort: string) {
+  const params = { limit: TOPOLOGY_LEAF_LIMIT, pon_port: ponPort === 'all' ? undefined : ponPort };
   return useQuery({
-    queryKey: ['admin', 'network', 'diagram'],
+    queryKey: oltKeys.topology({ oltId, ...params }),
     queryFn: async () => {
-      try {
-        const [oltsRes, topoRes] = await Promise.allSettled([
-          adminService.getOltList(),
-          adminService.getNetworkTopology(),
-        ]);
-
-        let rawOlts: OltDeviceItem[] = [];
-        if (oltsRes.status === 'fulfilled' && oltsRes.value) {
-          const val = oltsRes.value as any;
-          if (Array.isArray(val)) {
-            rawOlts = val;
-          } else if (Array.isArray(val?.data)) {
-            rawOlts = val.data;
-          }
-        }
-
-        let topology: NetworkTopologyItem[] = [];
-        if (topoRes.status === 'fulfilled' && topoRes.value) {
-          const val = topoRes.value as any;
-          if (Array.isArray(val)) {
-            topology = val;
-          } else if (Array.isArray(val?.data)) {
-            topology = val.data;
-          }
-        }
-
-        // Fallback to mock data only if backend returned zero data
-        if (rawOlts.length === 0) {
-          rawOlts = oltDevices;
-        }
-        if (topology.length === 0 && rawOlts === oltDevices) {
-          topology = networkTopologyData;
-        }
-
-        return {
-          topology,
-          olts: rawOlts,
-        };
-      } catch {
-        return {
-          topology: networkTopologyData,
-          olts: oltDevices,
-        };
-      }
+      const res = await http.getPage<unknown>(`/v1/olts/${encodeURIComponent(oltId || 'all')}/topology`, params);
+      return {
+        items: res.items.map(mapTopologyOnu),
+        total: res.meta.total,
+        truncated: res.raw.truncated === true,
+        ponPorts: asList(res.raw.pon_ports).map(mapTopologyPort),
+      };
     },
+    placeholderData: keepPreviousData,
   });
 }
 
-export function useNetworkMap() {
+/** GET /v1/network/nodes — the tenant's network map nodes with real coordinates. */
+export function useNetworkNodes() {
   return useQuery({
-    queryKey: ['admin', 'network', 'map'],
+    queryKey: networkKeys.nodes,
     queryFn: async () => {
-      try {
-        const routers = await adminService.getRouters();
-        if (!Array.isArray(routers)) return [];
-        return routers.map((r: any, idx: number) => ({
-          id: String(r.id || `map_${idx + 1}`),
-          type: (idx === 0 ? 'core' : 'pop') as 'core' | 'pop',
-          level: (idx === 0 ? 'Root' : 'L1') as 'Root' | 'L1',
-          name: String(r.name || `POP ${idx + 1}`),
-          lat: Number(r.latitude || 23.8103 + idx * 0.01),
-          lng: Number(r.longitude || 90.4125 + idx * 0.01),
-          status: (r.status === 'online' || r.status === 'active' ? 'online' : 'offline') as 'online' | 'offline',
-          ip: String(r.ip || r.host || '10.0.0.1'),
-          deviceModel: String(r.model || 'MikroTik CCR'),
-          connectedCount: Number(r.users || 0),
-          zone: String(r.area || 'Main Coverage'),
-        })) as NetworkMapNodeItem[];
-      } catch {
-        return [];
-      }
+      const data = await http.get<{ items?: unknown; total?: unknown; truncated?: unknown }>('/v1/network/nodes');
+      const items = asList(data?.items);
+      return {
+        nodes: buildMapNodes(items),
+        total: Number(data?.total ?? items.length) || items.length,
+        truncated: data?.truncated === true,
+      };
     },
   });
 }
-
-

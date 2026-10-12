@@ -1,361 +1,391 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { BellRing, Plus, RefreshCw, Send, CheckCircle2, ShieldAlert, Webhook, Mail, Terminal, Download } from 'lucide-react';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { NocHook } from '@/data/admin/isp-ops.data';
+import { Textarea } from '@/components/ui/textarea';
+import { AlertTriangle, CalendarClock, CheckCircle2, Pencil, Plus, Router, ServerCrash, Trash2, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import {
+  NOC_STATUSES,
+  useDeleteNocIncident,
+  useNocIncidents,
+  useNocSummary,
+  useSaveNocIncident,
+  type NocIncident,
+  type NocKind,
+  type NocSeverity,
+} from '../hooks/use-noc';
+import { useNetOpsOptions, type PickOption } from '../hooks/use-network-ops';
+import { useServerTable } from '../hooks/use-server-table';
+import { OptionSelect, fmtDateTime } from '../components/NetOpsControls';
 
-const searchFilter = (row: LegacyRow<NocHook>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.name).toLowerCase().includes(q) ||
-    String(r.type).toLowerCase().includes(q) ||
-    String(r.target).toLowerCase().includes(q)
-  );
+const severityClass: Record<NocSeverity, string> = {
+  minor: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400',
+  major: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400',
+  critical: 'bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-400',
 };
+const stateClass: Record<string, string> = {
+  online: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  offline: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+  unknown: 'bg-muted text-muted-foreground',
+};
+const label = (s: string) => s.replace(/_/g, ' ');
+/** "2026-10-11 09:30:00" ⇄ datetime-local "2026-10-11T09:30". */
+const toLocalInput = (v: string | null) => (v ? v.slice(0, 16).replace(' ', 'T') : '');
+
+interface IncidentForm {
+  kind: NocKind;
+  title: string;
+  description: string;
+  severity: NocSeverity;
+  status: string;
+  routerIds: string[];
+  areaIds: string[];
+  startsAt: string;
+  endsAt: string;
+}
+
+function ToggleChips({ options, value, onChange }: { options: PickOption[]; value: string[]; onChange: (v: string[]) => void }) {
+  if (options.length === 0) return <p className="text-xs text-muted-foreground">None available.</p>;
+  return (
+    <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+      {options.map((o) => {
+        const on = value.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(on ? value.filter((v) => v !== o.value) : [...value, o.value])}
+            className={cn(
+              'rounded-full border px-2.5 py-0.5 text-xs',
+              on ? 'border-primary bg-primary text-primary-foreground' : 'border-border/70 hover:bg-accent',
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export function NocPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [hooks, setHooks] = useState<NocHook[]>([]);
+  const table = useServerTable();
+  const [statusFilter, setStatusFilter] = useState('open');
+  const { data, isLoading, isError, error, refetch } = useNocIncidents({ page: table.page, pageSize: table.pageSize, search: table.search, status: statusFilter });
+  const summary = useNocSummary();
   const [modalOpen, setModalOpen] = useState(false);
-  const [isTestingAll, setIsTestingAll] = useState(false);
+  const [editing, setEditing] = useState<NocIncident | null>(null);
+  const [form, setForm] = useState<IncidentForm | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<NocIncident | null>(null);
+  const options = useNetOpsOptions(modalOpen);
+  const save = useSaveNocIncident();
+  const remove = useDeleteNocIncident();
 
-  // Form State
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'snmp' | 'webhook' | 'email'>('webhook');
-  const [target, setTarget] = useState('');
+  const set = (patch: Partial<IncidentForm>) => setForm((f) => (f ? { ...f, ...patch } : f));
 
-  const initialHooks = data?.nocHooks ?? [];
-  const list = hooks.length > 0 ? hooks : initialHooks;
-
-  const totalHooks = list.length;
-  const enabledCount = list.filter((r) => r.enabled).length;
-  const webhookCount = list.filter((r) => r.type === 'webhook').length;
-  const snmpCount = list.filter((r) => r.type === 'snmp').length;
-
-  const handleAddHook = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !target.trim()) {
-      toast.error('Please enter hook name and target URI/endpoint');
-      return;
-    }
-
-    const newHook: NocHook = {
-      id: `noc_${Date.now()}`,
-      name,
-      type,
-      target,
-      enabled: true,
-    };
-
-    setHooks((prev) => [newHook, ...(prev.length > 0 ? prev : initialHooks)]);
-    toast.success(`NOC Alert Hook "${newHook.name}" created and active.`);
-    setModalOpen(false);
-    setName('');
-    setTarget('');
+  const openCreate = (kind: NocKind) => {
+    setEditing(null);
+    setForm({ kind, title: '', description: '', severity: 'minor', status: NOC_STATUSES[kind][0], routerIds: [], areaIds: [], startsAt: '', endsAt: '' });
+    setModalOpen(true);
   };
 
-  const handleTestHook = (hook: NocHook) => {
-    toast.promise(
-      new Promise((res) => setTimeout(res, 500)),
+  const openEdit = (i: NocIncident) => {
+    setEditing(i);
+    setForm({
+      kind: i.kind,
+      title: i.title,
+      description: i.description ?? '',
+      severity: i.severity,
+      status: i.status,
+      routerIds: i.routerIds,
+      areaIds: i.areaIds,
+      startsAt: toLocalInput(i.startsAt),
+      endsAt: toLocalInput(i.endsAt),
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form) return;
+    save.mutate(
       {
-        loading: `Sending test payload to ${hook.name}...`,
-        success: `Payload dispatched to ${hook.target} (HTTP 200 OK / SNMP Trap acknowledged)`,
-        error: 'Target unreachable',
+        id: editing?.id,
+        body: {
+          kind: form.kind,
+          title: form.title,
+          description: form.description || null,
+          severity: form.severity,
+          status: form.status,
+          router_ids: form.routerIds.map(Number),
+          area_ids: form.areaIds.map(Number),
+          ...(form.startsAt ? { starts_at: form.startsAt.replace('T', ' ') } : {}),
+          ends_at: form.endsAt ? form.endsAt.replace('T', ' ') : null,
+        },
       },
+      { onSuccess: () => setModalOpen(false) },
     );
   };
 
-  const handleTestAll = () => {
-    setIsTestingAll(true);
-    setTimeout(() => {
-      setIsTestingAll(false);
-      toast.success('Dispatched test heartbeats across all configured NOC alerting endpoints.');
-    }, 750);
-  };
+  const closeOut = (i: NocIncident) => save.mutate({ id: i.id, body: { status: i.kind === 'maintenance' ? 'completed' : 'resolved' } });
 
-  const handleExportCsv = () => {
-    const headers = ['Hook Name', 'Protocol Type', 'Target Endpoint / Trap OID', 'Status'];
-    const rows = list.map((h) => [h.name, h.type.toUpperCase(), h.target, h.enabled ? 'Enabled' : 'Disabled']);
-    const csvContent = [headers.join(','), ...rows.map((r) => r.map((cell) => `"${cell}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `noc-alert-hooks-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('NOC hooks inventory exported.');
-  };
-
-  const columns = useMemo<LegacyColumnDef<NocHook, unknown>[]>(
-    () => [
-      {
-        accessorKey: 'name',
-        header: 'Hook Title & Service',
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
-              <BellRing className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-semibold text-sm text-foreground">{row.original.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{row.original.type} integration</p>
-            </div>
+  const columns: LegacyColumnDef<NocIncident, unknown>[] = [
+    {
+      accessorKey: 'title',
+      header: 'Incident / Window',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            {row.original.kind === 'maintenance' ? <CalendarClock className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
           </div>
-        ),
-      },
-      {
-        accessorKey: 'type',
-        header: 'Alert Channel',
-        cell: ({ row }) => {
-          const t = row.original.type;
-          return (
-            <div className="flex items-center gap-1.5">
-              {t === 'webhook' && <Webhook className="h-3.5 w-3.5 text-blue-500" />}
-              {t === 'snmp' && <Terminal className="h-3.5 w-3.5 text-purple-500" />}
-              {t === 'email' && <Mail className="h-3.5 w-3.5 text-amber-500" />}
-              <Badge variant="outline" className="capitalize text-xs font-mono border-border/70">
-                {t}
-              </Badge>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'target',
-        header: 'Endpoint / Destination',
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-foreground bg-muted/30 px-2 py-1 rounded border border-border/40 max-w-[280px] truncate block">
-            {row.original.target}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'enabled',
-        header: 'Status',
-        cell: ({ row }) => (
-          <Badge
-            variant="outline"
-            className={
-              row.original.enabled
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs'
-                : 'bg-muted text-muted-foreground text-xs'
-            }
-          >
-            {row.original.enabled ? (
-              <span className="flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Active
-              </span>
-            ) : (
-              'Disabled'
-            )}
-          </Badge>
-        ),
-      },
-      {
-        id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs gap-1"
-              onClick={() => handleTestHook(row.original)}
-            >
-              <Send className="h-3 w-3 text-primary" />
-              Test Trigger
+          <div>
+            <p className="font-semibold text-sm text-foreground">{row.original.title}</p>
+            <p className="text-xs text-muted-foreground capitalize">{row.original.kind}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'severity',
+      header: 'Severity',
+      cell: ({ row }) => (
+        <Badge variant="outline" className={cn('capitalize text-xs', severityClass[row.original.severity])}>
+          {row.original.severity}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant="outline" className={cn('capitalize text-xs', !row.original.isOpen && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400')}>
+          {label(row.original.status)}
+        </Badge>
+      ),
+    },
+    {
+      id: 'scope',
+      header: 'Affected',
+      cell: ({ row }) => (
+        <span className="text-xs text-muted-foreground">{[...row.original.routers, ...row.original.areas].join(', ') || '—'}</span>
+      ),
+    },
+    {
+      accessorKey: 'startsAt',
+      header: 'Start → End',
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          {fmtDateTime(row.original.startsAt)} → {fmtDateTime(row.original.endsAt)}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1.5">
+          {row.original.isOpen && (
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1" disabled={save.isPending} onClick={() => closeOut(row.original)}>
+              <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {row.original.kind === 'maintenance' ? 'Complete' : 'Resolve'}
             </Button>
-          </div>
-        ),
-      },
-    ],
-    [],
-  );
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(row.original)} title="Edit">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(row.original)} title="Delete">
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
-  if (isLoading && list.length === 0) return <PageSkeleton variant="table" />;
-  if (isError && list.length === 0) {
-    return <EmptyState title="Failed to load NOC hooks" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isLoading && !data) return <PageSkeleton variant="table" />;
+  if (isError && !data) {
+    return <EmptyState title="Failed to load NOC incidents" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
+
+  const s = summary.data;
+  const kpis = [
+    { label: 'Routers Online', value: s ? `${s.routers.online} / ${s.routers.total}` : '—', hint: s ? `${s.routers.unknown} never polled` : 'Loading…', icon: Router, tone: 'text-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+    { label: 'Unreachable', value: s?.routers.offline ?? '—', hint: 'Offline at the last poll', icon: ServerCrash, tone: 'text-rose-500', text: 'text-rose-600 dark:text-rose-400' },
+    { label: 'Active Sessions', value: s ? s.routers.activeSessions.toLocaleString() : '—', hint: 'From the last router poll', icon: Users, tone: 'text-blue-500', text: 'text-blue-600 dark:text-blue-400' },
+    { label: 'Open Incidents', value: s?.incidents.open ?? '—', hint: s ? `${s.incidents.bySeverity.critical} critical · ${s.maintenance.inProgress} maintenance live · ${s.maintenance.upcoming} upcoming` : 'Loading…', icon: AlertTriangle, tone: 'text-amber-500', text: 'text-foreground' },
+  ];
+  const statusOptions = form ? NOC_STATUSES[form.kind].map((v) => ({ value: v, label: label(v) })) : [];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="NOC Hooks & Incident Alerting"
-        subtitle="Forward fiber cuts, OLT link downs, BGP flapping, and MikroTik outages to Slack, Telegram, Grafana, or PagerDuty"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Network' }, { label: 'NOC Hooks' }]}
+        title="NOC — Incidents & Maintenance"
+        subtitle="Track network incidents and maintenance windows against live router health"
+        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Network' }, { label: 'NOC' }]}
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleTestAll} disabled={isTestingAll}>
-              <RefreshCw className={`h-4 w-4 mr-1.5 ${isTestingAll ? 'animate-spin' : ''}`} />
-              Test All Hooks
+            <Button variant="outline" size="sm" onClick={() => openCreate('maintenance')}>
+              <CalendarClock className="h-4 w-4 mr-1.5" />
+              Schedule Maintenance
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExportCsv}>
-              <Download className="h-4 w-4 mr-1.5" />
-              Export Hooks
-            </Button>
-            <Button size="sm" onClick={() => setModalOpen(true)}>
+            <Button size="sm" onClick={() => openCreate('incident')}>
               <Plus className="h-4 w-4 mr-1.5" />
-              Add NOC Hook
+              Report Incident
             </Button>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Configured Hooks</span>
-            <BellRing className="h-4 w-4 text-primary" />
+        {kpis.map((k) => (
+          <div key={k.label} className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+              <span>{k.label}</span>
+              <k.icon className={`h-4 w-4 ${k.tone}`} />
+            </div>
+            <div className="mt-2">
+              <div className={`text-2xl font-bold tabular-nums ${k.text}`}>{k.value}</div>
+              <p className="text-xs text-muted-foreground mt-0.5">{k.hint}</p>
+            </div>
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{totalHooks}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">{enabledCount} active listeners</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Webhook Forwarders</span>
-            <Webhook className="h-4 w-4 text-blue-500" />
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{webhookCount}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Slack, Discord & Telegram</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>SNMP Trap Receivers</span>
-            <Terminal className="h-4 w-4 text-purple-500" />
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground tabular-nums">{snmpCount}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Zabbix & PRTG endpoints</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
-            <span>Delivery Status</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">99.9% ACK</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Zero dropped outage alerts</p>
-          </div>
-        </div>
+        ))}
       </div>
+
+      {summary.isError ? (
+        <EmptyState title="Router health unavailable" description={errorMessage(summary.error)} actionLabel="Retry" onAction={() => summary.refetch()} />
+      ) : s && s.routers.items.length > 0 ? (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {s.routers.items.map((r) => (
+            <div key={r.id} className="rounded-lg border border-border/60 bg-card/60 p-3 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-foreground truncate">{r.name}</span>
+                <Badge variant="outline" className={cn('capitalize text-[10px]', stateClass[r.state])}>
+                  {r.state}
+                </Badge>
+              </div>
+              <p className="mt-1 text-muted-foreground">
+                {r.activeSessions === null ? 'Never polled' : `${r.activeSessions} / ${r.totalSessions ?? 0} sessions`}
+                {!r.enabled && ' · disabled'}
+              </p>
+              {r.lastPolledAt && <p className="text-[10px] text-muted-foreground font-mono">Polled {fmtDateTime(r.lastPolledAt)}</p>}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <DataTable
         columns={columns}
-        data={list}
-        searchKey="name"
-        searchFilterFn={searchFilter}
-        searchPlaceholder="Search NOC hooks by name, channel, or URL..."
+        data={data?.items ?? []}
+        getRowId={(row) => row.id}
+        searchPlaceholder="Search incidents..."
+        emptyTitle={statusFilter === 'open' ? 'No open incidents or maintenance' : 'Nothing recorded'}
         toolbarActions={
-          <Button size="sm" onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add NOC Hook
-          </Button>
+          <OptionSelect
+            value={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
+              table.setPage(1);
+            }}
+            options={[
+              { value: 'open', label: 'Open' },
+              { value: 'closed', label: 'Closed' },
+            ]}
+            placeholder="All"
+            noneLabel="All"
+            className="h-8 w-[120px] text-xs"
+          />
         }
+        server={table.server(data?.meta.total ?? 0)}
       />
 
-      {/* Add NOC Hook Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Configure NOC Incident Hook</DialogTitle>
-            <DialogDescription>
-              Create an automated alerting bridge to send real-time ISP network incident notifications.
-            </DialogDescription>
+            <DialogTitle>
+              {editing ? 'Edit' : form?.kind === 'maintenance' ? 'Schedule Maintenance Window' : 'Report Incident'}
+            </DialogTitle>
+            <DialogDescription>Affected routers and areas come from your network inventory.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleAddHook} className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Hook Name / Service *</Label>
-              <Input
-                id="name"
-                placeholder="e.g. Telegram NOC Emergency Room"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+          {form && (
+            <form onSubmit={handleSave} className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <Label htmlFor="type">Channel Type</Label>
-                <Select value={type} onValueChange={(val: 'snmp' | 'webhook' | 'email' | null) => { if (val) setType(val); }}>
-                  <SelectTrigger id="type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="webhook">HTTP Webhook (JSON POST)</SelectItem>
-                    <SelectItem value="snmp">SNMP Trap v2c / v3</SelectItem>
-                    <SelectItem value="email">SMTP Email Escalation</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="noc-title">Title *</Label>
+                <Input id="noc-title" value={form.title} onChange={(e) => set({ title: e.target.value })} required />
               </div>
-
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="noc-severity">Severity</Label>
+                  <OptionSelect
+                    id="noc-severity"
+                    value={form.severity}
+                    onChange={(v) => set({ severity: (v || 'minor') as NocSeverity })}
+                    options={(['minor', 'major', 'critical'] as const).map((v) => ({ value: v, label: v }))}
+                    placeholder="Severity"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="noc-status">Status</Label>
+                  <OptionSelect id="noc-status" value={form.status} onChange={(v) => set({ status: v })} options={statusOptions} placeholder="Status" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="noc-start">Starts{form.kind === 'maintenance' ? ' *' : ''}</Label>
+                  <Input id="noc-start" type="datetime-local" value={form.startsAt} onChange={(e) => set({ startsAt: e.target.value })} required={form.kind === 'maintenance'} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="noc-end">Ends</Label>
+                  <Input id="noc-end" type="datetime-local" value={form.endsAt} onChange={(e) => set({ endsAt: e.target.value })} />
+                </div>
+              </div>
               <div className="space-y-1.5">
-                <Label htmlFor="severity">Trigger Severity</Label>
-                <Select defaultValue="all">
-                  <SelectTrigger id="severity">
-                    <SelectValue placeholder="All events" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All (Info, Warning, Critical)</SelectItem>
-                    <SelectItem value="critical">Critical Outages Only</SelectItem>
-                    <SelectItem value="major">Major & Critical</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Affected routers</Label>
+                <ToggleChips options={options.data?.routers ?? []} value={form.routerIds} onChange={(v) => set({ routerIds: v })} />
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="target">Target Endpoint / URL / Receiver *</Label>
-              <Input
-                id="target"
-                placeholder={type === 'webhook' ? 'https://api.telegram.org/bot.../sendMessage' : '103.15.20.5:162'}
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">Payloads include node IP, PON port, affected customer count, and duration.</p>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create NOC Hook</Button>
-            </DialogFooter>
-          </form>
+              <div className="space-y-1.5">
+                <Label>Affected areas</Label>
+                <ToggleChips options={options.data?.areas ?? []} value={form.areaIds} onChange={(v) => set({ areaIds: v })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="noc-desc">Description</Label>
+                <Textarea id="noc-desc" value={form.description} onChange={(e) => set({ description: e.target.value })} rows={3} />
+              </div>
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={save.isPending}>
+                  {save.isPending ? 'Saving…' : 'Save'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete record"
+        description={`Delete "${deleteTarget?.title ?? ''}"?`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (deleteTarget) remove.mutate(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }
-

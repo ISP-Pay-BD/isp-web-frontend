@@ -8,10 +8,10 @@ export interface HeroData {
   ctaSecondary: string;
 }
 
+/** Live counts come from GET /api/v1/public/stats (0 / '' = unknown, the figure is hidden); uptimeSla is the published SLA. */
 export interface StatsData {
   trustedIsps: number;
   activeUsers: number;
-  activeAdmins: number;
   paymentsReconciled: string;
   uptimeSla: string;
 }
@@ -178,11 +178,6 @@ export interface CaseStudyData {
   results: Array<{ metric: string; label: string }>;
 }
 
-export interface TrustBadgeItem {
-  label: string;
-  sub: string;
-}
-
 export interface ConnectItem {
   name: string;
   desc: string;
@@ -225,7 +220,6 @@ export interface LandingSectionsData {
   rolesAccess: RoleAccessItem[];
   caseStudy: CaseStudyData;
   partners: string[];
-  trustBadges: TrustBadgeItem[];
   connects: ConnectItem[];
   permissionsMatrix: PermissionMatrixRow[];
 }

@@ -1,15 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { toast } from 'sonner';
+import { Plus, Scale, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useInventory, type InventoryUnit } from '../hooks/use-inventory';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { Can, ConfirmDialog } from '@/components/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -27,69 +26,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import {
-  Plus,
-  Ruler,
-  Boxes,
-  Scale,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import type { InventoryUnit } from '../api';
+import { useDeleteUnit, useInventoryUnits, useSaveUnit } from '../hooks/use-inventory-units';
+import { useInventorySummary } from '../hooks/use-inventory-summary';
+import { KpiTile } from '../shared/KpiTile';
+import { ListState } from '../shared/ListState';
+import { FieldError, fieldError, fmtDateTime } from '../shared/form-utils';
+import { useServerTable } from '../shared/table-utils';
 
-const unitSearchFilter = (
-  row: LegacyRow<InventoryUnit>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const u = row.original;
-  return (
-    u.name.toLowerCase().includes(q) ||
-    u.shortCode.toLowerCase().includes(q) ||
-    (u.description ?? '').toLowerCase().includes(q)
-  );
-};
+const MENU = 'inventory_purchess';
 
 export function InventoryUnitsPage() {
-  const { units: initialUnits, isLoading, isError, refetch } = useInventory();
-  const [units, setUnits] = useState<InventoryUnit[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const table = useServerTable();
+  const query = useInventoryUnits({ page: table.page, pageSize: table.pageSize, search: table.search });
+  const summary = useInventorySummary();
+  const deleteUnit = useDeleteUnit();
 
-  // Form State
-  const [name, setName] = useState('');
-  const [shortCode, setShortCode] = useState('');
-  const [description, setDescription] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<InventoryUnit | null>(null);
+  const [deleting, setDeleting] = useState<InventoryUnit | null>(null);
 
-  const list = units.length > 0 ? units : initialUnits;
-
-  const totalUnits = list.length;
-  const discreteUnits = list.filter((u) => ['pcs', 'box', 'set', 'pkt'].includes(u.shortCode.toLowerCase())).length;
-  const continuousUnits = list.filter((u) => ['mtr', 'm', 'drum', 'km', 'roll'].includes(u.shortCode.toLowerCase())).length;
-
-  const handleAddUnit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !shortCode.trim()) {
-      toast.error('Please enter unit name and short code');
-      return;
-    }
-
-    const newUnit: InventoryUnit = {
-      id: `unit_${Date.now()}`,
-      name,
-      shortCode: shortCode.toLowerCase(),
-      description,
-    };
-
-    setUnits((prev) => [newUnit, ...(prev.length > 0 ? prev : initialUnits)]);
-    toast.success(`Unit "${newUnit.name} (${newUnit.shortCode})" created.`);
-    setModalOpen(false);
-    setName('');
-    setShortCode('');
-    setDescription('');
-  };
+  const page = query.data;
 
   const columns = useMemo<LegacyColumnDef<InventoryUnit, unknown>[]>(
     () => [
@@ -97,35 +54,22 @@ export function InventoryUnitsPage() {
         accessorKey: 'name',
         header: 'Unit Name',
         enableHiding: false,
-        size: 240,
-        cell: ({ row }) => {
-          const u = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary shadow-xs">
-                <Scale className="h-4 w-4" />
-              </div>
-              <span className="font-semibold text-foreground text-sm">{u.name}</span>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: 'shortCode',
-        header: 'Short Code / Symbol',
-        size: 160,
+        size: 280,
         cell: ({ row }) => (
-          <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 bg-background">
-            {row.original.shortCode}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20 text-primary shadow-xs">
+              <Scale className="h-4 w-4" />
+            </div>
+            <span className="font-semibold text-foreground text-sm">{row.original.name}</span>
+          </div>
         ),
       },
       {
-        accessorKey: 'description',
-        header: 'Measurement Description',
-        size: 320,
+        accessorKey: 'createdAt',
+        header: 'Created',
+        size: 180,
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">{row.original.description || 'Standard measurement unit'}</span>
+          <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.createdAt)}</span>
         ),
       },
       {
@@ -141,18 +85,24 @@ export function InventoryUnitsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuLabel>Unit Options</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => toast.info(`Editing unit ${u.name}`)}>
-                  <Edit className="h-3.5 w-3.5 mr-2" />
-                  Edit Unit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-rose-500 focus:text-rose-500"
-                  onClick={() => toast.warning(`Unit ${u.name} removed`)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Delete Unit
-                </DropdownMenuItem>
+                <Can menu={MENU} action="update">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditing(u);
+                      setFormOpen(true);
+                    }}
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-2" />
+                    Edit Unit
+                  </DropdownMenuItem>
+                </Can>
+                <Can menu={MENU} action="delete">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(u)}>
+                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                    Delete Unit
+                  </DropdownMenuItem>
+                </Can>
               </DropdownMenuContent>
             </DropdownMenu>
           );
@@ -162,132 +112,147 @@ export function InventoryUnitsPage() {
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError) {
-    return <EmptyState title="Failed to load units" actionLabel="Retry" onAction={() => refetch()} />;
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Measurement Units"
-        subtitle="Standard inventory metrics for counting pieces, cables, drums, boxes, and bulk packs."
+        subtitle="Units used on purchase requisition and bill lines (pieces, meters, boxes…)."
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Inventory', href: '/admin/inventory/items' },
           { label: 'Measurement Units' },
         ]}
         actions={
-          <Button size="sm" onClick={() => setModalOpen(true)} className="h-9">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Unit
-          </Button>
+          <Can menu={MENU} action="create">
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+              className="h-9"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Unit
+            </Button>
+          </Can>
         }
       />
 
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Units</span>
-            <Scale className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {totalUnits}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Active metrics</p>
-        </div>
+        <KpiTile
+          label="Total Units"
+          icon={<Scale className="h-4 w-4 text-primary" />}
+          value={summary.data ? summary.data.unitsCount.toLocaleString() : '—'}
+          hint="Defined measurement units"
+        />
+      </div>
 
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Discrete / Packaged</span>
-            <Boxes className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {discreteUnits}
-          </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Pieces, boxes, sets</p>
-        </div>
+      <ListState
+        isLoading={query.isLoading}
+        isError={query.isError}
+        error={query.error}
+        onRetry={() => query.refetch()}
+        isEmpty={!table.search && page?.meta.total === 0}
+        errorTitle="Failed to load units"
+        emptyTitle="No units yet"
+        emptyDescription="Add the units you buy and stock items in."
+        icon={<Scale className="h-5 w-5" />}
+        rows={6}
+      >
+        <DataTable
+          columns={columns}
+          data={page?.items ?? []}
+          getRowId={(r) => r.id}
+          searchPlaceholder="Search units..."
+          emptyTitle="No units match your search"
+          server={{
+            page: table.page,
+            pageSize: table.pageSize,
+            total: page?.meta.total ?? 0,
+            onPageChange: table.setPage,
+            onPageSizeChange: table.onPageSizeChange,
+            search: table.search,
+            onSearchChange: table.onSearchChange,
+          }}
+        />
+      </ListState>
 
-        <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Continuous / Cable</span>
-            <Ruler className="h-4 w-4 text-primary" />
-          </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
-            {continuousUnits}
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Meters, drums, rolls</p>
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-md">
+          {formOpen ? <UnitForm unit={editing} onDone={() => setFormOpen(false)} /> : null}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title="Delete unit?"
+        description={deleting ? `"${deleting.name}" will be deleted.` : undefined}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!deleting) return;
+          const target = deleting;
+          deleteUnit.mutate(target.id, { onSuccess: () => toast.success(`Unit "${target.name}" deleted`) });
+          setDeleting(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function UnitForm({ unit, onDone }: { unit: InventoryUnit | null; onDone: () => void }) {
+  const [name, setName] = useState(unit?.name ?? '');
+  const save = useSaveUnit();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    save.mutate(
+      { id: unit?.id, name: name.trim() },
+      {
+        onSuccess: () => {
+          toast.success(unit ? `Unit "${name.trim()}" updated` : `Unit "${name.trim()}" created`);
+          onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Scale className="h-5 w-5 text-primary" />
+          {unit ? 'Edit Measurement Unit' : 'Add Measurement Unit'}
+        </DialogTitle>
+        <DialogDescription>Units are selectable on requisition and purchase bill lines.</DialogDescription>
+      </DialogHeader>
+
+      <div className="grid gap-4 py-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="unit-name">Unit Name *</Label>
+          <Input
+            id="unit-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            aria-invalid={Boolean(fieldError(save.error, 'name')) || undefined}
+            required
+          />
+          <FieldError message={fieldError(save.error, 'name')} />
         </div>
       </div>
 
-      {/* Main Data Table */}
-      <DataTable
-        columns={columns}
-        data={list}
-        searchKey="name"
-        searchFilterFn={unitSearchFilter}
-        searchPlaceholder="Search unit by name or code..."
-      />
-
-      {/* Add Unit Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleAddUnit}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5 text-primary" />
-                Add Measurement Unit
-              </DialogTitle>
-              <DialogDescription>
-                Define a new counting or length measurement unit for stock catalog items.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="unit-name">Unit Name *</Label>
-                <Input
-                  id="unit-name"
-                  placeholder="e.g. Drum (1000m) or Box"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="unit-code">Short Code / Symbol *</Label>
-                <Input
-                  id="unit-code"
-                  placeholder="e.g. drm or bx"
-                  value={shortCode}
-                  onChange={(e) => setShortCode(e.target.value)}
-                  className="font-mono lowercase"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="unit-desc">Description (Optional)</Label>
-                <Input
-                  id="unit-desc"
-                  placeholder="e.g. 1000 meters optical drop cable packaging"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save Unit</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={save.isPending}>
+          {save.isPending ? 'Saving…' : 'Save Unit'}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

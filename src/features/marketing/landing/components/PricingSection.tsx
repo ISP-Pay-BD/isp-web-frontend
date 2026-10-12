@@ -10,22 +10,35 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useMotionSafe } from '@/lib/animations';
 import { useLocale } from '@/features/marketing/shared';
-import type { PricingPlan, PaygCalculatorData } from '../types';
+import { useMarketingPricing } from '@/features/marketing/pricing/hooks/use-marketing-pricing';
 
 interface PricingSectionProps {
-  plans: PricingPlan[];
-  payg: PaygCalculatorData;
   title?: string;
   subtitle?: string;
 }
 
-export function PricingSection({ plans, payg, title, subtitle }: PricingSectionProps) {
+/** Calculator slider range — a UI control, not pricing data. */
+const PAYG_SLIDER = { min: 50, max: 5000, step: 50, initial: 500 } as const;
+
+/** Plans and PAYG rates come from GET /api/v1/public/registration/plans. */
+export function PricingSection({ title, subtitle }: PricingSectionProps) {
   const { locale, t } = useLocale();
   const { reduced } = useMotionSafe();
+  const { data } = useMarketingPricing();
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
-  const [isYearly, setIsYearly] = useState(false);
-  const [paygSubscribers, setPaygSubscribers] = useState(payg.defaultCustomers);
-  const paygTotal = payg.baseFeeBdt + paygSubscribers * payg.pricePerCustomerBdt;
+  const [paygSubscribers, setPaygSubscribers] = useState<number>(PAYG_SLIDER.initial);
+  const payg = data?.payg ?? null;
+  const trialDays = data?.trialDays ?? 0;
+  const plans = (data?.tiers ?? []).map((tier) => ({
+    id: tier.id,
+    name: tier.name,
+    priceBdt: tier.priceBdt,
+    period: tier.period === 'month' ? 'mo' : tier.period,
+    customers: tier.customers ? `Up to ${tier.customers.toLocaleString()}` : 'Unlimited',
+    features: tier.features,
+    highlighted: false,
+  }));
+  const paygTotal = payg ? payg.baseFeeBdt + paygSubscribers * payg.pricePerCustomerBdt : 0;
   const panelTransition = reduced
     ? { duration: 0 }
     : { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const };
@@ -33,7 +46,9 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
   const resolvedSubtitle =
     subtitle ??
     (locale === 'bn' ? t('marketing.pages.pricing.subtitle') : null) ??
-    `Fixed monthly plans for predictability, or pay-as-you-go at ${formatBdtWithSymbol(payg.baseFeeBdt)} base plus ${formatBdtWithSymbol(payg.pricePerCustomerBdt)} per active subscriber. No admin seat fees. No per-router licenses.`;
+    (payg
+      ? `Fixed monthly plans for predictability, or pay-as-you-go at ${formatBdtWithSymbol(payg.baseFeeBdt)} base plus ${formatBdtWithSymbol(payg.pricePerCustomerBdt)} per active subscriber. No admin seat fees. No per-router licenses.`
+      : 'Fixed monthly plans for predictability. No admin seat fees. No per-router licenses.');
 
   return (
     <section
@@ -48,7 +63,7 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
           <p className="mt-4 text-base text-white/60">{resolvedSubtitle}</p>
         </Reveal>
 
-        <Reveal className="mt-10">
+        <Reveal className={payg ? 'mt-10' : 'hidden'}>
           <div className="inline-flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1 backdrop-blur-md">
             <button
               type="button"
@@ -98,40 +113,8 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
               exit={reduced ? undefined : { opacity: 0, y: -12 }}
               transition={panelTransition}
             >
-              <div className="mt-10 flex items-center gap-3">
-                <span
-                  className={cn('text-sm', !isYearly ? 'font-medium text-white' : 'text-white/45')}
-                >
-                  Monthly
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsYearly(!isYearly)}
-                  className={cn(
-                    'relative h-7 w-12 rounded-full p-0.5 ring-1 ring-white/15 transition-colors duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]',
-                    isYearly ? 'bg-landing-cta' : 'bg-white/10',
-                  )}
-                  aria-label="Toggle yearly discount"
-                >
-                  <motion.span
-                    className="block h-5 w-5 rounded-full bg-white shadow-md"
-                    animate={{ x: isYearly ? 20 : 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                </button>
-                <span
-                  className={cn('text-sm', isYearly ? 'font-medium text-white' : 'text-white/45')}
-                >
-                  Yearly
-                </span>
-                <span className="border-landing-cta/30 bg-landing-cta/10 text-landing-cta rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                  Save 20%
-                </span>
-              </div>
-
               <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {plans.map((plan) => {
-                  const effectivePrice = isYearly ? Math.round(plan.priceBdt * 0.8) : plan.priceBdt;
                   return (
                     <div
                       key={plan.id}
@@ -157,9 +140,9 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                           <p className="mt-1 font-mono text-xs text-white/45">{plan.customers}</p>
                           <div className="mt-6 flex items-baseline">
                             <span className="font-landing-display text-4xl font-semibold text-white">
-                              {formatBdtWithSymbol(effectivePrice)}
+                              {formatBdtWithSymbol(plan.priceBdt)}
                             </span>
-                            <span className="ml-1.5 font-mono text-xs text-white/40">/ mo</span>
+                            <span className="ml-1.5 font-mono text-xs text-white/40">/ {plan.period}</span>
                           </div>
                           <ul className="mt-6 space-y-3 border-t border-white/[0.08] pt-5 text-sm text-white/65">
                             {plan.features.map((feat) => (
@@ -181,7 +164,9 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                                 : 'bg-white/10 text-white hover:bg-white/15',
                             )}
                           >
-                            <span className="flex-1 text-center">Start Free Trial</span>
+                            <span className="flex-1 text-center">
+                              {trialDays > 0 ? 'Start Free Trial' : 'Get Started'}
+                            </span>
                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 group-hover/btn:scale-105">
                               ↗
                             </span>
@@ -201,8 +186,9 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                       Need custom add-ons or burst capacity?
                     </h4>
                     <p className="mt-1 text-xs text-white/60">
-                      Enable SMS Credits (৳200/1k), White Label domain branding (৳500/mo), WhatsApp
-                      Alerts engine, or Extra Cloud Backups on any plan.
+                      {payg?.addons.length
+                        ? `Enable ${payg.addons.map((a) => `${a.name} (${formatBdtWithSymbol(a.priceBdt)})`).join(', ')} on any plan.`
+                        : 'Browse the add-on catalogue to extend any plan.'}
                     </p>
                   </div>
                   <Link
@@ -215,7 +201,7 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                 </div>
               </div>
             </motion.div>
-          ) : (
+          ) : payg ? (
             <motion.div
               key="payg"
               initial={reduced ? false : { opacity: 0, y: 12 }}
@@ -242,9 +228,9 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                     </div>
                     <input
                       type="range"
-                      min={payg.minCustomers}
-                      max={payg.maxCustomers}
-                      step={payg.step}
+                      min={PAYG_SLIDER.min}
+                      max={PAYG_SLIDER.max}
+                      step={PAYG_SLIDER.step}
                       value={paygSubscribers}
                       onChange={(e) => setPaygSubscribers(Number(e.target.value))}
                       className="accent-landing-cta w-full cursor-pointer"
@@ -274,7 +260,7 @@ export function PricingSection({ plans, payg, title, subtitle }: PricingSectionP
                 </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </section>

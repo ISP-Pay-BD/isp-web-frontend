@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { RegisterPage } from '@/features/marketing/register';
 
 export const metadata: Metadata = {
-  title: 'Start Free Trial — ISP Pay BD Platform',
+  title: 'Register your ISP — ISP Pay BD Platform',
   description:
-    'Start your 14-day free trial. Setup your ISP organization, connect MikroTik routers, and enable automated bKash reconciliation.',
+    'Create your ISP organization account, pick a plan, connect MikroTik routers and automate bKash reconciliation.',
 };
 
 export default function RegisterRoute() {

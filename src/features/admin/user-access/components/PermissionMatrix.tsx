@@ -17,9 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import type { PermissionSectionDef } from '@/data/users';
-import type { PermissionMap } from '@/types/auth';
+import type { PermissionMap, PermissionSectionDef } from '../types';
 
 interface PermissionMatrixProps {
   sections: PermissionSectionDef[];
@@ -272,7 +270,6 @@ export function PermissionMatrix({
                   const sectionActions = permissions[section.key] ?? [];
                   const allKeys = Object.keys(section.actions);
                   const isAll = allKeys.length > 0 && sectionActions.length === allKeys.length;
-                  const isSome = sectionActions.length > 0 && !isAll;
 
                   return (
                     <tr
@@ -353,26 +350,46 @@ export function PermissionMatrix({
 interface PermissionMatrixEditorProps {
   sections: PermissionSectionDef[];
   initialPermissions: PermissionMap;
-  onSave: (permissions: PermissionMap) => Promise<void>;
+  onSave: (permissions: PermissionMap) => Promise<unknown>;
+  /** Platform/role defaults are shown but cannot be edited by this account. */
+  readOnly?: boolean;
+  /** Loads a default matrix from the backend into the editor (not saved until Save). */
+  onLoadDefaults?: () => Promise<PermissionMap>;
 }
 
 export function PermissionMatrixEditor({
   sections,
   initialPermissions,
   onSave,
+  readOnly = false,
+  onLoadDefaults,
 }: PermissionMatrixEditorProps) {
   const [permissions, setPermissions] = useState<PermissionMap>(initialPermissions);
   const [saving, setSaving] = useState(false);
+  const [loadingDefaults, setLoadingDefaults] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await onSave(permissions);
-      toast.success('Permissions saved successfully');
+      toast.success('Permissions saved');
     } catch {
-      toast.error('Failed to save permissions');
+      // the API error is toasted globally
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLoadDefaults = async () => {
+    if (!onLoadDefaults) return;
+    setLoadingDefaults(true);
+    try {
+      setPermissions(await onLoadDefaults());
+      toast.info('Platform defaults loaded — review and save to apply');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not load the defaults');
+    } finally {
+      setLoadingDefaults(false);
     }
   };
 
@@ -380,58 +397,62 @@ export function PermissionMatrixEditor({
 
   return (
     <div className="space-y-4">
-      <PermissionMatrix
-        sections={sections}
-        permissions={permissions}
-        onChange={setPermissions}
-      />
-      
-      {/* Clean Footer Bar */}
+      <PermissionMatrix sections={sections} permissions={permissions} onChange={setPermissions} readOnly={readOnly} />
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-border/50">
         <div className="text-xs text-muted-foreground">
-          {hasChanges ? (
+          {readOnly ? (
+            <span className="flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5" /> These defaults are managed by the platform and are read-only for your account.
+            </span>
+          ) : hasChanges ? (
             <span className="text-amber-500 font-medium flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
               You have unsaved changes
             </span>
           ) : (
-            <span>All permissions synchronized</span>
+            <span>All permissions saved</span>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setPermissions(initialPermissions);
-              toast.info('Changes discarded');
-            }}
-            disabled={!hasChanges || saving}
-            className="text-xs h-9 gap-1.5"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Discard
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            size="sm"
-            className="text-xs h-9 px-4 gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                Save Permissions
-              </>
+        {!readOnly && (
+          <div className="flex items-center justify-end gap-2.5">
+            {onLoadDefaults && (
+              <Button variant="outline" size="sm" onClick={handleLoadDefaults} disabled={loadingDefaults || saving} className="text-xs h-9 gap-1.5">
+                <Layers className="h-3.5 w-3.5" />
+                {loadingDefaults ? 'Loading…' : 'Platform defaults'}
+              </Button>
             )}
-          </Button>
-        </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPermissions(initialPermissions)}
+              disabled={!hasChanges || saving}
+              className="text-xs h-9 gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Discard
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+              size="sm"
+              className="text-xs h-9 px-4 gap-1.5 font-semibold bg-primary text-primary-foreground shadow-sm"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  Save Permissions
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

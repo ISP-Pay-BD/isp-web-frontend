@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,30 +16,99 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { AuthBrandPanel } from '@/features/auth/login/components/AuthBrandPanel';
+import { authService } from '@/lib/api/services/auth.service';
+import { handleApiError } from '@/lib/api/utils/error-handler';
 
 const schema = z
   .object({
+    email: z.string().email('Enter a valid email address'),
+    code: z.string().trim().min(1, 'Enter the reset code from your email'),
     password: z.string().min(8, 'At least 8 characters'),
-    confirm: z.string().min(8),
+    confirm: z.string().min(8, 'At least 8 characters'),
   })
   .refine((v) => v.password === v.confirm, { message: 'Passwords must match', path: ['confirm'] });
 
 type Values = z.infer<typeof schema>;
 
-export function ResetPasswordPage() {
+function ResetPasswordForm() {
+  const params = useSearchParams();
+  const linkEmail = params.get('email') ?? '';
+  const linkCode = params.get('code') ?? '';
+  const fromLink = Boolean(linkEmail && linkCode);
   const [done, setDone] = useState(false);
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm<Values>({ resolver: zodResolver(schema) });
+  } = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: linkEmail, code: linkCode, password: '', confirm: '' },
+  });
 
-  const onSubmit = async () => {
-    await new Promise((r) => setTimeout(r, 600));
-    setDone(true);
-    toast.success('Password updated');
+  const onSubmit = async (values: Values) => {
+    try {
+      await authService.resetPassword({ email: values.email, code: values.code, newPassword: values.password });
+      setDone(true);
+      toast.success('Password updated');
+    } catch (err) {
+      handleApiError(err, (field, error) =>
+        setError(field === 'new_password' ? 'password' : (field as keyof Values), error),
+      );
+    }
   };
 
+  if (done) {
+    return (
+      <Alert>
+        <AlertDescription>
+          Password updated.{' '}
+          <Link href="/login" className="text-primary font-medium underline underline-offset-2">
+            Sign in
+          </Link>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className={fromLink ? 'hidden' : 'space-y-4'}>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" autoComplete="email" {...register('email')} />
+          {errors.email ? <p className="text-destructive text-sm">{errors.email.message}</p> : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="code">Reset code</Label>
+          <Input id="code" autoComplete="one-time-code" {...register('code')} />
+          {errors.code ? <p className="text-destructive text-sm">{errors.code.message}</p> : null}
+        </div>
+      </div>
+      {fromLink ? (
+        <p className="text-muted-foreground text-sm">
+          Resetting the password for <span className="text-foreground font-medium">{linkEmail}</span>
+        </p>
+      ) : null}
+      <div className="space-y-2">
+        <Label htmlFor="password">New password</Label>
+        <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
+        {errors.password ? <p className="text-destructive text-sm">{errors.password.message}</p> : null}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="confirm">Confirm password</Label>
+        <Input id="confirm" type="password" autoComplete="new-password" {...register('confirm')} />
+        {errors.confirm ? <p className="text-destructive text-sm">{errors.confirm.message}</p> : null}
+      </div>
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Update password
+      </Button>
+    </form>
+  );
+}
+
+export function ResetPasswordPage() {
   return (
     <div className="bg-background grid min-h-dvh lg:grid-cols-2">
       <AuthBrandPanel variant="forgot" />
@@ -58,37 +128,9 @@ export function ResetPasswordPage() {
             </p>
           </div>
 
-          {done ? (
-            <Alert>
-              <AlertDescription>
-                Password updated.{' '}
-                <Link href="/login" className="text-primary font-medium underline underline-offset-2">
-                  Sign in
-                </Link>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">New password</Label>
-                <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
-                {errors.password ? (
-                  <p className="text-destructive text-sm">{errors.password.message}</p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm">Confirm password</Label>
-                <Input id="confirm" type="password" autoComplete="new-password" {...register('confirm')} />
-                {errors.confirm ? (
-                  <p className="text-destructive text-sm">{errors.confirm.message}</p>
-                ) : null}
-              </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Update password
-              </Button>
-            </form>
-          )}
+          <Suspense fallback={null}>
+            <ResetPasswordForm />
+          </Suspense>
 
           <Link
             href="/login"

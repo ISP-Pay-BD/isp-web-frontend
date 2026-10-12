@@ -25,6 +25,21 @@ export interface PaginationParams {
   [key: string]: unknown;
 }
 
+export interface PageMeta {
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+}
+
+/** Result of `http.getPage` — the list plus the backend pagination meta. */
+export interface PageResult<T> {
+  items: T[];
+  meta: PageMeta;
+  /** The object the list was nested in (summary blocks, filters, etc.) */
+  raw: Record<string, unknown>;
+}
+
 export interface PaginatedResult<T> {
   items: T[];
   total: number;

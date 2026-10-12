@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import type { LucideIcon } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import { LogOut, Search } from 'lucide-react';
 import {
   Sidebar,
@@ -30,18 +28,20 @@ import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
-import { useMemo, useState, useCallback } from 'react';
+import { createElement, useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getNavIcon } from '@/features/shared/command-palette/nav-icons';
+import { useSidebarPins } from '@/features/admin/sidebar-pins/hooks/use-sidebar-pins';
+import { TenantThemeSync } from '@/features/admin/theme-studio/hooks/use-theme-studio';
 
 interface PortalSidebarProps {
   portal: 'admin' | 'customer' | 'platform' | 'employee';
 }
 
 function NavIcon({ name, className }: { name?: string; className?: string }) {
-  if (!name) return null;
-  const Icon = LucideIcons[name as keyof typeof LucideIcons] as LucideIcon | undefined;
-  return Icon ? <Icon className={className ?? 'h-4 w-4 shrink-0'} /> : null;
+  const icon = getNavIcon(name);
+  return icon ? createElement(icon, { className: className ?? 'h-4 w-4 shrink-0' }) : null;
 }
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
@@ -210,6 +210,14 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
 
   const showNavSkeleton = !hydrated;
 
+  // Admin portal: the user's pinned shortcuts on top + the tenant's saved theme.
+  const isAdminPortal = portal === 'admin' && (user?.role === 'admin' || user?.role === 'resellerAdmin');
+  const pins = useSidebarPins(hydrated && portal === 'admin' && Boolean(user));
+  const pinnedItems = useMemo<NavItem[]>(
+    () => (pins.data ?? []).map((p) => ({ id: `pin-${p.id}`, label: p.label, href: p.href, icon: p.icon || 'Pin' })),
+    [pins.data],
+  );
+
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border bg-sidebar border-r shadow-[var(--shadow-xs)]">
       {/* Header — Logo + Brand */}
@@ -253,6 +261,19 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
           </div>
         ) : (
           <>
+            <TenantThemeSync enabled={hydrated && isAdminPortal} />
+            {pinnedItems.length > 0 && !query.trim() && (
+              <SidebarGroup>
+                <SidebarGroupLabel className="text-muted-foreground/50 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]">
+                  Pinned
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <NavTree items={pinnedItems} currentPath={pathname} />
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
             {sections.map(([section, sectionItems], idx) => (
               <SidebarGroup key={section}>
                 {idx > 0 && (

@@ -1,21 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Building2,
   Percent,
-  Search,
-  Plus,
   ShieldCheck,
   Calculator,
-  CheckCircle2,
   AlertCircle,
   FileCheck,
-  RefreshCw,
-  X,
   Sliders,
   Check,
-  HelpCircle,
+  X,
 } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -24,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -40,471 +36,407 @@ import {
 } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { TaxSetting } from '@/data/admin/isp-ops.data';
+import { formatBdtWithSymbol } from '@/lib/format';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import {
+  fmtStamp,
+  useSaveTaxConfig,
+  useTaxConfig,
+  type TaxConfig,
+  type TaxMode,
+} from '../hooks/use-billing-config';
+
+const MODE_ITEMS: Record<TaxMode, string> = {
+  exclusive: 'Exclusive — added on top of the price',
+  inclusive: 'Inclusive — already in the price',
+};
+
+interface FormState {
+  enabled: boolean;
+  label: string;
+  ratePercent: string;
+  mode: TaxMode;
+  binNumber: string;
+  tinNumber: string;
+  registrationNumber: string;
+}
+
+const toForm = (t: TaxConfig): FormState => ({
+  enabled: t.enabled,
+  label: t.label,
+  ratePercent: String(t.ratePercent),
+  mode: t.mode,
+  binNumber: t.binNumber ?? '',
+  tinNumber: t.tinNumber ?? '',
+  registrationNumber: t.registrationNumber ?? '',
+});
 
 export function TaxSettingsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
+  const { data: tax, isLoading, isError, error, refetch } = useTaxConfig();
+  const save = useSaveTaxConfig();
+  const [form, setForm] = useState<FormState | null>(null);
+  const [calcBase, setCalcBase] = useState('');
 
-  const [search, setSearch] = useState('');
-  const [selectedTax, setSelectedTax] = useState<TaxSetting | null>(null);
+  const calc = useMemo(() => {
+    const base = Number(calcBase) || 0;
+    const rate = tax?.enabled ? tax.ratePercent : 0;
+    if (tax?.mode === 'inclusive') {
+      const vat = base - base / (1 + rate / 100);
+      return { vat, net: base - vat, gross: base };
+    }
+    const vat = base * (rate / 100);
+    return { vat, net: base, gross: base + vat };
+  }, [calcBase, tax]);
 
-  // Live Calculator State
-  const [calcBaseAmount, setCalcBaseAmount] = useState<number>(1000);
-  const [calcTaxRate, setCalcTaxRate] = useState<number>(15);
-  const [calcInclusive, setCalcInclusive] = useState<boolean>(false);
+  const handleToggleEnabled = () => {
+    if (!tax) return;
+    save.mutate(
+      { ...toTaxInput(toForm(tax)), enabled: !tax.enabled },
+      { onSuccess: (t) => toast.success(`${t.label} ${t.enabled ? 'enabled' : 'disabled'}`) },
+    );
+  };
 
-  const rawTaxes = useMemo(() => data?.taxSettings ?? [], [data?.taxSettings]);
-
-  const totalCollectedMonth = useMemo(
-    () => rawTaxes.reduce((s, t) => s + (t.collectedThisMonthBdt ?? 0), 0),
-    [rawTaxes]
-  );
-  const activeCount = useMemo(() => rawTaxes.filter((t) => t.active).length, [rawTaxes]);
-
-  const filteredTaxes = useMemo(() => {
-    return rawTaxes.filter((t) => {
-      if (!search) return true;
-      const q = search.toLowerCase().trim();
-      return (
-        t.name.toLowerCase().includes(q) ||
-        (t.code && t.code.toLowerCase().includes(q)) ||
-        (t.nbrCode && t.nbrCode.toLowerCase().includes(q)) ||
-        t.applyTo.toLowerCase().includes(q)
-      );
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form) return;
+    save.mutate(toTaxInput(form), {
+      onSuccess: () => {
+        toast.success('Tax settings saved');
+        setForm(null);
+      },
     });
-  }, [rawTaxes, search]);
-
-  // Live calculation results
-  const calculatedVat = useMemo(() => {
-    if (calcInclusive) {
-      return Math.round(calcBaseAmount - calcBaseAmount / (1 + calcTaxRate / 100));
-    } else {
-      return Math.round(calcBaseAmount * (calcTaxRate / 100));
-    }
-  }, [calcBaseAmount, calcTaxRate, calcInclusive]);
-
-  const calculatedTotal = useMemo(() => {
-    if (calcInclusive) {
-      return calcBaseAmount;
-    } else {
-      return calcBaseAmount + calculatedVat;
-    }
-  }, [calcBaseAmount, calculatedVat, calcInclusive]);
-
-  const handleToggleActive = (tax: TaxSetting, e: React.MouseEvent) => {
-    e.stopPropagation();
-    toast.success(`${tax.name}: Status toggled`);
   };
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError || !data) {
+  if (isError || !tax) {
     return (
       <EmptyState
         title="Failed to load tax settings"
-        description="Could not query NBR tax configuration."
+        description={errorMessage(error, 'Could not load the tax configuration.')}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
     );
   }
 
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
+  const registration = tax.binNumber ?? tax.tinNumber ?? tax.registrationNumber;
+  const rows: { label: string; value: React.ReactNode }[] = [
+    { label: 'Tax label', value: tax.label },
+    { label: 'Rate', value: `${tax.ratePercent}%` },
+    { label: 'Calculation', value: MODE_ITEMS[tax.mode] },
+    { label: 'BIN', value: tax.binNumber ?? '—' },
+    { label: 'TIN', value: tax.tinNumber ?? '—' },
+    { label: 'Registration no.', value: tax.registrationNumber ?? '—' },
+  ];
+
   return (
     <div className="space-y-6 w-full pb-20">
-      {/* Header */}
       <PageHeader
         title="Tax & VAT Settings"
-        subtitle="Configure Bangladesh NBR Value Added Tax (Mushak 6.3), Advance Income Tax (AIT), and OTC service levies."
+        subtitle="Your VAT rate, how it is applied to prices, and the registration numbers printed on invoices."
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Billing' },
           { label: 'Tax / VAT' },
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                refetch();
-                toast.success('Tax definitions updated from NBR schema');
-              }}
-              className="text-xs h-8 border-border/80 hover:bg-accent"
-            >
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Sync NBR Rules
-            </Button>
-
-            <Button
-              size="sm"
-              onClick={() => toast.info('Tax head creation template loaded')}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 gap-1.5 shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Tax Head
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            onClick={() => setForm(toForm(tax))}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 gap-1.5 shadow-sm"
+          >
+            <Sliders className="h-3.5 w-3.5" /> Edit Settings
+          </Button>
         }
       />
 
-      {/* KPI Metrics */}
+      {!tax.configured && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Tax is not configured yet. Edit the settings to set your VAT rate and registration numbers.
+        </div>
+      )}
+
+      {/* KPI ribbon */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total VAT Collected */}
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              VAT Collected (Month)
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</span>
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Building2 className="h-4 w-4" />
+              <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
-              ৳ {totalCollectedMonth.toLocaleString()}
-            </span>
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={handleToggleEnabled}
+              disabled={save.isPending}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all',
+                tax.enabled
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                  : 'bg-muted/60 text-muted-foreground border-border/80',
+              )}
+            >
+              {tax.enabled ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+              {tax.enabled ? 'Enabled' : 'Disabled'}
+            </button>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>NBR Challan ready</span>
-            <span className="text-emerald-500 font-medium">Mushak 6.3</span>
-          </div>
+          <div className="mt-2 text-[11px] text-muted-foreground">Click to {tax.enabled ? 'disable' : 'enable'}</div>
         </Card>
 
-        {/* Standard Broadband VAT */}
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Broadband VAT Rate
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{tax.label} Rate</span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
               <Percent className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
             <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-              15.0%
+              {tax.ratePercent}%
             </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>NBR ISP Statutory Rate</span>
           </div>
         </Card>
 
-        {/* Active Tax Heads */}
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-sky-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Active Tax Rules
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Calculation</span>
             <div className="p-2 rounded-lg bg-sky-500/10 text-sky-500">
-              <ShieldCheck className="h-4 w-4" />
+              <Building2 className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold tracking-tight text-sky-600 dark:text-sky-400 tabular-nums">
-              {activeCount} / {rawTaxes.length}
-            </span>
+            <span className="text-xl font-bold tracking-tight text-sky-600 dark:text-sky-400 capitalize">{tax.mode}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>Invoices, OTC & Hardware</span>
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            {tax.mode === 'inclusive' ? 'Already included in prices' : 'Added on top of prices'}
           </div>
         </Card>
 
-        {/* Compliance Status */}
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-amber-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Compliance Status
-            </span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registration</span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
               <FileCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              Compliant
-            </span>
+            <span className="text-sm font-bold tracking-tight text-foreground font-mono truncate">{registration ?? 'Not set'}</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span className="font-mono text-[10px]">BIN: 002391024-0101</span>
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            {tax.binNumber ? 'BIN' : tax.tinNumber ? 'TIN' : tax.registrationNumber ? 'Registration no.' : 'Add BIN / TIN in settings'}
           </div>
         </Card>
       </div>
 
-      {/* Live VAT & Tax Calculator Box */}
+      {/* Calculator using the saved settings */}
       <Card className="border-border/80 bg-card/60 backdrop-blur-xs shadow-sm overflow-hidden">
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Calculator className="h-4 w-4 text-primary" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-              Interactive VAT & Tax Calculator Widget
-            </h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{tax.label} Calculator</h3>
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-border/80">
-              Real-time Preview
+              Uses your saved settings
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                Base Package Price (BDT)
+              <label htmlFor="tax-base" className="text-[11px] font-medium text-muted-foreground block mb-1">
+                {tax.mode === 'inclusive' ? 'Price incl. tax (BDT)' : 'Price before tax (BDT)'}
               </label>
               <Input
+                id="tax-base"
                 type="number"
-                value={calcBaseAmount}
-                onChange={(e) => setCalcBaseAmount(Number(e.target.value) || 0)}
+                min={0}
+                placeholder="Enter an amount"
+                value={calcBase}
+                onChange={(e) => setCalcBase(e.target.value)}
                 className="h-9 text-xs font-mono font-bold"
               />
             </div>
 
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                Tax Head / Rate
-              </label>
-              <Select
-                value={String(calcTaxRate)}
-                onValueChange={(v) => setCalcTaxRate(Number(v))}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">Broadband VAT (15%)</SelectItem>
-                  <SelectItem value="5">OTC Service Tax (5%)</SelectItem>
-                  <SelectItem value="3">Corporate AIT (3%)</SelectItem>
-                  <SelectItem value="7.5">Hardware Sales (7.5%)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="bg-muted/30 p-3 rounded-lg border border-border/60">
+              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Net of tax</span>
+              <p className="text-lg font-bold text-foreground font-mono tabular-nums">{formatBdtWithSymbol(calc.net)}</p>
             </div>
 
             <div className="bg-muted/30 p-3 rounded-lg border border-border/60">
               <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                Computed Tax / VAT
+                {tax.label} {tax.enabled ? `(${tax.ratePercent}%)` : '(disabled)'}
               </span>
-              <p className="text-lg font-bold text-foreground font-mono tabular-nums">
-                ৳ {calculatedVat.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">BDT</span>
-              </p>
+              <p className="text-lg font-bold text-foreground font-mono tabular-nums">{formatBdtWithSymbol(calc.vat)}</p>
             </div>
 
             <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
-              <span className="text-[10px] text-primary uppercase font-semibold">
-                Gross Total Payable
-              </span>
-              <p className="text-lg font-bold text-primary font-mono tabular-nums">
-                ৳ {calculatedTotal.toLocaleString()} <span className="text-xs font-normal text-primary/80">BDT</span>
-              </p>
+              <span className="text-[10px] text-primary uppercase font-semibold">Customer pays</span>
+              <p className="text-lg font-bold text-primary font-mono tabular-nums">{formatBdtWithSymbol(calc.gross)}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tax Table */}
+      {/* Settings table */}
       <Card className="border-border/70 shadow-sm bg-card overflow-hidden">
-        <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search tax rules by name, NBR code, or scope..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 h-9 text-xs bg-background border-border/60 shadow-inner"
-            />
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {filteredTaxes.length} tax rules configured
-          </span>
-        </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4">Tax Description & NBR Reference</th>
-                <th className="py-3 px-3">Tax Rate</th>
-                <th className="py-3 px-3">Calculation Type</th>
-                <th className="py-3 px-3">Applicable Scope</th>
-                <th className="py-3 px-4">Collected (Month)</th>
-                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-4">Setting</th>
+                <th className="py-3 px-3">Value</th>
                 <th className="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filteredTaxes.map((tax) => {
-                return (
-                  <tr
-                    key={tax.id}
-                    onClick={() => setSelectedTax(tax)}
-                    className="hover:bg-muted/30 cursor-pointer transition-colors group"
-                  >
-                    {/* Name & NBR */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-foreground text-sm">
-                          {tax.name}
-                        </span>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                          <span className="font-mono text-[10px] font-semibold text-primary">{tax.code ?? 'VAT'}</span>
-                          {tax.nbrCode && (
-                            <>
-                              <span>·</span>
-                              <span className="font-mono text-[10px]">{tax.nbrCode}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Rate */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <span className="font-bold font-mono text-sm text-foreground">
-                        {tax.ratePct}%
-                      </span>
-                    </td>
-
-                    {/* Inclusive vs Exclusive */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-semibold uppercase',
-                          tax.inclusive
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                        )}
-                      >
-                        {tax.inclusive ? 'Inclusive (In Price)' : 'Exclusive (+ On Top)'}
-                      </Badge>
-                    </td>
-
-                    {/* Scope */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <Badge variant="secondary" className="capitalize text-xs">
-                        {tax.applyTo}
-                      </Badge>
-                    </td>
-
-                    {/* Collected This Month */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="font-mono font-semibold text-foreground text-xs tabular-nums">
-                        ৳ {(tax.collectedThisMonthBdt ?? 0).toLocaleString()}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleActive(tax, e)}
-                        className={cn(
-                          'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all',
-                          tax.active
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                            : 'bg-muted/60 text-muted-foreground border-border/80'
-                        )}
-                      >
-                        {tax.active ? (
-                          <>
-                            <Check className="h-3 w-3" /> Active
-                          </>
-                        ) : (
-                          <>
-                            <X className="h-3 w-3" /> Disabled
-                          </>
-                        )}
-                      </button>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedTax(tax)}
-                        className="h-8 px-2 text-xs font-medium text-primary hover:bg-primary/10 gap-1"
-                      >
-                        <Sliders className="h-3.5 w-3.5" /> Edit
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {rows.map((row) => (
+                <tr key={row.label} className="hover:bg-muted/30 transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-foreground text-sm">{row.label}</td>
+                  <td className="py-3.5 px-3 font-mono text-foreground">{row.value}</td>
+                  <td className="py-3.5 px-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setForm(toForm(tax))}
+                      className="h-8 px-2 text-xs font-medium text-primary hover:bg-primary/10 gap-1"
+                    >
+                      <Sliders className="h-3.5 w-3.5" /> Edit
+                    </Button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        {tax.updatedAt && (
+          <div className="border-t border-border/60 px-4 py-2.5 text-[11px] text-muted-foreground">
+            Last saved {fmtStamp(tax.updatedAt)}
+            {tax.updatedByName ? ` by ${tax.updatedByName}` : ''}
+          </div>
+        )}
       </Card>
 
-      {/* Edit Tax Drawer */}
-      <Sheet open={!!selectedTax} onOpenChange={(open) => !open && setSelectedTax(null)}>
+      {/* Edit drawer */}
+      <Sheet open={form !== null} onOpenChange={(open) => !open && setForm(null)}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto p-6 space-y-6">
-          {selectedTax && (
+          {form && (
             <>
               <SheetHeader>
-                <SheetTitle className="text-xl font-bold text-foreground">
-                  Tax Head: {selectedTax.name}
-                </SheetTitle>
+                <SheetTitle className="text-xl font-bold text-foreground">Tax Settings</SheetTitle>
                 <SheetDescription className="text-xs text-muted-foreground">
-                  NBR Mushak Schedule Configuration
+                  One tax configuration for your whole account.
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="space-y-4 text-xs">
-                <div className="space-y-1">
-                  <label className="font-semibold text-foreground">Tax Head Name</label>
-                  <Input defaultValue={selectedTax.name} className="h-9 text-xs" />
-                </div>
+              <form onSubmit={handleSave} className="space-y-4 text-xs">
+                <Card className="p-4 border-border/80 bg-muted/20">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">Charge tax</p>
+                      <p className="text-[11px] text-muted-foreground">Apply this tax to customer bills</p>
+                    </div>
+                    <Switch checked={form.enabled} onCheckedChange={(v) => set('enabled', Boolean(v))} />
+                  </div>
+                </Card>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Rate Percentage (%)</label>
-                    <Input defaultValue={selectedTax.ratePct} type="number" className="h-9 text-xs font-mono font-bold" />
+                    <label htmlFor="tax-label" className="font-semibold text-foreground">Label</label>
+                    <Input
+                      id="tax-label"
+                      required
+                      maxLength={40}
+                      value={form.label}
+                      onChange={(e) => set('label', e.target.value)}
+                      className="h-9 text-xs"
+                    />
                   </div>
-
                   <div className="space-y-1">
-                    <label className="font-semibold text-foreground">Internal Code</label>
-                    <Input defaultValue={selectedTax.code ?? 'VAT-15'} className="h-9 text-xs font-mono" />
+                    <label htmlFor="tax-rate" className="font-semibold text-foreground">Rate (%)</label>
+                    <Input
+                      id="tax-rate"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      required
+                      value={form.ratePercent}
+                      onChange={(e) => set('ratePercent', e.target.value)}
+                      className="h-9 text-xs font-mono font-bold"
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-semibold text-foreground">NBR Reference Code</label>
-                  <Input defaultValue={selectedTax.nbrCode ?? 'Mushak-6.3-9901'} className="h-9 text-xs font-mono" />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-foreground">Applicable Scope</label>
-                  <Select defaultValue={selectedTax.applyTo}>
-                    <SelectTrigger className="h-9 text-xs">
+                  <label htmlFor="tax-mode" className="font-semibold text-foreground">Calculation</label>
+                  <Select items={MODE_ITEMS} value={form.mode} onValueChange={(v) => v && set('mode', v as TaxMode)}>
+                    <SelectTrigger id="tax-mode" className="h-9 text-xs w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="invoice">Monthly Invoices Only</SelectItem>
-                      <SelectItem value="otc">One-Time Connection (OTC) Only</SelectItem>
-                      <SelectItem value="both">Both Invoices & OTC</SelectItem>
+                      {(Object.keys(MODE_ITEMS) as TaxMode[]).map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {MODE_ITEMS[m]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
 
+                {(
+                  [
+                    ['binNumber', 'BIN (VAT registration)'],
+                    ['tinNumber', 'TIN'],
+                    ['registrationNumber', 'Other registration no.'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key} className="space-y-1">
+                    <label htmlFor={`tax-${key}`} className="font-semibold text-foreground">{label}</label>
+                    <Input
+                      id={`tax-${key}`}
+                      maxLength={50}
+                      value={form[key]}
+                      onChange={(e) => set(key, e.target.value)}
+                      className="h-9 text-xs font-mono"
+                    />
+                  </div>
+                ))}
+
                 <div className="pt-4 space-y-2">
                   <Button
-                    onClick={() => {
-                      toast.success(`Tax head "${selectedTax.name}" updated successfully!`);
-                      setSelectedTax(null);
-                    }}
+                    type="submit"
+                    disabled={save.isPending}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-semibold"
                   >
-                    Save Tax Configuration
+                    {save.isPending ? 'Saving…' : 'Save Tax Settings'}
                   </Button>
                   <Button
+                    type="button"
                     variant="outline"
-                    onClick={() => setSelectedTax(null)}
+                    onClick={() => setForm(null)}
                     className="w-full text-xs h-9 border-border/80 hover:bg-accent"
                   >
                     Cancel
                   </Button>
                 </div>
-              </div>
+              </form>
             </>
           )}
         </SheetContent>
       </Sheet>
     </div>
   );
+}
+
+function toTaxInput(f: FormState) {
+  return {
+    enabled: f.enabled,
+    label: f.label.trim(),
+    ratePercent: Number(f.ratePercent || 0),
+    mode: f.mode,
+    binNumber: f.binNumber.trim() || null,
+    tinNumber: f.tinNumber.trim() || null,
+    registrationNumber: f.registrationNumber.trim() || null,
+  };
 }

@@ -3,7 +3,7 @@ import { JournalEntriesPage } from '@/features/admin/accounting/journal-entries'
 
 export const metadata: Metadata = {
   title: 'Journal Entries',
-  description: 'Posted and draft journal vouchers.',
+  description: 'Journal vouchers with debit and credit lines.',
 };
 
 export default function Page() {
