@@ -26,6 +26,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Library/Frameworks/Python.framework/Versions/3.11/bin/graphify hook-check"
+          }
+        ]
+      }
     ]
   }
 }
