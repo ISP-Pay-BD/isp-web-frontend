@@ -338,8 +338,12 @@ export function CustomerDetailPage({ id }: { id: string }) {
               </div>
             </div>
             <div className="mt-2.5 text-xl font-bold font-mono text-foreground flex items-center gap-2">
-              <span>{onu?.rx || 'Not found'}</span>
-              {onu?.status && (
+              <span>
+                {customer.connectionType?.toLowerCase() === 'utp'
+                  ? 'N/A (UTP)'
+                  : (onu?.rx && onu.rx !== 'Not found' && onu.rx !== '--' ? onu.rx : '--')}
+              </span>
+              {onu?.status && onu.status !== 'Not found' && onu.status !== '--' && (
                 <Badge variant="outline" className="text-[10px] border-border/60 capitalize">
                   {onu.status}
                 </Badge>
@@ -347,7 +351,9 @@ export function CustomerDetailPage({ id }: { id: string }) {
             </div>
             <div className="mt-1 flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground truncate">
-                {onu?.oltName ? `OLT: ${onu.oltName}` : 'No synchronized ONU'}
+                {customer.connectionType?.toLowerCase() === 'utp'
+                  ? 'Direct UTP Connection'
+                  : (onu?.oltName ? `OLT: ${onu.oltName}` : 'No synchronized ONU')}
               </p>
               <button
                 type="button"
