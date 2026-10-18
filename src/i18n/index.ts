@@ -30,6 +30,8 @@ import bnMore14 from './messages/bn/admin-more-14.json';
 import bnMore15 from './messages/bn/admin-more-15.json';
 import bnMore16 from './messages/bn/admin-more-16.json';
 import bnMore17 from './messages/bn/admin-more-17.json';
+import bnMore18 from './messages/bn/admin-more-18.json';
+import bnMore19 from './messages/bn/admin-more-19.json';
 import type { AppLocale } from './config';
 
 type Tree = { [key: string]: string | Tree };
@@ -48,7 +50,7 @@ function merge(target: Tree, source: Tree): Tree {
  * each file nests under its own top-level key (`customer`, `employee`, `admin`, `common`…).
  * English is the fallback written at the call site: `t('customer.pay.title', 'Pay your bill')`.
  */
-const bn = [bnCustomerHome, bnCustomerDashboard, bnCustomerPayments, bnCustomerRouter, bnCustomerSupport, bnCustomerAccount, bnEmployee, bnAdmin, bnAdminSupport, bnAdminOps, bnMore1, bnMore2, bnMore3, bnMore4, bnMore5, bnMore6, bnMore7, bnMore8, bnMore9, bnMore10, bnMore11, bnMore12, bnMore13, bnMore14, bnMore15, bnMore16, bnMore17, bnShared].reduce<Tree>(
+const bn = [bnCustomerHome, bnCustomerDashboard, bnCustomerPayments, bnCustomerRouter, bnCustomerSupport, bnCustomerAccount, bnEmployee, bnAdmin, bnAdminSupport, bnAdminOps, bnMore1, bnMore2, bnMore3, bnMore4, bnMore5, bnMore6, bnMore7, bnMore8, bnMore9, bnMore10, bnMore11, bnMore12, bnMore13, bnMore14, bnMore15, bnMore16, bnMore17, bnMore18, bnMore19, bnShared].reduce<Tree>(
   (acc, part) => merge(acc, part as Tree),
   structuredClone(bnBase) as Tree,
 );

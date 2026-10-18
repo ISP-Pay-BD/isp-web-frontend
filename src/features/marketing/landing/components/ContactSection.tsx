@@ -18,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/motion/Reveal';
 import { contactFormSchema, type ContactFormData } from '../schemas/contact.schema';
-import { useTranslations } from '@/features/marketing/shared';
+import { useLocale } from '@/features/marketing/shared';
 import { http } from '@/lib/api/client';
 import { handleApiError } from '@/lib/api/utils/error-handler';
 
@@ -28,8 +28,10 @@ const INQUIRY_TYPE: Record<ContactFormData['inquiryType'], 'demo' | 'feature' | 
   'Enterprise / Other': 'other',
 };
 
+const INQUIRY_TYPES = ['Demo Request', 'Feature Update Request', 'Enterprise / Other'] as const;
+
 export function ContactSection() {
-  const t = useTranslations();
+  const { t, te } = useLocale();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -46,6 +48,17 @@ export function ContactSection() {
     },
   });
 
+  const inquiryLabel = (type: (typeof INQUIRY_TYPES)[number]) => {
+    switch (type) {
+      case 'Demo Request':
+        return t('marketing.landing.contact.inquiryDemo', 'Demo Request');
+      case 'Feature Update Request':
+        return t('marketing.landing.contact.inquiryFeature', 'Feature Update Request');
+      default:
+        return t('marketing.landing.contact.inquiryOther', 'Enterprise / Other');
+    }
+  };
+
   const onSubmit = async (data: ContactFormData) => {
     setSubmitting(true);
     try {
@@ -58,12 +71,20 @@ export function ContactSection() {
         inquiry_type: INQUIRY_TYPE[data.inquiryType] ?? 'other',
       });
       setSubmitted(true);
-      toast.success('Message received!', {
-        description: `Thanks ${data.name} - our team will get back to you shortly.`,
+      toast.success(t('marketing.landing.contact.received', 'Message received!'), {
+        description: t(
+          'marketing.landing.contact.receivedDesc',
+          'Thanks {name} - our team will get back to you shortly.',
+          { name: data.name },
+        ),
       });
       reset();
     } catch (err) {
-      handleApiError(err, (field, error) => setError(field as keyof ContactFormData, error));
+      handleApiError(
+        err,
+        (field, error) => setError(field as keyof ContactFormData, error),
+        t('marketing.pluginDetail.sendFailed', 'Something went wrong. Please try again.'),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -113,10 +134,10 @@ export function ContactSection() {
             <a href="#contact-form" className="group block">
               <Building className="text-landing-accent h-5 w-5" aria-hidden />
               <strong className="group-hover:text-landing-accent mt-3 block text-sm text-white">
-                Running 10k+ lines?
+                {t('marketing.landing.contact.enterpriseTitle', 'Running 10k+ lines?')}
               </strong>
               <span className="mt-1 block text-xs text-white/55">
-                Custom SLA, migration &amp; NOC support
+                {t('marketing.landing.contact.enterpriseDesc', 'Custom SLA, migration & NOC support')}
               </span>
             </a>
           </li>
@@ -131,11 +152,13 @@ export function ContactSection() {
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-landing-display text-sm font-bold text-white">Our Address</h3>
+                <h3 className="font-landing-display text-sm font-bold text-white">
+                  {t('marketing.landing.contact.addressTitle', 'Our Address')}
+                </h3>
                 <p className="mt-1 text-xs leading-relaxed text-white/70">
-                  841 Badda Link Road, Middle Badda
+                  {t('marketing.landing.contact.addressLine1', '841 Badda Link Road, Middle Badda')}
                   <br />
-                  Dhaka 1212, Bangladesh
+                  {t('marketing.landing.contact.addressLine2', 'Dhaka 1212, Bangladesh')}
                 </p>
               </div>
             </div>
@@ -146,14 +169,14 @@ export function ContactSection() {
               </div>
               <div>
                 <h3 className="font-landing-display text-sm font-bold text-white">
-                  Direct Phone Lines
+                  {t('marketing.landing.contact.phonesTitle', 'Direct Phone Lines')}
                 </h3>
                 <p className="mt-1 space-y-1 font-mono text-xs text-white/70">
-                  <span>+880 1781-808231 (Support &amp; Sales)</span>
+                  <span>+880 1781-808231 ({t('marketing.landing.contact.phoneSales', 'Support & Sales')})</span>
                   <br />
-                  <span>+880 1628-856735 (Accounts)</span>
+                  <span>+880 1628-856735 ({t('marketing.landing.contact.phoneAccounts', 'Accounts')})</span>
                   <br />
-                  <span>+880 1610-585100 (Emergency NOC)</span>
+                  <span>+880 1610-585100 ({t('marketing.landing.contact.phoneNoc', 'Emergency NOC')})</span>
                 </p>
               </div>
             </div>
@@ -163,7 +186,9 @@ export function ContactSection() {
                 <Mail className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-landing-display text-sm font-bold text-white">Email Address</h3>
+                <h3 className="font-landing-display text-sm font-bold text-white">
+                  {t('marketing.landing.contact.emailTitle', 'Email Address')}
+                </h3>
                 <p className="mt-1 font-mono text-xs text-white/70">
                   info@isppaybd.com
                   <br />
@@ -177,11 +202,13 @@ export function ContactSection() {
                 <Clock className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-landing-display text-sm font-bold text-white">Office Hours</h3>
+                <h3 className="font-landing-display text-sm font-bold text-white">
+                  {t('marketing.landing.contact.hoursTitle', 'Office Hours')}
+                </h3>
                 <p className="mt-1 text-xs text-white/70">
-                  Saturday - Thursday: 10:00 AM - 8:00 PM
+                  {t('marketing.landing.contact.hoursWeek', 'Saturday - Thursday: 10:00 AM - 8:00 PM')}
                   <br />
-                  Friday: Closed (Emergency automated line active)
+                  {t('marketing.landing.contact.hoursFriday', 'Friday: Closed (Emergency automated line active)')}
                 </p>
               </div>
             </div>
@@ -190,36 +217,44 @@ export function ContactSection() {
           {/* Right — Form */}
           <div className="bg-landing-panel/90 rounded-2xl border border-white/15 p-8 lg:col-span-7">
             <h2 className="font-landing-display text-2xl font-bold text-white">
-              Tell us about your network
+              {t('marketing.landing.contact.formTitle', 'Tell us about your network')}
             </h2>
             <p className="mt-1 text-xs text-white/60">
-              Share your subscriber count, current routers, and where manual billing slows you down.
+              {t(
+                'marketing.landing.contact.formDesc',
+                'Share your subscriber count, current routers, and where manual billing slows you down.',
+              )}
             </p>
 
             {submitted && (
               <div className="mt-6 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300">
                 <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <span>Thank you! Your message has been routed to our Dhaka operations team.</span>
+                <span>
+                  {t(
+                    'marketing.landing.contact.thanks',
+                    'Thank you! Your message has been routed to our Dhaka operations team.',
+                  )}
+                </span>
               </div>
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-white/80">
-                  Full Name *
+                  {t('marketing.landing.contact.name', 'Full Name *')}
                 </label>
                 <input
                   {...register('name')}
-                  placeholder="Abdul Karim"
+                  placeholder={t('marketing.landing.contact.namePlaceholder', 'Abdul Karim')}
                   className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none"
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>}
+                {errors.name && <p className="mt-1 text-xs text-red-400">{te(errors.name.message ?? '')}</p>}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-white/80">
-                    Phone Number (BD) *
+                    {t('marketing.landing.contact.phone', 'Phone Number (BD) *')}
                   </label>
                   <input
                     {...register('phone')}
@@ -227,13 +262,13 @@ export function ContactSection() {
                     className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 font-mono text-sm text-white placeholder-white/40 focus:outline-none"
                   />
                   {errors.phone && (
-                    <p className="mt-1 text-xs text-red-400">{errors.phone.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{te(errors.phone.message ?? '')}</p>
                   )}
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-white/80">
-                    Email Address *
+                    {t('marketing.landing.contact.email', 'Email Address *')}
                   </label>
                   <input
                     {...register('email')}
@@ -242,47 +277,48 @@ export function ContactSection() {
                     className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none"
                   />
                   {errors.email && (
-                    <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{te(errors.email.message ?? '')}</p>
                   )}
                 </div>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-white/80">
-                  Inquiry Type *
+                  {t('marketing.landing.contact.inquiryType', 'Inquiry Type *')}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {(['Demo Request', 'Feature Update Request', 'Enterprise / Other'] as const).map(
-                    (type) => (
-                      <label
-                        key={type}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs text-white/80 hover:bg-white/10"
-                      >
-                        <input
-                          type="radio"
-                          value={type}
-                          {...register('inquiryType')}
-                          className="accent-landing-cta"
-                        />
-                        <span className="truncate">{type}</span>
-                      </label>
-                    ),
-                  )}
+                  {INQUIRY_TYPES.map((type) => (
+                    <label
+                      key={type}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs text-white/80 hover:bg-white/10"
+                    >
+                      <input
+                        type="radio"
+                        value={type}
+                        {...register('inquiryType')}
+                        className="accent-landing-cta"
+                      />
+                      <span className="truncate">{inquiryLabel(type)}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-white/80">
-                  Your Message *
+                  {t('marketing.landing.contact.message', 'Your Message *')}
                 </label>
                 <textarea
                   {...register('message')}
                   rows={4}
-                  placeholder="How many subscribers, which routers (MikroTik / OLT), and what questions do you have?"
+                  placeholder={t(
+                    'marketing.landing.contact.messagePlaceholder',
+                    'How many subscribers, which routers (MikroTik / OLT), and what questions do you have?',
+                  )}
                   className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none"
                 />
                 {errors.message && (
-                  <p className="mt-1 text-xs text-red-400">{errors.message.message}</p>
+                  <p className="mt-1 text-xs text-red-400">{te(errors.message.message ?? '')}</p>
                 )}
               </div>
 
@@ -291,7 +327,9 @@ export function ContactSection() {
                 disabled={submitting}
                 className="bg-landing-cta hover:bg-landing-cta-hover h-11 w-full text-sm font-semibold text-white"
               >
-                {submitting ? 'Sending Message…' : 'Send Message'}
+                {submitting
+                  ? t('marketing.landing.contact.sending', 'Sending Message…')
+                  : t('marketing.landing.contact.send', 'Send Message')}
                 <Send className="ml-2 h-4 w-4" />
               </Button>
             </form>

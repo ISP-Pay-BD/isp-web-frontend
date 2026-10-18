@@ -208,7 +208,7 @@ export function CustomerFeedbackPage() {
                 }
               }}
             >
-              <SelectTrigger aria-label="Filter by rating" className="h-9 w-[140px] text-xs">
+              <SelectTrigger aria-label={t('admin.support.filter.byRating', 'Filter by rating')} className="h-9 w-[140px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

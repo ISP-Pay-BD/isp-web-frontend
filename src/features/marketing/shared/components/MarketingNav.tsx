@@ -50,7 +50,7 @@ export function MarketingNav() {
         <Link
           href="/"
           className="flex items-center gap-2.5 pl-1"
-          aria-label={`${siteConfig.name} home`}
+          aria-label={t('marketing.nav.homeAria', '{name} home', { name: siteConfig.name })}
         >
           <Image
             src={brandAssets.logo}
@@ -65,7 +65,10 @@ export function MarketingNav() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+        <nav
+          className="hidden items-center gap-1 lg:flex"
+          aria-label={t('marketing.nav.primaryAria', 'Primary')}
+        >
           {marketingNavLinks.map((link) => (
             <a
               key={link.href}
@@ -80,19 +83,13 @@ export function MarketingNav() {
 
         <div className="hidden items-center gap-2 lg:flex">
           <LocaleToggle />
-          <Link href="/login">
-            <Button
-              variant="ghost"
-              className="h-9 rounded-full px-4 text-white/80 hover:bg-white/10 hover:text-white"
-            >
+          <Button variant="ghost"
+              className="h-9 rounded-full px-4 text-white/80 hover:bg-white/10 hover:text-white" render={<Link href="/login" />}>
               {t('marketing.nav.login')}
             </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-landing-cta hover:bg-landing-cta-hover h-9 rounded-full px-4 font-semibold text-white">
+          <Button className="bg-landing-cta hover:bg-landing-cta-hover h-9 rounded-full px-4 font-semibold text-white" render={<Link href="/register" />}>
               {t('marketing.nav.startTrial')}
             </Button>
-          </Link>
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -100,12 +97,12 @@ export function MarketingNav() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
-              aria-label="Open menu"
+              aria-label={t('marketing.nav.openMenu', 'Open menu')}
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </SheetTrigger>
             <SheetContent side="right" className="bg-landing-panel border-white/10 text-white">
-              <nav className="mt-8 flex flex-col gap-4" aria-label="Mobile">
+              <nav className="mt-8 flex flex-col gap-4" aria-label={t('marketing.nav.mobileAria', 'Mobile')}>
                 {marketingNavLinks.map((link) => (
                   <a
                     key={link.href}
@@ -119,11 +116,9 @@ export function MarketingNav() {
                 <Link href="/login" onClick={() => setOpen(false)} className="text-white/80">
                   {t('marketing.nav.login')}
                 </Link>
-                <Link href="/register" onClick={() => setOpen(false)}>
-                  <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full rounded-full text-white">
+                <Button className="bg-landing-cta hover:bg-landing-cta-hover mt-2 w-full rounded-full text-white" render={<Link href="/register" onClick={() => setOpen(false)} />}>
                     {t('marketing.nav.startTrial')}
                   </Button>
-                </Link>
               </nav>
             </SheetContent>
           </Sheet>

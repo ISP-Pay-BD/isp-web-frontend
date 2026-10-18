@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Monitor, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/features/marketing/shared';
+import { formatCount } from '@/lib/format';
 import { FiberScene } from './FiberScene';
 import { Magnetic, Parallax } from './motion-kit';
 import { OperatorConsole } from './OperatorConsole';
@@ -49,7 +50,7 @@ export function HeroSection({ stats, stage }: HeroSectionProps) {
         >
           <span className="size-2 rounded-full bg-emerald-400" aria-hidden />
           {stats.trustedIsps > 0
-            ? k('badge').replace('{count}', String(stats.trustedIsps))
+            ? t('marketing.landing.hero.badge', { count: formatCount(stats.trustedIsps) })
             : k('badgeFallback')}
           <ArrowRight
             className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5"

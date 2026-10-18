@@ -165,7 +165,7 @@ export function SupportTicketDetailPage() {
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">{t('admin.support.col.status', 'Status')}</span>
               <Select value={tk.status} items={statusItems} onValueChange={handleStatusChange} disabled={setStatus.isPending}>
-                <SelectTrigger aria-label="Ticket status" className="w-36 h-8">
+                <SelectTrigger aria-label={t('admin.support.ticketStatus', 'Ticket status')} className="w-36 h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -286,7 +286,7 @@ export function SupportTicketsPage() {
             </div>
             <div className="flex gap-2">
               <Select value={status} items={statusItems} onValueChange={(v) => { if (v) { setStatus(v); setPage(1); } }}>
-                <SelectTrigger aria-label="Filter by status" className="h-9 w-[130px] text-xs">
+                <SelectTrigger aria-label={t('admin.support.filter.byStatus', 'Filter by status')} className="h-9 w-[130px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -298,7 +298,7 @@ export function SupportTicketsPage() {
                 </SelectContent>
               </Select>
               <Select value={priority} items={priorityItems} onValueChange={(v) => { if (v) { setPriority(v); setPage(1); } }}>
-                <SelectTrigger aria-label="Filter by priority" className="h-9 w-[130px] text-xs">
+                <SelectTrigger aria-label={t('admin.support.filter.byPriority', 'Filter by priority')} className="h-9 w-[130px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

@@ -10,27 +10,34 @@ import { useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
-const footerColumns = {
+interface FooterLink {
+  /** Message key under `marketing.footer.links`; legal links come from the API and have none. */
+  id?: string;
+  label: string;
+  href: string;
+}
+
+const footerColumns: Record<'product' | 'solutions' | 'company', FooterLink[]> = {
   product: [
-    { label: 'Auto Reconciliation', href: '/#how-it-works' },
-    { label: 'MikroTik Sync', href: '/#product-preview' },
-    { label: 'POP Reseller Hub', href: '/#reseller' },
-    { label: 'Fiber OLT Manager', href: '/#product-preview' },
-    { label: 'Granular Permissions', href: '/#reseller' },
-    { label: 'Pricing & PAYG', href: '/#pricing' },
+    { id: 'autoReconciliation', label: 'Auto Reconciliation', href: '/#how-it-works' },
+    { id: 'mikrotikSync', label: 'MikroTik Sync', href: '/#product-preview' },
+    { id: 'popResellerHub', label: 'POP Reseller Hub', href: '/#reseller' },
+    { id: 'fiberOltManager', label: 'Fiber OLT Manager', href: '/#product-preview' },
+    { id: 'granularPermissions', label: 'Granular Permissions', href: '/#reseller' },
+    { id: 'pricingPayg', label: 'Pricing & PAYG', href: '/#pricing' },
   ],
   solutions: [
-    { label: 'Broadband ISPs', href: '/#roi' },
-    { label: 'POP / Sub-Resellers', href: '/#try-it' },
-    { label: 'Fiber Cable Operators', href: '/#product-preview' },
-    { label: 'BTRC Compliance Reports', href: '/#faq' },
-    { label: 'Customer Mobile App', href: '/#mobile-app' },
-    { label: 'Integrations & Plugins', href: '/#integrations' },
+    { id: 'broadbandIsps', label: 'Broadband ISPs', href: '/#roi' },
+    { id: 'popSubResellers', label: 'POP / Sub-Resellers', href: '/#try-it' },
+    { id: 'fiberCableOperators', label: 'Fiber Cable Operators', href: '/#product-preview' },
+    { id: 'btrcReports', label: 'BTRC Compliance Reports', href: '/#faq' },
+    { id: 'customerMobileApp', label: 'Customer Mobile App', href: '/#mobile-app' },
+    { id: 'integrationsPlugins', label: 'Integrations & Plugins', href: '/#integrations' },
   ],
   company: [
-    { label: 'About Us', href: '/contact' },
-    { label: 'Live Sandbox Demos', href: '/#try-it' },
-    { label: 'Contact Support', href: '/contact' },
+    { id: 'aboutUs', label: 'About Us', href: '/contact' },
+    { id: 'liveSandboxDemos', label: 'Live Sandbox Demos', href: '/#try-it' },
+    { id: 'contactSupport', label: 'Contact Support', href: '/contact' },
   ],
 };
 
@@ -48,7 +55,8 @@ function useLegalLinks() {
 
 export function MarketingFooter() {
   const t = useTranslations();
-  const legalLinks = useLegalLinks().data ?? [];
+  const legalLinks: FooterLink[] = useLegalLinks().data ?? [];
+  const linkLabel = (l: FooterLink) => (l.id ? t(`marketing.footer.links.${l.id}`, l.label) : l.label);
 
   return (
     <footer className="bg-landing-bg relative z-[1] overflow-hidden border-t border-white/10 text-white">
@@ -82,7 +90,7 @@ export function MarketingFooter() {
             <div className="space-y-2 pt-1 font-mono text-xs text-white/60">
               <div className="flex items-center gap-2.5">
                 <Phone className="text-landing-accent h-3.5 w-3.5 shrink-0" />
-                <span>+880 1781-808231 (Support &amp; Sales)</span>
+                <span>+880 1781-808231 ({t('marketing.landing.contact.phoneSales', 'Support & Sales')})</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="text-landing-accent h-3.5 w-3.5 shrink-0" />
@@ -90,7 +98,7 @@ export function MarketingFooter() {
               </div>
               <div className="flex items-center gap-2.5">
                 <MapPin className="text-landing-accent h-3.5 w-3.5 shrink-0" />
-                <span>Dhaka, Bangladesh</span>
+                <span>{t('marketing.footer.location', 'Dhaka, Bangladesh')}</span>
               </div>
             </div>
 
@@ -101,7 +109,7 @@ export function MarketingFooter() {
           {/* Product Links */}
           <div className="lg:col-span-3">
             <h3 className="mb-4 text-xs font-bold tracking-wider text-white uppercase">
-              Platform Features
+              {t('marketing.footer.platformFeatures', 'Platform Features')}
             </h3>
             <ul className="space-y-2.5 text-sm text-white/60">
               {footerColumns.product.map((l) => (
@@ -110,7 +118,7 @@ export function MarketingFooter() {
                     href={l.href}
                     className="hover:text-landing-accent group inline-flex items-center gap-1 transition-colors"
                   >
-                    <span>{l.label}</span>
+                    <span>{linkLabel(l)}</span>
                     <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition group-hover:opacity-100" />
                   </Link>
                 </li>
@@ -121,7 +129,7 @@ export function MarketingFooter() {
           {/* Solutions Links */}
           <div className="lg:col-span-3">
             <h3 className="mb-4 text-xs font-bold tracking-wider text-white uppercase">
-              Solutions &amp; Modules
+              {t('marketing.footer.solutionsModules', 'Solutions & Modules')}
             </h3>
             <ul className="space-y-2.5 text-sm text-white/60">
               {footerColumns.solutions.map((l) => (
@@ -130,7 +138,7 @@ export function MarketingFooter() {
                     href={l.href}
                     className="hover:text-landing-accent group inline-flex items-center gap-1 transition-colors"
                   >
-                    <span>{l.label}</span>
+                    <span>{linkLabel(l)}</span>
                     <ArrowUpRight className="text-landing-accent h-3 w-3 translate-x-0.5 -translate-y-0.5 opacity-0 transition group-hover:opacity-100" />
                   </Link>
                 </li>
@@ -140,7 +148,9 @@ export function MarketingFooter() {
 
           {/* Company & Support */}
           <div className="lg:col-span-2">
-            <h3 className="mb-4 text-xs font-bold tracking-wider text-white uppercase">Company</h3>
+            <h3 className="mb-4 text-xs font-bold tracking-wider text-white uppercase">
+              {t('marketing.footer.company', 'Company')}
+            </h3>
             <ul className="space-y-2.5 text-sm text-white/60">
               {[...footerColumns.company, ...legalLinks].map((l) => (
                 <li key={l.label}>
@@ -148,7 +158,7 @@ export function MarketingFooter() {
                     href={l.href}
                     className="hover:text-landing-accent group inline-flex items-center gap-1 transition-colors"
                   >
-                    <span>{l.label}</span>
+                    <span>{linkLabel(l)}</span>
                   </Link>
                 </li>
               ))}
@@ -160,7 +170,7 @@ export function MarketingFooter() {
                 className="bg-landing-cta/15 border-landing-cta/30 text-landing-accent hover:bg-landing-cta inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors hover:text-white"
               >
                 <Sparkles className="h-3 w-3" />
-                Start Free Trial
+                {t('marketing.pricing.comparison.startFreeTrial', 'Start Free Trial')}
               </Link>
             </div>
           </div>
@@ -170,7 +180,9 @@ export function MarketingFooter() {
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/50 sm:flex-row">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <span>Bank-grade 256-bit SSL · BTRC Compliant Logging · ISO Standard</span>
+            <span>
+              {t('marketing.footer.compliance', 'Bank-grade 256-bit SSL · BTRC Compliant Logging · ISO Standard')}
+            </span>
           </div>
           <div>
             © {new Date().getFullYear()} {siteConfig.name}. {t('marketing.footer.rights')}
@@ -182,13 +194,14 @@ export function MarketingFooter() {
 }
 
 const STATUS_STYLE = {
-  operational: { dot: 'bg-emerald-500', ring: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400', label: 'All systems operational' },
-  degraded: { dot: 'bg-amber-500', ring: 'border-amber-500/20 bg-amber-500/10 text-amber-400', label: 'Some systems degraded' },
-  outage: { dot: 'bg-red-500', ring: 'border-red-500/20 bg-red-500/10 text-red-400', label: 'Service disruption' },
+  operational: { dot: 'bg-emerald-500', ring: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' },
+  degraded: { dot: 'bg-amber-500', ring: 'border-amber-500/20 bg-amber-500/10 text-amber-400' },
+  outage: { dot: 'bg-red-500', ring: 'border-red-500/20 bg-red-500/10 text-red-400' },
 } as const;
 
 /** Real platform health from the public status endpoint; hidden until it answers. */
 function FooterStatusBadge() {
+  const t = useTranslations();
   const { data } = useQuery({
     queryKey: ['marketing', 'status', 'footer'],
     queryFn: ({ signal }) => http.get<{ overall?: string }>('/v1/public/status', undefined, signal),
@@ -198,6 +211,11 @@ function FooterStatusBadge() {
   const overall = data?.overall as keyof typeof STATUS_STYLE | undefined;
   if (!overall || !STATUS_STYLE[overall]) return null;
   const style = STATUS_STYLE[overall];
+  const label = {
+    operational: t('marketing.status.overallOperational', 'All systems operational'),
+    degraded: t('marketing.footer.statusDegraded', 'Some systems degraded'),
+    outage: t('marketing.footer.statusOutage', 'Service disruption'),
+  }[overall];
 
   return (
     <Link
@@ -205,7 +223,7 @@ function FooterStatusBadge() {
       className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80', style.ring)}
     >
       <span className={cn('relative inline-flex h-2 w-2 rounded-full', style.dot)} />
-      {style.label}
+      {label}
     </Link>
   );
 }

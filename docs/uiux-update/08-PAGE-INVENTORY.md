@@ -1,6 +1,6 @@
 # 08 — Page inventory (after implementation)
 
-Every screen in the app (210; the 4 redirect-only routes are left out) with its state after the UI/UX update. Snapshot 2026-10-18 on top of `39a600a`, produced by a one-off scan of each screen's page component plus its own `../components` (shared components are fixed once, see [01](01-SHARED-FIXES.md) and [02](02-DATA-TABLES.md)).
+Every screen in the app (210; the 4 redirect-only routes are left out) with its state after the UI/UX update. Snapshot 2026-10-18 on top of `3f66a97`, produced by a one-off scan of each screen's page component plus its own `../components` (shared components are fixed once, see [01](01-SHARED-FIXES.md) and [02](02-DATA-TABLES.md)).
 
 | Column | Meaning |
 |---|---|
@@ -235,12 +235,12 @@ Every screen in the app (210; the 4 redirect-only routes are left out) with its 
 | `/forgot-password` | `auth/forgot-password/pages/ForgotPasswordPage.tsx` | — | · | ✓ | 150 | · | ✅ |
 | `/help` | `marketing/help/pages/HelpPage.tsx` | — | · | ✓ | 129 | · | ✅ |
 | `/login` | `auth/login/pages/LoginPage.tsx` | — | ✓ | ✓ | 27 | · | ✅ |
-| `/plugins` | `marketing/plugins/pages/PluginsPage.tsx` | — | · | ✓ | 219 | · | ✅ |
-| `/plugins/[slug]` | `marketing/plugins/pages/PluginDetailPage.tsx` | — | · | ✓ | 270 | · | ✅ |
-| `/pricing` | `marketing/pricing/pages/PricingPage.tsx` | — | · | ✓ | 295 | · | ✅ |
+| `/plugins` | `marketing/plugins/pages/PluginsPage.tsx` | — | · | ✓ | 227 | · | ✅ |
+| `/plugins/[slug]` | `marketing/plugins/pages/PluginDetailPage.tsx` | — | · | ✓ | 243 | · | ✅ |
+| `/pricing` | `marketing/pricing/pages/PricingPage.tsx` | — | · | ✓ | 345 | · | ✅ |
 | `/privacy` | `marketing/legal/pages/LegalPage.tsx` | — | · | — | 68 | · | ✅ |
-| `/register` | `marketing/register/pages/RegisterPage.tsx` | — | · | ✓ | 457 | · | ✅ |
-| `/register/referral` | `marketing/register/pages/RegisterPage.tsx` | — | · | ✓ | 457 | · | ✅ |
+| `/register` | `marketing/register/pages/RegisterPage.tsx` | — | · | ✓ | 573 | · | ✅ |
+| `/register/referral` | `marketing/register/pages/RegisterPage.tsx` | — | · | ✓ | 573 | · | ✅ |
 | `/reset-password` | `auth/reset-password/pages/ResetPasswordPage.tsx` | — | ✓ | ✓ | 152 | · | ✅ |
 | `/status` | `marketing/status/pages/StatusPage.tsx` | — | · | ✓ | 171 | · | ✅ |
 | `/terms` | `marketing/legal/pages/LegalPage.tsx` | — | · | — | 68 | · | ✅ |

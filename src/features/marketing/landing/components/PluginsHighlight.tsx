@@ -26,15 +26,11 @@ export function PluginsHighlight({ plugins }: PluginsHighlightProps) {
           </h3>
           <p className="mt-3 text-base text-white/60">{t('marketing.sections.plugins.desc')}</p>
         </div>
-        <Link href="/plugins">
-          <Button
-            variant="outline"
-            className="h-10 border-white/15 bg-transparent px-5 text-sm text-white hover:bg-white/5"
-          >
+        <Button variant="outline"
+            className="h-10 border-white/15 bg-transparent px-5 text-sm text-white hover:bg-white/5" render={<Link href="/plugins" />}>
             {t('marketing.sections.plugins.browseAll')}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-        </Link>
       </div>
 
       <ul className="mt-12 divide-y divide-white/10 border-y border-white/10">
@@ -45,17 +41,20 @@ export function PluginsHighlight({ plugins }: PluginsHighlightProps) {
                 <h3 className="font-landing-display text-base font-semibold text-white">
                   {plugin.name}
                 </h3>
-                <span className="text-[11px] text-white/60">{plugin.category}</span>
+                <span className="text-xs text-white/60">{plugin.category}</span>
               </div>
               <p className="mt-1 max-w-xl text-sm text-white/55">
-                {plugin.desc ?? 'Modular add-on extending your core ISP platform.'}
+                {plugin.desc ??
+                  t('marketing.landing.plugins.fallbackDesc', 'Modular add-on extending your core ISP platform.')}
               </p>
             </div>
             <div className="flex items-center gap-4 text-sm">
               <span className="font-mono text-white/80 tabular-nums">
                 {plugin.priceBdt === 0
                   ? t('common.free')
-                  : `${formatBdtWithSymbol(plugin.priceBdt)}/mo`}
+                  : t('marketing.landing.plugins.pricePerMonth', '{price}/mo', {
+                      price: formatBdtWithSymbol(plugin.priceBdt),
+                    })}
               </span>
               <Link href="/plugins" className="text-landing-accent text-xs hover:underline">
                 {t('marketing.sections.plugins.details')}

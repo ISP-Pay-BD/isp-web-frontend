@@ -81,5 +81,18 @@
   "validation": {
     "enter_your_name": "আপনার নাম লিখুন",
     "enter_a_valid_bd_mobile_number_e_g_017xxxxxxxx": "সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন (যেমন 017XXXXXXXX)"
+  },
+  "admin": {
+    "support": {
+      "filter": {
+        "byStatus": "অবস্থা অনুযায়ী ফিল্টার",
+        "byPriority": "অগ্রাধিকার অনুযায়ী ফিল্টার",
+        "byRating": "রেটিং অনুযায়ী ফিল্টার"
+      },
+      "ticketStatus": "টিকেটের অবস্থা"
+    }
+  },
+  "common": {
+    "skipToContent": "মূল বিষয়বস্তুতে যান"
   }
 }

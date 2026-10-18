@@ -2,7 +2,7 @@
 
 Terms the translators flagged as uncertain, with every message that uses them. Reviewer: mark each term **OK** or write the preferred wording; the replacement can then be applied with a search/replace over `src/i18n/messages/bn/`.
 
-Generated from the message files on 2026-10-18. Terms with no hits are omitted.
+Generated from the message files on 2026-10-18. Terms with no hits are omitted. Two product claims to confirm are not wording but facts: the footer line "ব্যাংক-গ্রেড ২৫৬-বিট SSL · BTRC-সম্মত লগিং" repeats an English marketing claim, and the contact office hours.
 
 ## বরাদ্দকৃত  — 7 message(s)
 
@@ -25,7 +25,7 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.hr.status.deducted` | কর্তিত |
 | ☐ |  | `employee.common.status.deducted` | কর্তিত |
 
-## কর্তন  — 12 message(s)
+## কর্তন  — 13 message(s)
 
 | OK? | Preferred wording | Key | Current text |
 |---|---|---|---|
@@ -35,9 +35,9 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.pop.transactions.debitOutflow` | ডেবিট কর্তন |
 | ☐ |  | `admin.pop.transactions.outflows` | কর্তন |
 | ☐ |  | `admin.pop.transactions.settlementOutflows` | নিষ্পত্তি কর্তন |
+| ☐ |  | `marketing.pricing.totalEstimated` | মোট আনুমানিক মাসিক কর্তন |
 | ☐ |  | `admin.hr.advance.colDeductMonth` | কর্তনের মাস |
-| ☐ |  | `admin.hr.advance.subtitle` | স্টাফের অগ্রিমের অনুরোধ যাচাই করুন, জরুরি অগ্রিম বেতন দিন এবং কর্তনের সময়সূচি ঠিক করুন। |
-| | | … and 4 more | |
+| | | … and 5 more | |
 
 ## পেরোল  — 4 message(s)
 
@@ -62,7 +62,7 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.accounting.balanceSheet.totalLE` | মোট দায় ও মূলধন |
 | | | … and 1 more | |
 
-## দায়  — 43 message(s)
+## দায়  — 44 message(s)
 
 | OK? | Preferred wording | Key | Current text |
 |---|---|---|---|
@@ -74,7 +74,7 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.ops.invoices.kpiRate` | আদায়ের হার |
 | ☐ |  | `platform.metering.page.subtitle` | {period}-এর টেন্যান্টভিত্তিক ব্যবহার: কাস্টমার, রিসেলার, রাউটার, SMS ও আদায় করা কাস্টমার পেমেন্ট |
 | ☐ |  | `admin.ops.leads.colOwner` | সেলস দায়িত্বপ্রাপ্ত |
-| | | … and 35 more | |
+| | | … and 36 more | |
 
 ## রাজস্ব  — 4 message(s)
 
@@ -227,17 +227,19 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 |---|---|---|---|
 | ☐ |  | `admin.ops.noc.kpiUnreachable` | নাগালের বাইরে |
 
-## জরুরি  — 7 message(s)
+## জরুরি  — 9 message(s)
 
 | OK? | Preferred wording | Key | Current text |
 |---|---|---|---|
+| ☐ |  | `marketing.landing.contact.phoneNoc` | জরুরি NOC |
+| ☐ |  | `marketing.landing.contact.hoursFriday` | শুক্রবার: বন্ধ (জরুরি স্বয়ংক্রিয় লাইন চালু থাকে) |
 | ☐ |  | `admin.hr.advance.subtitle` | স্টাফের অগ্রিমের অনুরোধ যাচাই করুন, জরুরি অগ্রিম বেতন দিন এবং কর্তনের সময়সূচি ঠিক করুন। |
 | ☐ |  | `admin.ops.noc.kpiOpenHint` | {critical}টি জরুরি · {live}টি রক্ষণাবেক্ষণ চলছে · {upcoming}টি আসন্ন |
 | ☐ |  | `admin.ops.noc.severity.critical` | জরুরি |
 | ☐ |  | `platform.sla.page.postureCritical` | জরুরি |
 | ☐ |  | `customer.dashboard.supportTitle` | জরুরি সাপোর্ট |
 | ☐ |  | `employee.advanceSalary.emptyHint` | জরুরি প্রয়োজন বা খরচের জন্য অগ্রিম বেতন লাগলে আবেদন জমা দিন। |
-| ☐ |  | `employee.jobs.priority.urgent` | জরুরি |
+| | | … and 1 more | |
 
 ## গুরুতর  — 2 message(s)
 
@@ -364,7 +366,7 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.auditLogs.colEntity` | এন্টিটি |
 | ☐ |  | `admin.auditLogs.searchPlaceholder` | অ্যাকশন, এন্টিটি, সম্পাদনকারী, IP বা বিবরণ দিয়ে খুঁজুন... |
 
-## রিকনসিলিয়েশন  — 9 message(s)
+## রিকনসিলিয়েশন  — 10 message(s)
 
 | OK? | Preferred wording | Key | Current text |
 |---|---|---|---|
@@ -376,7 +378,7 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `marketing.landing.integrations.nagad` | একই অটো-রিকনসিলিয়েশন, একই গতি |
 | ☐ |  | `marketing.landing.faq.subtitle` | ISP Pay BD-তে বিলিং, MikroTik সিঙ্ক, bKash/Nagad রিকনসিলিয়েশন আর রিসেলার পেআউট কীভাবে কাজ করে। |
 | ☐ |  | `auth.brand.loginIntro` | রিয়েল-টাইম MikroTik সিঙ্ক, bKash ও Nagad-এর স্বয়ংক্রিয় রিকনসিলিয়েশন, OLT টেলিমেট্রি এবং ফিল্ড স্টাফের লেজার — বাংলাদেশের অপারেটরদের জন্য তৈরি। |
-| | | … and 1 more | |
+| | | … and 2 more | |
 
 ## পুনঃসংযোগ  — 8 message(s)
 
@@ -441,3 +443,89 @@ Generated from the message files on 2026-10-18. Terms with no hits are omitted.
 | ☐ |  | `admin.userAccess.custom.emptyDesc` | কোনো ইউজারের জন্য কাস্টম ওভাররাইড সেট করা নেই। |
 | ☐ |  | `admin.userAccess.custom.colOverrides` | ওভাররাইড |
 | | | … and 5 more | |
+
+## পে-অ্যাজ-ইউ-গো  — 16 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `platform.admins.plan.paygLong` | পে-অ্যাজ-ইউ-গো (ওয়ালেট) |
+| ☐ |  | `platform.admins.billing.modePayg` | পে-অ্যাজ-ইউ-গো |
+| ☐ |  | `platform.admins.billing.changeHint` | বর্তমান পরিশোধিত মেয়াদ অপরিবর্তিত থাকবে। পে-অ্যাজ-ইউ-গো প্ল্যানে প্রতি সাইকেলে টেন্যান্টের ওয়ালেট থেকে বিল কাটা হয়; ফিক্সড প্যাকেজ ইনভয়েসের মাধ্যমে নবায়ন হয়। |
+| ☐ |  | `platform.admins.billing.switchPayg` | পে-অ্যাজ-ইউ-গো-তে পরিবর্তন করুন |
+| ☐ |  | `platform.admins.billing.noPaygPlan` | কোনো সক্রিয় পে-অ্যাজ-ইউ-গো প্ল্যান নেই। |
+| ☐ |  | `platform.admins.billing.confirmPayg` | এই টেন্যান্টকে পে-অ্যাজ-ইউ-গো-তে পরিবর্তন করবেন? |
+| ☐ |  | `platform.catalog.paygSwitched` | পে-অ্যাজ-ইউ-গো মোডে পরিবর্তন করা হয়েছে |
+| ☐ |  | `marketing.register.paygName` | পে-অ্যাজ-ইউ-গো |
+| | | … and 8 more | |
+
+## পে-অ্যাজ-ইউ-গ্রো  — 3 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.pages.pricing.subtitle` | ফিক্সড মাসিক টিয়ার বা পে-অ্যাজ-ইউ-গ্রো — কোনো per-seat ফাঁদ নেই, কোনো রাউটার লাইসেন্স ফি নেই। |
+| ☐ |  | `marketing.pricing.paygTab` | পে-অ্যাজ-ইউ-গ্রো ওয়ালেট |
+| ☐ |  | `marketing.pricing.paygEyebrow` | পে-অ্যাজ-ইউ-গ্রো |
+
+## মাসিক কর্তন  — 1 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.pricing.totalEstimated` | মোট আনুমানিক মাসিক কর্তন |
+
+## গ্রানুলার  — 2 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.sections.permissions.badge` | গ্রানুলার পারমিশন |
+| ☐ |  | `marketing.footer.links.granularPermissions` | গ্রানুলার পারমিশন |
+
+## ডেমো রিকোয়েস্ট  — 1 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.landing.contact.inquiryDemo` | ডেমো রিকোয়েস্ট |
+
+## সীমাহীন  — 7 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `platform.admins.packages.fieldCap` | কাস্টমারের সীমা (0 = সীমাহীন) |
+| ☐ |  | `admin.hotspot.users.dataLimitPlaceholder` | খালি রাখলে সীমাহীন |
+| ☐ |  | `admin.hotspot.packages.unlimited` | সীমাহীন |
+| ☐ |  | `marketing.pricing.comparison.unlimited` | সীমাহীন |
+| ☐ |  | `marketing.pricing.comparison.unlimitedSubscribers` | সীমাহীন সাবস্ক্রাইবার |
+| ☐ |  | `marketing.pricing.faq.limitsA` | না, কখনোই না। সব প্ল্যানেই সীমাহীন MikroTik রাউটার সংযোগ এবং সীমাহীন স্টাফ অ্যাকাউন্ট রয়েছে। |
+| ☐ |  | `admin.subscription.selfRecharge.unlimitedCustomers` | সীমাহীন কাস্টমার |
+
+## অনবোর্ডিং  — 2 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.pages.register.referralSubtitle` | আপনার রেফারেল কোড অনবোর্ডিং অগ্রাধিকার এবং বর্ধিত ট্রায়াল সাপোর্ট আনলক করে। |
+| ☐ |  | `marketing.register.helpTitle` | অনবোর্ডিংয়ে সাহায্য লাগবে? |
+
+## সেবা ব্যাহত  — 1 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.footer.statusOutage` | সেবা ব্যাহত হচ্ছে |
+
+## ব্যাংক-গ্রেড  — 1 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.footer.compliance` | ব্যাংক-গ্রেড ২৫৬-বিট SSL · BTRC-সম্মত লগিং · ISO স্ট্যান্ডার্ড |
+
+## সাবস্ক্রাইবার  — 36 message(s)
+
+| OK? | Preferred wording | Key | Current text |
+|---|---|---|---|
+| ☐ |  | `marketing.sections.tryIt.desc` | সম্পূর্ণ admin প্যানেল, রিসেলার কনসোল, এবং সাবস্ক্রাইবার অ্যাপ এক্সপ্লোর করুন। নিচের ক্রেডেনশিয়াল প্রি-কনফিগারড; শুধু সাইন ইন ক্লিক করুন। |
+| ☐ |  | `marketing.sections.ctaFinal.desc` | MikroTik সংযুক্ত করুন, bKash ও Nagad অটো-ম্যাচিং চালু করুন, এবং একটি অপারেটর প্যানেল থেকে পুরো সাবস্ক্রাইবার ট্রি বিল করুন। বেশিরভাগ টিম এক বিকেলে লাইভ হয়। |
+| ☐ |  | `marketing.sections.ctaFinal.bullet2` | ফ্রি সাবস্ক্রাইবার ও বিলিং মাইগ্রেশন |
+| ☐ |  | `marketing.pages.pricing.title` | আপনার সাবস্ক্রাইবার সংখ্যার সাথে স্কেল হয় এমন প্ল্যান |
+| ☐ |  | `marketing.pages.register.subtitle` | ১৪ দিন ফ্রি — MikroTik সংযুক্ত করুন, সাবস্ক্রাইবার ইমপোর্ট করুন, এবং আজই bKash রিকনসিলিয়েশন চালু করুন। |
+| ☐ |  | `marketing.landing.proof.subscribers` | সাবস্ক্রাইবারের বিল হচ্ছে |
+| ☐ |  | `shared.hierarchy.subscribers` | সাবস্ক্রাইবার |
+| ☐ |  | `shared.hierarchy.totalSubscribers` | মোট সাবস্ক্রাইবার |
+| | | … and 28 more | |

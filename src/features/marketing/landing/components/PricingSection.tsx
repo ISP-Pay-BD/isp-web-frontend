@@ -9,7 +9,7 @@ import { Reveal } from '@/components/motion/Reveal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useMotionSafe } from '@/lib/animations';
-import { useLocale } from '@/features/marketing/shared';
+import { useTranslations } from '@/features/marketing/shared';
 import { useMarketingPricing } from '@/features/marketing/pricing/hooks/use-marketing-pricing';
 
 interface PricingSectionProps {
@@ -22,19 +22,33 @@ const PAYG_SLIDER = { min: 50, max: 5000, step: 50, initial: 500 } as const;
 
 /** Plans and PAYG rates come from GET /api/v1/public/registration/plans. */
 export function PricingSection({ title, subtitle }: PricingSectionProps) {
-  const { locale, t } = useLocale();
+  const t = useTranslations();
   const { reduced } = useMotionSafe();
   const { data } = useMarketingPricing();
   const [model, setModel] = useState<'fixed' | 'payg'>('fixed');
   const [paygSubscribers, setPaygSubscribers] = useState<number>(PAYG_SLIDER.initial);
   const payg = data?.payg ?? null;
   const trialDays = data?.trialDays ?? 0;
+  const periodLabel = (period: string) => {
+    switch (period) {
+      case 'month':
+        return t('marketing.landing.pricing.periodMonth', 'mo');
+      case 'year':
+        return t('marketing.landing.pricing.periodYear', 'year');
+      case 'week':
+        return t('marketing.landing.pricing.periodWeek', 'week');
+      default:
+        return period;
+    }
+  };
   const plans = (data?.tiers ?? []).map((tier) => ({
     id: tier.id,
     name: tier.name,
     priceBdt: tier.priceBdt,
-    period: tier.period === 'month' ? 'mo' : tier.period,
-    customers: tier.customers ? `Up to ${formatCount(tier.customers)}` : 'Unlimited',
+    period: periodLabel(tier.period),
+    customers: tier.customers
+      ? t('marketing.landing.pricing.upTo', 'Up to {count}', { count: formatCount(tier.customers) })
+      : t('marketing.pricing.comparison.unlimited', 'Unlimited'),
     features: tier.features,
     highlighted: false,
   }));
@@ -45,10 +59,19 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
   const resolvedTitle = title ?? t('marketing.pages.pricing.title');
   const resolvedSubtitle =
     subtitle ??
-    (locale === 'bn' ? t('marketing.pages.pricing.subtitle') : null) ??
     (payg
-      ? `Fixed monthly plans for predictability, or pay-as-you-go at ${formatBdtWithSymbol(payg.baseFeeBdt)} base plus ${formatBdtWithSymbol(payg.pricePerCustomerBdt)} per active subscriber. No admin seat fees. No per-router licenses.`
-      : 'Fixed monthly plans for predictability. No admin seat fees. No per-router licenses.');
+      ? t(
+          'marketing.landing.pricing.subtitlePayg',
+          'Fixed monthly plans for predictability, or pay-as-you-go at {base} base plus {rate} per active subscriber. No admin seat fees. No per-router licenses.',
+          {
+            base: formatBdtWithSymbol(payg.baseFeeBdt),
+            rate: formatBdtWithSymbol(payg.pricePerCustomerBdt),
+          },
+        )
+      : t(
+          'marketing.landing.pricing.subtitle',
+          'Fixed monthly plans for predictability. No admin seat fees. No per-router licenses.',
+        ));
 
   return (
     <section
@@ -81,7 +104,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                 />
               )}
               <Calendar size={15} className="relative z-10" />
-              <span className="relative z-10">Fixed Monthly</span>
+              <span className="relative z-10">{t('marketing.landing.pricing.fixedTab', 'Fixed Monthly')}</span>
             </button>
             <button
               type="button"
@@ -99,7 +122,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                 />
               )}
               <Wallet size={15} className="relative z-10" />
-              <span className="relative z-10">Pay-As-You-Go</span>
+              <span className="relative z-10">{t('marketing.landing.pricing.paygTab', 'Pay-As-You-Go')}</span>
             </button>
           </div>
         </Reveal>
@@ -132,8 +155,8 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                               {plan.name}
                             </h3>
                             {plan.highlighted && (
-                              <span className="border-landing-cta/30 bg-landing-cta/15 text-landing-accent rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
-                                Popular
+                              <span className="border-landing-cta/30 bg-landing-cta/15 text-landing-accent rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wider uppercase">
+                                {t('marketing.landing.pricing.popular', 'Popular')}
                               </span>
                             )}
                           </div>
@@ -165,7 +188,9 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                             )}
                           >
                             <span className="flex-1 text-center">
-                              {trialDays > 0 ? 'Start Free Trial' : 'Get Started'}
+                              {trialDays > 0
+                                ? t('marketing.pricing.comparison.startFreeTrial', 'Start Free Trial')
+                                : t('marketing.pricing.comparison.getStarted', 'Get Started')}
                             </span>
                             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 group-hover/btn:scale-105">
                               ↗
@@ -183,19 +208,24 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                 <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                   <div>
                     <h4 className="font-landing-display text-base font-semibold text-white">
-                      Need custom add-ons or burst capacity?
+                      {t('marketing.landing.pricing.addonsTitle', 'Need custom add-ons or burst capacity?')}
                     </h4>
                     <p className="mt-1 text-xs text-white/60">
                       {payg?.addons.length
-                        ? `Enable ${payg.addons.map((a) => `${a.name} (${formatBdtWithSymbol(a.priceBdt)})`).join(', ')} on any plan.`
-                        : 'Browse the add-on catalogue to extend any plan.'}
+                        ? t('marketing.landing.pricing.addonsEnable', 'Enable {list} on any plan.', {
+                            list: payg.addons.map((a) => `${a.name} (${formatBdtWithSymbol(a.priceBdt)})`).join(', '),
+                          })
+                        : t(
+                            'marketing.landing.pricing.addonsBrowseHint',
+                            'Browse the add-on catalogue to extend any plan.',
+                          )}
                     </p>
                   </div>
                   <Link
                     href="/plugins"
                     className="text-landing-accent inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold hover:underline"
                   >
-                    <span>Browse all add-ons</span>
+                    <span>{t('marketing.landing.pricing.addonsBrowse', 'Browse all add-ons')}</span>
                     <span>→</span>
                   </Link>
                 </div>
@@ -213,15 +243,17 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
               <div className="rounded-[2rem] bg-white/[0.03] p-1.5 ring-1 ring-white/10 backdrop-blur-xl transition duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 <div className="bg-landing-panel rounded-[calc(2rem-0.375rem)] p-8 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
                   <h3 className="font-landing-display text-2xl font-semibold text-white">
-                    Pay only for active subscribers
+                    {t('marketing.landing.pricing.paygTitle', 'Pay only for active subscribers')}
                   </h3>
                   <p className="mt-2 text-sm text-white/55">
-                    {formatBdtWithSymbol(payg.baseFeeBdt)}/mo base +{' '}
-                    {formatBdtWithSymbol(payg.pricePerCustomerBdt)} per subscriber.
+                    {t('marketing.landing.pricing.paygRates', '{base}/mo base + {rate} per subscriber.', {
+                      base: formatBdtWithSymbol(payg.baseFeeBdt),
+                      rate: formatBdtWithSymbol(payg.pricePerCustomerBdt),
+                    })}
                   </p>
                   <div className="mt-8 space-y-4">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-white/60">Subscribers</span>
+                      <span className="text-white/60">{t('marketing.pricing.comparison.subscribers', 'Subscribers')}</span>
                       <span className="font-mono text-xl font-semibold text-white">
                         {formatCount(paygSubscribers)}
                       </span>
@@ -237,12 +269,15 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                     />
                   </div>
                   <div className="mt-8 border-t border-white/[0.08] pt-6">
-                    <p className="font-mono text-[11px] tracking-wider text-white/60 uppercase">
-                      Estimated monthly
+                    <p className="font-mono text-xs tracking-wider text-white/60 uppercase">
+                      {t('marketing.landing.pricing.estimated', 'Estimated monthly')}
                     </p>
                     <p className="font-landing-display mt-1 text-3xl font-semibold text-white">
                       {formatBdtWithSymbol(paygTotal)}
-                      <span className="font-mono text-sm font-normal text-white/60"> / mo</span>
+                      <span className="font-mono text-sm font-normal text-white/60">
+                        {' '}
+                        / {periodLabel('month')}
+                      </span>
                     </p>
                   </div>
                   <div className="mt-7">
@@ -251,7 +286,9 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                       render={<Link href="/register" />}
                       className="group/btn bg-landing-cta hover:bg-landing-cta-hover relative h-12 w-full overflow-hidden rounded-full pr-2 pl-6 text-sm font-semibold text-white shadow-[0_0_24px_rgba(247,88,3,0.3)] transition duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_36px_rgba(247,88,3,0.45)] active:scale-[0.98]"
                     >
-                      <span className="flex-1 text-center">Get started with PAYG</span>
+                      <span className="flex-1 text-center">
+                        {t('marketing.landing.pricing.paygCta', 'Get started with PAYG')}
+                      </span>
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 group-hover/btn:scale-105">
                         ↗
                       </span>
