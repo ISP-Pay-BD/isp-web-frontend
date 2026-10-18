@@ -47,6 +47,8 @@
 | [11-I18N.md](./11-I18N.md) | English + Bengali | Copy & locale |
 | [12-AI-CODING-RULES.md](./12-AI-CODING-RULES.md) | AI agent rules | Every coding session |
 | [13-STRICT-AGENT-MANDATE.md](./13-STRICT-AGENT-MANDATE.md) | Non-negotiable mandate | Every session |
+| [14-ISP-FEATURE-CATALOG.md](./14-ISP-FEATURE-CATALOG.md) | ISP Feature Catalog | Architecture & features |
+| [15-ANIMATION-AND-UX-ROADMAP.md](./15-ANIMATION-AND-UX-ROADMAP.md) | **Animation & UX Motion Roadmap** | UI/UX motion & delight |
 
 ## Reference backend (read-only)
 
