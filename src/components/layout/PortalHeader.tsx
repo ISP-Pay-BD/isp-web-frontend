@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuthHydrated } from '@/hooks/use-auth-hydrated';
+import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { CommandPalette } from '@/features/shared/command-palette';
 import { toast } from 'sonner';
 
@@ -53,6 +54,14 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
   useGlobalShortcuts({ enabled: portal === 'admin', onHelp: openShortcuts });
+  const applyThemeCustomizerStyles = useThemeCustomizerStore((s) => s.applyDomStyles);
+
+  // Re-apply the saved brand color/radius/density on every full load — the
+  // customizer dialog only applies them while it's mounted, so without this
+  // a refresh silently reverted the picked color back to the default orange.
+  useEffect(() => {
+    applyThemeCustomizerStyles();
+  }, [applyThemeCustomizerStyles]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

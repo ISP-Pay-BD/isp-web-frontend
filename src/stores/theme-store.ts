@@ -90,6 +90,14 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
         const state = get();
         const root = document.documentElement;
 
+        // Apply brand color — this was the missing piece: presetId/primaryColor
+        // were saved to the store, but nothing wrote them to the CSS variables
+        // bg-primary/text-primary etc. actually read, so picking a preset never
+        // changed anything on screen. Mirrors applyTenantTheme()'s variable set.
+        root.style.setProperty('--primary', state.primaryColor);
+        root.style.setProperty('--sidebar-primary', state.primaryColor);
+        root.style.setProperty('--ring', state.primaryColor);
+
         // Apply radius
         root.style.setProperty('--radius', `${state.radius / 16}rem`);
 
