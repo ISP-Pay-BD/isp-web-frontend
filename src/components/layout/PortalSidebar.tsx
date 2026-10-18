@@ -29,7 +29,7 @@ import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
-import { createElement, useEffect, useMemo, useState, useCallback } from 'react';
+import { createElement, useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNavIcon } from '@/features/shared/command-palette/nav-icons';
@@ -63,18 +63,6 @@ function pickActiveHref(items: NavItem[], path: string): string | null {
   return best;
 }
 
-const OPEN_SECTIONS_KEY = 'ipb_nav_open_sections';
-
-function readOpenSections(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(OPEN_SECTIONS_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
-  } catch {
-    return [];
-  }
-}
 
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
   const t = useTranslations();
@@ -248,30 +236,6 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   }, [filtered, portal]);
 
   const activeHref = useMemo(() => pickActiveHref(items, pathname), [items, pathname]);
-  const activeSection = useMemo(
-    () => sections.find(([, list]) => list.some((it) => pickActiveHref([it], pathname) === activeHref))?.[0] ?? null,
-    [sections, pathname, activeHref],
-  );
-
-  // Groups can be folded; the one holding the current page is always open and the choice is remembered.
-  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(['Overview', ...readOpenSections()]));
-  useEffect(() => {
-    if (activeSection) setOpenSections((prev) => (prev.has(activeSection) ? prev : new Set(prev).add(activeSection)));
-  }, [activeSection]);
-  const toggleSection = useCallback((name: string) => {
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      try {
-        localStorage.setItem(OPEN_SECTIONS_KEY, JSON.stringify([...next]));
-      } catch {
-        /* storage unavailable */
-      }
-      return next;
-    });
-  }, []);
-  const foldable = sections.length > 3;
 
   const showNavSkeleton = !hydrated;
 
@@ -347,7 +311,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <TenantThemeSync enabled={hydrated && isAdminPortal} />
             {pinnedItems.length > 0 && !query.trim() && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-muted-foreground/80 px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-[0.08em]">
+                <SidebarGroupLabel className="text-muted-foreground/60 px-3 pt-3 pb-1 text-xs font-medium tracking-normal select-none">
                   {t('common.sidebar.pinned', 'Pinned')}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -358,33 +322,18 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
               </SidebarGroup>
             )}
             {sections.map(([section, sectionItems], idx) => {
-              const open = !foldable || isCollapsed || Boolean(query.trim()) || openSections.has(section);
               const sectionLabel = t(`nav.section.${sectionSlug(section)}`, section);
               return (
                 <SidebarGroup key={section}>
                   {idx > 0 && <div className="border-sidebar-border/30 mx-3 my-1 border-t" />}
-                  {foldable && !isCollapsed ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(section)}
-                      aria-expanded={open}
-                      className="text-muted-foreground/70 hover:text-foreground flex w-full items-center justify-between px-3 pt-3 pb-1 text-xs font-semibold tracking-[0.08em] uppercase transition-colors"
-                    >
-                      <span>{sectionLabel}</span>
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} aria-hidden />
-                    </button>
-                  ) : (
-                    <SidebarGroupLabel className="text-muted-foreground/80 px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-[0.08em]">
-                      {sectionLabel}
-                    </SidebarGroupLabel>
-                  )}
-                  {open ? (
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        <NavTree items={sectionItems} currentPath={activeHref ?? pathname} />
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  ) : null}
+                  <SidebarGroupLabel className="text-muted-foreground/60 px-3 pt-3.5 pb-1 text-xs font-medium tracking-normal select-none">
+                    {sectionLabel}
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <NavTree items={sectionItems} currentPath={activeHref ?? pathname} />
+                    </SidebarMenu>
+                  </SidebarGroupContent>
                 </SidebarGroup>
               );
             })}
