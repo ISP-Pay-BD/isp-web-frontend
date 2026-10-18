@@ -44,12 +44,20 @@ export function useSaveTenantTheme() {
 
 const FONT_SIZES: Record<TenantTheme['fontScale'], string> = { sm: '15px', md: '', lg: '17px' };
 
+/** Near-white app token (see --primary-foreground in globals.css) — always used for text on a primary-colored surface. */
+const PRIMARY_FOREGROUND = 'oklch(0.99 0.005 80)';
+
 /** Push a theme into the CSS variables / attributes the design system reads. */
 export function applyTenantTheme(theme: TenantTheme | null) {
   if (typeof document === 'undefined' || !theme) return;
   const root = document.documentElement;
+  // Same unconditional treatment as the quick theme-store customizer, for
+  // every preset including Default — primary-colored text/buttons always
+  // use the app's near-white token, per product decision.
   root.style.setProperty('--primary', theme.primary);
+  root.style.setProperty('--primary-foreground', PRIMARY_FOREGROUND);
   root.style.setProperty('--sidebar-primary', theme.primary);
+  root.style.setProperty('--sidebar-primary-foreground', PRIMARY_FOREGROUND);
   root.style.setProperty('--ring', theme.primary);
   root.style.setProperty('--radius', `${theme.radius / 16}rem`);
   root.style.fontSize = FONT_SIZES[theme.fontScale] ?? '';

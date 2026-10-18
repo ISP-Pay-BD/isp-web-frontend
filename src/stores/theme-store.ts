@@ -4,6 +4,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { THEME_PRESETS as themePresetsData } from '@/features/admin/theme-studio/presets';
 
+/** Near-white app token (see --primary-foreground in globals.css) — always used for text on a primary-colored surface. */
+const PRIMARY_FOREGROUND = 'oklch(0.99 0.005 80)';
+
 interface ThemeCustomizerState {
   presetId: string;
   primaryColor: string;
@@ -94,8 +97,14 @@ export const useThemeCustomizerStore = create<ThemeCustomizerState>()(
         // were saved to the store, but nothing wrote them to the CSS variables
         // bg-primary/text-primary etc. actually read, so picking a preset never
         // changed anything on screen. Mirrors applyTenantTheme()'s variable set.
+        // Every preset, including Default, gets the same treatment so the
+        // picker behaves consistently; primary-colored text/buttons always
+        // use the app's near-white token, per product decision — not computed
+        // per-color contrast.
         root.style.setProperty('--primary', state.primaryColor);
+        root.style.setProperty('--primary-foreground', PRIMARY_FOREGROUND);
         root.style.setProperty('--sidebar-primary', state.primaryColor);
+        root.style.setProperty('--sidebar-primary-foreground', PRIMARY_FOREGROUND);
         root.style.setProperty('--ring', state.primaryColor);
 
         // Apply radius
