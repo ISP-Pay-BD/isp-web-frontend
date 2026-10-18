@@ -23,6 +23,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
+import { toggleThemeWithTransition } from '@/components/layout/ThemeToggle';
 import { useFilteredNav } from '@/hooks/use-filtered-nav';
 import { canSee } from '@/lib/permissions/can';
 import { useAuthStore } from '@/stores/auth-store';
@@ -165,14 +166,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             value="Toggle theme dark light mode appearance"
             onSelect={() => {
               handleAction(() => {
-                setTheme(theme === 'dark' ? 'light' : 'dark');
-                toast.success(`Theme switched to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+                const next = theme === 'dark' ? 'light' : 'dark';
+                toggleThemeWithTransition(next, setTheme);
+                toast.success(`Theme switched to ${next} mode`);
               });
             }}
-            onClick={() => {
+            onClick={(e) => {
               handleAction(() => {
-                setTheme(theme === 'dark' ? 'light' : 'dark');
-                toast.success(`Theme switched to ${theme === 'dark' ? 'light' : 'dark'} mode`);
+                const next = theme === 'dark' ? 'light' : 'dark';
+                toggleThemeWithTransition(next, setTheme, e);
+                toast.success(`Theme switched to ${next} mode`);
               });
             }}
             className="cursor-pointer"

@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  Moon,
-  Sun,
   Command,
   LogOut,
   User,
@@ -15,13 +13,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ThemeCustomizerModal } from './ThemeCustomizerModal';
+import { ThemeToggle } from './ThemeToggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +39,6 @@ interface PortalHeaderProps {
 
 export function PortalHeader({ portal }: PortalHeaderProps) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const hydrated = useAuthHydrated();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -156,16 +153,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           </Button>
 
           {/* Theme Toggle Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-8 w-8 rounded-lg border border-transparent transition-colors hover:border-border"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label="Toggle theme"
-          >
-            <Sun className="h-4 w-4 scale-100 rotate-0 text-amber-500 transition dark:scale-0 dark:-rotate-90" />
-            <Moon className="absolute h-4 w-4 scale-0 rotate-90 text-muted-foreground transition dark:scale-100 dark:rotate-0" />
-          </Button>
+          <ThemeToggle />
 
           {/* User Account Dropdown Menu */}
           {!hydrated ? (

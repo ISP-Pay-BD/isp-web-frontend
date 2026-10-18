@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toggleThemeWithTransition } from './ThemeToggle';
 import { THEME_PRESETS as themePresetsData } from '@/features/admin/theme-studio/presets';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { toast } from 'sonner';
@@ -112,7 +113,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setTheme('light')}
+                onClick={(e) => toggleThemeWithTransition('light', setTheme, e)}
                 className={cn(
                   'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition text-xs font-semibold',
                   theme === 'light'
@@ -125,7 +126,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
               </button>
               <button
                 type="button"
-                onClick={() => setTheme('system')}
+                onClick={(e) => toggleThemeWithTransition('dark', setTheme, e)}
                 className={cn(
                   'flex items-center justify-center gap-2 p-2.5 rounded-xl border transition text-xs font-semibold',
                   theme === 'dark'
