@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Search } from 'lucide-react';
+import { ChevronDown, LogOut, Pin, Search, Settings2 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -28,14 +28,14 @@ import { adminSectionOrder } from '@/config/navigation/admin';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import Image from 'next/image';
-import { ChevronDown } from 'lucide-react';
 import { createElement, useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNavIcon } from '@/features/shared/command-palette/nav-icons';
-import { useSidebarPins } from '@/features/admin/sidebar-pins/hooks/use-sidebar-pins';
+import { useSidebarPins, useToggleSidebarPin } from '@/features/admin/sidebar-pins/hooks/use-sidebar-pins';
 import { TenantThemeSync } from '@/features/admin/theme-studio/hooks/use-theme-studio';
 import { useTranslations } from '@/i18n/locale-context';
+import { cn } from '@/lib/utils';
 
 interface PortalSidebarProps {
   portal: 'admin' | 'customer' | 'platform' | 'employee';
@@ -64,7 +64,15 @@ function pickActiveHref(items: NavItem[], path: string): string | null {
 }
 
 
-function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
+interface NavTreeProps {
+  items: NavItem[];
+  currentPath: string;
+  isPinnable?: boolean;
+  pinnedHrefs?: Set<string>;
+  onTogglePin?: (item: { href: string; label: string; icon?: string; pinKey?: string }) => void;
+}
+
+function NavTree({ items, currentPath, isPinnable, pinnedHrefs, onTogglePin }: NavTreeProps) {
   const t = useTranslations();
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === 'collapsed';
@@ -94,6 +102,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
           item.href === currentPath || (item.children?.some((c) => c.href === currentPath) ?? false);
         const isExpanded = expandedIds.has(item.id);
         const isLeafActive = item.href === currentPath;
+        const isLeafPinned = Boolean(item.href && pinnedHrefs?.has(item.href));
         const itemLabel = t(`nav.${item.id}`, item.label);
 
         return item.children?.length ? (
@@ -128,14 +137,15 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               <SidebarMenuSub className="border-sidebar-border/30 my-0.5 ml-4 space-y-px border-l-2 py-1 pl-3">
                 {item.children.map((child: NavItem) => {
                   const isChildActive = child.href === currentPath;
+                  const isChildPinned = Boolean(child.href && pinnedHrefs?.has(child.href));
                   return (
-                    <SidebarMenuSubItem key={child.id}>
+                    <SidebarMenuSubItem key={child.id} className="group/sub relative">
                       <SidebarMenuSubButton
                         isActive={isChildActive}
                         className={
                           isChildActive
-                            ? 'ipb-sidebar-sub-button active-child relative rounded-md py-[7px] pl-3 text-[13px] font-semibold text-primary'
-                            : 'ipb-sidebar-sub-button rounded-md py-[7px] pl-3 text-[13px] text-sidebar-foreground/55 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/85'
+                            ? 'ipb-sidebar-sub-button active-child relative rounded-md py-[7px] pl-3 pr-7 text-xs font-semibold text-primary'
+                            : 'ipb-sidebar-sub-button rounded-md py-[7px] pl-3 pr-7 text-xs text-sidebar-foreground/55 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/85'
                         }
                         render={<Link href={child.href ?? '#'} />}
                       >
@@ -147,6 +157,32 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                         )}
                         <span className="truncate">{t(`nav.${child.id}`, child.label)}</span>
                       </SidebarMenuSubButton>
+
+                      {isPinnable && child.href && !isCollapsed && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTogglePin?.({
+                              href: child.href!,
+                              label: child.label,
+                              icon: child.icon || item.icon,
+                              pinKey: child.id,
+                            });
+                          }}
+                          title={isChildPinned ? t('common.sidebar.unpin', 'Unpin from sidebar') : t('common.sidebar.pin', 'Pin to sidebar')}
+                          aria-label={isChildPinned ? t('common.sidebar.unpin', 'Unpin from sidebar') : t('common.sidebar.pin', 'Pin to sidebar')}
+                          className={cn(
+                            'absolute right-1.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded transition-colors',
+                            isChildPinned
+                              ? 'text-primary opacity-90 hover:text-destructive hover:bg-destructive/10'
+                              : 'text-muted-foreground/35 opacity-0 group-hover/sub:opacity-100 hover:text-primary hover:bg-sidebar-accent',
+                          )}
+                        >
+                          <Pin className={cn('h-3 w-3 transition-transform', isChildPinned ? 'fill-primary rotate-45' : 'hover:scale-110')} />
+                        </button>
+                      )}
                     </SidebarMenuSubItem>
                   );
                 })}
@@ -154,14 +190,14 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
             )}
           </SidebarMenuItem>
         ) : (
-          <SidebarMenuItem key={item.id}>
+          <SidebarMenuItem key={item.id} className="group/item relative">
             <SidebarMenuButton
               isActive={isLeafActive}
               tooltip={itemLabel}
               className={
                 isLeafActive
-                  ? 'ipb-sidebar-button active-leaf group relative rounded-lg py-5 font-semibold text-primary'
-                  : 'ipb-sidebar-button rounded-lg py-5 text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground'
+                  ? 'ipb-sidebar-button active-leaf group relative rounded-lg py-5 font-semibold text-primary pr-8'
+                  : 'ipb-sidebar-button rounded-lg py-5 text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground pr-8'
               }
               render={<Link href={item.href ?? '#'} />}
             >
@@ -174,11 +210,37 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
               <NavIcon name={item.icon} />
               <span className="truncate">{itemLabel}</span>
               {item.badge ? (
-                <span className="bg-primary/15 text-primary ml-auto rounded-md px-1.5 py-0.5 text-xs font-semibold dark:bg-primary/20">
+                <span className="bg-primary/15 text-primary ml-auto mr-1 rounded-md px-1.5 py-0.5 text-xs font-semibold dark:bg-primary/20">
                   {item.badge}
                 </span>
               ) : null}
             </SidebarMenuButton>
+
+            {isPinnable && item.href && !isCollapsed && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePin?.({
+                    href: item.href!,
+                    label: item.label,
+                    icon: item.icon,
+                    pinKey: item.id,
+                  });
+                }}
+                title={isLeafPinned ? t('common.sidebar.unpin', 'Unpin from sidebar') : t('common.sidebar.pin', 'Pin to sidebar')}
+                aria-label={isLeafPinned ? t('common.sidebar.unpin', 'Unpin from sidebar') : t('common.sidebar.pin', 'Pin to sidebar')}
+                className={cn(
+                  'absolute right-2 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-md transition-colors',
+                  isLeafPinned
+                    ? 'text-primary opacity-90 hover:text-destructive hover:bg-destructive/10'
+                    : 'text-muted-foreground/40 opacity-0 group-hover/item:opacity-100 hover:text-primary hover:bg-sidebar-accent/80',
+                )}
+              >
+                <Pin className={cn('h-3.5 w-3.5 transition-transform', isLeafPinned ? 'fill-primary rotate-45' : 'hover:scale-110')} />
+              </button>
+            )}
           </SidebarMenuItem>
         );
       })}
@@ -242,6 +304,32 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
   // Admin portal: the user's pinned shortcuts on top + the tenant's saved theme.
   const isAdminPortal = portal === 'admin' && (user?.role === 'admin' || user?.role === 'resellerAdmin');
   const pins = useSidebarPins(hydrated && portal === 'admin' && Boolean(user));
+  const togglePinMutation = useToggleSidebarPin();
+  const pinnedHrefs = useMemo(() => new Set((pins.data ?? []).map((p) => p.href)), [pins.data]);
+
+  const handleTogglePin = useCallback(
+    (item: { href: string; label: string; icon?: string; pinKey?: string }) => {
+      const isPinned = pinnedHrefs.has(item.href);
+      togglePinMutation.mutate(item, {
+        onSuccess: () => {
+          if (isPinned) {
+            toast.success(t('admin.sidebarPins.unpinned', 'Unpinned “{label}”', { label: item.label }));
+          } else {
+            toast.success(t('admin.sidebarPins.pinned', 'Pinned “{label}”', { label: item.label }));
+          }
+        },
+        onError: (err: unknown) => {
+          if (err instanceof Error && err.message === 'MAX_PINS_REACHED') {
+            toast.error(t('admin.sidebarPins.errMax', 'You can pin up to {max} shortcuts', { max: 12 }));
+          } else {
+            toast.error(t('admin.sidebarPins.loadFailed', 'Could not update pin'));
+          }
+        },
+      });
+    },
+    [pinnedHrefs, togglePinMutation, t],
+  );
+
   const navIdByHref = useMemo(() => {
     const map = new Map<string, string>();
     const visit = (item: NavItem) => {
@@ -311,12 +399,31 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <TenantThemeSync enabled={hydrated && isAdminPortal} />
             {pinnedItems.length > 0 && !query.trim() && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-muted-foreground/60 px-3 pt-3 pb-1 text-xs font-medium tracking-normal select-none">
-                  {t('common.sidebar.pinned', 'Pinned')}
-                </SidebarGroupLabel>
+                <div className="flex items-center justify-between px-3 pt-3 pb-1">
+                  <SidebarGroupLabel className="text-muted-foreground/60 p-0 text-xs font-medium tracking-normal select-none flex items-center gap-1.5">
+                    <Pin className="h-3 w-3 rotate-45 text-primary fill-primary" aria-hidden />
+                    <span>{t('common.sidebar.pinned', 'Pinned')}</span>
+                    <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-mono">
+                      {pinnedItems.length}
+                    </span>
+                  </SidebarGroupLabel>
+                  <Link
+                    href="/admin/sidebar-pins"
+                    title={t('common.sidebar.managePins', 'Manage pinned shortcuts')}
+                    className="text-muted-foreground/45 hover:text-primary transition-colors text-xs p-1 rounded hover:bg-sidebar-accent"
+                  >
+                    <Settings2 className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    <NavTree items={pinnedItems} currentPath={pathname} />
+                    <NavTree
+                      items={pinnedItems}
+                      currentPath={pathname}
+                      isPinnable={isAdminPortal}
+                      pinnedHrefs={pinnedHrefs}
+                      onTogglePin={handleTogglePin}
+                    />
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -331,7 +438,13 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      <NavTree items={sectionItems} currentPath={activeHref ?? pathname} />
+                      <NavTree
+                        items={sectionItems}
+                        currentPath={activeHref ?? pathname}
+                        isPinnable={isAdminPortal}
+                        pinnedHrefs={pinnedHrefs}
+                        onTogglePin={handleTogglePin}
+                      />
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
