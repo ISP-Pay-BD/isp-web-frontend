@@ -39,7 +39,7 @@ The test for every item: **does it make a real task faster, clearer or more rewa
 | **Push/SMS reminder with one-tap pay link** | Closes the loop with C1 | Backend reminder template + pay-link endpoint |
 | **Product analytics** (pay-button → paid funnel, time to record a payment, weekly active admins) | Without measurement there is no proof it is used more | Choose a tool (privacy-friendly, self-hosted if possible) |
 | **Final brand icon artwork** | The shipped PNGs are generated from the existing mark; replace them if the brand team supplies artwork | Design asset |
-| **Idempotent invoice creation (backend)** | The web now reuses an open invoice, but two devices can still race; the API should accept an idempotency key or return the open invoice | Backend change in `zapi` |
+| **Idempotent invoice creation (backend)** | Done on `isppaybd_isp` branch `fix/renew-invoice-idempotent`: a repeat renew returns the same pending invoice with the same number, and a per-customer MySQL lock stops two simultaneous calls creating two. Tested (Zapi suite 1,065 and App suite 288 pass) but **not yet merged or deployed**. Not changed: a month-keyed row is still reused for a *different* package even when the earlier one was paid — a legacy design worth a separate review | PR review + deploy |
 
 ## Honest limits of this pass
 
@@ -50,5 +50,5 @@ The test for every item: **does it make a real task faster, clearer or more rewa
 1. **A real phone.** The browser run emulates 390px and touch; it is not an Android/iOS device. Check the customer pay flow, the bottom nav (safe-area) and the install prompt on a physical phone.
 2. **Real data.** The stub returns a few rows per list. Long names, hundreds of rows, slow networks and server errors were not exercised end to end.
 3. **Bangla copy.** The wording was written by the implementers; a native speaker should review it — the terms to check are listed at the end of [06](06-BANGLA-I18N.md).
-4. **Backend:** invoice creation is not idempotent server-side (see *Next*); API error messages stay in English.
+4. **Backend:** the idempotent-renew fix is on a `zapi` branch awaiting review/deploy (see *Next*); API error messages stay in English.
 5. **Analytics:** none is wired up, so "do people use it more?" cannot be answered yet.

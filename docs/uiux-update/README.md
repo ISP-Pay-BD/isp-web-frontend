@@ -116,13 +116,13 @@ Effort: **S** < half a day · **M** 1–2 days · **L** 3+ days. The per-fix doc
 
 1. **Customer bottom nav (C2):** adopted Home · Pay · Wi-Fi · Support · More; Rewards moved into More.
 2. **Admin sidebar groups (A1):** adopted the nine groups; item names and permissions unchanged.
-3. **Pay = online checkout (C1):** shipped with a client-side double-tap guard. The zapi renew endpoint creates a payment record on every call (it only refuses when the month is already paid for the same package), so **ask the backend to reuse an open invoice** to make this fully safe.
+3. **Pay = online checkout (C1):** shipped with a client-side double-tap guard. The zapi renew endpoint creates a payment record on every call (it only refuses when the month is already paid for the same package), so the web reuses an open invoice itself. The backend fix (one invoice per customer per month, stable invoice number on a repeat call, per-customer lock against two simultaneous calls) is written and tested on `isppaybd_isp` branch `fix/renew-invoice-idempotent` — it still needs review, merge and deploy.
 4. **Admin Bangla (I4):** started as the "middle path" (daily-use screens only), then widened to every admin and platform screen. Protocol and product names stay in Latin script.
 
 ## Follow-ups that need a human
 
 - **Native-speaker review of the Bangla wording** (everything under `src/i18n/messages/bn/`). The terms the writers were least sure of are listed at the end of [06](06-BANGLA-I18N.md).
-- **Backend:** server-side idempotency for the renew call (the web now reuses an open invoice, but two devices can still race); a "connected since" field for router devices; a realtime channel if the live-feed idea (roadmap §3.1) is wanted.
+- **Backend:** merge and deploy `isppaybd_isp` branch `fix/renew-invoice-idempotent` (idempotent renew: same invoice on a repeat call, per-customer lock so two devices cannot create two invoices); a "connected since" field for router devices; a realtime channel if the live-feed idea (roadmap §3.1) is wanted.
 - **Real-device check.** The work was verified with `typecheck`, `lint`, the unit/architecture tests, a production build and a headless-Chrome crawl of 175 routes at 390px (English + Bangla, axe-core WCAG 2.x A/AA) against a *stub* API. It has not been run on a physical phone or against real data.
 - **PWA:** the manifest now ships 192/512/maskable PNG icons generated from the existing mark; swap in final brand artwork if the design team has it.
 - **Marketing pages** other than the landing page (`/pricing`, `/register`, `/contact`) got the contrast and label fixes from the crawl but were not redesigned.
