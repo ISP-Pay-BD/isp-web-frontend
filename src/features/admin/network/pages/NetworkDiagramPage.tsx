@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, type ReactNode } from 'react';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useAreaOptions } from '@/features/admin/customers/hooks/use-customers';
+import { Input } from '@/components/ui/input';
+import dynamic from 'next/dynamic';
 import { PageHeader } from '@/features/admin/shared';
-import { useNetworkTopology } from '../hooks/useNetwork';
-import type { TopologyOnu, TopologyPort } from '../types';
+import { useNetworkTopology, useNetworkNodes } from '../hooks/useNetwork';
+import { TopologyCanvas, type CanvasSelection } from '../components/TopologyCanvas';
+import type { TopologyOnu, MapNode } from '../types';
 import { useOltOptions, useSyncOlt } from '@/features/admin/olt/hooks/useOltDevices';
 import { parseBackendDate, rxBand } from '@/features/admin/olt/types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -12,12 +17,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Network, RefreshCw, ZoomIn, ZoomOut, Zap, Cpu, SignalHigh, ChevronRight, DownloadCloud } from 'lucide-react';
+import { Network, RefreshCw, Zap, Cpu, SignalHigh, ChevronRight, GitFork, MapIcon, Server, CheckCircle2, XCircle, Clock, Search, X, GitBranch, Router } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateTime } from '@/lib/format/date';
 import { formatCount } from '@/lib/format';
 import { useTranslations } from '@/i18n/locale-context';
+import Link from 'next/link';
+
+// leaflet is browser-only (touches window/document): load the shared map on the client only.
+const GeoMap = dynamic(() => import('@/components/shared/GeoMap').then((m) => m.GeoMap), {
+  ssr: false,
+  loading: () => <div className="h-[480px] animate-pulse rounded-xl bg-muted/60" />,
+});
+
+const isPlaced = (n: MapNode) => n.latitude !== null && n.longitude !== null;
 
 const NO_SPLITTER = 'No splitter assigned';
 
@@ -41,27 +54,156 @@ const RX_BAR: Record<ReturnType<typeof rxBand>, string> = {
 
 const portKey = (oltId: string, ponPort: string) => `${oltId}|${ponPort}`;
 
+/** Legacy "Splitter Layout" picker: keep the DB splitters, or auto-group each port's ONUs into 1×N splitters by ONU index. */
+const SPLITTER_LAYOUTS = ['direct', '1x2', '1x4', '1x8', '1x16'] as const;
+type SplitterLayout = (typeof SPLITTER_LAYOUTS)[number];
+const onuIndex = (onu: TopologyOnu) => Number.parseInt(onu.onuId.replace(/\D/g, ''), 10) || 1;
+
+/** Same rule as the web's renderTopology(): ONU n goes to Splitter-ceil(n / N). */
+function regroupSplitters(onus: TopologyOnu[], layout: Exclude<SplitterLayout, 'direct'>): Map<string, TopologyOnu[]> {
+  const size = Number(layout.split('x')[1]);
+  const groups = new Map<string, TopologyOnu[]>();
+  for (const onu of [...onus].sort((a, b) => onuIndex(a) - onuIndex(b))) {
+    const name = `Splitter-${String(Math.ceil(onuIndex(onu) / size)).padStart(2, '0')} (${layout})`;
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name)!.push(onu);
+  }
+  return groups;
+}
+
+/** Auto Refresh re-syncs the selected OLT on this cadence, like the web (60 s). */
+const AUTO_REFRESH_MS = 60_000;
+
+function StatCard({ icon, label, value, tone }: { icon: ReactNode; label: string; value: string; tone: string }) {
+  return (
+    <Card className="border-border/60 shadow-sm">
+      <CardContent className="flex items-center gap-3 p-4">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>{icon}</span>
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Inspector for OLT / PON port / splitter cards — counts and the online ratio, like the web page's sidebar. */
+function GroupDetails({ selection }: { selection: Exclude<CanvasSelection, { kind: 'onu' }> }) {
+  const t = useTranslations();
+  const total = selection.online + selection.offline;
+  const pct = total > 0 ? Math.round((selection.online / total) * 100) : 0;
+  const kindLabel =
+    selection.kind === 'olt'
+      ? t('admin.network.diagram.cardOlt', 'OLT')
+      : selection.kind === 'port'
+        ? t('admin.network.diagram.ponInterface', 'PON Interface')
+        : t('admin.network.diagram.splitter', 'Splitter');
+  const childLabel =
+    selection.kind === 'olt'
+      ? t('admin.network.diagram.cardPonPorts', 'PON Ports')
+      : selection.kind === 'port'
+        ? t('admin.network.diagram.cardOnus', 'ONUs')
+        : t('admin.network.diagram.cardUsers', 'Users');
+  const Icon = selection.kind === 'olt' ? Router : selection.kind === 'port' ? GitBranch : Zap;
+  const rows: { label: string; value: string; tone?: string }[] = [
+    ...(selection.parentTitle ? [{ label: t('admin.network.diagram.under', 'Under'), value: selection.parentTitle }] : []),
+    { label: childLabel, value: formatCount(selection.childCount) },
+    { label: t('status.online', 'Online'), value: formatCount(selection.online), tone: 'text-emerald-600 dark:text-emerald-400' },
+    { label: t('status.offline', 'Offline'), value: formatCount(selection.offline), tone: 'text-red-500' },
+    { label: t('admin.network.diagram.onlineRatio', 'Online ratio'), value: `${pct}%` },
+  ];
+  return (
+    <div className="flex min-h-0 flex-col">
+      <div className="flex items-center gap-3 border-b border-border/60 bg-muted/20 px-5 py-4 pr-12">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold text-foreground">{selection.title}</p>
+          <p className="text-xs text-muted-foreground">{kindLabel}</p>
+        </div>
+      </div>
+      <div className="divide-y divide-border/30 overflow-y-auto">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-2.5">
+            <span className="text-xs text-muted-foreground">{row.label}</span>
+            <span className={`truncate font-mono text-xs font-semibold ${row.tone ?? 'text-foreground'}`}>{row.value}</span>
+          </div>
+        ))}
+        <div className="space-y-1.5 px-5 py-4">
+          <p className="text-xs text-muted-foreground">{t('admin.network.diagram.health', 'Network health')}</p>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NetworkDiagramPage() {
   const t = useTranslations();
   const splitterLabel = (name: string) => (name === NO_SPLITTER ? t('admin.network.diagram.noSplitter', 'No splitter assigned') : name);
   const statusText = (status: string) => t(`status.${status.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, status);
   const [selectedOltId, setSelectedOltId] = useState<string>('all');
   const [selectedPonPort, setSelectedPonPort] = useState<string>('all');
-  const [selectedNode, setSelectedNode] = useState<TopologyOnu | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [selection, setSelection] = useState<CanvasSelection | null>(null);
+  const selectedNode: TopologyOnu | null = selection?.kind === 'onu' ? selection.onu : null;
+  const [viewMode, setViewMode] = useState<'diagram' | 'map'>('diagram');
+  const [zone, setZone] = useState<string>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebouncedValue(searchInput);
+  const [splitterLayout, setSplitterLayout] = useState<SplitterLayout>('direct');
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const oltQuery = useOltOptions();
-  const topoQuery = useNetworkTopology(selectedOltId, selectedPonPort);
+  const areasQuery = useAreaOptions();
+  const topoQuery = useNetworkTopology(selectedOltId, selectedPonPort, zone, search);
   const sync = useSyncOlt();
+  const nodesQuery = useNetworkNodes({ enabled: viewMode === 'map' });
+  const mapNodes = useMemo(() => (nodesQuery.data?.nodes ?? []).filter(isPlaced), [nodesQuery.data]);
+  const mapNodesById = useMemo(() => new Map(mapNodes.map((n) => [n.id, n])), [mapNodes]);
+  const mapMarkers = useMemo(
+    () =>
+      mapNodes.map((n) => ({
+        id: n.id,
+        latitude: n.latitude as number,
+        longitude: n.longitude as number,
+        color: n.color ?? '#e85a1a',
+        label: n.label,
+      })),
+    [mapNodes],
+  );
+  // Parent→child wiring edges, same idea as the dedicated Network Map page.
+  const mapLines = useMemo(
+    () =>
+      mapNodes
+        .filter((n) => n.parentId && mapNodesById.has(n.parentId))
+        .map((n) => {
+          const parent = mapNodesById.get(n.parentId as string)!;
+          return {
+            id: `${parent.id}-${n.id}`,
+            from: [parent.latitude as number, parent.longitude as number] as [number, number],
+            to: [n.latitude as number, n.longitude as number] as [number, number],
+            color: n.color ?? '#e85a1a',
+          };
+        }),
+    [mapNodes, mapNodesById],
+  );
 
   const olts = useMemo(() => oltQuery.data?.items ?? [], [oltQuery.data]);
   const selectedOlt = olts.find((o) => o.id === selectedOltId) ?? null;
   const allPorts = useMemo(() => topoQuery.data?.ponPorts ?? [], [topoQuery.data]);
   const leaves = useMemo(() => topoQuery.data?.items ?? [], [topoQuery.data]);
 
-  const ports = useMemo(
-    () => (selectedPonPort === 'all' ? allPorts : allPorts.filter((p) => p.ponPort === selectedPonPort)),
-    [allPorts, selectedPonPort],
-  );
+  const isFiltered = zone !== 'all' || search.trim() !== '';
+  const ports = useMemo(() => {
+    const byPort = selectedPonPort === 'all' ? allPorts : allPorts.filter((p) => p.ponPort === selectedPonPort);
+    if (!isFiltered) return byPort;
+    // Zone/search narrow the ONU leaves server-side; drop ports left with none.
+    const hit = new Set(leaves.map((l) => portKey(l.oltId, l.ponPort)));
+    return byPort.filter((p) => hit.has(portKey(p.oltId, p.ponPort)));
+  }, [allPorts, selectedPonPort, isFiltered, leaves]);
   const portNames = useMemo(() => Array.from(new Set(allPorts.map((p) => p.ponPort))), [allPorts]);
 
   const totalOnus = ports.reduce((s, p) => s + p.total, 0);
@@ -79,8 +221,12 @@ export function NetworkDiagramPage() {
       if (!splitters.has(splitter)) splitters.set(splitter, []);
       splitters.get(splitter)!.push(item);
     }
+    if (splitterLayout === 'direct') return map;
+    for (const [key, splitters] of map) {
+      map.set(key, regroupSplitters(Array.from(splitters.values()).flat(), splitterLayout));
+    }
     return map;
-  }, [leaves]);
+  }, [leaves, splitterLayout]);
 
   const isRefreshing = (topoQuery.isFetching || oltQuery.isFetching) && !topoQuery.isLoading;
   const handleRefresh = () => {
@@ -88,18 +234,33 @@ export function NetworkDiagramPage() {
     void topoQuery.refetch();
   };
 
-  const handleSync = () => {
-    if (!selectedOlt) return;
+  // "Refresh Sync": pull fresh ONUs from the selected OLT; with "All OLTs" there's nothing to sync, so just reload.
+  const canSync = Boolean(selectedOlt?.syncSupported);
+  const handleSync = (quiet = false) => {
+    if (!selectedOlt || !canSync) {
+      handleRefresh();
+      return;
+    }
     sync.mutate(selectedOlt.id, {
-      onSuccess: (res) =>
-        toast.success(t('admin.network.diagram.synced', 'Synchronized {n} ONUs from {olt}.', { n: formatCount(res?.synced ?? 0), olt: selectedOlt.name })),
+      onSuccess: (res) => {
+        if (!quiet) {
+          toast.success(t('admin.network.diagram.synced', 'Synchronized {n} ONUs from {olt}.', { n: formatCount(res?.synced ?? 0), olt: selectedOlt.name }));
+        }
+      },
     });
   };
 
-  const focusPort = (port: TopologyPort) => {
-    setSelectedOltId(port.oltId);
-    setSelectedPonPort(port.ponPort);
-  };
+  // Auto Refresh: sync once on enable, then every 60 s until toggled off or the page closes.
+  const syncRef = useRef(handleSync);
+  useEffect(() => {
+    syncRef.current = handleSync;
+  });
+  useEffect(() => {
+    if (!autoRefresh) return;
+    syncRef.current(true);
+    const id = setInterval(() => syncRef.current(true), AUTO_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [autoRefresh, selectedOltId]);
 
   if (topoQuery.isLoading || oltQuery.isLoading) {
     return <PageSkeleton variant="dashboard" rows={6} />;
@@ -117,8 +278,29 @@ export function NetworkDiagramPage() {
     );
   }
 
+  const canvasLabels = {
+    onu: 'ONU',
+    direct: t('admin.network.diagram.directConn', 'Direct Port Connection'),
+    online: t('status.online', 'Online'),
+    offline: t('status.offline', 'Offline'),
+    olt: t('admin.network.diagram.cardOlt', 'OLT'),
+    port: t('admin.network.diagram.cardPort', 'Port'),
+    splitter: t('admin.network.diagram.splitter', 'Splitter'),
+    ponPorts: t('admin.network.diagram.cardPonPorts', 'PON Ports'),
+    onus: t('admin.network.diagram.cardOnus', 'ONUs'),
+    users: t('admin.network.diagram.cardUsers', 'Users'),
+    rx: 'Rx',
+  };
   const oltItems = [{ value: 'all', label: t('admin.network.diagram.allOlts', 'All OLT Headends') }, ...olts.map((o) => ({ value: o.id, label: `${o.name} (${o.brand})` }))];
   const portItems = [{ value: 'all', label: t('admin.network.diagram.allPorts', 'All PON Ports') }, ...portNames.map((p) => ({ value: p, label: p }))];
+  const zoneItems = [
+    { value: 'all', label: t('admin.network.diagram.allZones', 'All Zones') },
+    ...(areasQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
+  ];
+  const layoutItems = SPLITTER_LAYOUTS.map((l) => ({
+    value: l,
+    label: l === 'direct' ? t('admin.network.diagram.layoutDirect', 'Direct / Custom DB') : t('admin.network.diagram.layoutAuto', 'Auto {n} Splitters', { n: l }),
+  }));
   const selectedLastSeen = parseBackendDate(selectedNode?.lastSeen ?? null);
 
   return (
@@ -135,66 +317,43 @@ export function NetworkDiagramPage() {
             { label: 'Network' },
             { label: t('admin.network.diagram.crumb', 'Diagram') },
           ]}
-          actions={
-            <div className="flex items-center gap-2">
-              {selectedOlt && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSync}
-                  disabled={sync.isPending || !selectedOlt.syncSupported}
-                  title={
-                    selectedOlt.syncSupported
-                      ? t('admin.network.diagram.syncTitle', 'Read every ONU from {olt} now', { olt: selectedOlt.name })
-                      : t('admin.network.diagram.syncUnsupported', 'No sync driver on this server for {brand}', { brand: selectedOlt.brand })
-                  }
-                  className="gap-1.5 font-semibold shadow-sm"
-                >
-                  <DownloadCloud className={`h-4 w-4 ${sync.isPending ? 'animate-pulse' : ''}`} />
-                  {sync.isPending ? t('admin.network.diagram.syncing', 'Syncing… (up to a minute)') : t('admin.network.diagram.syncOlt', 'Sync OLT')}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="gap-1.5 font-semibold shadow-sm"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {t('admin.network.diagram.refresh', 'Refresh')}
-              </Button>
-            </div>
-          }
         />
       </div>
 
-      {/* KPI Stats Band */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums">{formatCount(oltQuery.data?.total ?? olts.length)}</span>{' '}
-          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOlts', 'total olts')}</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{formatCount(totalOnus)}</span>{' '}
-          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOnus', 'onus in view')}</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{formatCount(onlineOnus)}</span>{' '}
-          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOnline', 'online onus')}</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums">{formatCount(offlineOnus)}</span>{' '}
-          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOffline', 'offline onus / alarm')}</span>
-        </p>
+      {/* KPI stat cards */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard
+          icon={<Server className="h-5 w-5 text-blue-500" />}
+          tone="bg-blue-500/10"
+          label={t('admin.network.diagram.kpiOlts', 'Total OLT')}
+          value={formatCount(oltQuery.data?.total ?? olts.length)}
+        />
+        <StatCard
+          icon={<Network className="h-5 w-5 text-violet-500" />}
+          tone="bg-violet-500/10"
+          label={t('admin.network.diagram.kpiOnus', 'Total ONU')}
+          value={formatCount(totalOnus)}
+        />
+        <StatCard
+          icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+          tone="bg-emerald-500/10"
+          label={t('admin.network.diagram.kpiOnline', 'Online ONU')}
+          value={formatCount(onlineOnus)}
+        />
+        <StatCard
+          icon={<XCircle className="h-5 w-5 text-red-500" />}
+          tone="bg-red-500/10"
+          label={t('admin.network.diagram.kpiOffline', 'Offline ONU')}
+          value={formatCount(offlineOnus)}
+        />
       </div>
 
-      {/* Controls / Filter Toolbar */}
+      {/* Controls / Filter Toolbar — same fields as the web page: OLT, PON, Zone, Splitter Layout, Search, Sync, Auto Refresh, view. */}
       <div>
         <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
-          <CardContent className="pt-5 pb-5 px-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="min-w-52">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto] lg:items-end">
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">OLT</span>
                 <Select
                   items={oltItems}
                   value={selectedOltId}
@@ -204,7 +363,7 @@ export function NetworkDiagramPage() {
                     setSelectedPonPort('all');
                   }}
                 >
-                  <SelectTrigger className="shadow-sm">
+                  <SelectTrigger className="w-full shadow-sm">
                     <SelectValue placeholder={t('admin.network.diagram.allOltNodes', 'All OLT Nodes')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -217,9 +376,10 @@ export function NetworkDiagramPage() {
                 </Select>
               </div>
 
-              <div className="min-w-44">
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">{t('admin.network.diagram.ponPort', 'PON Port')}</span>
                 <Select items={portItems} value={selectedPonPort} onValueChange={(v) => v && setSelectedPonPort(String(v))}>
-                  <SelectTrigger className="shadow-sm">
+                  <SelectTrigger className="w-full shadow-sm">
                     <SelectValue placeholder={t('admin.network.diagram.allPorts', 'All PON Ports')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,50 +391,143 @@ export function NetworkDiagramPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-mono bg-muted/30 px-2 py-1 rounded-md">
-                {Math.round(zoomLevel * 100)}%
-              </span>
-              <div>
-                <Button
-                  variant="outline"
-                  size="icon" aria-label={t('admin.network.diagram.zoomOut', 'Zoom out')}
-                  className="h-8 w-8 shadow-sm"
-                  onClick={() => setZoomLevel((z) => Math.max(0.7, z - 0.1))}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">{t('admin.network.diagram.zone', 'Zone')}</span>
+                <Select items={zoneItems} value={zone} onValueChange={(v) => v && setZone(String(v))}>
+                  <SelectTrigger className="w-full shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zoneItems.map((z) => (
+                      <SelectItem key={z.value} value={z.value}>
+                        {z.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Button
-                  variant="outline"
-                  size="icon" aria-label={t('admin.network.diagram.zoomIn', 'Zoom in')}
-                  className="h-8 w-8 shadow-sm"
-                  onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.1))}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">{t('admin.network.diagram.splitterLayout', 'Splitter Layout')}</span>
+                <Select items={layoutItems} value={splitterLayout} onValueChange={(v) => v && setSplitterLayout(v as SplitterLayout)}>
+                  <SelectTrigger className="w-full shadow-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {layoutItems.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-muted-foreground">{t('admin.network.diagram.searchOnu', 'Search ONU')}</span>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={t('admin.network.diagram.searchPlaceholder', 'MAC, name, PPPoE…')}
+                    aria-label={t('admin.network.diagram.searchOnu', 'Search ONU')}
+                    className="pl-8 shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-1">
                 <Button
-                  variant="ghost"
                   size="sm"
-                  className="text-xs font-medium"
-                  onClick={() => setZoomLevel(1)}
+                  onClick={() => handleSync()}
+                  disabled={sync.isPending || isRefreshing}
+                  title={
+                    selectedOlt && !canSync
+                      ? t('admin.network.diagram.syncUnsupported', 'No sync driver on this server for {brand}', { brand: selectedOlt.brand })
+                      : undefined
+                  }
+                  className="gap-1.5 font-semibold"
                 >
-                  {t('admin.network.diagram.reset', 'Reset')}
+                  <RefreshCw className={`h-4 w-4 ${sync.isPending || isRefreshing ? 'animate-spin' : ''}`} />
+                  {sync.isPending ? t('admin.network.diagram.syncing', 'Syncing…') : t('admin.network.diagram.refreshSync', 'Refresh Sync')}
                 </Button>
+                <Button
+                  size="sm"
+                  variant={autoRefresh ? 'secondary' : 'outline'}
+                  onClick={() => setAutoRefresh((v) => !v)}
+                  aria-pressed={autoRefresh}
+                  className={`gap-1.5 font-semibold ${autoRefresh ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
+                >
+                  <Clock className="h-4 w-4" />
+                  {autoRefresh ? t('admin.network.diagram.autoOn', 'Auto: ON') : t('admin.network.diagram.autoRefresh', 'Auto Refresh')}
+                </Button>
+                <div className="flex items-center rounded-lg border border-border/60 p-0.5 shadow-sm">
+                  <Button
+                    variant={viewMode === 'diagram' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs font-medium"
+                    onClick={() => setViewMode('diagram')}
+                  >
+                    <GitFork className="h-3.5 w-3.5" /> {t('admin.network.diagram.viewDiagram', 'Diagram')}
+                  </Button>
+                  <Button
+                    variant={viewMode === 'map' ? 'default' : 'ghost'}
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs font-medium"
+                    onClick={() => setViewMode('map')}
+                  >
+                    <MapIcon className="h-3.5 w-3.5" /> {t('admin.network.diagram.viewMap', 'Map View')}
+                  </Button>
+                </div>
               </div>
-            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Map view: real OLT/ONU coordinates from /v1/network/nodes — see Network Map for the full filterable version. */}
+      {viewMode === 'map' && (
+        <div>
+          <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
+            <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                  <MapIcon className="h-4 w-4 text-primary" />
+                </span>
+                {t('admin.network.diagram.mapTitle', 'Node Locations')}
+              </CardTitle>
+              <Link href="/admin/network/map" className="text-xs font-medium text-primary hover:underline">
+                {t('admin.network.diagram.openFullMap', 'Open full Network Map →')}
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0">
+              {nodesQuery.isLoading ? (
+                <div className="h-[480px] animate-pulse bg-muted/40" />
+              ) : nodesQuery.isError ? (
+                <EmptyState variant="error"
+                  title={t('admin.network.diagram.mapLoadFailed', 'Could not load node locations')}
+                  actionLabel={t('common.retry', 'Retry')}
+                  onAction={() => nodesQuery.refetch()}
+                />
+              ) : (
+                <GeoMap
+                  markers={mapMarkers}
+                  lines={mapLines}
+                  height={480}
+                  className="rounded-none border-0"
+                  emptyMessage={t('admin.network.diagram.mapEmpty', 'None of these nodes have coordinates yet.')}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Topology tree */}
-      <div>
-        <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
+      {viewMode === 'diagram' && (
+      <div className={`grid gap-4 ${selection ? 'xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start' : ''}`}>
+        <Card className="min-w-0 border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-muted/20 py-3.5 px-6 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold flex items-center gap-2.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
@@ -293,164 +546,56 @@ export function NetworkDiagramPage() {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="min-h-[480px] overflow-x-auto bg-muted/20 p-6">
+          <CardContent className="p-0">
             {topoQuery.data?.truncated && (
-              <p className="mb-4 text-xs text-muted-foreground">
+              <p className="px-6 pt-4 text-xs text-muted-foreground">
                 {t('admin.network.diagram.truncated', 'Showing {shown} of {total} ONUs — pick a PON port (or “Show all” on a port) to load every ONU on it.', {
                   shown: formatCount(leaves.length),
                   total: formatCount(topoQuery.data.total),
                 })}
               </p>
             )}
-            <div
-              className="transition-transform duration-300 origin-top-left space-y-8"
-              style={{ transform: `scale(${zoomLevel})` }}
-            >
-              {ports.length > 0 ? (
-                ports.map((port) => {
-                  const splittersMap = groupedTree.get(portKey(port.oltId, port.ponPort)) ?? new Map<string, TopologyOnu[]>();
-                  const loaded = Array.from(splittersMap.values()).reduce((s, list) => s + list.length, 0);
-                  const isFocused = selectedOltId === port.oltId && selectedPonPort === port.ponPort;
-                  return (
-                    <div
-                      key={portKey(port.oltId, port.ponPort)}
-                      className="rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm p-5 shadow-sm space-y-6 ring-1 ring-border/60"
-                    >
-                      {/* Port Header */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-3">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="default" className="font-mono text-xs px-2.5 py-1 shadow-sm">
-                            {port.ponPort}
-                          </Badge>
-                          <span className="text-xs font-medium text-muted-foreground">{port.oltName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {loaded < port.total && !isFocused && (
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => focusPort(port)}>
-                              {t('admin.network.diagram.showAll', 'Show all')}
-                            </Button>
-                          )}
-                          <span className="text-xs text-muted-foreground font-mono bg-muted/30 px-2 py-0.5 rounded-md">
-                            {t('admin.network.diagram.portOnline', '{online}/{total} online', { online: formatCount(port.online), total: formatCount(port.total) })}
-                            {loaded < port.total ? ` · ${t('admin.network.diagram.portShown', '{n} shown', { n: formatCount(loaded) })}` : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Splitters Row */}
-                      {splittersMap.size > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                          {Array.from(splittersMap.entries()).map(([splitterName, onus]) => (
-                            <div
-                              key={splitterName}
-                              className="rounded-xl border border-border/50 bg-background/80 p-4 space-y-3 shadow-sm hover:shadow-md hover:border-primary/20 transition duration-200"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-foreground flex items-center gap-2">
-                                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10">
-                                    <Zap className="h-3.5 w-3.5 text-amber-500" />
-                                  </span>
-                                  {splitterLabel(splitterName)}
-                                </span>
-                                <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
-                                  {t('admin.network.diagram.drops', '{n} drops', { n: formatCount(onus.length) })}
-                                </Badge>
-                              </div>
-
-                              {/* ONUs under this splitter */}
-                              <div className="space-y-2">
-                                {onus.map((onu) => {
-                                  const band = rxBand(onu.rxPowerDbm);
-                                  const isNormal = onu.status === 'online' && band !== 'critical';
-                                  return (
-                                    <div
-                                      key={onu.id}
-                                      onClick={() => setSelectedNode(onu)}
-                                      className={`group/onu flex items-center justify-between p-2.5 rounded-lg border text-xs cursor-pointer transition duration-200 ${
-                                        onu.status === 'online'
-                                          ? 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-sm'
-                                          : 'bg-red-500/5 hover:bg-red-500/10 border-red-500/20 hover:border-red-500/40 hover:shadow-sm'
-                                      }`}
-                                    >
-                                      <div className="min-w-0 pr-3">
-                                        <div className="font-semibold text-foreground truncate group-hover/onu:text-primary transition-colors">
-                                          {onu.customerName ?? <span className="italic text-muted-foreground">{t('admin.network.diagram.unassigned', 'Unassigned')}</span>}
-                                        </div>
-                                        <div className="text-xs font-mono text-muted-foreground mt-0.5 truncate">
-                                          {onu.onuId}
-                                          {(onu.zone ?? onu.mac) ? ` • ${onu.zone ?? onu.mac}` : ''}
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2.5 flex-shrink-0">
-                                        <div className="text-right">
-                                          <div
-                                            className={`font-mono font-bold text-xs ${
-                                              isNormal ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
-                                            }`}
-                                          >
-                                            {onu.rxPowerDbm !== null ? `${onu.rxPowerDbm} dBm` : '— dBm'}
-                                          </div>
-                                          {onu.txPowerDbm !== null && (
-                                            <div className="text-xs text-muted-foreground font-mono">
-                                              {t('admin.network.diagram.tx', 'Tx: {value} dBm', { value: onu.txPowerDbm })}
-                                            </div>
-                                          )}
-                                        </div>
-                                        <span
-                                          className={`h-2.5 w-2.5 rounded-full ${
-                                            onu.status === 'online'
-                                              ? 'bg-emerald-500 shadow-sm shadow-emerald-500/40'
-                                              : 'bg-red-500 shadow-sm shadow-red-500/40'
-                                          }`}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {t('admin.network.diagram.notLoaded', '{n} ONUs on this port are not loaded in this view.', { n: formatCount(port.total) })}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div
-                  className="text-center py-16 text-muted-foreground"
-                >
-                  <Network className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-medium">{t('admin.network.diagram.emptyTitle', 'No synchronized ONUs for the current filter')}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    {olts.length === 0
-                      ? t('admin.network.diagram.emptyNoOlt', 'Onboard an OLT first, then synchronize it.')
-                      : selectedOlt
-                        ? t('admin.network.diagram.emptySync', 'Use “Sync OLT” to read its ONUs.')
-                        : t('admin.network.diagram.emptySelect', 'Select an OLT and synchronize it to build the tree.')}
-                  </p>
-                </div>
-              )}
-            </div>
+            <TopologyCanvas
+              ports={ports}
+              groupedTree={groupedTree}
+              portKey={portKey}
+              selectedId={selection?.id ?? null}
+              onSelect={setSelection}
+              expandAll={isFiltered}
+              labels={canvasLabels}
+              emptyLabel={
+                olts.length === 0
+                  ? t('admin.network.diagram.emptyNoOlt', 'Onboard an OLT first, then synchronize it.')
+                  : selectedOlt
+                    ? t('admin.network.diagram.emptySync', 'Use “Sync OLT” to read its ONUs.')
+                    : t('admin.network.diagram.emptySelect', 'Select an OLT and synchronize it to build the tree.')
+              }
+            />
           </CardContent>
         </Card>
-      </div>
-
-      {/* Node Detail Inspector Sheet */}
-      <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-        <SheetContent className="sm:max-w-md overflow-hidden p-0">
-          {selectedNode && (
+        {selection && (
+          <aside
+            aria-live="polite"
+            className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm ring-1 ring-border/60 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)]"
+          >
+            <button
+              type="button"
+              onClick={() => setSelection(null)}
+              aria-label={t('common.close', 'Close')}
+              className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            {selection.kind === 'onu' ? (
+              <>
+                {selectedNode && (
             <div
               className="flex flex-col h-full min-h-0"
             >
               {/* Header */}
               <div className="relative px-6 pt-6 pb-4 border-b border-border/60 bg-muted/20 shrink-0">
-                <SheetHeader className="relative z-10 text-left">
-                  <SheetTitle className="flex items-center gap-2.5 text-base">
+                <div className="relative z-10 text-left">
+                  <div className="flex items-center gap-2.5 text-base pr-8">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/15">
                       <SignalHigh className="h-5 w-5 text-primary" />
                     </span>
@@ -462,8 +607,8 @@ export function NetworkDiagramPage() {
                           : t('admin.network.diagram.lastSync', 'From the last synchronization')}
                       </div>
                     </div>
-                  </SheetTitle>
-                </SheetHeader>
+                  </div>
+                </div>
 
                 {/* Connection Path Breadcrumb */}
                 <div className="relative z-10 mt-4 flex items-center gap-1 text-xs font-mono bg-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 shadow-xs">
@@ -621,8 +766,15 @@ export function NetworkDiagramPage() {
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+              </>
+            ) : (
+              <GroupDetails selection={selection} />
+            )}
+          </aside>
+        )}
+      </div>
+      )}
+
     </div>
   );
 }

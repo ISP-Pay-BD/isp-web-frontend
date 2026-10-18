@@ -23,7 +23,7 @@ import {
 import { toast } from 'sonner';
 import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
 import { DataTable } from '@/features/shared/data-table';
-import type { MapboxMarker } from '@/components/shared/MapboxMap';
+import type { GeoMapMarker } from '@/components/shared/GeoMap';
 import { saveBlob } from '@/lib/api/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -43,8 +43,8 @@ import { useTranslations } from '@/i18n/locale-context';
 import type { EmployeeFormValues } from '../schemas';
 import type { AdvanceLog, AttendanceLog, InstallationItem, InstallationStatus } from '../types';
 
-// mapbox-gl is heavy — load the map only when the GPS tab is opened.
-const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
+// leaflet is browser-only — load the map only when the GPS tab is opened.
+const GeoMap = dynamic(() => import('@/components/shared/GeoMap').then((m) => m.GeoMap), {
   ssr: false,
   loading: () => <Skeleton className="h-[380px] w-full rounded-lg" />,
 });
@@ -73,7 +73,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const data = activity.data;
   const pings = useMemo(() => [...(data?.locations ?? [])].reverse(), [data?.locations]);
 
-  const markers = useMemo<MapboxMarker[]>(
+  const markers = useMemo<GeoMapMarker[]>(
     () =>
       pings.map((p, idx) => ({
         id: p.id,
@@ -560,7 +560,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                     </div>
                   ) : (
                     <>
-                      <MapboxMap
+                      <GeoMap
                         markers={markers}
                         selectedId={selectedLocationId}
                         onSelect={setSelectedLocationId}

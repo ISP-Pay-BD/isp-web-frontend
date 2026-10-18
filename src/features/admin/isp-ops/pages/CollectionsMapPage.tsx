@@ -7,7 +7,7 @@ import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { MapboxMap } from '@/components/shared/MapboxMap';
+import { GeoMap } from '@/components/shared/GeoMap';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -296,7 +296,7 @@ export function CollectionsMapPage() {
               onAction={() => points.refetch()}
             />
           ) : (
-            <MapboxMap
+            <GeoMap
               markers={markers}
               selectedId={selectedId}
               onSelect={setSelectedId}

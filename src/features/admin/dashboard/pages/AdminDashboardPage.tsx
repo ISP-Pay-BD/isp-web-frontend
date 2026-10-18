@@ -254,7 +254,7 @@ export function AdminDashboardPage() {
                 {t('admin.dashboard.kpi.today', 'Today: {amount}', { amount: formatBdtWithSymbol(stats.todayCollectionBdt) })}
                 {collectedDeltaPct !== null && (
                   <span
-                    className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[10px] tabular-nums ${collectedDeltaPct >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}
+                    className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-xs tabular-nums ${collectedDeltaPct >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}
                   >
                     {collectedDeltaPct >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                     {Math.abs(collectedDeltaPct).toFixed(0)}%

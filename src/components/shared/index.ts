@@ -19,5 +19,5 @@ export { SearchInput } from './SearchInput';
 export { DateDisplay } from './DateDisplay';
 export { FilterBar } from './FilterBar';
 export { ChartCard } from './ChartCard';
-export { MapboxMap, hasMapboxToken, type MapboxMarker } from './MapboxMap';
+export { GeoMap, type GeoMapMarker } from './GeoMap';
 export { TablePagination, useTablePagination, type TablePaginationProps } from './TablePagination';

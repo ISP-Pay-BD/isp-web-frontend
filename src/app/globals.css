@@ -816,3 +816,21 @@ html:lang(bn) {
     -webkit-print-color-adjust: exact !important;
   }
 }
+
+/* Leaflet (GeoMap) — Tailwind's preflight resets `img { max-width: 100%; height: auto }`,
+   which collides with Leaflet's own tile sizing and is the classic cause of a blank/empty
+   map when Leaflet is dropped into a Tailwind app: tiles mount but render at the wrong
+   size, so nothing visible paints. Leaflet's own stylesheet already undoes this for
+   `.leaflet-container img`, but relies on load order beating Tailwind's cascade, which
+   Next.js doesn't guarantee across client-component CSS chunks — so it's restated here,
+   after Tailwind, where it's guaranteed to win. */
+.leaflet-container img {
+  max-width: none;
+}
+
+/* The divIcon's own wrapper (see markerIcon() in GeoMapImpl) handles anchoring; Leaflet's
+   default icon shadow/backdrop styling is for its bundled pin image, which we never use. */
+.geo-map-marker {
+  background: transparent;
+  border: none;
+}

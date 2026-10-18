@@ -49,8 +49,15 @@ function DropdownMenuContent({
   )
 }
 
+/** True beneath a DropdownMenuGroup — Base UI's GroupLabel throws ("MenuGroupRootContext is missing") anywhere else. */
+const InMenuGroupContext = React.createContext(false)
+
 function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
-  return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+  return (
+    <InMenuGroupContext.Provider value={true}>
+      <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+    </InMenuGroupContext.Provider>
+  )
 }
 
 function DropdownMenuLabel({
@@ -60,14 +67,33 @@ function DropdownMenuLabel({
 }: MenuPrimitive.GroupLabel.Props & {
   inset?: boolean
 }) {
+  const inGroup = React.useContext(InMenuGroupContext)
+  const classes = cn(
+    "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
+    className as string | undefined
+  )
+
+  // A heading placed straight in the menu (the common case on row-action
+  // menus) must not crash the page: outside a group there is nothing for
+  // GroupLabel to label, so render it as a plain heading instead.
+  if (!inGroup) {
+    return (
+      <div
+        data-slot="dropdown-menu-label"
+        data-inset={inset}
+        role="presentation"
+        className={classes}
+      >
+        {props.children as React.ReactNode}
+      </div>
+    )
+  }
+
   return (
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn(
-        "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
-        className
-      )}
+      className={classes}
       {...props}
     />
   )

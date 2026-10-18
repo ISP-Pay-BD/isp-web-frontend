@@ -1,22 +1,25 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { PageHeader } from '@/features/admin/shared';
-import { useNetworkNodes } from '../hooks/useNetwork';
+import { useNetworkNodes, useUpdateNodeLocation } from '../hooks/useNetwork';
 import { MAP_LEVELS, type MapLevel, type MapNode } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { MapPin, MapPinOff, Layers, RadioTower, GitBranch } from 'lucide-react';
+import { MapPin, MapPinOff, Layers, RadioTower, GitBranch, Save, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCount } from '@/lib/format';
 import { useTranslations } from '@/i18n/locale-context';
+import { toast } from 'sonner';
 
-// mapbox-gl is heavy and browser-only: load the shared map on the client only.
-const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
+// leaflet is browser-only (touches window/document): load the shared map on the client only.
+const GeoMap = dynamic(() => import('@/components/shared/GeoMap').then((m) => m.GeoMap), {
   ssr: false,
   loading: () => <div className="absolute inset-4 animate-pulse rounded-xl bg-muted/60 md:inset-5" />,
 });
@@ -82,10 +85,37 @@ export function NetworkMapPage() {
   const { data, isLoading, isError, refetch } = useNetworkNodes();
   const [selectedLevel, setSelectedLevel] = useState<'all' | MapLevel>('all');
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [latInput, setLatInput] = useState('');
+  const [lngInput, setLngInput] = useState('');
+  const updateLocation = useUpdateNodeLocation();
 
   const nodes = useMemo(() => data?.nodes ?? [], [data]);
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const activeNode = activeId ? (byId.get(activeId) ?? null) : null;
+
+  // Reset the coordinate inputs whenever the selected node changes, so a
+  // previous node's half-typed values don't leak into the next one.
+  useEffect(() => {
+    setLatInput(activeNode && isPlaced(activeNode) ? String(activeNode.latitude) : '');
+    setLngInput(activeNode && isPlaced(activeNode) ? String(activeNode.longitude) : '');
+  }, [activeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSaveLocation = () => {
+    if (!activeNode) return;
+    const lat = Number(latInput);
+    const lng = Number(lngInput);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      toast.error(t('admin.network.map.invalidCoords', 'Enter a valid latitude (-90 to 90) and longitude (-180 to 180).'));
+      return;
+    }
+    updateLocation.mutate(
+      { id: activeNode.id, latitude: lat, longitude: lng },
+      {
+        onSuccess: () => toast.success(t('admin.network.map.locationSaved', 'Location saved for {name}.', { name: activeNode.label })),
+        onError: () => toast.error(t('admin.network.map.locationSaveFailed', 'Could not save the location.')),
+      },
+    );
+  };
   const filtered = useMemo(
     () => nodes.filter((n) => selectedLevel === 'all' || n.level === selectedLevel),
     [nodes, selectedLevel],
@@ -103,6 +133,29 @@ export function NetworkMapPage() {
         label: node.label,
       })),
     [placed],
+  );
+
+  // Parent→child wiring edges — the "network" part of Network Mapping: the
+  // old PHP page drew these as coloured polylines under the pins (matching
+  // the OLT→PON→Splitter→ONU tree onto the geography, not just scattered
+  // dots). Only drawn between two markers that are both currently visible
+  // (placed + passing the level filter), so a line never points at a pin
+  // that isn't on screen.
+  const placedById = useMemo(() => new Map(placed.map((n) => [n.id, n])), [placed]);
+  const lines = useMemo(
+    () =>
+      placed
+        .filter((n) => n.parentId && placedById.has(n.parentId))
+        .map((n) => {
+          const parent = placedById.get(n.parentId as string)!;
+          return {
+            id: `${parent.id}-${n.id}`,
+            from: [parent.latitude as number, parent.longitude as number] as [number, number],
+            to: [n.latitude as number, n.longitude as number] as [number, number],
+            color: levelColors[n.level].hex,
+          };
+        }),
+    [placed, placedById],
   );
 
   if (isLoading) {
@@ -197,8 +250,9 @@ export function NetworkMapPage() {
 
         <CardContent className="relative flex min-h-[560px] flex-col overflow-hidden bg-background p-0 md:flex-row">
           <div className="relative min-h-[480px] flex-1 bg-muted/40 p-4 md:p-5">
-            <MapboxMap
+            <GeoMap
               markers={markers}
+              lines={lines}
               selectedId={activeId}
               onSelect={(id) => setActiveId(id)}
               height="100%"
@@ -269,14 +323,50 @@ export function NetworkMapPage() {
                 <div className="space-y-2.5 border-t border-border/50 pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{t('admin.network.map.coordinates', 'Coordinates')}</span>
-                    <span className="font-mono text-xs">
-                      {isPlaced(activeNode) ? `${activeNode.latitude}, ${activeNode.longitude}` : t('admin.network.map.notSet', 'Not set')}
-                    </span>
+                    {isPlaced(activeNode) ? (
+                      <span className="font-mono text-xs">{`${activeNode.latitude}, ${activeNode.longitude}`}</span>
+                    ) : (
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">{t('admin.network.map.notSet', 'Not set')}</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{t('admin.network.map.children', 'Child nodes')}</span>
                     <span className="text-xs font-bold text-foreground">{formatCount(activeNode.childCount)}</span>
                   </div>
+                </div>
+
+                {/* Set/correct this node's coordinates — the write path the map used to be missing entirely. */}
+                <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-3">
+                  <Label className="text-xs font-semibold text-foreground">
+                    {isPlaced(activeNode)
+                      ? t('admin.network.map.editCoords', 'Update coordinates')
+                      : t('admin.network.map.setCoords', 'Set coordinates')}
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      value={latInput}
+                      onChange={(e) => setLatInput(e.target.value)}
+                      placeholder={t('admin.network.map.latPlaceholder', 'Latitude')}
+                      inputMode="decimal"
+                      className="h-8 font-mono text-xs"
+                    />
+                    <Input
+                      value={lngInput}
+                      onChange={(e) => setLngInput(e.target.value)}
+                      placeholder={t('admin.network.map.lngPlaceholder', 'Longitude')}
+                      inputMode="decimal"
+                      className="h-8 font-mono text-xs"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={handleSaveLocation}
+                    disabled={updateLocation.isPending || !latInput || !lngInput}
+                  >
+                    {updateLocation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                    {t('admin.network.map.saveLocation', 'Save location')}
+                  </Button>
                 </div>
 
                 <Button

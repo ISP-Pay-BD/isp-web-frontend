@@ -12,6 +12,9 @@ const optStr = (value: unknown): string | null => {
 export interface TopologyOnu {
   id: string;
   onuId: string;
+  /** Raw ONU index on the PON port (`ONU: 4` on the card). */
+  onuIndex: string | null;
+  vendor: string | null;
   oltId: string;
   oltName: string;
   ponPort: string;
@@ -33,6 +36,8 @@ export function mapTopologyOnu(raw: unknown): TopologyOnu {
   return {
     id: str(r.id),
     onuId: str(r.onuId),
+    onuIndex: optStr(r.onuIndex),
+    vendor: ['n/a', 'unknown'].includes(str(r.vendor).trim().toLowerCase()) ? null : optStr(r.vendor),
     oltId: str(r.oltId),
     oltName: str(r.oltName),
     ponPort: str(r.ponPort, 'Unknown'),

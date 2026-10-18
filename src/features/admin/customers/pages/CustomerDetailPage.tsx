@@ -39,7 +39,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { Can } from '@/components/shared/Can';
-import { MapboxMap } from '@/components/shared/MapboxMap';
+import { GeoMap } from '@/components/shared/GeoMap';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -672,7 +672,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
                 {customer.latitude !== undefined && customer.longitude !== undefined ? (
                   <div className="space-y-3">
                     <div className="rounded-xl overflow-hidden border border-border/70 shadow-sm">
-                      <MapboxMap
+                      <GeoMap
                         markers={[
                           {
                             id: customer.id,
