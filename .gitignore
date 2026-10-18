@@ -48,3 +48,9 @@ next-env.d.ts
 .playwright-cli/
 *.png
 !public/**/*.png
+
+# graphify
+graphify-out/
+.graphify_*/
+*.graphify
+

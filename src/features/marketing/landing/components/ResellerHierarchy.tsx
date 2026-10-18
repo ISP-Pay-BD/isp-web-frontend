@@ -1,14 +1,19 @@
 'use client';
 
 import { Building2, Store, Users2, ShieldCheck } from 'lucide-react';
+import { Reveal } from '@/components/motion/Reveal';
 import { useTranslations } from '@/features/marketing/shared';
-import type { ResellerHierarchyData } from '../types';
+import { PermissionsTable } from './PermissionsMatrix';
+import { SectionTitle } from './SectionTitle';
+import type { PermissionMatrixRow, ResellerHierarchyData } from '../types';
 
 interface ResellerHierarchyProps {
   data: ResellerHierarchyData;
+  matrix: PermissionMatrixRow[];
 }
 
-export function ResellerHierarchy({ data }: ResellerHierarchyProps) {
+/** Who sees what: the operator → staff → POP → subscriber tiers beside the permission matrix. */
+export function ResellerHierarchy({ data, matrix }: ResellerHierarchyProps) {
   const t = useTranslations();
 
   const tiers = [
@@ -35,38 +40,41 @@ export function ResellerHierarchy({ data }: ResellerHierarchyProps) {
   ];
 
   return (
-    <section id="reseller" className="relative border-t border-white/10 bg-landing-bg py-20 md:py-28">
+    <section id="reseller" className="relative z-[1] border-t border-white/10 py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
-        <div className="max-w-2xl">
-          <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
-            {t('marketing.sections.reseller.badge')}
-          </p>
-          <h2 className="font-landing-display mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            {t('marketing.sections.reseller.title')}
-          </h2>
-          <p className="mt-4 text-base text-white/60">{data.description}</p>
+        <Reveal>
+          <SectionTitle
+            title={t('marketing.sections.reseller.title')}
+            description={t('marketing.sections.roles.desc')}
+          />
           <p className="mt-4 font-mono text-xs text-white/40">{data.levels.join(' → ')}</p>
-        </div>
+        </Reveal>
 
-        <ol className="mt-12 divide-y divide-white/10 border-y border-white/10">
-          {tiers.map((tier, index) => {
-            const Icon = tier.icon;
-            return (
-              <li key={tier.title} className="flex gap-4 py-5">
-                <span className="font-mono text-xs text-white/35 w-6 shrink-0 pt-0.5">
-                  0{index + 1}
-                </span>
-                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-landing-cta" aria-hidden />
-                <div>
-                  <h3 className="font-landing-display text-base font-semibold text-white">
-                    {tier.title}
-                  </h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/55">{tier.desc}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="mt-12 grid gap-12 lg:grid-cols-2 lg:gap-16">
+          <Reveal as="ol" className="divide-y divide-white/10 self-start border-y border-white/10">
+            {tiers.map((tier, index) => {
+              const Icon = tier.icon;
+              return (
+                <li key={tier.title} className="flex gap-4 py-5">
+                  <span className="w-6 shrink-0 pt-0.5 font-mono text-xs text-white/35">
+                    0{index + 1}
+                  </span>
+                  <Icon className="text-landing-cta mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+                  <div>
+                    <h3 className="font-landing-display text-base font-semibold text-white">
+                      {tier.title}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-white/55">{tier.desc}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </Reveal>
+
+          <Reveal delay={0.08}>
+            <PermissionsTable matrix={matrix} />
+          </Reveal>
+        </div>
       </div>
     </section>
   );

@@ -43,12 +43,6 @@ export const landingSections = {
     'FastNet BD', 'NetLink CTG', 'SkyConnect', 'CityNet Sylhet', 'LinkWave', 'FiberOne BD',
     'SpeedNet Khulna', 'WaveISP', 'ConnectBD', 'NetZone', 'DhakaNet', 'GreenLink',
   ],
-  trustBadges: [
-    { label: '120+ ISPs', sub: 'Across Bangladesh' },
-    { label: '85K+ users', sub: 'Managed daily' },
-    { label: '2M+ payments', sub: 'Reconciled' },
-    { label: '99.9% uptime', sub: 'Platform SLA' },
-  ],
   caseStudy: {
     company: 'FastNet BD',
     location: 'Dhaka & Gazipur',

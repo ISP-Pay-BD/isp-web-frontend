@@ -2,160 +2,184 @@
 
 import { useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { Plus, Download, Tags, Pencil, Trash2, CornerDownRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useBandwidthData } from '../hooks/useBandwidthData';
-import type { BandwidthCategoryItem } from '@/data/admin/bandwidth.data';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Download, Tags, Layers, Trash2, MapPin } from 'lucide-react';
-import { toast } from 'sonner';
+import {
+  useBandwidthCategories,
+  useCreateBandwidthCategory,
+  useDeleteBandwidthCategory,
+  useUpdateBandwidthCategory,
+  type CategoryInput,
+} from '../hooks/useBandwidthCatalog';
+import type { ActiveStatus, BandwidthCategory } from '../types';
+import { FieldError, OptionSelect } from '../components/OptionSelect';
+import { downloadCsv, fieldErrorsOf, isoDay } from '../utils';
 
-const categorySearchFilter = (
-  row: LegacyRow<BandwidthCategoryItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
+/** Category and sub-category rows flattened for one table (sub-categories follow their parent). */
+interface CategoryRow {
+  key: string;
+  kind: 'Category' | 'Sub-category';
+  categoryId: number;
+  subIndex: number | null;
+  name: string;
+  parentName: string;
+  status: ActiveStatus;
+  shortDescription: string;
+  itemCount: number;
+  subCount: number;
+}
+
+function flatten(categories: BandwidthCategory[]): CategoryRow[] {
+  return categories.flatMap((c) => [
+    {
+      key: `c-${c.id}`,
+      kind: 'Category' as const,
+      categoryId: c.id,
+      subIndex: null,
+      name: c.name,
+      parentName: '',
+      status: c.status,
+      shortDescription: c.shortDescription,
+      itemCount: c.itemCount + c.subcategories.reduce((s, x) => s + x.itemCount, 0),
+      subCount: c.subcategories.length,
+    },
+    ...c.subcategories.map((s) => ({
+      key: `s-${c.id}-${s.index}`,
+      kind: 'Sub-category' as const,
+      categoryId: c.id,
+      subIndex: s.index,
+      name: s.name,
+      parentName: c.name,
+      status: s.status,
+      shortDescription: s.shortDescription,
+      itemCount: s.itemCount,
+      subCount: 0,
+    })),
+  ]);
+}
+
+const categorySearchFilter = (row: LegacyRow<CategoryRow>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
-  const cat = row.original;
-  return (
-    cat.name.toLowerCase().includes(q) ||
-    cat.area.toLowerCase().includes(q)
-  );
+  const c = row.original;
+  return [c.name, c.parentName, c.shortDescription].some((v) => v.toLowerCase().includes(q));
 };
 
+type DialogState = { mode: 'create' } | { mode: 'edit'; row: CategoryRow } | null;
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
 export function BandwidthCategoriesPage() {
-  const { data, isLoading, isError, refetch } = useBandwidthData();
-  const [categories, setCategories] = useState<BandwidthCategoryItem[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState(350);
-  const [area, setArea] = useState('All Zones');
+  const { data, isLoading, isError, refetch } = useBandwidthCategories();
+  const deleteCategory = useDeleteBandwidthCategory();
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [toDelete, setToDelete] = useState<CategoryRow | null>(null);
 
-  const initial = data?.categories ?? [];
-  if (categories.length === 0 && initial.length > 0) {
-    setCategories(initial);
-  }
-
-  const list = categories.length > 0 ? categories : initial;
-
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    const newCat: BandwidthCategoryItem = {
-      id: `bwc_${Date.now()}`,
-      name,
-      priceBdt: price,
-      area,
-      subcategoriesCount: 1,
-      itemsCount: 0,
-    };
-    setCategories((prev) => [newCat, ...prev]);
-    toast.success('Bandwidth category created.');
-    setModalOpen(false);
-    setName('');
-  };
+  const categories = useMemo(() => data ?? [], [data]);
+  const rows = useMemo(() => flatten(categories), [categories]);
+  const subTotal = rows.filter((r) => r.kind === 'Sub-category').length;
+  const itemTotal = categories.reduce((s, c) => s + c.itemCount + c.subcategories.reduce((a, x) => a + x.itemCount, 0), 0);
 
   const handleExportCsv = () => {
-    const headers = ['ID', 'Category Name', 'Coverage Area', 'Base Rate / Mbps (BDT)', 'Active Products'];
-    const rows = list.map((c) => [
-      c.id,
-      c.name,
-      c.area,
-      c.priceBdt,
-      c.itemsCount,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `bandwidth_categories_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Bandwidth categories exported to CSV');
+    downloadCsv(
+      `bandwidth_categories_${isoDay()}.csv`,
+      ['Type', 'Name', 'Parent', 'Status', 'Description', 'Items'],
+      rows.map((r) => [r.kind, r.name, r.parentName, r.status, r.shortDescription, r.itemCount]),
+    );
   };
 
-  const columns = useMemo<LegacyColumnDef<BandwidthCategoryItem, unknown>[]>(
+  const confirmDelete = () => {
+    if (!toDelete) return;
+    deleteCategory.mutate(
+      { id: toDelete.categoryId, subIndex: toDelete.subIndex },
+      { onSuccess: () => toast.success(`${toDelete.kind} deleted`) },
+    );
+    setToDelete(null);
+  };
+
+  const columns = useMemo<LegacyColumnDef<CategoryRow, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Category Classification',
+        header: 'Category',
         enableHiding: false,
-        size: 260,
+        size: 280,
         cell: ({ row }) => (
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0">
-              <Tags className="h-4 w-4" />
-            </div>
+            {row.original.kind === 'Category' ? (
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 shrink-0">
+                <Tags className="h-4 w-4" />
+              </div>
+            ) : (
+              <CornerDownRight className="ml-3 h-4 w-4 text-muted-foreground shrink-0" />
+            )}
             <div>
               <div className="font-bold text-sm text-foreground">{row.original.name}</div>
-              <div className="text-[10px] text-muted-foreground font-mono">{row.original.id}</div>
+              {row.original.parentName ? (
+                <div className="text-[10px] text-muted-foreground">under {row.original.parentName}</div>
+              ) : null}
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'area',
-        header: 'Coverage Territory',
-        size: 180,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 text-xs text-foreground">
-            <MapPin className="h-3 w-3 text-primary shrink-0" />
-            <span>{row.original.area}</span>
-          </div>
-        ),
+        accessorKey: 'kind',
+        header: 'Type',
+        size: 120,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.kind}</span>,
       },
       {
-        accessorKey: 'priceBdt',
-        header: 'Benchmark Base Rate',
-        size: 160,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-            {formatBdtWithSymbol(row.original.priceBdt)} / Mbps
-          </span>
-        ),
+        accessorKey: 'shortDescription',
+        header: 'Description',
+        size: 240,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.shortDescription || '—'}</span>,
       },
       {
-        accessorKey: 'itemsCount',
-        header: 'Catalog Products',
-        size: 150,
+        accessorKey: 'itemCount',
+        header: 'Items',
+        size: 110,
         cell: ({ row }) => (
           <Badge variant="secondary" className="font-mono text-xs">
-            {row.original.itemsCount} SKUs Linked
+            {row.original.itemCount} items
           </Badge>
         ),
       },
       {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 110,
+        cell: ({ row }) => <StatusBadge status={row.original.status === 'active' ? 'active' : 'suspended'} label={row.original.status} />,
+      },
+      {
         id: 'actions',
         header: '',
-        size: 80,
+        size: 90,
         cell: ({ row }) => (
-          <div className="text-right">
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setDialog({ mode: 'edit', row: row.original })}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                setCategories((prev) => prev.filter((c) => c.id !== row.original.id));
-                toast.success('Category classification removed.');
-              }}
+              aria-label="Delete"
+              onClick={() => setToDelete(row.original)}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -166,16 +190,11 @@ export function BandwidthCategoriesPage() {
     [],
   );
 
-  if (isLoading && categories.length === 0) return <PageSkeleton variant="table" rows={4} />;
-  if (isError && categories.length === 0) {
+  if (isLoading) return <PageSkeleton variant="table" rows={4} />;
+  if (isError) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load categories"
-          description="Could not fetch bandwidth categories."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
+        <EmptyState title="Failed to load categories" description="Could not fetch bandwidth categories." actionLabel="Retry" onAction={() => refetch()} />
       </div>
     );
   }
@@ -184,7 +203,7 @@ export function BandwidthCategoriesPage() {
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Bandwidth Item Categories"
-        subtitle="Upstream category groups, benchmark rate rules, and coverage area definitions"
+        subtitle="Category and sub-category groups of the bandwidth item catalogue"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
@@ -192,111 +211,151 @@ export function BandwidthCategoriesPage() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
-            >
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={rows.length === 0} className="text-xs border-border/80 hover:bg-accent">
               <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Categories
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
-            >
+            <Button size="sm" onClick={() => setDialog({ mode: 'create' })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
               <Plus className="h-3.5 w-3.5" /> Add Category
             </Button>
           </div>
         }
       />
 
-      {/* KPI Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{list.length}</span>{' '}
-          <span className="text-muted-foreground">category classifications</span>
+          <span className="font-semibold tabular-nums text-foreground">{categories.length}</span>{' '}
+          <span className="text-muted-foreground">categories</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-primary">{list.reduce((s, c) => s + c.itemsCount, 0)}</span>{' '}
-          <span className="text-muted-foreground">active catalog SKUs mapped</span>
+          <span className="font-semibold tabular-nums text-foreground">{subTotal}</span>{' '}
+          <span className="text-muted-foreground">sub-categories</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            ৳{list.length ? Math.round(list.reduce((s, c) => s + c.priceBdt, 0) / list.length) : 0} / Mbps
-          </span>{' '}
-          <span className="text-muted-foreground">avg benchmark base rate</span>
+          <span className="font-semibold tabular-nums text-primary">{itemTotal}</span>{' '}
+          <span className="text-muted-foreground">catalogue items</span>
         </p>
       </div>
 
-      {/* Main Table */}
       <DataTable
         columns={columns}
-        data={list}
-        getRowId={(row) => row.id}
+        data={rows}
+        getRowId={(row) => row.key}
         searchKey="name"
-        searchPlaceholder="Search categories by name or territory..."
+        searchPlaceholder="Search categories by name or description..."
         searchFilterFn={categorySearchFilter}
-        facetFilters={[{ columnId: 'area', title: 'Coverage Territory' }]}
+        facetFilters={[
+          { columnId: 'kind', title: 'Type' },
+          { columnId: 'status', title: 'Status' },
+        ]}
         emptyTitle="No categories found"
-        emptyDescription="Create a bandwidth category to group catalog items."
+        emptyDescription="Create a bandwidth category to group catalogue items."
       />
 
-      {/* Add Category Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Tags className="h-4 w-4 text-primary" /> Add Bandwidth Category
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Group products into DIA, Peering, Submarine, or Content Cache categories.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAdd} className="space-y-3.5 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Category Name *</Label>
-              <Input
-                placeholder="e.g. Submarine Cable (SEA-ME-WE-5)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Base Rate / Mbps (BDT)</Label>
-                <Input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Coverage Territory</Label>
-                <Input
-                  value={area}
-                  onChange={(e) => setArea(e.target.value)}
-                  className="text-xs h-9"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="text-xs font-semibold">
-                Save Category
-              </Button>
-            </div>
-          </form>
+          {dialog ? (
+            <CategoryForm
+              key={dialog.mode === 'edit' ? dialog.row.key : 'new'}
+              editing={dialog.mode === 'edit' ? dialog.row : null}
+              categories={categories}
+              onDone={() => setDialog(null)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title={`Delete ${toDelete?.kind.toLowerCase() ?? 'category'} "${toDelete?.name ?? ''}"?`}
+        description={
+          toDelete?.kind === 'Category'
+            ? 'A category that still has sub-categories cannot be deleted.'
+            : 'A sub-category that still has items cannot be deleted.'
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </div>
+  );
+}
+
+function CategoryForm({ editing, categories, onDone }: { editing: CategoryRow | null; categories: BandwidthCategory[]; onDone: () => void }) {
+  const create = useCreateBandwidthCategory();
+  const update = useUpdateBandwidthCategory();
+  const [form, setForm] = useState<CategoryInput>({
+    name: editing?.name ?? '',
+    status: editing?.status ?? 'active',
+    shortDescription: editing?.shortDescription ?? '',
+  });
+  const [parentId, setParentId] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const pending = create.isPending || update.isPending;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+    const callbacks = {
+      onSuccess: () => {
+        toast.success(editing ? `${editing.kind} updated` : parentId ? 'Sub-category added' : 'Category added');
+        onDone();
+      },
+      onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
+    };
+    if (editing) update.mutate({ ...form, id: editing.categoryId, subIndex: editing.subIndex }, callbacks);
+    else create.mutate({ ...form, parentId: parentId ? Number(parentId) : null }, callbacks);
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-base font-bold flex items-center gap-2">
+          <Tags className="h-4 w-4 text-primary" /> {editing ? `Edit ${editing.kind.toLowerCase()}` : 'Add bandwidth category'}
+        </DialogTitle>
+        <DialogDescription className="text-xs">
+          {editing?.parentName ? `Sub-category under ${editing.parentName}.` : 'Pick a parent to create a sub-category instead.'}
+        </DialogDescription>
+      </DialogHeader>
+
+      <form onSubmit={submit} className="space-y-3.5 pt-2">
+        {!editing ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Parent category</Label>
+            <OptionSelect
+              value={parentId}
+              onChange={setParentId}
+              emptyLabel="None — top-level category"
+              options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
+            />
+            <FieldError message={errors.parent_id} />
+          </div>
+        ) : null}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cat-name" className="text-xs font-semibold">Name *</Label>
+          <Input id="cat-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-xs h-9" required minLength={3} aria-invalid={Boolean(errors.name) || undefined} />
+          <FieldError message={errors.name} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Status *</Label>
+          <OptionSelect value={form.status} onChange={(v) => setForm({ ...form, status: v === 'inactive' ? 'inactive' : 'active' })} options={STATUS_OPTIONS} />
+          <FieldError message={errors.status} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="cat-desc" className="text-xs font-semibold">Short description</Label>
+          <Textarea id="cat-desc" rows={2} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} className="text-xs" />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-3 border-t">
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
+            {pending ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }

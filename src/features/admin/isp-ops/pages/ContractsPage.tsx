@@ -1,13 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -25,8 +26,13 @@ import {
 } from '@/components/ui/dialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
+import { saveBlob } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
+import { formatBdtWithSymbol } from '@/lib/format';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import { toast } from 'sonner';
 import {
   FileText,
@@ -34,339 +40,336 @@ import {
   Eye,
   CheckCircle2,
   Clock,
-  Send,
   Download,
   ShieldCheck,
+  Pencil,
+  Trash2,
+  Paperclip,
+  XCircle,
 } from 'lucide-react';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
+import { BillingCustomerPicker } from '../components/BillingCustomerPicker';
+import {
+  fmtDay,
+  todayYmd,
+  useContractMutations,
+  useContracts,
+  useContractSummary,
+  type BillingCustomerOption,
+  type Contract,
+  type ContractStatus,
+} from '../hooks/use-billing-config';
 
-type Row = IspOpsData['contracts'][number];
-
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.customerName).toLowerCase().includes(q) ||
-    String(r.title).toLowerCase().includes(q) ||
-    String(r.status).toLowerCase().includes(q) ||
-    String(r.signedAt).toLowerCase().includes(q)
-  );
+const STATUS_LABEL: Record<ContractStatus, string> = {
+  active: 'Active',
+  expired: 'Expired',
+  terminated: 'Terminated',
 };
+const ALL = '__all__';
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ATTACHMENT_ACCEPT = '.pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg';
 
 export function ContractsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [contracts, setContracts] = useState<Row[]>([]);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [viewContract, setViewContract] = useState<Row | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<string>('all');
+  const [expiringOnly, setExpiringOnly] = useState(false);
 
-  const [newContract, setNewContract] = useState<{
-    customerName: string;
-    title: string;
-    status: 'draft' | 'signed' | 'sent' | 'expired';
-    signedAt: string | null;
-  }>({
-    customerName: '',
-    title: 'Dedicated Leased Line 100 Mbps SLA',
-    status: 'signed',
-    signedAt: '2026-09-10',
-  });
+  const summary = useContractSummary();
+  const expiringWithin = summary.data?.expiringWithin ?? 0;
+  const list = useContracts({ page, perPage: pageSize, search, status, expiringOnly, expiringWithin: expiringOnly ? expiringWithin : 0 });
+  const { remove, download } = useContractMutations();
 
-  useMemo(() => {
-    if (data?.contracts && contracts.length === 0) {
-      setContracts(data.contracts);
-    }
-  }, [data?.contracts, contracts.length]);
+  const [formTarget, setFormTarget] = useState<Contract | 'new' | null>(null);
+  const [viewContract, setViewContract] = useState<Contract | null>(null);
+  const [deleting, setDeleting] = useState<Contract | null>(null);
 
-  const rows = contracts.length > 0 ? contracts : (data?.contracts ?? []);
+  const statuses = useMemo(() => summary.data?.statuses ?? [], [summary.data?.statuses]);
+  const statusItems = useMemo(
+    () => ({ [ALL]: 'All statuses', ...Object.fromEntries(statuses.map((s) => [s, STATUS_LABEL[s] ?? s])) }),
+    [statuses],
+  );
 
-  const handleCreateContract = () => {
-    if (!newContract.customerName.trim()) {
-      toast.error('Customer name is required');
-      return;
-    }
-    const created: Row = {
-      id: `ct_${Date.now()}`,
-      customerName: newContract.customerName.trim(),
-      title: newContract.title,
-      status: newContract.status,
-      signedAt: newContract.signedAt,
-    };
-    setContracts((prev) => [created, ...prev]);
-    toast.success(`Contract "${created.title}" saved & dispatched for e-signature!`);
-    setCreateModalOpen(false);
-    setNewContract({
-      customerName: '',
-      title: 'Dedicated Leased Line 100 Mbps SLA',
-      status: 'signed',
-      signedAt: '2026-09-10',
+  const handleDownload = (c: Contract) =>
+    download.mutate(c.id, {
+      onSuccess: ({ blob, filename }) => saveBlob(blob, filename ?? c.attachmentName ?? `contract-${c.id}`),
     });
-  };
 
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<Contract, unknown>[]>(
     () => [
       {
         accessorKey: 'customerName',
-        header: 'Subscriber / Corporate Client',
+        header: 'Customer',
         size: 200,
         enableHiding: false,
+        enableSorting: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
               <FileText className="h-4 w-4" />
             </div>
             <div>
-              <span className="font-semibold text-xs text-foreground block">{String(row.original.customerName)}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">Contract #{row.index + 501}</span>
+              <span className="font-semibold text-xs text-foreground block">{row.original.customerName ?? `Customer #${row.original.customerId}`}</span>
+              <span className="text-[10px] text-muted-foreground font-mono">Contract #{row.original.id}</span>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'title',
-        header: 'Agreement Title & SLA Tier',
+        header: 'Agreement & SLA',
         size: 240,
+        enableSorting: false,
         cell: ({ row }) => (
-          <span className="font-medium text-xs text-foreground block">{String(row.original.title)}</span>
+          <div>
+            <span className="font-medium text-xs text-foreground block">{row.original.title}</span>
+            {row.original.slaNotes && (
+              <span className="text-[10px] text-muted-foreground line-clamp-1">{row.original.slaNotes}</span>
+            )}
+          </div>
         ),
       },
       {
-        accessorKey: 'status',
-        header: 'E-Sign Status',
-        size: 130,
+        id: 'period',
+        header: 'Term',
+        size: 170,
+        enableSorting: false,
         cell: ({ row }) => {
-          const s = String(row.original.status);
-          const isSigned = s === 'signed';
+          const c = row.original;
+          const soon = c.status === 'active' && c.daysToEnd !== null && c.daysToEnd >= 0 && c.daysToEnd <= expiringWithin;
+          return (
+            <div className="font-mono text-xs text-muted-foreground">
+              <span>{fmtDay(c.startDate)}</span>
+              <span> → </span>
+              <span className={cn(soon && 'text-amber-600 dark:text-amber-400 font-semibold')}>{c.endDate ? fmtDay(c.endDate) : 'Open-ended'}</span>
+              {soon && <span className="block text-[10px] text-amber-600 dark:text-amber-400">Ends in {c.daysToEnd} days</span>}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'monthlyValue',
+        header: 'Monthly Value',
+        size: 120,
+        enableSorting: false,
+        cell: ({ row }) => <span className="font-mono text-xs font-semibold tabular-nums">{formatBdtWithSymbol(row.original.monthlyValue)}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        size: 120,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const s = row.original.status;
           return (
             <Badge
-              variant={isSigned ? 'default' : 'secondary'}
-              className={`capitalize text-[10px] font-mono gap-1 ${
-                isSigned ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''
-              }`}
+              variant={s === 'active' ? 'default' : 'secondary'}
+              className={cn('capitalize text-[10px] font-mono gap-1', s === 'active' && 'bg-emerald-600 hover:bg-emerald-600 text-white')}
             >
-              {isSigned ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-              {s}
+              {s === 'active' ? <CheckCircle2 className="h-3 w-3" /> : s === 'expired' ? <Clock className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+              {STATUS_LABEL[s]}
             </Badge>
           );
         },
       },
       {
-        accessorKey: 'signedAt',
-        header: 'Executed Date',
-        size: 130,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{String(row.original.signedAt)}</span>
-        ),
-      },
-      {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        size: 120,
+        size: 150,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1 text-primary hover:bg-primary/10"
-              onClick={() => setViewContract(row.original)}
-              title="View Agreement"
-            >
+            <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-primary hover:bg-primary/10" onClick={() => setViewContract(row.original)}>
               <Eye className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">View</span>
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={() => toast.success(`E-sign link resent via WhatsApp to ${row.original.customerName}`)}
-              title="Resend E-Sign Link"
-            >
-              <Send className="h-3.5 w-3.5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" aria-label="Edit contract" onClick={() => setFormTarget(row.original)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" aria-label="Delete contract" onClick={() => setDeleting(row.original)}>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [expiringWithin],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
-    return <EmptyState title="Failed to load contracts" actionLabel="Retry" onAction={() => refetch()} />;
+  if (summary.isLoading) return <PageSkeleton variant="table" />;
+  if (summary.isError || list.isError) {
+    return (
+      <EmptyState
+        title="Failed to load contracts"
+        description={errorMessage(summary.error ?? list.error)}
+        actionLabel="Retry"
+        onAction={() => {
+          summary.refetch();
+          list.refetch();
+        }}
+      />
+    );
   }
 
-  const signedCount = rows.filter((r) => r.status === 'signed').length;
+  const s = summary.data;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Service Level Agreements & Contracts"
-        subtitle="Manage digital e-sign broadband subscription contracts, SLA guarantees, and corporate bandwidth leases"
+        title="Contracts & SLAs"
+        subtitle="Customer service agreements: term, monthly value, SLA terms and the signed document."
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'Engagement' },
           { label: 'Contracts' },
         ]}
         actions={
-          <Button
-            className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setCreateModalOpen(true)}
-          >
+          <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setFormTarget('new')}>
             <Plus className="h-4 w-4" />
             Create Contract
           </Button>
         }
       />
 
-      <OpsSummaryStrip
-        items={[
-          { label: 'Total Executed Agreements', value: rows.length },
-          { label: 'Active Signed SLAs', value: `${signedCount} Contracts` },
-          { label: 'Pending E-Signature', value: `${rows.length - signedCount} Pending` },
-          { label: 'Vault Signature Standard', value: 'SHA-256 Digital Seal' },
-          { label: 'Uptime SLA Guarantee', value: '99.9% Redundant Core' },
-        ]}
-      />
+      {s && (
+        <OpsSummaryStrip
+          items={[
+            { label: 'contracts', value: s.total },
+            { label: 'active', value: s.active },
+            { label: `ending within ${s.expiringWithin} days`, value: s.expiringSoon },
+            ...(s.pastEndDate > 0 ? [{ label: 'active past end date', value: s.pastEndDate }] : []),
+            { label: 'expired', value: s.expired },
+            { label: 'terminated', value: s.terminated },
+            { label: 'active monthly value', value: formatBdtWithSymbol(s.activeMonthlyValue) },
+          ]}
+        />
+      )}
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                Executed Customer Agreements
-              </CardTitle>
-              <CardDescription>
-                Digitally authenticated service level agreements and bandwidth leases
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Customer Agreements
+          </CardTitle>
+          <CardDescription>Search by customer, mobile or agreement title</CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns}
-            data={rows}
-            searchKey="customerName"
-            searchFilterFn={searchFilter}
-            searchPlaceholder="Search agreements by customer or title..."
-            facetFilters={[{ columnId: 'status', title: 'E-Sign Status' }]}
+            data={list.data?.items ?? []}
+            isLoading={list.isLoading && !list.data}
+            emptyTitle="No contracts found"
+            emptyDescription={search || status !== 'all' || expiringOnly ? 'Try clearing the filters.' : 'Create the first contract.'}
+            searchPlaceholder="Search agreements by customer or title…"
+            getRowId={(r) => String(r.id)}
+            server={{
+              page,
+              pageSize,
+              total: list.data?.meta.total ?? 0,
+              onPageChange: setPage,
+              onPageSizeChange: (n) => {
+                setPageSize(n);
+                setPage(1);
+              },
+              search,
+              onSearchChange: (v) => {
+                setSearch(v);
+                setPage(1);
+              },
+            }}
             toolbarActions={
-              <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                New Contract
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select
+                  items={statusItems}
+                  value={status === 'all' ? ALL : status}
+                  onValueChange={(v) => {
+                    setStatus(!v || v === ALL ? 'all' : String(v));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>All statuses</SelectItem>
+                    {statuses.map((st) => (
+                      <SelectItem key={st} value={st}>
+                        {STATUS_LABEL[st] ?? st}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  variant={expiringOnly ? 'default' : 'outline'}
+                  className="h-8 text-xs gap-1"
+                  onClick={() => {
+                    setExpiringOnly((v) => !v);
+                    setPage(1);
+                  }}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Expiring soon
+                </Button>
+              </div>
             }
           />
         </CardContent>
       </Card>
 
-      {/* Create Contract Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Generate Subscription Contract
-            </DialogTitle>
-            <DialogDescription>
-              Create and dispatch an e-sign service agreement to subscriber.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2 text-xs">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Subscriber / Corporate Name</Label>
-              <Input
-                value={newContract.customerName}
-                onChange={(e) => setNewContract({ ...newContract, customerName: e.target.value })}
-                placeholder="e.g. Grameenphone Ltd / Rahim Uddin"
-                className="text-xs"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Contract Title / Plan SLA</Label>
-              <Input
-                value={newContract.title}
-                onChange={(e) => setNewContract({ ...newContract, title: e.target.value })}
-                className="text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Agreement Status</Label>
-                <Select
-                  value={newContract.status}
-                  onValueChange={(v) => { if (v) setNewContract({ ...newContract, status: v as 'draft' | 'signed' | 'sent' | 'expired' }); }}
-                >
-                  <SelectTrigger className="text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="signed">Signed & Verified</SelectItem>
-                    <SelectItem value="pending">Pending Customer E-Sign</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Execution Date</Label>
-                <Input
-                  type="date"
-                  value={newContract.signedAt ?? ''}
-                  onChange={(e) => setNewContract({ ...newContract, signedAt: e.target.value })}
-                  className="text-xs font-mono"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateContract} className="gap-1.5 bg-primary text-primary-foreground">
-              <CheckCircle2 className="h-4 w-4" />
-              Generate & Dispatch
-            </Button>
-          </DialogFooter>
+      {/* Create / edit */}
+      <Dialog open={formTarget !== null} onOpenChange={(open) => !open && setFormTarget(null)}>
+        <DialogContent className="sm:max-w-lg">
+          {formTarget !== null && (
+            <ContractForm
+              key={formTarget === 'new' ? 'new' : formTarget.id}
+              target={formTarget}
+              statuses={statuses}
+              onDone={() => setFormTarget(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* View Contract Modal */}
+      {/* View */}
       <Dialog open={!!viewContract} onOpenChange={(open) => !open && setViewContract(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              Service Agreement Document
+              Contract #{viewContract?.id}
             </DialogTitle>
             <DialogDescription>{viewContract?.title}</DialogDescription>
           </DialogHeader>
           {viewContract && (
             <div className="space-y-3 py-2 text-xs">
               <div className="p-4 bg-muted/20 border border-border/50 rounded-lg space-y-2">
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Subscriber Party:</span>
-                  <span className="font-semibold text-foreground">{viewContract.customerName}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Service Provider:</span>
-                  <span className="font-semibold text-foreground">ISP Pay BD Ltd.</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Executed Date:</span>
-                  <span className="font-mono">{viewContract.signedAt}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Digital Signature Seal:</span>
-                  <span className="font-mono text-emerald-500 font-semibold">SHA256: 8f92a1c849e... (Verified)</span>
-                </div>
+                {(
+                  [
+                    ['Customer', viewContract.customerName ?? `#${viewContract.customerId}`],
+                    ['Mobile', viewContract.customerMobile ?? '—'],
+                    ['Term', `${fmtDay(viewContract.startDate)} → ${viewContract.endDate ? fmtDay(viewContract.endDate) : 'Open-ended'}`],
+                    ['Monthly value', formatBdtWithSymbol(viewContract.monthlyValue)],
+                    ['Status', STATUS_LABEL[viewContract.status]],
+                    ['Created by', viewContract.createdByName ?? '—'],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="flex justify-between gap-3 border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className="font-semibold text-foreground text-right">{value}</span>
+                  </div>
+                ))}
               </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed italic">
-                This document confirms a legally binding SLA agreement for high-speed fiber broadband provision with guaranteed 99.9% uptime and 24/7 dedicated NOC support.
+              {viewContract.slaNotes && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-muted-foreground">SLA notes</p>
+                  <p className="whitespace-pre-wrap text-foreground leading-relaxed">{viewContract.slaNotes}</p>
+                </div>
+              )}
+              <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Paperclip className="h-3.5 w-3.5" />
+                {viewContract.hasAttachment ? viewContract.attachmentName ?? 'Attachment' : 'No document attached'}
               </p>
             </div>
           )}
@@ -374,19 +377,195 @@ export function ContractsPage() {
             <Button variant="outline" onClick={() => setViewContract(null)}>
               Close
             </Button>
-            <Button
-              className="gap-1.5 bg-primary text-primary-foreground"
-              onClick={() => {
-                toast.success('Agreement PDF downloaded');
-                setViewContract(null);
-              }}
-            >
-              <Download className="h-4 w-4" />
-              Download PDF
-            </Button>
+            {viewContract?.hasAttachment && (
+              <Button className="gap-1.5 bg-primary text-primary-foreground" disabled={download.isPending} onClick={() => handleDownload(viewContract)}>
+                <Download className="h-4 w-4" />
+                {download.isPending ? 'Downloading…' : 'Download Document'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete this contract?"
+        description={deleting ? `Contract #${deleting.id} "${deleting.title}" and its attached document are removed.` : undefined}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!deleting) return;
+          const target = deleting;
+          remove.mutate(target.id, {
+            onSuccess: () => {
+              toast.success(`Contract #${target.id} deleted`);
+              setDeleting(null);
+            },
+          });
+        }}
+      />
     </div>
+  );
+}
+
+function ContractForm({
+  target,
+  statuses,
+  onDone,
+}: {
+  target: Contract | 'new';
+  statuses: ContractStatus[];
+  onDone: () => void;
+}) {
+  const isNew = target === 'new';
+  const { create, update } = useContractMutations();
+  const [customer, setCustomer] = useState<BillingCustomerOption | null>(null);
+  const [title, setTitle] = useState(isNew ? '' : target.title);
+  const [startDate, setStartDate] = useState(isNew ? todayYmd() : target.startDate);
+  const [endDate, setEndDate] = useState(isNew ? '' : (target.endDate ?? ''));
+  const [monthlyValue, setMonthlyValue] = useState(isNew ? '' : String(target.monthlyValue));
+  const [status, setStatus] = useState<ContractStatus>(isNew ? 'active' : target.status);
+  const [slaNotes, setSlaNotes] = useState(isNew ? '' : (target.slaNotes ?? ''));
+  const [file, setFile] = useState<File | null>(null);
+  const pending = create.isPending || update.isPending;
+  const statusItems = useMemo(() => Object.fromEntries(statuses.map((s) => [s, STATUS_LABEL[s] ?? s])), [statuses]);
+
+  const pickFile = (f: File | null) => {
+    if (f && f.size > MAX_ATTACHMENT_BYTES) {
+      toast.error('The attachment must be at most 5 MB');
+      return;
+    }
+    if (f && !/\.(pdf|png|jpe?g)$/i.test(f.name)) {
+      toast.error('Attach a PDF, PNG or JPG file');
+      return;
+    }
+    setFile(f);
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const values = { title, startDate, endDate, monthlyValue: Number(monthlyValue || 0), slaNotes, status, file };
+    if (isNew) {
+      if (!customer) {
+        toast.error('Choose a customer');
+        return;
+      }
+      create.mutate(
+        { ...values, customerId: customer.id },
+        {
+          onSuccess: (c) => {
+            toast.success(`Contract #${c.id} created`);
+            onDone();
+          },
+        },
+      );
+      return;
+    }
+    update.mutate(
+      { ...values, id: target.id },
+      {
+        onSuccess: (c) => {
+          toast.success(`Contract #${c.id} updated`);
+          onDone();
+        },
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={submit}>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          {isNew ? 'New Contract' : `Edit Contract #${target.id}`}
+        </DialogTitle>
+        <DialogDescription>{isNew ? 'Record a service agreement with a customer.' : (target.customerName ?? '')}</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4 py-4 text-xs">
+        {isNew && (
+          <div className="space-y-2">
+            <Label htmlFor="ct-customer" className="text-xs font-semibold">Customer *</Label>
+            <BillingCustomerPicker id="ct-customer" value={customer} onChange={setCustomer} />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="ct-title" className="text-xs font-semibold">Title *</Label>
+          <Input id="ct-title" required maxLength={150} value={title} onChange={(e) => setTitle(e.target.value)} className="text-xs" placeholder="e.g. Dedicated line SLA" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="ct-start" className="text-xs font-semibold">Start Date *</Label>
+            <Input id="ct-start" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-xs font-mono" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ct-end" className="text-xs font-semibold">End Date</Label>
+            <Input id="ct-end" type="date" min={startDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} className="text-xs font-mono" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="ct-value" className="text-xs font-semibold">Monthly Value (৳)</Label>
+            <Input
+              id="ct-value"
+              type="number"
+              min={0}
+              step="0.01"
+              value={monthlyValue}
+              onChange={(e) => setMonthlyValue(e.target.value)}
+              className="text-xs font-mono"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ct-status" className="text-xs font-semibold">Status</Label>
+            <Select items={statusItems} value={status} onValueChange={(v) => v && setStatus(v as ContractStatus)}>
+              <SelectTrigger id="ct-status" className="text-xs w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses.map((st) => (
+                  <SelectItem key={st} value={st}>
+                    {STATUS_LABEL[st] ?? st}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="ct-sla" className="text-xs font-semibold">SLA Notes</Label>
+          <Textarea id="ct-sla" maxLength={2000} value={slaNotes} onChange={(e) => setSlaNotes(e.target.value)} className="text-xs min-h-16" placeholder="Uptime, response time, penalties…" />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="ct-file" className="text-xs font-semibold">
+            {!isNew && target.hasAttachment ? 'Replace Document' : 'Document'} (PDF, PNG or JPG, max 5 MB)
+          </Label>
+          <Input
+            id="ct-file"
+            type="file"
+            accept={ATTACHMENT_ACCEPT}
+            onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+            className="text-xs"
+          />
+          {!isNew && target.hasAttachment && !file && (
+            <p className="text-[11px] text-muted-foreground">Current: {target.attachmentName ?? 'attached document'}</p>
+          )}
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={pending} className="gap-1.5 bg-primary text-primary-foreground">
+          <CheckCircle2 className="h-4 w-4" />
+          {pending ? 'Saving…' : isNew ? 'Create Contract' : 'Save Changes'}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

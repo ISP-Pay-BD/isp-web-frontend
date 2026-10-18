@@ -1,428 +1,541 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/shared/page-header';
+import { DataTable } from '@/features/shared/data-table';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { getEngineGroup } from '@/data/admin/engines.catalog';
-import type { EngineLog, EngineRecord, EnginesData } from '@/data/admin/engines.data';
-import { useEngines } from '../hooks/use-engines';
-import { humanizeAction } from '../lib/humanize-action';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuthStore } from '@/stores/auth-store';
+import {
+  useDeployEngine,
+  useEngineAction,
+  useEngineEntry,
+  useEngineInstances,
+  useTenantAdminOptions,
+} from '../hooks/use-engines';
+import { engineDate, enginePriceLabel, instanceStatusLabel } from '../lib/engine-format';
+import type { EngineCatalogItem, EngineInstance, EnginePortal } from '../types';
 
 type Props = {
+  /** Catalog slug of the engine (route segment) */
   groupId: string;
-  portal?: 'admin' | 'platform';
+  portal?: EnginePortal;
 };
 
-function statusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-  if (status === 'failed' || status === 'disabled') return 'destructive';
-  if (status === 'success' || status === 'enabled' || status === 'active') return 'default';
-  if (status === 'running' || status === 'queued') return 'secondary';
+const CONFIG_MAX_BYTES = 16 * 1024;
+
+function statusVariant(status: EngineInstance['status'] | undefined): 'default' | 'destructive' | 'outline' {
+  if (status === 'enabled') return 'default';
+  if (status === 'disabled') return 'destructive';
   return 'outline';
 }
 
-function nextStamp(seq: number) {
-  return `local-${seq}`;
-}
-
 export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
-  const { data, isLoading, isError, refetch } = useEngines(portal);
-  const group = getEngineGroup(groupId);
-
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data || !group) {
-    return <EmptyState title="Failed to load engines" actionLabel="Retry" onAction={() => refetch()} />;
-  }
-
-  return <EngineHubInner data={data} groupId={groupId} portal={portal} />;
-}
-
-function EngineHubInner({
-  data,
-  groupId,
-  portal,
-}: {
-  data: EnginesData;
-  groupId: string;
-  portal: 'admin' | 'platform';
-}) {
-  const group = getEngineGroup(groupId)!;
-  const [activeFeature, setActiveFeature] = useState(group.features[0]?.id ?? '');
-  const [records, setRecords] = useState<EngineRecord[]>(() =>
-    data.records.filter((r) => group.features.some((f) => f.id === r.featureId)),
-  );
-  const [logs, setLogs] = useState<EngineLog[]>(() =>
-    data.logs.filter((l) => group.features.some((f) => f.id === l.featureId)),
-  );
-  const [query, setQuery] = useState('');
-  const seqRef = useRef(0);
-  const [, startTransition] = useTransition();
-
-  const feature = group.features.find((f) => f.id === activeFeature) ?? group.features[0]!;
-  const enabledCount = records.filter((r) => r.enabled).length;
-
-  const featureRecords = useMemo(() => {
-    const rows = records.filter((r) => r.featureId === feature.id);
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.title.toLowerCase().includes(q) ||
-        r.meta.toLowerCase().includes(q) ||
-        r.status.toLowerCase().includes(q),
-    );
-  }, [records, feature.id, query]);
-
-  const featureLogs = useMemo(
-    () => logs.filter((l) => l.featureId === feature.id).slice(0, 20),
-    [logs, feature.id],
-  );
-
-  const featureMetrics = useMemo(
-    () => data.metrics.filter((m) => m.featureId === feature.id),
-    [data.metrics, feature.id],
-  );
-
-  const pushLog = (message: string, level: EngineLog['level'] = 'info') => {
-    seqRef.current += 1;
-    const seq = seqRef.current;
-    setLogs((prev) => [
-      {
-        id: `${feature.id}-${seq}`,
-        featureId: feature.id,
-        at: nextStamp(seq),
-        level,
-        message,
-      },
-      ...prev,
-    ]);
-  };
-
-  const runAction = (action: string) => {
-    startTransition(() => {
-      const label = humanizeAction(action);
-      if (action === 'enable' || action === 'disable') {
-        const enabled = action === 'enable';
-        setRecords((prev) =>
-          prev.map((r) =>
-            r.featureId === feature.id
-              ? { ...r, enabled, status: enabled ? 'enabled' : 'disabled' }
-              : r,
-          ),
-        );
-        pushLog(`${feature.name}: ${label}`, 'success');
-        toast.success(`${feature.name} — ${label}`);
-        return;
-      }
-      if (action === 'ack' || action === 'unack') {
-        setRecords((prev) =>
-          prev.map((r) =>
-            r.featureId === feature.id && r.id === featureRecords[0]?.id
-              ? { ...r, status: action === 'ack' ? 'acked' : 'active' }
-              : r,
-          ),
-        );
-        pushLog(`${feature.name}: ${label}`, 'info');
-        toast.message(`${feature.name}: ${label}`);
-        return;
-      }
-      if (
-        action === 'retry' ||
-        action === 'retry_all' ||
-        action === 'run' ||
-        action === 'run_now' ||
-        action === 'simulate' ||
-        action === 'test'
-      ) {
-        seqRef.current += 1;
-        const stamp = nextStamp(seqRef.current);
-        setRecords((prev) =>
-          prev.map((r, idx) =>
-            r.featureId === feature.id && idx === 0
-              ? { ...r, status: 'running', updatedAt: stamp }
-              : r,
-          ),
-        );
-        pushLog(`${feature.name}: ${label} started`, 'info');
-        queueMicrotask(() => {
-          seqRef.current += 1;
-          const done = nextStamp(seqRef.current);
-          setRecords((prev) =>
-            prev.map((r, idx) =>
-              r.featureId === feature.id && idx === 0
-                ? { ...r, status: 'success', updatedAt: done }
-                : r,
-            ),
-          );
-          pushLog(`${feature.name}: ${label} completed`, 'success');
-          toast.success(`${feature.name}: ${label}`);
-        });
-        return;
-      }
-      if (action === 'create' || action === 'add' || action === 'log' || action === 'open') {
-        const n = records.filter((r) => r.featureId === feature.id).length + 1;
-        seqRef.current += 1;
-        const stamp = nextStamp(seqRef.current);
-        setRecords((prev) => [
-          {
-            id: `${feature.id}-new-${seqRef.current}`,
-            featureId: feature.id,
-            title: `${feature.name} · new ${n}`,
-            status: 'draft',
-            meta: `Created locally · ${stamp}`,
-            updatedAt: stamp,
-            enabled: true,
-          },
-          ...prev,
-        ]);
-        pushLog(`${feature.name}: created record`, 'success');
-        toast.success('Created');
-        return;
-      }
-      pushLog(`${feature.name}: ${label}`, 'info');
-      toast.message(`${feature.name}: ${label}`);
-    });
-  };
-
-  const toggleRecord = (id: string, enabled: boolean) => {
-    setRecords((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, enabled, status: enabled ? 'enabled' : 'disabled' } : r,
-      ),
-    );
-    pushLog(`Record ${enabled ? 'enabled' : 'disabled'}`, 'info');
-  };
+  const router = useRouter();
+  const { data: entry, isLoading, isError, error, refetch } = useEngineEntry(groupId);
 
   const enginesIndex = portal === 'platform' ? '/platform/engines' : '/admin/engines';
-  const basePath = portal === 'platform' ? '/platform/dashboard' : '/admin/dashboard';
+  const dashboard = portal === 'platform' ? '/platform/dashboard' : '/admin/dashboard';
+
+  if (isLoading) return <PageSkeleton variant="detail" />;
+
+  if (isError || !entry) {
+    const notFound = error?.status === 404;
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Engine"
+          breadcrumb={[
+            { label: 'Dashboard', url: dashboard },
+            { label: 'Engines', url: enginesIndex },
+            { label: groupId },
+          ]}
+        />
+        {notFound ? (
+          <EmptyState
+            title="This engine is not available"
+            description={error?.message && error.message !== 'This engine is not available' ? error.message : undefined}
+            actionLabel="Back to engines"
+            onAction={() => router.push(enginesIndex)}
+          />
+        ) : (
+          <EmptyState
+            title="Failed to load engine"
+            description={error?.message}
+            actionLabel="Retry"
+            onAction={() => refetch()}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title={group.title}
-        subtitle={group.subtitle}
+        title={entry.name}
+        subtitle={entry.category}
         breadcrumb={[
-          { label: 'Dashboard', url: basePath },
+          { label: 'Dashboard', url: dashboard },
           { label: 'Engines', url: enginesIndex },
-          { label: group.title },
+          { label: entry.name },
         ]}
+        actions={
+          <Link
+            href={enginesIndex}
+            className="text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
+          >
+            All engines
+          </Link>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{group.features.length}</span> features
-        </span>
+        <span>{entry.category}</span>
         <span className="text-border">·</span>
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{records.length}</span> records
-        </span>
+        <span className="tabular-nums text-foreground">{enginePriceLabel(entry)}</span>
+        {entry.priceType ? (
+          <>
+            <span className="text-border">·</span>
+            <span className="capitalize">{entry.priceType}</span>
+          </>
+        ) : null}
         <span className="text-border">·</span>
-        <span>
-          <span className="font-semibold tabular-nums text-foreground">{enabledCount}</span> enabled
-        </span>
-        <span className="text-border">·</span>
-        <Badge variant="outline" className="capitalize">
-          {group.priority}
-        </Badge>
+        {portal === 'platform' ? (
+          <>
+            <Badge variant={entry.published ? 'default' : 'outline'}>
+              {entry.published ? 'Published' : 'Unpublished'}
+            </Badge>
+            {entry.instancesSummary ? (
+              <>
+                <span className="text-border">·</span>
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{entry.instancesSummary.enabled}</span>{' '}
+                  enabled
+                </span>
+                <span className="text-border">·</span>
+                <span>
+                  <span className="font-semibold tabular-nums text-foreground">{entry.instancesSummary.disabled}</span>{' '}
+                  disabled
+                </span>
+              </>
+            ) : null}
+          </>
+        ) : (
+          <Badge variant={statusVariant(entry.instance?.status)}>{instanceStatusLabel(entry.instance)}</Badge>
+        )}
       </div>
 
-      <Tabs value={activeFeature} onValueChange={setActiveFeature} className="gap-4">
-        <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <TabsList variant="line" className="h-auto min-w-full justify-start gap-1">
-            {group.features.map((f) => (
-              <TabsTrigger
-                key={f.id}
-                value={f.id}
-                className="shrink-0 text-xs transition-colors duration-200 ease-out sm:text-sm"
-              >
-                {f.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </ScrollArea>
+      <div className="ui-panel-enter flex flex-col gap-4 rounded-lg border border-border/60 bg-card p-4 sm:flex-row sm:p-5">
+        {entry.imageUrl ? (
+          // Remote catalog image (arbitrary host) — next/image would need a remotePatterns entry.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={entry.imageUrl}
+            alt=""
+            className="h-20 w-20 shrink-0 rounded-lg border border-border/50 object-cover"
+            onError={(e) => {
+              e.currentTarget.hidden = true;
+            }}
+          />
+        ) : null}
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold tracking-tight">About this engine</h2>
+          <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+            {entry.description || 'No description provided.'}
+          </p>
+        </div>
+      </div>
 
-        {group.features.map((f) => (
-          <TabsContent key={f.id} value={f.id} className="space-y-4 outline-none">
-            {f.id === feature.id ? (
-              <div className="ui-panel-enter space-y-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold tracking-tight">{feature.name}</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
-                  </div>
-                  <Badge variant="outline" className="capitalize">
-                    {feature.kind}
-                  </Badge>
-                </div>
+      {portal === 'platform' ? <PlatformInstancesPanel entry={entry} /> : <TenantInstancePanel entry={entry} />}
+    </div>
+  );
+}
 
-                <div className="flex flex-wrap gap-2">
-                  {feature.actions.map((action) => (
-                    <Button
-                      key={action}
-                      size="sm"
-                      variant={
-                        action.includes('delete') || action === 'reject' ? 'destructive' : 'secondary'
-                      }
-                      className="ui-press capitalize"
-                      onClick={() => runAction(action)}
-                    >
-                      {humanizeAction(action)}
-                    </Button>
-                  ))}
-                </div>
+/* ---------------------------------------------------------------- admin portal */
 
-                {(feature.kind === 'analytics' || feature.kind === 'dashboard') &&
-                featureMetrics.length > 0 ? (
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg bg-muted/30 px-3 py-2.5 text-sm">
-                    {featureMetrics.map((m) => (
-                      <div key={`${m.featureId}-${m.label}`}>
-                        <span className="text-xs text-muted-foreground">{m.label}</span>
-                        <p className="font-semibold tabular-nums">
-                          {m.value}
-                          {m.unit ? (
-                            <span className="ml-1 text-xs font-normal text-muted-foreground">{m.unit}</span>
-                          ) : null}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
+  const role = useAuthStore((s) => s.user?.role);
+  const canWrite = role === 'admin';
+  const instance = entry.instance;
+  const deploy = useDeployEngine(entry.slug);
+  const action = useEngineAction(entry.slug);
+  const busy = deploy.isPending || action.isPending;
+
+  const enable = () => {
+    const done = () => toast.success(`${entry.name} enabled`);
+    if (!instance) deploy.mutate({ pluginId: entry.id }, { onSuccess: done });
+    else action.mutate({ id: instance.id, action: 'enable' }, { onSuccess: done });
+  };
+
+  const disable = () => {
+    if (!instance) return;
+    action.mutate(
+      { id: instance.id, action: 'disable' },
+      { onSuccess: () => toast.success(`${entry.name} disabled`) },
+    );
+  };
+
+  return (
+    <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Your ISP</h2>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">Status</dt>
+            <dd>
+              <Badge variant={statusVariant(instance?.status)}>{instanceStatusLabel(instance)}</Badge>
+            </dd>
+            {instance ? (
+              <>
+                <dt className="text-muted-foreground">Enabled at</dt>
+                <dd className="tabular-nums">{engineDate(instance.enabledAt)}</dd>
+                {instance.status === 'disabled' ? (
+                  <>
+                    <dt className="text-muted-foreground">Disabled at</dt>
+                    <dd className="tabular-nums">{engineDate(instance.disabledAt)}</dd>
+                  </>
                 ) : null}
-
-                {(feature.kind === 'builder' ||
-                  feature.kind === 'workflow' ||
-                  feature.kind === 'policy') && (
-                  <div className="space-y-3 rounded-lg border border-border/50 bg-muted/15 p-4">
-                    <p className="text-sm font-medium">Rule / policy</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Input placeholder="Name / rule title" defaultValue={`${feature.name} rule`} />
-                      <Input
-                        placeholder="Condition / cron / scope"
-                        defaultValue="status=active AND balance>0"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" className="ui-press" onClick={() => runAction('save')}>
-                        Save draft
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="ui-press"
-                        onClick={() => runAction('validate')}
-                      >
-                        Validate
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="ui-press"
-                        onClick={() => runAction('publish')}
-                      >
-                        Publish
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Filter records…"
-                    className="max-w-sm transition-[box-shadow] duration-200 ease-out"
-                  />
-                  <span className="text-xs tabular-nums text-muted-foreground">{featureRecords.length}</span>
-                </div>
-
-                <div className="overflow-hidden rounded-lg border border-border/60">
-                  {featureRecords.length === 0 ? (
-                    <div className="p-4">
-                      <EmptyState
-                        title="No records match"
-                        description="Clear the filter or create a new local record"
-                        actionLabel="Clear filter"
-                        onAction={() => setQuery('')}
-                      />
-                    </div>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/40 text-left text-[11px] tracking-wide text-muted-foreground">
-                        <tr>
-                          <th className="px-3 py-2 font-medium">Record</th>
-                          <th className="px-3 py-2 font-medium">Status</th>
-                          <th className="hidden px-3 py-2 font-medium md:table-cell">Meta</th>
-                          <th className="px-3 py-2 font-medium">On</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {featureRecords.map((row) => (
-                          <tr
-                            key={row.id}
-                            className="border-t border-border/40 transition-colors duration-200 ease-out hover:bg-muted/20"
-                          >
-                            <td className="px-3 py-2">
-                              <div className="font-medium">{row.title}</div>
-                              <div className="text-xs text-muted-foreground tabular-nums">{row.id}</div>
-                            </td>
-                            <td className="px-3 py-2">
-                              <Badge variant={statusVariant(row.status)} className="capitalize">
-                                {row.status}
-                              </Badge>
-                            </td>
-                            <td className="hidden px-3 py-2 text-muted-foreground md:table-cell">
-                              {row.meta}
-                            </td>
-                            <td className="px-3 py-2">
-                              <Switch
-                                checked={row.enabled}
-                                onCheckedChange={(v) => toggleRecord(row.id, Boolean(v))}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Execution log</p>
-                    <Link
-                      href={enginesIndex}
-                      className="text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                    >
-                      All engines
-                    </Link>
-                  </div>
-                  <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/10 p-3 font-mono text-xs">
-                    {featureLogs.map((l) => (
-                      <div
-                        key={l.id}
-                        className="flex flex-wrap gap-2 border-b border-border/20 py-1 last:border-0"
-                      >
-                        <span className="text-muted-foreground tabular-nums">{l.at}</span>
-                        <Badge variant="outline" className="capitalize">
-                          {l.level}
-                        </Badge>
-                        <span>{l.message}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                <dt className="text-muted-foreground">Last updated</dt>
+                <dd className="tabular-nums">{engineDate(instance.updatedAt)}</dd>
+              </>
             ) : null}
-          </TabsContent>
-        ))}
-      </Tabs>
+          </dl>
+        </div>
+
+        {canWrite ? (
+          <div className="flex flex-wrap gap-2">
+            {instance?.status === 'enabled' ? (
+              <Button size="sm" variant="destructive" className="ui-press" disabled={busy} onClick={disable}>
+                {action.isPending && action.variables?.action === 'disable' ? 'Disabling…' : 'Disable'}
+              </Button>
+            ) : (
+              <Button size="sm" className="ui-press" disabled={busy} onClick={enable}>
+                {deploy.isPending || (action.isPending && action.variables?.action === 'enable')
+                  ? 'Enabling…'
+                  : 'Enable'}
+              </Button>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      {!canWrite ? (
+        <p className="text-xs text-muted-foreground">
+          Only the ISP admin account can enable, disable or configure engines.
+        </p>
+      ) : null}
+
+      {instance ? (
+        canWrite ? (
+          <ConfigEditor
+            key={`${instance.id}-${instance.updatedAt ?? ''}`}
+            instance={instance}
+            pending={action.isPending && action.variables?.action === 'configure'}
+            disabled={busy}
+            onSave={(config) =>
+              action.mutate(
+                { id: instance.id, action: 'configure', config },
+                { onSuccess: () => toast.success('Configuration saved') },
+              )
+            }
+          />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Configuration</p>
+            <pre className="max-h-64 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-3 font-mono text-xs">
+              {JSON.stringify(instance.config, null, 2)}
+            </pre>
+          </div>
+        )
+      ) : canWrite ? (
+        <p className="text-xs text-muted-foreground">Enable this engine to configure it.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function ConfigEditor({
+  instance,
+  pending,
+  disabled,
+  onSave,
+}: {
+  instance: EngineInstance;
+  pending: boolean;
+  disabled: boolean;
+  onSave: (config: Record<string, unknown>) => void;
+}) {
+  const [text, setText] = useState(() => JSON.stringify(instance.config, null, 2));
+  const [error, setError] = useState<string | null>(null);
+
+  const save = () => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text.trim() === '' ? '{}' : text);
+    } catch {
+      setError('Configuration must be valid JSON.');
+      return;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      setError('Configuration must be a JSON object, e.g. { "key": "value" }.');
+      return;
+    }
+    if (new Blob([JSON.stringify(parsed)]).size > CONFIG_MAX_BYTES) {
+      setError('Configuration must be 16 KB or smaller.');
+      return;
+    }
+    setError(null);
+    onSave(parsed as Record<string, unknown>);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label htmlFor="engine-config" className="text-sm font-medium">
+        Configure
+      </label>
+      <Textarea
+        id="engine-config"
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          if (error) setError(null);
+        }}
+        spellCheck={false}
+        rows={8}
+        aria-invalid={error ? true : undefined}
+        className="font-mono text-xs"
+      />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      <Button size="sm" className="ui-press" disabled={disabled} onClick={save}>
+        {pending ? 'Saving…' : 'Save configuration'}
+      </Button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- platform portal */
+
+function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
+  const role = useAuthStore((s) => s.user?.role);
+  const canWrite = role === 'super_admin';
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const action = useEngineAction(entry.slug);
+
+  const { data, isLoading, isError, refetch } = useEngineInstances({
+    engineKey: entry.slug,
+    search,
+    page,
+    perPage: pageSize,
+  });
+
+  const onSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const columns: LegacyColumnDef<EngineInstance, unknown>[] = [
+    {
+      accessorKey: 'tenantName',
+      header: 'Tenant',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">{row.original.tenantName || '—'}</div>
+          <div className="font-mono text-[11px] text-muted-foreground">#{row.original.tenantId}</div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={statusVariant(row.original.status)} className="capitalize">
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: 'enabledAt',
+      header: 'Enabled at',
+      cell: ({ row }) => (
+        <span className="text-xs tabular-nums text-muted-foreground">{engineDate(row.original.enabledAt)}</span>
+      ),
+    },
+    {
+      accessorKey: 'updatedAt',
+      header: 'Updated',
+      cell: ({ row }) => (
+        <span className="text-xs tabular-nums text-muted-foreground">{engineDate(row.original.updatedAt)}</span>
+      ),
+    },
+  ];
+
+  if (canWrite) {
+    columns.push({
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const inst = row.original;
+        const next = inst.status === 'enabled' ? 'disable' : 'enable';
+        const rowPending = action.isPending && action.variables?.id === inst.id;
+        return (
+          <Button
+            size="sm"
+            variant={next === 'disable' ? 'destructive' : 'outline'}
+            disabled={action.isPending}
+            onClick={() =>
+              action.mutate(
+                { id: inst.id, action: next },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      `${entry.name} ${next === 'enable' ? 'enabled' : 'disabled'} for ${inst.tenantName || `tenant #${inst.tenantId}`}`,
+                    ),
+                },
+              )
+            }
+          >
+            {rowPending ? 'Saving…' : next === 'enable' ? 'Enable' : 'Disable'}
+          </Button>
+        );
+      },
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      {canWrite ? <EnableForTenant entry={entry} /> : null}
+
+      <div className="space-y-2">
+        <h2 className="text-base font-semibold tracking-tight">Tenant installs</h2>
+        {isError ? (
+          <EmptyState title="Failed to load installs" actionLabel="Retry" onAction={() => refetch()} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={data?.items ?? []}
+            isLoading={isLoading}
+            getRowId={(row) => row.id}
+            emptyTitle={search ? 'No tenants match' : 'No tenant has enabled this engine yet'}
+            searchPlaceholder="Search tenants…"
+            enableColumnVisibility={false}
+            enableLayoutToggle={false}
+            server={{
+              page,
+              pageSize,
+              total: data?.total ?? 0,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => {
+                setPageSize(size);
+                setPage(1);
+              },
+              search,
+              onSearchChange,
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EnableForTenant({ entry }: { entry: EngineCatalogItem }) {
+  const [input, setInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [tenantId, setTenantId] = useState('');
+  const deploy = useDeployEngine(entry.slug);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(input.trim()), 300);
+    return () => clearTimeout(t);
+  }, [input]);
+
+  const { data, isLoading, isError, isFetching, refetch } = useTenantAdminOptions(search);
+  const options = data?.items ?? [];
+  const selected = options.find((o) => o.id === tenantId);
+
+  const submit = () => {
+    if (!tenantId) return;
+    deploy.mutate(
+      { pluginId: entry.id, tenantId },
+      {
+        onSuccess: () => {
+          toast.success(`${entry.name} enabled for ${selected?.organizationName || selected?.name || `tenant #${tenantId}`}`);
+          setTenantId('');
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
+      <div>
+        <h2 className="text-base font-semibold tracking-tight">Enable for tenant</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Pick an ISP admin account to deploy this engine to.</p>
+      </div>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Search admins by name, email or phone…"
+          aria-label="Search tenant admins"
+          className="h-8 text-xs md:max-w-xs"
+        />
+        <Select value={tenantId} onValueChange={(v) => setTenantId(v ?? '')}>
+          <SelectTrigger className="h-8 w-full text-xs md:w-72" disabled={isLoading || isError}>
+            <SelectValue>
+              {(v: string) =>
+                v
+                  ? (selected?.organizationName || selected?.name || `#${v}`)
+                  : isLoading || isFetching
+                    ? 'Loading admins…'
+                    : options.length === 0
+                      ? 'No admins found'
+                      : 'Select tenant admin'
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                <span className="truncate">
+                  {o.organizationName || o.name}
+                  <span className="ml-1 text-muted-foreground">{o.email}</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button size="sm" className="ui-press" disabled={!tenantId || deploy.isPending} onClick={submit}>
+          {deploy.isPending ? 'Enabling…' : 'Enable for tenant'}
+        </Button>
+      </div>
+      {isError ? (
+        <p className="text-xs text-destructive">
+          Could not load tenant admins.{' '}
+          <button type="button" className="underline" onClick={() => refetch()}>
+            Retry
+          </button>
+        </p>
+      ) : data && data.total > options.length ? (
+        <p className="text-xs text-muted-foreground">
+          Showing {options.length} of {data.total} — refine the search to find more.
+        </p>
+      ) : null}
     </div>
   );
 }

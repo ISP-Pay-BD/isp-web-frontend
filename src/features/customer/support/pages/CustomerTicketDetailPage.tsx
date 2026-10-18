@@ -28,7 +28,7 @@ interface PageProps {
 export function CustomerTicketDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
-  const { data: ticket, isLoading, isError, refetch, replyMutation } = useCustomerTicketDetail(ticketId);
+  const { data: ticket, isLoading, isError, error, refetch, replyMutation } = useCustomerTicketDetail(ticketId);
 
   const {
     register,
@@ -51,32 +51,29 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
   if (isError || !ticket) {
     return (
       <CustomerPageShell title="Ticket Details" subtitle="Support Ticket Inquiry">
-        <CustomerErrorState message="Support ticket not found." onRetry={() => refetch()} />
+        <CustomerErrorState message={error?.message || 'Support ticket not found.'} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
 
   const onSubmit = async (data: TicketReplyInput) => {
     try {
-      await replyMutation.mutateAsync({
-        ticketId,
-        message: data.message,
-      });
-      toast.success('Reply submitted to support team!');
+      await replyMutation.mutateAsync(data.message);
+      toast.success('Reply sent.');
       reset();
     } catch {
-      toast.error('Failed to submit reply. Please try again.');
+      // the backend message is toasted by the query client
     }
   };
 
   return (
     <CustomerPageShell
-      title={`Ticket ${ticket.id}`}
-      subtitle={`Created on ${formatDate(ticket.createdAt)} · Subject: ${ticket.subject}`}
+      title={`Ticket #${ticket.id}`}
+      subtitle={`Created on ${formatDate(ticket.createdAt)} · Subject: ${ticket.subject || '—'}`}
       breadcrumbs={[
         { label: 'Customer', href: '/customer/dashboard' },
         { label: 'Support', href: '/customer/support' },
-        { label: ticket.id },
+        { label: `#${ticket.id}` },
       ]}
       actions={
         <Link href="/customer/support">
@@ -104,7 +101,7 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
                     }
                     className="capitalize"
                   >
-                    {ticket.status}
+                    {ticket.status === 'pending' ? 'in progress' : ticket.status}
                   </Badge>
                   <Badge
                     variant="outline"
@@ -119,15 +116,15 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
                     {ticket.priority} priority
                   </Badge>
                 </div>
-                <CardTitle className="text-xl font-bold">{ticket.subject}</CardTitle>
+                <CardTitle className="text-xl font-bold">{ticket.subject || 'Untitled ticket'}</CardTitle>
               </div>
 
               <div className="text-xs text-muted-foreground sm:text-right space-y-1">
                 <div className="flex items-center sm:justify-end gap-1 font-mono">
                   <Calendar className="h-3.5 w-3.5" />
-                  <span>Last updated: {formatDate(ticket.updatedAt)}</span>
+                  <span>Opened: {formatDate(ticket.createdAt)}</span>
                 </div>
-                <div>Customer: {ticket.customerName}</div>
+                {ticket.category && <div className="capitalize">Category: {ticket.category}</div>}
               </div>
             </div>
           </CardHeader>
@@ -135,8 +132,11 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
           {/* Conversation Thread */}
           <CardContent className="pt-6 space-y-6">
             <div className="space-y-4">
+              {ticket.messages.length === 0 && (
+                <p className="text-sm text-muted-foreground">No messages on this ticket yet.</p>
+              )}
               {ticket.messages.map((msg) => {
-                const isCustomer = msg.sender === 'customer';
+                const isCustomer = msg.fromMe;
                 return (
                   <div
                     key={msg.id}
@@ -161,9 +161,7 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
                     >
                       <div className="flex items-center justify-between gap-4 text-xs font-semibold">
                         <span>{msg.senderName}</span>
-                        <span className="opacity-70 font-mono text-[10px]">
-                          {formatDate(msg.sentAt)}
-                        </span>
+                        <span className="opacity-70 font-mono text-[10px]">{msg.sentAt}</span>
                       </div>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                     </div>
@@ -193,7 +191,7 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
 
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-muted-foreground">
-                    Support team responds within 2 hours during active shifts.
+                    {ticket.status === 'closed' ? 'This ticket is closed — replying adds to the thread.' : ''}
                   </span>
                   <Button
                     type="submit"

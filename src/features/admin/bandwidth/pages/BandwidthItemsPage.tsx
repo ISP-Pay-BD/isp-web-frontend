@@ -2,122 +2,77 @@
 
 import { useMemo, useState } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import { Plus, Download, Package, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useBandwidthData } from '../hooks/useBandwidthData';
-import type { BandwidthCatalogItem } from '@/data/admin/bandwidth.data';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Download, Zap, Layers, Trash2, Package, Tag } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import {
+  useBandwidthCategories,
+  useBandwidthItems,
+  useCreateBandwidthItem,
+  useDeleteBandwidthItem,
+  useUpdateBandwidthItem,
+  type ItemInput,
+} from '../hooks/useBandwidthCatalog';
+import type { BandwidthCatalogItem, BandwidthCategory } from '../types';
+import { FieldError, OptionSelect } from '../components/OptionSelect';
+import { downloadCsv, fieldErrorsOf, isoDay } from '../utils';
 
-const itemSearchFilter = (
-  row: LegacyRow<BandwidthCatalogItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
+const itemSearchFilter = (row: LegacyRow<BandwidthCatalogItem>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
-  const item = row.original;
-  return (
-    item.name.toLowerCase().includes(q) ||
-    item.categoryName.toLowerCase().includes(q) ||
-    (item.description?.toLowerCase().includes(q) ?? false)
-  );
+  const i = row.original;
+  return [i.itemName, i.category, i.subcategory, i.description].some((v) => v.toLowerCase().includes(q));
 };
 
+type DialogState = { mode: 'create' } | { mode: 'edit'; item: BandwidthCatalogItem } | null;
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
 export function BandwidthItemsPage() {
-  const { data, isLoading, isError, refetch } = useBandwidthData();
-  const [items, setItems] = useState<BandwidthCatalogItem[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newItemName, setNewItemName] = useState('');
-  const [newCapacity, setNewCapacity] = useState(100);
-  const [newPrice, setNewPrice] = useState(32000);
-  const [newVat, setNewVat] = useState(5);
-  const [newType, setNewType] = useState<'upstream' | 'peering' | 'cache' | 'transit'>('upstream');
-  const [newCategory, setNewCategory] = useState('Dedicated Internet (DIA)');
+  const { data, isLoading, isError, refetch } = useBandwidthItems();
+  const categoriesQuery = useBandwidthCategories();
+  const deleteItem = useDeleteBandwidthItem();
+  const [dialog, setDialog] = useState<DialogState>(null);
+  const [toDelete, setToDelete] = useState<BandwidthCatalogItem | null>(null);
 
-  const initialItems = data?.catalogItems ?? [];
-  if (items.length === 0 && initialItems.length > 0) {
-    setItems(initialItems);
-  }
-
-  const list = items.length > 0 ? items : initialItems;
-
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemName.trim()) return;
-    const newItem: BandwidthCatalogItem = {
-      id: `bwi_${Date.now()}`,
-      name: newItemName,
-      categoryId: 'bwc_1',
-      categoryName: newCategory,
-      unitPriceBdt: newPrice,
-      vatPercent: newVat,
-      capacityMbps: newCapacity,
-      type: newType,
-    };
-    setItems((prev) => [newItem, ...prev]);
-    toast.success('Bandwidth catalog SKU created successfully.');
-    setModalOpen(false);
-    setNewItemName('');
-  };
-
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    toast.success('Catalog item removed from procurement list.');
-  };
+  const items = useMemo(() => data ?? [], [data]);
+  const activeCount = items.filter((i) => i.status === 'active').length;
+  const categoryCount = new Set(items.map((i) => i.categoryId)).size;
 
   const handleExportCsv = () => {
-    const headers = ['ID', 'Item Name', 'Category', 'Type', 'Capacity (Mbps)', 'Price (BDT)', 'VAT %'];
-    const rows = list.map((item) => [
-      item.id,
-      item.name,
-      item.categoryName,
-      item.type,
-      item.capacityMbps,
-      item.unitPriceBdt,
-      `${item.vatPercent}%`,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `bandwidth_catalog_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Bandwidth catalog exported to CSV');
+    downloadCsv(
+      `bandwidth_items_${isoDay()}.csv`,
+      ['Item', 'Category', 'Sub-category', 'Unit price (BDT)', 'VAT %', 'Status', 'Description'],
+      items.map((i) => [i.itemName, i.category, i.subcategory, i.unitPrice, i.vat, i.status, i.description]),
+    );
+  };
+
+  const confirmDelete = () => {
+    if (!toDelete) return;
+    deleteItem.mutate(toDelete.id, { onSuccess: () => toast.success('Item deleted') });
+    setToDelete(null);
   };
 
   const columns = useMemo<LegacyColumnDef<BandwidthCatalogItem, unknown>[]>(
     () => [
       {
-        accessorKey: 'name',
-        header: 'Product Spec & Description',
+        accessorKey: 'itemName',
+        header: 'Item',
         enableHiding: false,
         size: 260,
         cell: ({ row }) => (
@@ -126,83 +81,53 @@ export function BandwidthItemsPage() {
               <Package className="h-4 w-4" />
             </div>
             <div>
-              <div className="font-bold text-sm text-foreground">{row.original.name}</div>
-              {row.original.description && (
-                <div className="text-[11px] text-muted-foreground mt-0.5">{row.original.description}</div>
-              )}
+              <div className="font-bold text-sm text-foreground">{row.original.itemName}</div>
+              {row.original.description ? <div className="text-[11px] text-muted-foreground mt-0.5">{row.original.description}</div> : null}
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'categoryName',
-        header: 'Category Group',
-        size: 180,
+        accessorKey: 'category',
+        header: 'Category',
+        size: 200,
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-xs font-semibold bg-secondary/80 border-border/60">
-            {row.original.categoryName}
-          </Badge>
+          <div className="space-y-0.5">
+            <Badge variant="outline" className="text-xs font-semibold bg-secondary/80 border-border/60">
+              {row.original.category || '—'}
+            </Badge>
+            {row.original.subcategory ? <div className="text-[10px] text-muted-foreground">› {row.original.subcategory}</div> : null}
+          </div>
         ),
       },
       {
-        accessorKey: 'type',
-        header: 'Traffic Type',
-        size: 120,
-        cell: ({ row }) => (
-          <Badge
-            variant="outline"
-            className={cn(
-              'capitalize text-[10px] font-mono font-semibold',
-              row.original.type === 'upstream' && 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-              row.original.type === 'peering' && 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-              row.original.type === 'cache' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-            )}
-          >
-            {row.original.type}
-          </Badge>
-        ),
+        accessorKey: 'unitPrice',
+        header: 'Unit Price',
+        size: 140,
+        cell: ({ row }) => <span className="font-mono text-sm font-bold text-foreground">{formatBdtWithSymbol(row.original.unitPrice)}</span>,
       },
       {
-        accessorKey: 'capacityMbps',
-        header: 'Trunk Capacity',
-        size: 130,
-        cell: ({ row }) => (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-secondary/80 border border-border/50 text-xs font-bold font-mono text-primary">
-            <Zap className="h-3 w-3 text-amber-500" />
-            {row.original.capacityMbps} Mbps
-          </span>
-        ),
+        accessorKey: 'vat',
+        header: 'VAT',
+        size: 90,
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.vat}%</span>,
       },
       {
-        accessorKey: 'unitPriceBdt',
-        header: 'Contract Price (BDT)',
-        size: 150,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm font-bold text-foreground">
-            {formatBdtWithSymbol(row.original.unitPriceBdt)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'vatPercent',
-        header: 'Govt VAT',
-        size: 100,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{row.original.vatPercent}%</span>
-        ),
+        accessorKey: 'status',
+        header: 'Status',
+        size: 110,
+        cell: ({ row }) => <StatusBadge status={row.original.status === 'active' ? 'active' : 'suspended'} label={row.original.status} />,
       },
       {
         id: 'actions',
         header: '',
-        size: 80,
+        size: 90,
         cell: ({ row }) => (
-          <div className="text-right">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              onClick={() => handleDelete(row.original.id)}
-            >
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setDialog({ mode: 'edit', item: row.original })}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete(row.original)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -212,188 +137,214 @@ export function BandwidthItemsPage() {
     [],
   );
 
-  if (isLoading && items.length === 0) return <PageSkeleton variant="table" rows={6} />;
-  if (isError && items.length === 0) {
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
+  if (isError) {
     return (
-      <EmptyState
-        title="Failed to load catalog items"
-        description="Could not fetch bandwidth catalog items."
-        actionLabel="Retry"
-        onAction={() => refetch()}
-      />
+      <div className="p-6">
+        <EmptyState title="Failed to load catalogue items" description="Could not fetch bandwidth catalogue items." actionLabel="Retry" onAction={() => refetch()} />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Catalog Items"
-        subtitle="Upstream IP transit products, BDIX domestic peering, and CDN caching SKUs for procurement"
+        title="Bandwidth Catalogue Items"
+        subtitle="Items used on provider purchase bills and client sales invoices"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
-          { label: 'Catalog Items' },
+          { label: 'Catalogue Items' },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Catalog
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={items.length === 0} className="text-xs border-border/80 hover:bg-accent">
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Catalogue
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Catalog SKU
+            <Button size="sm" onClick={() => setDialog({ mode: 'create' })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> Add Item
             </Button>
           </div>
         }
       />
 
-      {/* Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{list.length}</span>{' '}
-          <span className="text-muted-foreground">procurement SKUs</span>
+          <span className="font-semibold tabular-nums text-foreground">{items.length}</span>{' '}
+          <span className="text-muted-foreground">catalogue items</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-primary">{`${data?.summary?.totalPurchasedMbps ?? 2500} Mbps`}</span>{' '}
-          <span className="text-muted-foreground">total purchased trunk</span>
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{activeCount}</span>{' '}
+          <span className="text-muted-foreground">active</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{`${data?.summary?.utilizationPercent ?? 82}%`}</span>{' '}
-          <span className="text-muted-foreground">network utilization</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            {formatBdtWithSymbol(data?.summary?.monthlyCostBdt ?? 605000)}
-          </span>{' '}
-          <span className="text-muted-foreground">monthly upstream commitment</span>
+          <span className="font-semibold tabular-nums text-primary">{categoryCount}</span>{' '}
+          <span className="text-muted-foreground">categories in use</span>
         </p>
       </div>
 
-      {/* Main Table */}
       <DataTable
         columns={columns}
-        data={list}
+        data={items}
         getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search product by name, category, or spec..."
+        searchKey="itemName"
+        searchPlaceholder="Search item by name, category, or description..."
         searchFilterFn={itemSearchFilter}
         facetFilters={[
-          { columnId: 'categoryName', title: 'Category' },
-          { columnId: 'type', title: 'Traffic Type' },
+          { columnId: 'category', title: 'Category' },
+          { columnId: 'status', title: 'Status' },
         ]}
-        emptyTitle="No catalog items"
-        emptyDescription="Add upstream bandwidth packages to start recording purchase bills."
+        emptyTitle="No catalogue items"
+        emptyDescription="Add bandwidth items to start recording purchase bills and invoices."
       />
 
-      {/* Add Item Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Package className="h-4 w-4 text-primary" /> Add Bandwidth Catalog Item
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Define a new upstream IP transit, peering, or cache product SKU.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAddItem} className="space-y-3.5 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Product Name *</Label>
-              <Input
-                placeholder="e.g. 500 Mbps DIA Full Duplex Redundant"
-                value={newItemName}
-                onChange={(e) => setNewItemName(e.target.value)}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Capacity (Mbps) *</Label>
-                <Input
-                  type="number"
-                  value={newCapacity}
-                  onChange={(e) => setNewCapacity(Number(e.target.value))}
-                  className="text-xs h-9 font-mono"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Category Group *</Label>
-                <Select value={newCategory} onValueChange={(v) => v && setNewCategory(v)}>
-                  <SelectTrigger className="text-xs h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Dedicated Internet (DIA)">Dedicated Internet (DIA)</SelectItem>
-                    <SelectItem value="Domestic Peering (BDIX)">Domestic Peering (BDIX)</SelectItem>
-                    <SelectItem value="International Internet Bandwidth (IIG)">International IIG</SelectItem>
-                    <SelectItem value="Content Cache (Google / FB / CDN)">Content Cache</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-1.5">
-                <Label className="text-xs font-semibold">Unit Price (BDT) *</Label>
-                <Input
-                  type="number"
-                  value={newPrice}
-                  onChange={(e) => setNewPrice(Number(e.target.value))}
-                  className="text-xs h-9 font-mono font-bold"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">% VAT</Label>
-                <Input
-                  type="number"
-                  value={newVat}
-                  onChange={(e) => setNewVat(Number(e.target.value))}
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Traffic Type</Label>
-              <Select value={newType} onValueChange={(v) => v && setNewType(v as typeof newType)}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="upstream">Upstream DIA</SelectItem>
-                  <SelectItem value="peering">BDIX Peering</SelectItem>
-                  <SelectItem value="cache">Content Cache (CDN)</SelectItem>
-                  <SelectItem value="transit">L2 VLAN Transit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="text-xs font-semibold">
-                Create SKU
-              </Button>
-            </div>
-          </form>
+          {dialog ? (
+            <ItemForm
+              key={dialog.mode === 'edit' ? dialog.item.id : 'new'}
+              editing={dialog.mode === 'edit' ? dialog.item : null}
+              categories={categoriesQuery.data ?? []}
+              categoriesLoading={categoriesQuery.isLoading}
+              onDone={() => setDialog(null)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title={`Delete "${toDelete?.itemName ?? ''}"?`}
+        description="The item is removed from the catalogue. Existing bills and invoices keep their line text."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </div>
+  );
+}
+
+function ItemForm({
+  editing,
+  categories,
+  categoriesLoading,
+  onDone,
+}: {
+  editing: BandwidthCatalogItem | null;
+  categories: BandwidthCategory[];
+  categoriesLoading: boolean;
+  onDone: () => void;
+}) {
+  const create = useCreateBandwidthItem();
+  const update = useUpdateBandwidthItem();
+  const [form, setForm] = useState<ItemInput>({
+    itemName: editing?.itemName ?? '',
+    categoryId: editing?.categoryId ?? 0,
+    subcategoryIndex: editing?.subcategoryIndex ?? null,
+    status: editing?.status ?? 'active',
+    unitPrice: editing ? String(editing.unitPrice) : '',
+    vat: editing ? String(editing.vat) : '',
+    description: editing?.description ?? '',
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const pending = create.isPending || update.isPending;
+  const subs = categories.find((c) => c.id === form.categoryId)?.subcategories ?? [];
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.categoryId) {
+      setErrors({ category_id: 'Select a category' });
+      return;
+    }
+    setErrors({});
+    const callbacks = {
+      onSuccess: () => {
+        toast.success(editing ? 'Item updated' : 'Item added');
+        onDone();
+      },
+      onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
+    };
+    if (editing) update.mutate({ ...form, id: editing.id }, callbacks);
+    else create.mutate(form, callbacks);
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-base font-bold flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" /> {editing ? 'Edit catalogue item' : 'Add catalogue item'}
+        </DialogTitle>
+        <DialogDescription className="text-xs">
+          {editing ? 'An item stays in its category; delete and re-add it to move it.' : 'The unit price and VAT prefill bill and invoice lines.'}
+        </DialogDescription>
+      </DialogHeader>
+
+      <form onSubmit={submit} className="space-y-3.5 pt-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="item-name" className="text-xs font-semibold">Item name *</Label>
+          <Input id="item-name" value={form.itemName} onChange={(e) => setForm({ ...form, itemName: e.target.value })} className="text-xs h-9" required minLength={3} aria-invalid={Boolean(errors.item_name) || undefined} />
+          <FieldError message={errors.item_name} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Category *</Label>
+            <OptionSelect
+              value={form.categoryId ? String(form.categoryId) : ''}
+              onChange={(v) => setForm({ ...form, categoryId: Number(v) || 0, subcategoryIndex: null })}
+              options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
+              placeholder={categoriesLoading ? 'Loading…' : 'Select category'}
+              disabled={Boolean(editing)}
+              invalid={Boolean(errors.category_id)}
+            />
+            <FieldError message={errors.category_id} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Sub-category</Label>
+            <OptionSelect
+              value={form.subcategoryIndex === null ? '' : String(form.subcategoryIndex)}
+              onChange={(v) => setForm({ ...form, subcategoryIndex: v === '' ? null : Number(v) })}
+              emptyLabel="None"
+              options={subs.map((s) => ({ value: String(s.index), label: s.name }))}
+              disabled={Boolean(editing) || subs.length === 0}
+            />
+            <FieldError message={errors.subcategory_index} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label htmlFor="item-price" className="text-xs font-semibold">Unit price (BDT)</Label>
+            <Input id="item-price" type="number" min="0" step="any" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} className="text-xs h-9 font-mono font-bold" />
+            <FieldError message={errors.unit} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="item-vat" className="text-xs font-semibold">VAT %</Label>
+            <Input id="item-vat" type="number" min="0" max="100" step="any" value={form.vat} onChange={(e) => setForm({ ...form, vat: e.target.value })} className="text-xs h-9 font-mono" />
+            <FieldError message={errors.vat} />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Status *</Label>
+          <OptionSelect value={form.status} onChange={(v) => setForm({ ...form, status: v === 'inactive' ? 'inactive' : 'active' })} options={STATUS_OPTIONS} />
+          <FieldError message={errors.status} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="item-desc" className="text-xs font-semibold">Description</Label>
+          <Textarea id="item-desc" rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="text-xs" maxLength={500} />
+          <FieldError message={errors.description} />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-3 border-t">
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
+            {pending ? 'Saving…' : editing ? 'Save item' : 'Add item'}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }

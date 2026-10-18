@@ -13,15 +13,21 @@ export const registrationSchema = z
     district: z.string().min(1, 'Please select a district'),
     upazilla: z.string().min(1, 'Upazilla/Thana is required'),
     address: z.string().min(3, 'Address is required'),
-    package: z.string().min(1, 'Please select a package plan'),
+    /** plan id | 'payg' | 'custom' */
+    package: z.string().min(1, 'Please select a plan'),
     customer_type: z.array(z.string()).min(1, 'Select at least one customer type'),
     reference_name: z.string().optional(),
     reference_mobile: z.string().optional(),
-    referral_code: z.string().optional(),
+    custom_plan_note: z.string().optional(),
+    payg_addons: z.array(z.string()).optional(),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: "Passwords don't match",
     path: ['confirm_password'],
+  })
+  .refine((data) => data.package !== 'custom' || (data.custom_plan_note ?? '').trim().length >= 3, {
+    message: 'Please describe the plan you need.',
+    path: ['custom_plan_note'],
   });
 
 export type RegistrationFormData = z.infer<typeof registrationSchema>;

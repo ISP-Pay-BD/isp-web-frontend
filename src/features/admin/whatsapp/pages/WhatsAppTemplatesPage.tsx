@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHeader } from '@/features/admin/shared';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -25,106 +20,105 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
-import { EmptyState } from '@/components/shared/EmptyState';
+import { WhatsAppLoadError } from '../components/WhatsAppLoadError';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { OpsSummaryStrip } from '@/components/shared/OpsSummaryStrip';
 import { DataTable } from '@/features/shared/data-table';
 import { toast } from 'sonner';
-import {
-  Plus,
-  FileCode,
-  Send,
-  Eye,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  RefreshCw,
-  Sparkles,
-} from 'lucide-react';
+import { Plus, FileCode, Send, CheckCircle2, Clock, AlertTriangle, RefreshCw, Edit, Trash2 } from 'lucide-react';
+import { formatDate } from '@/lib/format';
 import { WhatsAppNavLinks } from './WhatsAppInboxPage';
-import { useWhatsApp } from '../hooks/use-whatsapp';
-import type { WhatsAppTemplate } from '@/data/admin/comms.data';
+import {
+  useDeleteWhatsAppTemplate,
+  useSaveWhatsAppTemplate,
+  useTestWhatsAppTemplate,
+  useWhatsAppTemplates,
+  type WaTemplateInput,
+} from '../hooks/use-whatsapp';
+import type { WaCategory, WaTemplate } from '../types';
 
-const templateSearchFilter = (
-  row: LegacyRow<WhatsAppTemplate>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const t = row.original;
-  return (
-    t.name.toLowerCase().includes(q) ||
-    t.body.toLowerCase().includes(q) ||
-    t.category.toLowerCase().includes(q) ||
-    t.language.toLowerCase().includes(q) ||
-    t.status.toLowerCase().includes(q)
-  );
+const EMPTY: WaTemplateInput = { name: '', category: 'UTILITY', language: 'en', body: '', eventKey: '', metaTemplateId: '', enabled: true };
+
+/** {{1}}, {{2}}… placeholders used by a Meta template body. */
+const paramCount = (body: string) => {
+  const nums = Array.from(body.matchAll(/\{\{(\d+)\}\}/g), (m) => Number(m[1]));
+  return nums.length ? Math.max(...nums) : 0;
 };
 
 export function WhatsAppTemplatesPage() {
-  const { data, isLoading, isError, refetch } = useWhatsApp();
-  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [testModalOpen, setTestModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
-  const [testPhone, setTestPhone] = useState('+8801712345678');
-  const [testParams, setTestParams] = useState({
-    p1: 'Rahim Uddin',
-    p2: 'September 2026',
-    p3: '1,200',
-    p4: '10 Sep 2026',
-  });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
+  const templates = useWhatsAppTemplates({ page, pageSize, search, category });
+  const saveTemplate = useSaveWhatsAppTemplate();
+  const deleteTemplate = useDeleteWhatsAppTemplate();
+  const testTemplate = useTestWhatsAppTemplate();
 
-  const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    category: 'UTILITY' as 'UTILITY' | 'AUTHENTICATION' | 'MARKETING',
-    language: 'en',
-    body: '',
-  });
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [form, setForm] = useState<WaTemplateInput>(EMPTY);
+  const [testTarget, setTestTarget] = useState<WaTemplate | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testParams, setTestParams] = useState<string[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useMemo(() => {
-    if (data?.templates && templates.length === 0) {
-      setTemplates(data.templates);
-    }
-  }, [data?.templates, templates.length]);
+  const openEditor = (tpl: WaTemplate | null) => {
+    setForm(
+      tpl
+        ? {
+            id: tpl.id,
+            name: tpl.name,
+            category: tpl.category,
+            language: tpl.language,
+            body: tpl.body,
+            eventKey: tpl.eventKey,
+            metaTemplateId: tpl.metaTemplateId,
+            enabled: tpl.enabled,
+          }
+        : EMPTY,
+    );
+    setEditorOpen(true);
+  };
 
-  const list = templates.length > 0 ? templates : (data?.templates ?? []);
+  const openTest = (tpl: WaTemplate) => {
+    setTestTarget(tpl);
+    setTestParams(Array.from({ length: paramCount(tpl.body) }, () => ''));
+  };
 
-  const handleCreateTemplate = () => {
-    if (!newTemplate.name.trim() || !newTemplate.body.trim()) {
-      toast.error('Template name and body are required');
+  const handleSave = () => {
+    if (!form.name.trim()) {
+      toast.error('Template name is required');
       return;
     }
-    const created: WhatsAppTemplate = {
-      id: `wat_${Date.now()}`,
-      name: newTemplate.name.toLowerCase().replace(/\s+/g, '_'),
-      category: newTemplate.category,
-      language: newTemplate.language,
-      status: 'PENDING',
-      body: newTemplate.body,
-      lastUpdated: new Date().toISOString().split('T')[0] ?? '2026-09-10',
-    };
-
-    setTemplates((prev) => [created, ...prev]);
-    toast.success(`Template "${created.name}" submitted to Meta for approval (Status: PENDING)`);
-    setCreateModalOpen(false);
-    setNewTemplate({ name: '', category: 'UTILITY', language: 'en', body: '' });
-  };
-
-  const handleSendTestMessage = () => {
-    if (!selectedTemplate) return;
-    toast.promise(
-      new Promise((res) => setTimeout(res, 600)),
+    saveTemplate.mutate(
+      { ...form, name: form.name.trim().toLowerCase().replace(/\s+/g, '_') },
       {
-        loading: `Transmitting WhatsApp HSM template to ${testPhone}...`,
-        success: `Message delivered to ${testPhone} via Meta Cloud API!`,
-        error: 'Delivery failed',
-      }
+        onSuccess: () => {
+          toast.success(form.id ? 'Template updated' : 'Template saved (status PENDING until approved by Meta)');
+          setEditorOpen(false);
+        },
+      },
     );
-    setTestModalOpen(false);
   };
 
-  const columns = useMemo<LegacyColumnDef<WhatsAppTemplate, unknown>[]>(
+  const handleTest = () => {
+    if (!testTarget) return;
+    if (!testPhone.trim()) {
+      toast.error('Enter a WhatsApp number');
+      return;
+    }
+    testTemplate.mutate(
+      { id: testTarget.id, to: testPhone.trim(), params: testParams },
+      {
+        onSuccess: () => {
+          toast.success(`Template sent to ${testPhone.trim()}`);
+          setTestTarget(null);
+        },
+      },
+    );
+  };
+
+  const columns = useMemo<LegacyColumnDef<WaTemplate, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
@@ -134,7 +128,9 @@ export function WhatsAppTemplatesPage() {
         cell: ({ row }) => (
           <div>
             <span className="font-mono font-semibold text-xs text-foreground block">{row.original.name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">ID: {row.original.id}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {row.original.eventKey ? `Event: ${row.original.eventKey}` : `ID: ${row.original.id}`}
+            </span>
           </div>
         ),
       },
@@ -178,24 +174,10 @@ export function WhatsAppTemplatesPage() {
           const status = row.original.status;
           return (
             <Badge
-              variant={
-                status === 'APPROVED'
-                  ? 'default'
-                  : status === 'REJECTED'
-                    ? 'destructive'
-                    : 'secondary'
-              }
-              className={`text-[10px] font-mono gap-1 ${
-                status === 'APPROVED' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''
-              }`}
+              variant={status === 'APPROVED' ? 'default' : status === 'REJECTED' ? 'destructive' : 'secondary'}
+              className={`text-[10px] font-mono gap-1 ${status === 'APPROVED' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
             >
-              {status === 'APPROVED' ? (
-                <CheckCircle2 className="h-3 w-3" />
-              ) : status === 'PENDING' ? (
-                <Clock className="h-3 w-3" />
-              ) : (
-                <AlertTriangle className="h-3 w-3" />
-              )}
+              {status === 'APPROVED' ? <CheckCircle2 className="h-3 w-3" /> : status === 'PENDING' ? <Clock className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
               {status}
             </Badge>
           );
@@ -206,41 +188,48 @@ export function WhatsAppTemplatesPage() {
         header: 'Message Body & Dynamic Variables',
         size: 360,
         cell: ({ row }) => (
-          <div className="py-1">
-            <span className="text-xs text-foreground/90 font-mono line-clamp-2 leading-relaxed bg-muted/20 p-2 rounded-lg border border-border/40">
-              {row.original.body}
-            </span>
-          </div>
+          <span className="text-xs text-foreground/90 font-mono line-clamp-2 leading-relaxed bg-muted/20 p-2 rounded-lg border border-border/40">
+            {row.original.body || '—'}
+          </span>
         ),
       },
       {
-        accessorKey: 'lastUpdated',
+        accessorKey: 'updatedAt',
         header: 'Updated',
         size: 110,
-        cell: ({ row }) => (
-          <span className="text-xs font-mono text-muted-foreground">{row.original.lastUpdated}</span>
-        ),
+        cell: ({ row }) => <span className="text-xs font-mono text-muted-foreground">{row.original.updatedAt ? formatDate(row.original.updatedAt) : '—'}</span>,
       },
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        size: 100,
+        size: 140,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
+            {row.original.status === 'APPROVED' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1 text-primary hover:bg-primary/10"
+                onClick={() => openTest(row.original)}
+                title="Send a test message"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Test</span>
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditor(row.original)} title="Edit">
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
             <Button
               variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1 text-primary hover:bg-primary/10"
-              onClick={() => {
-                setSelectedTemplate(row.original);
-                setTestModalOpen(true);
-              }}
-              title="Test WhatsApp Delivery"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteId(row.original.id)}
+              title="Delete"
             >
-              <Send className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Test</span>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
@@ -249,26 +238,20 @@ export function WhatsAppTemplatesPage() {
     [],
   );
 
-  if (isLoading) return <PageSkeleton variant="table" />;
-  if (isError || !data) {
+  if (templates.isLoading) return <PageSkeleton variant="table" />;
+  if (templates.isError && !templates.data) {
     return (
-      <EmptyState
-        title="Failed to load templates"
-        description="Could not fetch WhatsApp templates from Meta registry."
-        actionLabel="Retry"
-        onAction={() => refetch()}
-      />
+      <WhatsAppLoadError error={templates.error} title="Failed to load templates" fallback="Could not fetch WhatsApp templates." onRetry={() => templates.refetch()} />
     );
   }
 
-  const approvedCount = list.filter((t) => t.status === 'APPROVED').length;
-  const pendingCount = list.filter((t) => t.status === 'PENDING').length;
+  const stats = templates.data?.stats;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="WhatsApp Message Templates"
-        subtitle="Meta-approved HSM message templates for utility alerts, OTPs, and promotional broadcasts"
+        subtitle="Meta message templates for utility alerts, OTPs, and promotional broadcasts"
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'WhatsApp' },
@@ -276,23 +259,11 @@ export function WhatsAppTemplatesPage() {
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={() => {
-                refetch();
-                toast.success('Templates synced from Meta Cloud API Graph endpoint');
-              }}
-            >
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" disabled={templates.isFetching} onClick={() => templates.refetch()}>
               <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
-              Sync with Meta
+              Refresh
             </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => setCreateModalOpen(true)}
-            >
+            <Button size="sm" className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => openEditor(null)}>
               <Plus className="h-4 w-4" />
               Create Template
             </Button>
@@ -304,46 +275,72 @@ export function WhatsAppTemplatesPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Total Templates', value: list.length },
-          { label: 'Meta Approved', value: `${approvedCount} Templates` },
-          { label: 'Pending Review', value: `${pendingCount} Templates` },
-          { label: 'Utility Category', value: list.filter((t) => t.category === 'UTILITY').length },
-          { label: 'Marketing Category', value: list.filter((t) => t.category === 'MARKETING').length },
-          { label: 'WABA ID', value: '8827364519283' },
+          { label: 'Total Templates', value: stats?.total ?? 0 },
+          { label: 'Meta Approved', value: `${stats?.approved ?? 0} Templates` },
+          { label: 'Pending Review', value: `${stats?.pending ?? 0} Templates` },
+          { label: 'Utility Category', value: stats?.utility ?? 0 },
+          { label: 'Marketing Category', value: stats?.marketing ?? 0 },
+          { label: 'WABA ID', value: templates.data?.wabaId || '—' },
         ]}
       />
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <FileCode className="h-4 w-4 text-primary" />
-                Meta Approved Template Registry
+                Template Registry
               </CardTitle>
-              <CardDescription>
-                Synchronized with WhatsApp Business Account (WABA) Cloud Graph API
-              </CardDescription>
+              <CardDescription>Approval status is set by Meta; only APPROVED templates can be sent</CardDescription>
             </div>
+            <Select
+              value={category}
+              onValueChange={(v) => {
+                if (v) {
+                  setCategory(v);
+                  setPage(1);
+                }
+              }}
+            >
+              <SelectTrigger className="h-9 w-[170px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="UTILITY">Utility</SelectItem>
+                <SelectItem value="AUTHENTICATION">Authentication</SelectItem>
+                <SelectItem value="MARKETING">Marketing</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
           <DataTable
             columns={columns}
-            data={list}
+            data={templates.data?.items ?? []}
             getRowId={(row) => row.id}
             searchKey="name"
-            searchPlaceholder="Search templates by name, body or category..."
-            searchFilterFn={templateSearchFilter}
-            facetFilters={[
-              { columnId: 'category', title: 'Category' },
-              { columnId: 'status', title: 'Status' },
-              { columnId: 'language', title: 'Language' },
-            ]}
+            searchPlaceholder="Search templates by name or body..."
             emptyTitle="No WhatsApp templates found"
-            emptyDescription="Create your first Meta HSM template to begin broadcasting."
+            emptyDescription="Register your Meta-approved templates to use them in alerts and campaigns."
+            server={{
+              page,
+              pageSize,
+              total: templates.data?.meta.total ?? 0,
+              onPageChange: setPage,
+              onPageSizeChange: (size) => {
+                setPageSize(size);
+                setPage(1);
+              },
+              search,
+              onSearchChange: (q) => {
+                setSearch(q);
+                setPage(1);
+              },
+            }}
             toolbarActions={
-              <Button size="sm" onClick={() => setCreateModalOpen(true)} className="gap-1.5">
+              <Button size="sm" onClick={() => openEditor(null)} className="gap-1.5">
                 <Plus className="h-4 w-4" />
                 Create Template
               </Button>
@@ -352,35 +349,26 @@ export function WhatsAppTemplatesPage() {
         </CardContent>
       </Card>
 
-      {/* Create Meta Template Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-primary" />
-              Create WhatsApp Template
+              {form.id ? 'Edit WhatsApp Template' : 'Register WhatsApp Template'}
             </DialogTitle>
             <DialogDescription>
-              Submit a new HSM message template to Meta for Business Account approval.
+              Use the exact template name approved in your WhatsApp Business Manager. New templates start as PENDING.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Template Name (Snake Case)</Label>
-                <Input
-                  value={newTemplate.name}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
-                  placeholder="e.g. invoice_bill_reminder"
-                  className="font-mono text-xs"
-                />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. invoice_bill_reminder" className="font-mono text-xs" />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Category</Label>
-                <Select
-                  value={newTemplate.category}
-                  onValueChange={(v) => { if (v) setNewTemplate({ ...newTemplate, category: v as any }); }}
-                >
+                <Select value={form.category} onValueChange={(v) => { if (v) setForm({ ...form, category: v as WaCategory }); }}>
                   <SelectTrigger className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -392,114 +380,119 @@ export function WhatsAppTemplatesPage() {
                 </Select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Language</Label>
-              <Select
-                value={newTemplate.language}
-                onValueChange={(v) => { if (v) setNewTemplate({ ...newTemplate, language: v }); }}
-              >
-                <SelectTrigger className="text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English (en)</SelectItem>
-                  <SelectItem value="bn">Bengali (bn)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Language</Label>
+                <Select value={form.language} onValueChange={(v) => { if (v) setForm({ ...form, language: v }); }}>
+                  <SelectTrigger className="text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English (en)</SelectItem>
+                    <SelectItem value="bn">Bengali (bn)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Event Key (optional)</Label>
+                <Input value={form.eventKey} onChange={(e) => setForm({ ...form, eventKey: e.target.value })} placeholder="e.g. payment_done" className="font-mono text-xs" />
+              </div>
             </div>
-
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Template Body Text</Label>
+              <Label className="text-xs font-semibold">Template Body Text (preview)</Label>
               <Textarea
-                value={newTemplate.body}
-                onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })}
-                placeholder="Hello {{1}}, your monthly ISP invoice for {{2}} is ready. Total: ৳{{3}}."
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                placeholder="Hello {{1}}, your monthly invoice for {{2}} is ready."
                 className="h-28 font-mono text-xs leading-relaxed"
               />
               <p className="text-[11px] text-muted-foreground">
-                Use double braces like <code className="font-mono bg-muted px-1 py-0.5 rounded text-primary">&#123;&#123;1&#125;&#125;</code> for dynamic parameters.
+                Use <code className="font-mono bg-muted px-1 py-0.5 rounded text-primary">&#123;&#123;1&#125;&#125;</code> style parameters exactly as approved by Meta.
               </p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
+              <span className="font-semibold">Enabled for automatic event sends</span>
+              <Switch checked={form.enabled} onCheckedChange={(c) => setForm({ ...form, enabled: c })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateModalOpen(false)}>
+            <Button variant="outline" onClick={() => setEditorOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateTemplate} className="gap-1.5 bg-primary text-primary-foreground">
+            <Button onClick={handleSave} disabled={saveTemplate.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              Submit to Meta
+              {saveTemplate.isPending ? 'Saving…' : 'Save Template'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Test Send Modal */}
-      <Dialog open={testModalOpen} onOpenChange={setTestModalOpen}>
+      <Dialog open={!!testTarget} onOpenChange={(open) => !open && setTestTarget(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Send className="h-5 w-5 text-primary" />
               Test Template Delivery
             </DialogTitle>
-            <DialogDescription>
-              Send an instant WhatsApp message with substituted parameters.
-            </DialogDescription>
+            <DialogDescription>Sends the approved template through your Meta Cloud API number.</DialogDescription>
           </DialogHeader>
-          {selectedTemplate && (
+          {testTarget && (
             <div className="space-y-4 py-2 text-xs">
               <div className="space-y-1.5">
                 <span className="text-muted-foreground font-semibold">Rendered Preview:</span>
-                <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 font-mono text-xs leading-relaxed">
-                  {selectedTemplate.body
-                    .replace(/\{\{1\}\}/g, testParams.p1)
-                    .replace(/\{\{2\}\}/g, testParams.p2)
-                    .replace(/\{\{3\}\}/g, testParams.p3)
-                    .replace(/\{\{4\}\}/g, testParams.p4)}
+                <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                  {testParams.reduce((body, value, i) => body.split(`{{${i + 1}}}`).join(value || `{{${i + 1}}}`), testTarget.body) || testTarget.name}
                 </div>
               </div>
-
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Target Phone Number</Label>
-                <Input
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="+88017xxxxxxxx"
-                  className="font-mono text-xs"
-                />
+                <Label className="text-xs font-semibold">Target WhatsApp Number</Label>
+                <Input value={testPhone} onChange={(e) => setTestPhone(e.target.value)} placeholder="8801XXXXXXXXX" className="font-mono text-xs" />
               </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-mono">&#123;&#123;1&#125;&#125; (Name)</Label>
-                  <Input
-                    value={testParams.p1}
-                    onChange={(e) => setTestParams({ ...testParams, p1: e.target.value })}
-                    className="h-8 text-xs font-mono"
-                  />
+              {testParams.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {testParams.map((value, i) => (
+                    <div key={i} className="space-y-1">
+                      <Label className="text-[11px] font-mono">{`{{${i + 1}}}`}</Label>
+                      <Input
+                        value={value}
+                        onChange={(e) => setTestParams(testParams.map((p, j) => (j === i ? e.target.value : p)))}
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] font-mono">&#123;&#123;2&#125;&#125; (Month / Package)</Label>
-                  <Input
-                    value={testParams.p2}
-                    onChange={(e) => setTestParams({ ...testParams, p2: e.target.value })}
-                    className="h-8 text-xs font-mono"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTestModalOpen(false)}>
+            <Button variant="outline" onClick={() => setTestTarget(null)}>
               Cancel
             </Button>
-            <Button onClick={handleSendTestMessage} className="gap-1.5 bg-primary text-primary-foreground">
+            <Button onClick={handleTest} disabled={testTemplate.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <Send className="h-4 w-4" />
-              Transmit Test Message
+              {testTemplate.isPending ? 'Sending…' : 'Send Test Message'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Delete WhatsApp template"
+        description="The template is removed from this account (it stays in your Meta Business Manager)."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (!deleteId) return;
+          deleteTemplate.mutate(deleteId, {
+            onSuccess: () => {
+              toast.success('Template deleted');
+              setDeleteId(null);
+            },
+          });
+        }}
+      />
     </div>
   );
 }

@@ -3,8 +3,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserRole } from '@/types/auth';
-import { mockFetch } from '@/lib/mock-api/client';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session-cookie';
+import { registerAuthHandlers } from '@/lib/api/client';
+import { queryClient } from '@/lib/query-client';
+
+import { authService } from '@/lib/api/services/auth.service';
 
 interface AuthState {
   user: User | null;
@@ -13,16 +16,15 @@ interface AuthState {
   /** False until zustand persist rehydrates from localStorage */
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password?: string, otp?: string) => Promise<User>;
   logout: () => void;
   syncSessionCookie: () => void;
   role: () => UserRole | null;
 }
 
 /**
- * Start logged-out. Never seed a customer mock user here — that caused the
- * admin sidebar to flash customer nav (Rahim Uddin) on every hard refresh
- * before persist rehydration finished.
+ * Start logged-out. Never seed a user here — that caused the admin sidebar
+ * to flash the wrong nav on every hard refresh before rehydration finished.
  */
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -34,23 +36,27 @@ export const useAuthStore = create<AuthState>()(
 
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
-      login: async (email, password) => {
-        const session = await mockFetch('auth.login', { email, password });
+      login: async (email, password = '', otp) => {
+        const response = await authService.login({ email, password, ...(otp ? { otp } : {}) });
+        // A previous account's cached lists must never leak into this session.
+        queryClient.clear();
         set({
-          user: session.user,
-          token: session.token,
+          user: response.user,
+          token: response.token,
           isAuthenticated: true,
         });
         setAuthCookie({
-          userId: session.user.id,
-          role: session.user.role,
-          status: session.user.status,
+          userId: response.user.id,
+          role: response.user.role,
+          status: response.user.status,
         });
-        return session.user;
+        return response.user;
       },
 
       logout: () => {
+        authService.logout().catch(() => {});
         set({ user: null, token: null, isAuthenticated: false });
+        queryClient.clear();
         clearAuthCookie();
       },
 
@@ -88,3 +94,14 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
+
+// The HTTP client refreshes tokens and detects dead sessions; keep the store in sync.
+registerAuthHandlers({
+  onTokenRefreshed: (token) => useAuthStore.setState({ token }),
+  onSessionExpired: () => {
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login?expired=1');
+    }
+  },
+});

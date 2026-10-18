@@ -1,33 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Pin,
-  Calendar,
-  Search,
-  ArrowRight,
-  Bell,
-} from 'lucide-react';
+import { Calendar, Search, ArrowRight, Bell, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState, CustomerEmptyState } from '@/features/customer/shared';
+  CustomerPageShell,
+  CustomerLoadingSkeleton,
+  CustomerErrorState,
+  CustomerEmptyState,
+} from '@/features/customer/shared';
 import { useCustomerNews } from '../hooks/use-customer-news';
+import type { CustomerNotice } from '@/lib/api/adapters/customer.adapter';
 import { formatDate } from '@/lib/format';
-import type { NewsItem } from '@/data/shared/types';
+
+const PAGE_SIZE = 20;
 
 export function CustomerNewsPage() {
-  const { data, isLoading, isError, refetch } = useCustomerNews();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, error, refetch, isFetching } = useCustomerNews({ page, perPage: PAGE_SIZE });
   const [search, setSearch] = useState('');
-  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [selectedNews, setSelectedNews] = useState<CustomerNotice | null>(null);
 
   if (isLoading) {
     return (
@@ -40,45 +36,46 @@ export function CustomerNewsPage() {
   if (isError || !data) {
     return (
       <CustomerPageShell title="News & Notices" subtitle="Provider Announcements">
-        <CustomerErrorState onRetry={() => refetch()} />
+        <CustomerErrorState message={error?.message || undefined} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
 
-  const items = data.items.filter(
-    (item) =>
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      (item.titleBn ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      item.body.toLowerCase().includes(search.toLowerCase()),
-  );
+  const q = search.toLowerCase().trim();
+  const items = q
+    ? data.items.filter((item) => item.title.toLowerCase().includes(q) || item.details.toLowerCase().includes(q))
+    : data.items;
+  const totalPages = data.meta.totalPages;
 
   return (
     <CustomerPageShell
       title="News & Notices"
-      subtitle="Stay informed with network maintenance schedules, POP upgrades, and official announcements."
+      subtitle="Maintenance schedules and announcements from your provider."
       breadcrumbs={[
         { label: 'Customer', href: '/customer/dashboard' },
         { label: 'News & Notices' },
       ]}
     >
       <div className="space-y-6">
-        {/* Search Bar */}
         <div className="flex items-center gap-3 p-4 rounded-xl border bg-card max-w-md">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search notices, schedules, packages..."
+            placeholder="Search notices..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="border-0 p-0 focus-visible:ring-0 shadow-none text-xs"
           />
         </div>
 
-        {/* Notices Cards Grid */}
         {items.length === 0 ? (
           <CustomerEmptyState
             icon={<Bell className="h-10 w-10 text-muted-foreground/60" />}
             title="No notices found"
-            description="There are currently no active provider announcements matching your query."
+            description={
+              data.items.length === 0
+                ? 'Your provider has not published any notices yet.'
+                : 'No notices on this page match your search.'
+            }
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -86,38 +83,21 @@ export function CustomerNewsPage() {
               <Card
                 key={item.id}
                 onClick={() => setSelectedNews(item)}
-                className={`relative flex flex-col justify-between p-5 hover:border-primary/50 transition-all cursor-pointer group ${
-                  item.pinned ? 'border-primary/40 bg-primary/[0.02]' : ''
-                }`}
+                className="relative flex flex-col justify-between p-5 hover:border-primary/50 transition cursor-pointer group"
               >
                 <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(item.publishedAt)}
-                      </span>
-                    </div>
-
-                    {item.pinned && (
-                      <Badge variant="secondary" className="gap-1 text-[10px] font-bold text-primary">
-                        <Pin className="h-3 w-3 fill-primary" />
-                        Pinned Notice
-                      </Badge>
-                    )}
-                  </div>
+                  <span className="text-xs font-mono text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {formatDate(item.createdAt)}
+                  </span>
 
                   <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                    {item.title}
+                    {item.title || 'Notice'}
                   </h3>
 
-                  {item.titleBn && (
-                    <p className="text-xs text-muted-foreground font-bengali">{item.titleBn}</p>
+                  {item.details && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{item.details}</p>
                   )}
-
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {item.body}
-                  </p>
                 </div>
 
                 <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-primary font-semibold">
@@ -129,39 +109,59 @@ export function CustomerNewsPage() {
           </div>
         )}
 
-        {/* News Detail Modal */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              disabled={page <= 1 || isFetching}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              disabled={page >= totalPages || isFetching}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+
         <Dialog open={!!selectedNews} onOpenChange={(open) => !open && setSelectedNews(null)}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <div className="flex items-center gap-2 mb-1">
                 <Badge variant="outline" className="text-xs font-mono">
-                  {selectedNews ? formatDate(selectedNews.publishedAt) : ''}
+                  {selectedNews ? formatDate(selectedNews.createdAt) : ''}
                 </Badge>
-                {selectedNews?.pinned && (
-                  <Badge variant="secondary" className="text-xs">
-                    Pinned Announcement
-                  </Badge>
-                )}
               </div>
-              <DialogTitle className="text-xl font-bold leading-snug">
-                {selectedNews?.title}
-              </DialogTitle>
-              {selectedNews?.titleBn && (
-                <DialogDescription className="font-bengali text-sm text-foreground/80 mt-1">
-                  {selectedNews.titleBn}
-                </DialogDescription>
-              )}
+              <DialogTitle className="text-xl font-bold leading-snug">{selectedNews?.title || 'Notice'}</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 pt-3 border-t text-sm text-foreground/90 leading-relaxed">
-              <p>{selectedNews?.body}</p>
+              <p className="whitespace-pre-wrap">{selectedNews?.details || 'No further details.'}</p>
 
-              <div className="p-3.5 rounded-xl border bg-muted/40 text-xs space-y-1 text-muted-foreground">
-                <span className="font-semibold text-foreground">Notice Broadcast Scope:</span>
-                <p>All active residential and commercial subscribers connected to the local POP.</p>
-              </div>
-
-              <div className="flex justify-end pt-2">
+              <div className="flex items-center justify-between gap-2 pt-2">
+                {selectedNews?.url ? (
+                  <a
+                    href={selectedNews.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Open link <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : (
+                  <span />
+                )}
                 <Button onClick={() => setSelectedNews(null)} size="sm">
                   Close Notice
                 </Button>

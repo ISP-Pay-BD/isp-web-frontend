@@ -1,30 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import {
-  Calculator,
-  ArrowRight,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
-  RefreshCw,
-  Search,
-  CheckCircle2,
-  FileText,
-  Sliders,
-  DollarSign,
-  Calendar,
-  Layers,
-  ArrowUpRight,
-  ArrowDownLeft,
-} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Calculator, Calendar, ArrowRight, Info } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -32,312 +15,243 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { ProrationExample } from '@/data/admin/isp-ops.data';
+import { formatBdt, formatBdtWithSymbol } from '@/lib/format';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { BillingCustomerPicker } from '../components/BillingCustomerPicker';
+import {
+  fmtDay,
+  todayYmd,
+  useBillingPackageOptions,
+  useProrationQuote,
+  type BillingCustomerOption,
+} from '../hooks/use-billing-config';
 
 export function ProrationPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
+  const packages = useBillingPackageOptions();
+  const [customer, setCustomer] = useState<BillingCustomerOption | null>(null);
+  const [packageId, setPackageId] = useState<number | null>(null);
+  const [changeDate, setChangeDate] = useState(todayYmd());
 
-  // Interactive Calculator Sandbox
-  const [calcFromPrice, setCalcFromPrice] = useState<number>(800);
-  const [calcToPrice, setCalcToPrice] = useState<number>(1500);
-  const [calcDaysUsed, setCalcDaysUsed] = useState<number>(10);
-  const [calcCycleDays, setCalcCycleDays] = useState<number>(30);
-  const [search, setSearch] = useState('');
+  const quote = useProrationQuote({ customerId: customer?.id ?? null, packageId, changeDate });
+  const q = quote.data;
 
-  const rawRows = useMemo(() => data?.prorationExamples ?? [], [data?.prorationExamples]);
+  const targetOptions = useMemo(
+    () => (packages.data ?? []).filter((p) => p.active && p.id !== customer?.packageId),
+    [packages.data, customer?.packageId],
+  );
+  const selectItems = useMemo(
+    () => Object.fromEntries(targetOptions.map((p) => [String(p.id), `${p.name} — ${formatBdtWithSymbol(p.price)}`])),
+    [targetOptions],
+  );
+  const currentPackage = useMemo(
+    () => (packages.data ?? []).find((p) => p.id === customer?.packageId) ?? null,
+    [packages.data, customer?.packageId],
+  );
 
-  // Proration Sandbox Calculations
-  const remainingDays = Math.max(0, calcCycleDays - calcDaysUsed);
-  const unusedCredit = Math.round((remainingDays / calcCycleDays) * calcFromPrice);
-  const newPlanCharge = Math.round((remainingDays / calcCycleDays) * calcToPrice);
-  const netPayable = newPlanCharge - unusedCredit;
-  const isUpgrade = calcToPrice >= calcFromPrice;
-
-  const filteredRows = useMemo(() => {
-    return rawRows.filter((r) => {
-      if (!search) return true;
-      const q = search.toLowerCase().trim();
-      return (
-        (r.customerName && r.customerName.toLowerCase().includes(q)) ||
-        r.fromPackage.toLowerCase().includes(q) ||
-        r.toPackage.toLowerCase().includes(q)
-      );
-    });
-  }, [rawRows, search]);
-
-  const handleApplyProration = () => {
-    toast.success(`Prorated package upgrade calculated! Net invoice ৳ ${netPayable.toLocaleString()} generated and speed adjusted via RADIUS.`);
-  };
-
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError || !data) {
+  if (packages.isError) {
     return (
       <EmptyState
-        title="Failed to load proration wizard"
-        description="Could not load package change calculations."
+        title="Failed to load packages"
+        description={errorMessage(packages.error, 'Could not load your package catalogue.')}
         actionLabel="Retry"
-        onAction={() => refetch()}
+        onAction={() => packages.refetch()}
       />
     );
   }
 
+  const isUpgrade = q ? q.net >= 0 : true;
+
   return (
     <div className="space-y-6 w-full pb-20">
-      {/* Header */}
       <PageHeader
-        title="Proration Wizard & Mid-Cycle Upgrades"
-        subtitle="Accurately compute credit refunds, prorated charges, and net adjustments when subscribers upgrade or downgrade plans mid-month."
+        title="Proration Calculator"
+        subtitle="Work out the credit, charge and net amount when a customer moves to another package before their expiry date. Nothing is billed or changed here."
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Billing' },
-          { label: 'Proration Wizard' },
+          { label: 'Proration' },
         ]}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                refetch();
-                toast.success('Proration ledger synchronized');
-              }}
-              className="text-xs h-8 border-border/80 hover:bg-accent"
-            >
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Sync Ledger
-            </Button>
-          </div>
-        }
       />
 
-      {/* Interactive Sandbox Calculator Card */}
       <Card className="border-border/80 bg-card/60 backdrop-blur-xs shadow-md overflow-hidden">
         <CardContent className="p-6 space-y-6">
           <div className="flex items-center justify-between border-b border-border/80 pb-3">
             <div className="flex items-center gap-2">
               <Calculator className="h-4 w-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                Live Mid-Cycle Plan Change Simulator
-              </h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Mid-Cycle Package Change</h3>
             </div>
             <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-primary/30 text-primary font-mono">
-              Auto-Prorated (Exact Day Basis)
+              Read-only quote
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Existing Package */}
+            {/* Customer */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground">
-                Current Package Monthly Fee
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">৳</span>
-                <Input
-                  type="number"
-                  value={calcFromPrice}
-                  onChange={(e) => setCalcFromPrice(Number(e.target.value) || 0)}
-                  className="pl-7 h-9 text-xs font-mono font-bold"
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground">e.g. Home 20 Mbps (৳ 800)</p>
+              <label htmlFor="pr-customer" className="text-[11px] font-semibold text-muted-foreground">Customer</label>
+              <BillingCustomerPicker
+                id="pr-customer"
+                value={customer}
+                onChange={(c) => {
+                  setCustomer(c);
+                  setPackageId(null);
+                }}
+              />
+              {customer && (
+                <p className="text-[10px] text-muted-foreground">
+                  Current: {currentPackage ? `${currentPackage.name} (${formatBdtWithSymbol(currentPackage.price)})` : 'no priced package'}
+                  {customer.willExpire ? ` · expires ${fmtDay(customer.willExpire)}` : ''}
+                </p>
+              )}
             </div>
 
-            {/* Target Package */}
+            {/* Target package */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground">
-                Target New Package Monthly Fee
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">৳</span>
-                <Input
-                  type="number"
-                  value={calcToPrice}
-                  onChange={(e) => setCalcToPrice(Number(e.target.value) || 0)}
-                  className="pl-7 h-9 text-xs font-mono font-bold"
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground">e.g. Home Turbo 50 Mbps (৳ 1,500)</p>
+              <label htmlFor="pr-package" className="text-[11px] font-semibold text-muted-foreground">New Package</label>
+              {packages.isLoading ? (
+                <Skeleton className="h-9 w-full" />
+              ) : (
+                <Select
+                  items={selectItems}
+                  value={packageId !== null ? String(packageId) : null}
+                  onValueChange={(v) => setPackageId(v ? Number(v) : null)}
+                  disabled={!customer || targetOptions.length === 0}
+                >
+                  <SelectTrigger id="pr-package" className="h-9 w-full text-xs">
+                    <SelectValue placeholder={targetOptions.length === 0 ? 'No other packages' : 'Choose package'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {targetOptions.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name} — {formatBdtWithSymbol(p.price)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            {/* Days Elapsed */}
+            {/* Change date */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-muted-foreground">
-                Days Already Used in Cycle
-              </label>
+              <label htmlFor="pr-date" className="text-[11px] font-semibold text-muted-foreground">Change Date</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  type="number"
-                  value={calcDaysUsed}
-                  onChange={(e) => setCalcDaysUsed(Number(e.target.value) || 0)}
+                  id="pr-date"
+                  type="date"
+                  value={changeDate}
+                  onChange={(e) => setChangeDate(e.target.value)}
                   className="pl-8 h-9 text-xs font-mono font-bold"
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground">{remainingDays} days remaining in 30d cycle</p>
-            </div>
-
-            {/* Net Amount Box */}
-            <div className={cn(
-              'p-4 rounded-lg border flex flex-col justify-between',
-              isUpgrade ? 'bg-primary/10 border-primary/30' : 'bg-emerald-500/10 border-emerald-500/30'
-            )}>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                  {isUpgrade ? 'Net Payable by Subscriber' : 'Credit Refund to Account'}
-                </span>
-                <p className="text-xl font-bold font-mono text-foreground mt-1 tabular-nums">
-                  ৳ {Math.abs(netPayable).toLocaleString()} <span className="text-xs font-normal text-muted-foreground">BDT</span>
+              {q && (
+                <p className="text-[10px] text-muted-foreground">
+                  {q.daysRemaining} of {q.cycleDays} days remaining
                 </p>
+              )}
+            </div>
+
+            {/* Net */}
+            <div
+              className={cn(
+                'p-4 rounded-lg border flex flex-col justify-between',
+                isUpgrade ? 'bg-primary/10 border-primary/30' : 'bg-emerald-500/10 border-emerald-500/30',
+              )}
+            >
+              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                {q ? (isUpgrade ? 'Net Payable by Customer' : 'Net Credit to Customer') : 'Net Adjustment'}
+              </span>
+              {quote.isFetching && !q ? (
+                <Skeleton className="mt-2 h-7 w-28" />
+              ) : q ? (
+                <p className="text-xl font-bold font-mono text-foreground mt-1 tabular-nums">
+                  {formatBdtWithSymbol(Math.abs(q.net))}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">Pick a customer and a package</p>
+              )}
+            </div>
+          </div>
+
+          {quote.isError && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <Info className="h-3.5 w-3.5 shrink-0" />
+              {errorMessage(quote.error, 'Could not calculate the proration.')}
+            </div>
+          )}
+
+          {q && (
+            <>
+              {q.expired && (
+                <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  The customer&apos;s package has already expired on the change date — there is nothing left to prorate.
+                </div>
+              )}
+
+              <div className="bg-muted/30 p-4 rounded-lg border border-border/60 text-xs flex flex-col lg:flex-row items-center justify-between gap-4 font-mono">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Unused credit:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    ({q.daysRemaining}/{q.cycleDays}) × {formatBdt(q.currentPackage.price)} = {formatBdt(q.credit)}
+                  </span>
+                </div>
+                <span>·</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">New package charge:</span>
+                  <span className="font-bold text-sky-600 dark:text-sky-400">
+                    ({q.daysRemaining}/{q.cycleDays}) × {formatBdt(q.targetPackage.price)} = {formatBdt(q.charge)}
+                  </span>
+                </div>
+                <span>=</span>
+                <div className="flex items-center gap-2 font-bold text-primary">
+                  <span>Net:</span>
+                  <span>{formatBdtWithSymbol(q.net)}</span>
+                </div>
               </div>
-              <Button
-                size="sm"
-                onClick={handleApplyProration}
-                className="mt-2 text-xs h-7 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-              >
-                Apply & Bill Now
-              </Button>
-            </div>
-          </div>
 
-          {/* Mathematical Breakdown Formula */}
-          <div className="bg-muted/30 p-4 rounded-lg border border-border/60 text-xs flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">1. Unused Old Plan Credit:</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                ({remainingDays}/30) × ৳{calcFromPrice} = ৳{unusedCredit}
-              </span>
-            </div>
-            <span>+</span>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">2. Prorated New Plan Charge:</span>
-              <span className="font-bold text-sky-600 dark:text-sky-400">
-                ({remainingDays}/30) × ৳{calcToPrice} = ৳{newPlanCharge}
-              </span>
-            </div>
-            <span>=</span>
-            <div className="flex items-center gap-2 font-bold text-primary">
-              <span>Net:</span>
-              <span>৳{netPayable} BDT</span>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="rounded-lg border border-border/60 p-3">
+                  <p className="text-[10px] uppercase font-semibold text-muted-foreground">Customer</p>
+                  <p className="font-bold text-foreground mt-0.5">{q.customer.name}</p>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    {q.customer.mobile}
+                    {q.customer.willExpire ? ` · expires ${fmtDay(q.customer.willExpire)}` : ''}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/60 p-3 flex items-center gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase font-semibold text-muted-foreground">From</p>
+                    <p className="font-medium text-foreground truncate">{q.currentPackage.name}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{formatBdtWithSymbol(q.currentPackage.price)} / mo</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase font-semibold text-muted-foreground">To</p>
+                    <p className="font-bold text-primary truncate">{q.targetPackage.name}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{formatBdtWithSymbol(q.targetPackage.price)} / mo</p>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border/60 p-3">
+                  <p className="text-[10px] uppercase font-semibold text-muted-foreground">Type</p>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      'mt-1 text-[10px] font-semibold uppercase px-2 py-0.5',
+                      q.direction === 'upgrade'
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+                    )}
+                  >
+                    {q.direction === 'upgrade' ? 'Upgrade' : q.direction === 'downgrade' ? 'Downgrade' : 'Same price'}
+                  </Badge>
+                  <p className="text-[11px] text-muted-foreground mt-1">Effective {fmtDay(q.changeDate)}</p>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
-      </Card>
-
-      {/* Proration Ledger Table */}
-      <Card className="border-border/70 shadow-sm bg-card overflow-hidden">
-        <div className="p-4 border-b border-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search by customer name or package plan..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 h-9 text-xs bg-background border-border/60 shadow-inner"
-            />
-          </div>
-          <span className="text-xs text-muted-foreground font-medium">
-            {filteredRows.length} recent proration events
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4">Subscriber Name</th>
-                <th className="py-3 px-4">Original Plan</th>
-                <th className="py-3 px-4">New Target Plan</th>
-                <th className="py-3 px-3">Days Used</th>
-                <th className="py-3 px-4">Unused Credit</th>
-                <th className="py-3 px-4">New Plan Charge</th>
-                <th className="py-3 px-4">Net Adjustment</th>
-                <th className="py-3 px-3">Type</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {filteredRows.map((row) => {
-                const isUp = row.netBdt >= 0;
-
-                return (
-                  <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                    {/* Customer */}
-                    <td className="py-3.5 px-4">
-                      <span className="font-bold text-foreground text-sm">
-                        {row.customerName ?? 'Subscriber Account'}
-                      </span>
-                    </td>
-
-                    {/* From Package */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{row.fromPackage}</span>
-                        {row.fromPriceBdt && (
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            ৳ {row.fromPriceBdt.toLocaleString()} / mo
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* To Package */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-primary">{row.toPackage}</span>
-                        {row.toPriceBdt && (
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            ৳ {row.toPriceBdt.toLocaleString()} / mo
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Days Used */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <span className="font-mono text-xs font-semibold text-foreground">
-                        {row.daysUsed} / {row.cycleDays ?? 30} days
-                      </span>
-                    </td>
-
-                    {/* Unused Credit */}
-                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums">
-                      -৳ {row.creditBdt.toLocaleString()}
-                    </td>
-
-                    {/* Charge */}
-                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-foreground font-medium tabular-nums">
-                      +৳ {row.chargeBdt.toLocaleString()}
-                    </td>
-
-                    {/* Net */}
-                    <td className="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-sm tabular-nums">
-                      <span className={cn(isUp ? 'text-primary' : 'text-emerald-500')}>
-                        {isUp ? '+' : ''}৳ {row.netBdt.toLocaleString()}
-                      </span>
-                    </td>
-
-                    {/* Type Badge */}
-                    <td className="py-3.5 px-3 whitespace-nowrap">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-semibold uppercase px-2 py-0.5',
-                          isUp
-                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        )}
-                      >
-                        {isUp ? 'Upgrade' : 'Downgrade'}
-                      </Badge>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </Card>
     </div>
   );

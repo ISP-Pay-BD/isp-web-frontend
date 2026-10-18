@@ -172,6 +172,98 @@
         "referralTitle": "Join via partner referral",
         "referralSubtitle": "Your referral code unlocks onboarding priority and extended trial support."
       }
+    },
+    "landing": {
+      "hero": {
+        "badge": "Trusted by {count}+ ISPs across Bangladesh",
+        "badgeFallback": "Built for ISPs across Bangladesh",
+        "titleLead": "Run your whole ISP from",
+        "titleAccent": "one console.",
+        "subtitle": "Every bKash and Nagad payment matched to the right customer, MikroTik PPPoE kept in sync, and a branded Bangla app for your subscribers.",
+        "demo": "Try the live demo",
+        "fact1": "14-day free trial",
+        "fact2": "No card required",
+        "fact3": "Free migration from your current panel",
+        "fact4": "Bangla phone and WhatsApp support",
+        "stageConsole": "Operator console",
+        "stageApp": "Subscriber app",
+        "sample": "Sample data"
+      },
+      "console": {
+        "title": "Payments",
+        "today": "Today",
+        "collected": "Collected",
+        "matched": "Auto-matched",
+        "review": "Needs review",
+        "colTime": "Time",
+        "colGateway": "Gateway",
+        "colCustomer": "Customer",
+        "colAmount": "Amount",
+        "colStatus": "Status",
+        "statusMatched": "Matched",
+        "statusReconnected": "Reconnected",
+        "statusReview": "Review",
+        "navDashboard": "Dashboard",
+        "navCustomers": "Customers",
+        "navPayments": "Payments",
+        "navMikrotik": "MikroTik",
+        "navOlt": "OLT",
+        "navReports": "Reports"
+      },
+      "phone": {
+        "isp": "Your ISP",
+        "greeting": "Hi, {name}",
+        "due": "Current due",
+        "dueOn": "Due on the 25th",
+        "pay": "Pay with bKash",
+        "invoices": "Invoices",
+        "paid": "Paid",
+        "connected": "PPPoE connected"
+      },
+      "payment": {
+        "title": "{gateway} payment",
+        "stepReceived": "Received",
+        "stepMatched": "Matched",
+        "stepReconnected": "Reconnected",
+        "statusReceived": "Payment received",
+        "statusMatched": "Matched to {customer}",
+        "statusReconnected": "Line back online"
+      },
+      "proof": {
+        "label": "Platform numbers",
+        "title": "From Dhaka to Rangpur, operators run on one reconciled ledger",
+        "desc": "Billing, MikroTik provisioning and bKash/Nagad reconciliation on one panel, live since 2020.",
+        "isps": "ISP operators on the platform",
+        "subscribers": "subscribers billed",
+        "payments": "payments matched automatically",
+        "uptime": "uptime SLA"
+      },
+      "journey": {
+        "title": "Follow one payment",
+        "desc": "From a subscriber's bKash to a live PPPoE line, without anyone opening a spreadsheet or a router.",
+        "step": "Step {n}"
+      },
+      "preview": {
+        "title": "See it in action",
+        "desc": "The operator console, MikroTik sync, fiber OLT diagnostics and the subscriber app, module by module."
+      },
+      "integrations": {
+        "title": "Wired into the rails your business already runs on",
+        "desc": "Native MikroTik control, bKash and Nagad auto-reconciliation, SMS and OLT. The Bangladesh stack, not bolted-on plugins.",
+        "coreRail": "Core rail",
+        "mikrotik": "Real-time PPPoE + hotspot sync",
+        "bkash": "Send Money matched in under a second",
+        "nagad": "Same auto-reconciliation, same speed",
+        "also": "Also connects with"
+      },
+      "faq": {
+        "title": "Answers before you ask sales",
+        "subtitle": "How billing, MikroTik sync, bKash/Nagad reconciliation and reseller payouts work on ISP Pay BD."
+      },
+      "app": {
+        "homeAlt": "Subscriber app home screen: package, monthly bill, PPPoE connection and a Pay Now button",
+        "paymentAlt": "Subscriber app payment screen with aamarPay, bKash, Nagad and SSLCommerz"
+      }
     }
   },
   "customer": {

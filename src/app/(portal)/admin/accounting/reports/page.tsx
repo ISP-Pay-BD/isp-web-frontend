@@ -3,7 +3,7 @@ import { AccountingReportsPage } from '@/features/admin/accounting/reports';
 
 export const metadata: Metadata = {
   title: 'Accounting Reports',
-  description: 'P&L, cash flow, and receivables.',
+  description: 'Income, expense and net results for a period.',
 };
 
 export default function Page() {

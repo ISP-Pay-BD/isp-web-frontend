@@ -126,6 +126,23 @@ export interface DataTableProps<TData extends RowData> {
   /** Enable table container centering vs edge-to-edge full width switcher */
   enableLayoutToggle?: boolean;
   defaultLayoutMode?: 'full' | 'centered';
+  /**
+   * Server-driven pagination (+ optional search). When set, `data` is the
+   * current page only and page/search changes are delegated to the caller.
+   */
+  server?: ServerTableState;
+}
+
+export interface ServerTableState {
+  /** 1-based page */
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  /** Controlled search value; `onSearchChange` is debounced by the table */
+  search?: string;
+  onSearchChange?: (search: string) => void;
 }
 
 function multiValueFilterFn<TData extends RowData>(
@@ -159,6 +176,7 @@ export function DataTable<TData extends RowData>({
   initialSorting = [],
   enableLayoutToggle = true,
   defaultLayoutMode = 'full',
+  server,
 }: DataTableProps<TData>) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -190,10 +208,38 @@ export function DataTable<TData extends RowData>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [localPagination, setLocalPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: defaultPageSize,
   });
+  const pagination: PaginationState = server
+    ? { pageIndex: Math.max(0, server.page - 1), pageSize: server.pageSize }
+    : localPagination;
+  const setPagination = (updater: PaginationState | ((old: PaginationState) => PaginationState)) => {
+    const next = typeof updater === 'function' ? updater(pagination) : updater;
+    if (!server) return setLocalPagination(next);
+    if (next.pageSize !== pagination.pageSize) server.onPageSizeChange(next.pageSize);
+    else if (next.pageIndex !== pagination.pageIndex) server.onPageChange(next.pageIndex + 1);
+  };
+
+  // Server search: local input state, debounced into the caller's query.
+  const [serverSearch, setServerSearch] = useState(server?.search ?? '');
+  // Keep the latest callback in a ref so an inline `onSearchChange` doesn't
+  // re-fire the search (and reset the page) on every parent render.
+  const onServerSearchChangeRef = useRef(server?.onSearchChange);
+  useEffect(() => {
+    onServerSearchChangeRef.current = server?.onSearchChange;
+  });
+  const lastEmittedSearch = useRef((server?.search ?? '').trim());
+  useEffect(() => {
+    const next = serverSearch.trim();
+    if (next === lastEmittedSearch.current) return;
+    const t = setTimeout(() => {
+      lastEmittedSearch.current = next;
+      onServerSearchChangeRef.current?.(next);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [serverSearch]);
 
   const tableColumns = useMemo(() => {
     const next = columns.map((col) => {
@@ -256,6 +302,8 @@ export function DataTable<TData extends RowData>({
     },
     enableRowSelection,
     enableSortingRemoval: false,
+    manualPagination: Boolean(server),
+    rowCount: server?.total,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
@@ -271,12 +319,13 @@ export function DataTable<TData extends RowData>({
   // Reset page index when filters or data change
   const prevFiltersRef = useRef({ columnFilters, data });
   useEffect(() => {
+    if (server) return; // server owns the page index
     const prev = prevFiltersRef.current;
     if (prev.columnFilters !== columnFilters || prev.data !== data) {
-      setPagination((p) => ({ ...p, pageIndex: 0 }));
+      setLocalPagination((p) => ({ ...p, pageIndex: 0 }));
       prevFiltersRef.current = { columnFilters, data };
     }
-  }, [columnFilters, data]);
+  }, [columnFilters, data, server]);
 
   const selectedCount = table.getSelectedRowModel().rows.length;
 
@@ -299,7 +348,39 @@ export function DataTable<TData extends RowData>({
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
-          {searchKey ? (
+          {server?.onSearchChange ? (
+            <div className="relative">
+              <Input
+                id={`${id}-search`}
+                ref={inputRef}
+                className={cn(
+                  'peer min-w-64 h-9 text-xs ps-9 bg-background/70 border-border/70 rounded-lg shadow-2xs',
+                  serverSearch && 'pe-9',
+                )}
+                value={serverSearch}
+                onChange={(e) => setServerSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                type="search"
+                aria-label={searchPlaceholder}
+              />
+              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
+                <ListFilter size={15} strokeWidth={2} aria-hidden />
+              </div>
+              {serverSearch ? (
+                <button
+                  type="button"
+                  className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 transition-colors hover:text-foreground"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setServerSearch('');
+                    inputRef.current?.focus();
+                  }}
+                >
+                  <CircleX size={15} strokeWidth={2} aria-hidden />
+                </button>
+              ) : null}
+            </div>
+          ) : searchKey ? (
             <div className="relative">
               <Input
                 id={`${id}-search`}
@@ -380,7 +461,7 @@ export function DataTable<TData extends RowData>({
                 type="button"
                 onClick={() => handleLayoutModeToggle('full')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'full'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -394,7 +475,7 @@ export function DataTable<TData extends RowData>({
                 type="button"
                 onClick={() => handleLayoutModeToggle('centered')}
                 className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all duration-150',
+                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
                   layoutMode === 'centered'
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'

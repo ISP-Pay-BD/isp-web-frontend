@@ -1,18 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { createElement, useMemo, type ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import type { LucideIcon } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import {
   UserPlus,
   Receipt,
-  RefreshCw,
+  FileText,
   Send,
   Sun,
   Moon,
-  LifeBuoy,
   Users,
   Compass,
 } from 'lucide-react';
@@ -27,7 +24,70 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { useFilteredNav } from '@/hooks/use-filtered-nav';
+import { canSee } from '@/lib/permissions/can';
+import { useAuthStore } from '@/stores/auth-store';
 import type { NavItem } from '@/config/navigation';
+import { getNavIcon } from './nav-icons';
+
+/**
+ * Shortcuts to the pages the daily jobs start from. Shown only to the roles and permissions the
+ * destination (and its API) requires, so the palette never offers a page that would refuse the caller.
+ */
+const QUICK_ACTIONS: ReadonlyArray<
+  Pick<NavItem, 'roles' | 'permission'> & {
+    href: string;
+    label: string;
+    keywords: string;
+    Icon: ComponentType<{ className?: string }>;
+    tone: string;
+  }
+> = [
+  {
+    href: '/admin/customers/new',
+    label: 'Add New Customer',
+    keywords: 'Add customer new create subscriber',
+    Icon: UserPlus,
+    tone: 'text-primary',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'customer', action: 'create' },
+  },
+  {
+    href: '/admin/customer-payments/new',
+    label: 'Record Customer Payment',
+    keywords: 'Record payment collection invoice bill',
+    Icon: Receipt,
+    tone: 'text-emerald-500',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'customer_payment', action: 'create' },
+  },
+  {
+    href: '/admin/customers/expired',
+    label: 'View Payment Due Customers',
+    keywords: 'Due payment expired customers collection',
+    Icon: Users,
+    tone: 'text-amber-500',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'customer', action: 'read' },
+  },
+  {
+    href: '/admin/reports/btrc',
+    label: 'Generate BTRC Compliance Reports',
+    keywords: 'BTRC compliance reports subscriber export',
+    Icon: FileText,
+    tone: 'text-emerald-500',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'reports', action: 'read' },
+  },
+  {
+    href: '/admin/sms',
+    label: 'Send Due SMS Reminders',
+    keywords: 'Send SMS due reminders broadcast templates',
+    Icon: Send,
+    tone: 'text-purple-500',
+    roles: ['admin', 'resellerAdmin'],
+    permission: { menu: 'sms_message', action: 'read' },
+  },
+];
 
 function flattenNav(items: NavItem[]): NavItem[] {
   const result: NavItem[] = [];
@@ -39,13 +99,7 @@ function flattenNav(items: NavItem[]): NavItem[] {
 }
 
 function NavIcon({ name }: { name?: string }) {
-  if (!name) return <Compass className="mr-2 h-4 w-4 text-muted-foreground" />;
-  const Component = LucideIcons[name as keyof typeof LucideIcons] as unknown;
-  if (typeof Component === 'function' || (typeof Component === 'object' && Component !== null)) {
-    const Icon = Component as LucideIcon;
-    return <Icon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />;
-  }
-  return <Compass className="mr-2 h-4 w-4 text-muted-foreground" />;
+  return createElement(getNavIcon(name) ?? Compass, { className: 'mr-2 h-4 w-4 shrink-0 text-muted-foreground' });
 }
 
 interface CommandPaletteProps {
@@ -56,7 +110,12 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const user = useAuthStore((state) => state.user);
   const navItems = useFilteredNav();
+  const quickActions = useMemo(
+    () => (user ? QUICK_ACTIONS.filter((action) => canSee(action, user.permissions, user.role)) : []),
+    [user],
+  );
 
   const commands = useMemo(() => flattenNav(navItems), [navItems]);
 
@@ -88,79 +147,19 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         {/* Quick Operations Group */}
         <CommandGroup heading="Quick Actions">
-          <CommandItem
-            value="Add customer new create subscriber"
-            onSelect={() => navigate('/admin/customers/new')}
-            onClick={() => navigate('/admin/customers/new')}
-            className="cursor-pointer"
-          >
-            <UserPlus className="mr-2 h-4 w-4 text-primary" />
-            <span className="font-medium">Add New Customer</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/customers/new</span>
-          </CommandItem>
-
-          <CommandItem
-            value="Record payment collection invoice bill"
-            onSelect={() => navigate('/admin/customer-payments/new')}
-            onClick={() => navigate('/admin/customer-payments/new')}
-            className="cursor-pointer"
-          >
-            <Receipt className="mr-2 h-4 w-4 text-emerald-500" />
-            <span className="font-medium">Record Customer Payment</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/customer-payments/new</span>
-          </CommandItem>
-
-          <CommandItem
-            value="Due payment expired customers collection"
-            onSelect={() => navigate('/admin/customers?status=expired')}
-            onClick={() => navigate('/admin/customers?status=expired')}
-            className="cursor-pointer"
-          >
-            <Users className="mr-2 h-4 w-4 text-amber-500" />
-            <span className="font-medium">View Payment Due Customers</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/customers?status=expired</span>
-          </CommandItem>
-
-          <CommandItem
-            value="Sync MikroTik routers RADIUS gateways"
-            onSelect={() => {
-              handleAction(() => {
-                toast.success('MikroTik sync initiated — queues and sessions updating');
-              });
-            }}
-            onClick={() => {
-              handleAction(() => {
-                toast.success('MikroTik sync initiated — queues and sessions updating');
-              });
-            }}
-            className="cursor-pointer"
-          >
-            <RefreshCw className="mr-2 h-4 w-4 text-blue-500" />
-            <span className="font-medium">Sync MikroTik Gateways</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">Instant Action</span>
-          </CommandItem>
-
-          <CommandItem
-            value="BTRC compliance reports subscriber export"
-            onSelect={() => navigate('/admin/reports')}
-            onClick={() => navigate('/admin/reports')}
-            className="cursor-pointer"
-          >
-            <Send className="mr-2 h-4 w-4 text-emerald-500" />
-            <span className="font-medium">Generate BTRC Compliance Reports</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/reports</span>
-          </CommandItem>
-
-          <CommandItem
-            value="Send SMS due reminders broadcast templates"
-            onSelect={() => navigate('/admin/sms')}
-            onClick={() => navigate('/admin/sms')}
-            className="cursor-pointer"
-          >
-            <Send className="mr-2 h-4 w-4 text-purple-500" />
-            <span className="font-medium">Send Due SMS Reminders</span>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">/admin/sms</span>
-          </CommandItem>
+          {quickActions.map(({ href, label, keywords, Icon, tone }) => (
+            <CommandItem
+              key={href}
+              value={keywords}
+              onSelect={() => navigate(href)}
+              onClick={() => navigate(href)}
+              className="cursor-pointer"
+            >
+              <Icon className={`mr-2 h-4 w-4 ${tone}`} />
+              <span className="font-medium">{label}</span>
+              <span className="ml-auto font-mono text-[10px] text-muted-foreground">{href}</span>
+            </CommandItem>
+          ))}
 
           <CommandItem
             value="Toggle theme dark light mode appearance"

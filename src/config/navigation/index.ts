@@ -24,16 +24,52 @@ export function getNavigationForRole(role: UserRole, isExpired: boolean): NavIte
 }
 
 export const employeeNavigation: NavItem[] = [
-  { id: 'emp-salaries', label: 'Salaries', href: '/employee/salaries', icon: 'Banknote', roles: ['employee'] },
-  { id: 'emp-advance', label: 'Advance Salary', href: '/employee/advance-salary', icon: 'Wallet', roles: ['employee'] },
-  { id: 'emp-attendance', label: 'Attendance', href: '/employee/attendance', icon: 'MapPinned', roles: ['employee'] },
-  { id: 'emp-jobs', label: 'Work Orders', href: '/employee/jobs', icon: 'ClipboardList', roles: ['employee'] },
-  { id: 'emp-installs', label: 'Installations', href: '/employee/installations', icon: 'HardHat', roles: ['employee'] },
-  { id: 'emp-profile', label: 'Profile', href: '/employee/profile', icon: 'User', roles: ['employee'] },
+  {
+    id: 'emp-salaries',
+    label: 'Salaries',
+    href: '/employee/salaries',
+    icon: 'Banknote',
+    roles: ['employee'],
+  },
+  {
+    id: 'emp-advance',
+    label: 'Advance Salary',
+    href: '/employee/advance-salary',
+    icon: 'Wallet',
+    roles: ['employee'],
+  },
+  {
+    id: 'emp-attendance',
+    label: 'Attendance',
+    href: '/employee/attendance',
+    icon: 'MapPinned',
+    roles: ['employee'],
+  },
+  {
+    id: 'emp-jobs',
+    label: 'Work Orders',
+    href: '/employee/jobs',
+    icon: 'ClipboardList',
+    roles: ['employee'],
+  },
+  {
+    id: 'emp-installs',
+    label: 'Installations',
+    href: '/employee/installations',
+    icon: 'HardHat',
+    roles: ['employee'],
+  },
+  {
+    id: 'emp-profile',
+    label: 'Profile',
+    href: '/employee/profile',
+    icon: 'User',
+    roles: ['employee'],
+  },
 ];
 
 export const marketingNavLinks = [
-  { label: 'Product', href: '/#auto-reconcile' },
+  { label: 'Product', href: '/#product-preview' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'Pricing', href: '/#pricing' },
   { label: 'FAQ', href: '/#faq' },

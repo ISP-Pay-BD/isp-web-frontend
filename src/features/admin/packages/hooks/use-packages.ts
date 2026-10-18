@@ -1,53 +1,39 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Package } from '@/data/shared/types';
+import { packagesApi } from '../api/packages.api';
+import type { PackageFormValues } from '../schemas/package.schema';
 
-export function usePackages() {
+const PACKAGES = ['admin', 'packages'] as const;
+
+export function usePackages(params: { page: number; perPage: number; search?: string; status?: string }) {
   return useQuery({
-    queryKey: ['admin', 'domain', 'packages'],
-    queryFn: async () => {
-      const res = await mockFetch('admin.domain', 'packages');
-      return res as { items: Package[]; popPackages: Package[] };
-    },
+    queryKey: [...PACKAGES, 'list', params],
+    queryFn: () => packagesApi.list(params),
+    placeholderData: keepPreviousData,
   });
 }
 
-export function useCreatePackage() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: Partial<Package>) => mockFetch('admin.packages.create', payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package created');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to create package'),
-  });
+export function usePackageSummary() {
+  return useQuery({ queryKey: [...PACKAGES, 'summary'], queryFn: packagesApi.summary });
 }
 
-export function useUpdatePackage() {
+/** Package writes; the form maps validation errors itself (meta.silent). */
+export function usePackageMutations() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<Package> }) =>
-      mockFetch('admin.packages.update', id, payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package updated');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to update package'),
-  });
-}
-
-export function useDeletePackage() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => mockFetch('admin.packages.delete', id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin', 'domain', 'packages'] });
-      toast.success('Package deleted');
-    },
-    onError: (err: Error) => toast.error(err.message || 'Failed to delete package'),
-  });
+  const refresh = (message: string) => () => {
+    qc.invalidateQueries({ queryKey: PACKAGES });
+    qc.invalidateQueries({ queryKey: ['admin', 'options', 'packages'] });
+    toast.success(message);
+  };
+  return {
+    create: useMutation({ mutationFn: (v: PackageFormValues) => packagesApi.create(v), meta: { silent: true }, onSuccess: refresh('Package created') }),
+    update: useMutation({
+      mutationFn: (v: { id: string; values: PackageFormValues }) => packagesApi.update(v.id, v.values),
+      meta: { silent: true },
+      onSuccess: refresh('Package updated'),
+    }),
+    remove: useMutation({ mutationFn: (id: string) => packagesApi.remove(id), onSuccess: refresh('Package deleted') }),
+  };
 }

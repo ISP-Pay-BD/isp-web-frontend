@@ -4,7 +4,7 @@ import { PluginsPage } from '@/features/marketing/plugins';
 export const metadata: Metadata = {
   title: 'Plugins & Addons Marketplace — ISP Pay BD',
   description:
-    'Explore 15+ modular add-ons including WhatsApp Business, Huawei/ZTE OLT Manager, HR Payroll, and Merchant webhooks.',
+    'Browse the modular add-ons available on ISP Pay BD and request the ones your ISP needs.',
 };
 
 export default function PluginsRoute() {

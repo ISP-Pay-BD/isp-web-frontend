@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -64,7 +64,8 @@
   /* Portal fonts */
   --font-portal-sans: 'Satoshi', 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-portal-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-landing-display: 'Satoshi', 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-landing-display:
+    'Satoshi', 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-landing-body: 'Satoshi', 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-bengali: 'Noto Sans Bengali', var(--font-landing-body);
 
@@ -75,7 +76,7 @@
   --card-foreground: oklch(0.14 0.02 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.14 0.02 250);
-  --primary: oklch(0.58 0.20 41);
+  --primary: oklch(0.58 0.2 41);
   --primary-foreground: oklch(0.99 0.005 80);
   --secondary: oklch(0.955 0.008 250);
   --secondary-foreground: oklch(0.18 0.025 250);
@@ -86,8 +87,8 @@
   --destructive: oklch(0.55 0.22 27);
   --border: oklch(0.89 0.009 250);
   --input: oklch(0.89 0.009 250);
-  --ring: oklch(0.58 0.20 41 / 40%);
-  --chart-1: oklch(0.58 0.20 41);
+  --ring: oklch(0.58 0.2 41 / 40%);
+  --chart-1: oklch(0.58 0.2 41);
   --chart-2: oklch(0.55 0.08 250);
   --chart-3: oklch(0.45 0.06 250);
   --chart-4: oklch(0.38 0.04 250);
@@ -95,12 +96,12 @@
   --radius: 0.75rem;
   --sidebar: oklch(0.985 0.005 250);
   --sidebar-foreground: oklch(0.14 0.02 250);
-  --sidebar-primary: oklch(0.58 0.20 41);
+  --sidebar-primary: oklch(0.58 0.2 41);
   --sidebar-primary-foreground: oklch(0.99 0.005 80);
   --sidebar-accent: oklch(0.945 0.012 250);
   --sidebar-accent-foreground: oklch(0.14 0.02 250);
   --sidebar-border: oklch(0.89 0.009 250);
-  --sidebar-ring: oklch(0.58 0.20 41 / 40%);
+  --sidebar-ring: oklch(0.58 0.2 41 / 40%);
 
   /* Diffused tactile elevation for light mode */
   --shadow-2xs: 0 1px 2px rgba(15, 23, 42, 0.03);
@@ -190,6 +191,283 @@
   [data-slot='stat-value'] {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Scroll-driven reveal (`Reveal`, `RevealItem`): the browser runs it from the scroll position with no
+   JavaScript, so no section sits invisible while the page hydrates on a slow phone. Where scroll
+   timelines are unsupported, or motion is reduced, content is simply shown. */
+@keyframes lp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-reveal {
+      animation: lp-reveal cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-timeline: view();
+      animation-range: entry calc(4% + var(--reveal-shift, 0%)) cover
+        calc(22% + var(--reveal-shift, 0%));
+    }
+  }
+}
+
+/* Hero entrance: plain CSS, so it plays on first paint instead of after hydration. `--d` staggers. */
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.lp-rise {
+  animation: lp-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Hero headline: each word rises out of a blur, staggered with `--d`. CSS, so it runs before hydration. */
+@keyframes lp-rise-blur {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    filter: blur(10px);
+  }
+}
+.lp-rise-word {
+  display: inline-block;
+  animation: lp-rise-blur 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Section headings: words slide up out of their line as the heading scrolls in (`RevealWords`). */
+@keyframes lp-word {
+  from {
+    transform: translateY(110%);
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-word-mask {
+      view-timeline-name: --lp-word;
+    }
+    .lp-word {
+      animation: lp-word cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-timeline: --lp-word;
+      animation-range: entry calc(30% + var(--i, 0) * 5%) cover calc(36% + var(--i, 0) * 5%);
+    }
+  }
+}
+
+/* Hero aurora: two warm lights (vermilion, ember) drifting slowly behind the headline. Transform only. */
+@keyframes lp-drift-a {
+  to {
+    transform: translate(14%, 10%) scale(1.08);
+  }
+}
+@keyframes lp-drift-b {
+  to {
+    transform: translate(-12%, 14%) scale(0.94);
+  }
+}
+.lp-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 40%, transparent 92%);
+}
+.lp-aurora::before,
+.lp-aurora::after {
+  content: '';
+  position: absolute;
+  width: min(70vw, 1100px);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  will-change: transform;
+}
+.lp-aurora::before {
+  left: -16%;
+  top: -42%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--landing-cta) 34%, transparent),
+    transparent
+  );
+  animation: lp-drift-a 22s ease-in-out infinite alternate;
+}
+.lp-aurora::after {
+  right: -18%;
+  top: -34%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, color-mix(in srgb, var(--landing-cta) 45%, #ffb020) 22%, transparent),
+    transparent
+  );
+  animation: lp-drift-b 26s ease-in-out infinite alternate;
+}
+
+/* A fiber-and-node circuit motif, tiled and faded at the edges; colour with `color`, strength with opacity. */
+.lp-circuit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: currentColor;
+  --lp-circuit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96' fill='none' stroke='black' stroke-width='1' stroke-linecap='round'%3E%3Cpath d='M0 24 H30 L42 36 H96 M0 72 H18 L30 60 H66 L78 72 H96 M48 0 V14 M48 82 V96'/%3E%3Ccircle cx='42' cy='36' r='2.5'/%3E%3Ccircle cx='30' cy='60' r='2.5'/%3E%3Ccircle cx='78' cy='72' r='2.5'/%3E%3Ccircle cx='48' cy='14' r='2'/%3E%3C/svg%3E");
+  -webkit-mask-image:
+    var(--lp-circuit), radial-gradient(70% 70% at 50% 40%, black 30%, transparent 80%);
+  -webkit-mask-size:
+    96px 96px,
+    100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  -webkit-mask-composite: source-in;
+  mask-image: var(--lp-circuit), radial-gradient(70% 70% at 50% 40%, black 30%, transparent 80%);
+  mask-size:
+    96px 96px,
+    100% 100%;
+  mask-repeat: repeat, no-repeat;
+  mask-composite: intersect;
+}
+
+/* A soft light that drifts on its own and follows the mouse while it is over the block (`PointerGlow`). */
+@keyframes lp-glow-drift {
+  50% {
+    transform: translate(-50%, -50%) translate(14%, 10%);
+  }
+}
+.lp-glow {
+  position: absolute;
+  left: var(--gx, 50%);
+  top: var(--gy, 70%);
+  width: 46rem;
+  height: 46rem;
+  pointer-events: none;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--landing-cta) 22%, transparent),
+    transparent
+  );
+  animation: lp-glow-drift 14s ease-in-out infinite;
+  transition:
+    left 600ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The payment card leans toward the mouse and a sheen follows it (`TiltCard`; never under reduced motion). */
+.lp-tilt {
+  position: relative;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-tilt[data-tilting] {
+  transition-duration: 120ms;
+}
+.lp-tilt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--sx, 50%) var(--sy, 0%),
+    rgb(255 255 255 / 12%),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.lp-tilt[data-tilting]::after {
+  opacity: 1;
+}
+
+/* ── Illustration palette (landing/components/illustrations.tsx) ───────────────────────────
+   Three faces per material, lit from the top-left: top lightest, left middle, right darkest.
+   Mixed from the landing tokens so the whole set sits on the dark canvas. */
+.il-edge > * {
+  stroke: rgb(255 255 255 / 10%);
+  stroke-width: 0.6;
+  stroke-linejoin: round;
+}
+.il-brand-top {
+  fill: color-mix(in srgb, var(--landing-cta) 55%, var(--landing-panel));
+}
+.il-brand-left {
+  fill: color-mix(in srgb, var(--landing-cta) 36%, var(--landing-panel));
+}
+.il-brand-right {
+  fill: color-mix(in srgb, var(--landing-cta) 22%, var(--landing-panel));
+}
+.il-ink-top {
+  fill: color-mix(in srgb, white 16%, var(--landing-panel));
+}
+.il-ink-left {
+  fill: color-mix(in srgb, white 9%, var(--landing-panel));
+}
+.il-ink-right {
+  fill: color-mix(in srgb, white 4%, var(--landing-panel));
+}
+.il-paper-top {
+  fill: color-mix(in srgb, white 30%, var(--landing-panel));
+}
+.il-paper-left {
+  fill: color-mix(in srgb, white 20%, var(--landing-panel));
+}
+.il-paper-right {
+  fill: color-mix(in srgb, white 12%, var(--landing-panel));
+}
+.il-silver-top {
+  fill: color-mix(in srgb, white 52%, var(--landing-panel));
+}
+.il-silver-left {
+  fill: color-mix(in srgb, white 36%, var(--landing-panel));
+}
+.il-silver-right {
+  fill: color-mix(in srgb, white 24%, var(--landing-panel));
+}
+.il-accent {
+  fill: var(--landing-cta);
+}
+.il-accent-left {
+  fill: color-mix(in srgb, var(--landing-cta) 80%, black);
+}
+.il-accent-right {
+  fill: color-mix(in srgb, var(--landing-cta) 62%, black);
+}
+.il-ok {
+  fill: #34d399;
+}
+.il-screen {
+  fill: color-mix(in srgb, white 6%, var(--landing-bg));
+}
+.il-soft {
+  fill: rgb(255 255 255 / 10%);
+}
+.il-soft-strong {
+  fill: rgb(255 255 255 / 20%);
+}
+.il-shadow {
+  fill: rgb(0 0 0 / 35%);
+}
+.il-tick,
+.il-line-accent,
+.il-arc {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.il-tick {
+  stroke: white;
+  stroke-width: 3;
+}
+.il-line-accent {
+  stroke: var(--landing-cta);
+  stroke-width: 2;
+  stroke-dasharray: 3 4;
+}
+.il-arc {
+  stroke: color-mix(in srgb, white 45%, var(--landing-panel));
+  stroke-width: 4;
 }
 
 @keyframes lp-marquee {
@@ -424,7 +702,8 @@
   }
 
   /* Reset body and hide screen-only application shells */
-  html, body {
+  html,
+  body {
     background: #ffffff !important;
     color: #000000 !important;
     font-family: Arial, Helvetica, sans-serif !important;
@@ -441,11 +720,11 @@
   header,
   aside,
   footer,
-  [data-slot="sidebar"],
+  [data-slot='sidebar'],
   .no-print,
   button,
   .toaster,
-  div[role="dialog"] > div[data-state="open"] > button,
+  div[role='dialog'] > div[data-state='open'] > button,
   div[data-radix-popper-content-wrapper] {
     display: none !important;
   }
@@ -495,4 +774,3 @@
     -webkit-print-color-adjust: exact !important;
   }
 }
-

@@ -5,38 +5,56 @@ import {
   Receipt,
   Download,
   Calendar,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  Filter,
-  DollarSign,
-  Printer,
   CheckCircle2,
+  AlertCircle,
+  Clock,
   AlignJustify,
   AlignCenter,
+  RefreshCw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { CurrencyDisplay, PageSkeleton, EmptyState, TablePagination } from '@/components/shared';
-import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useOtcReport } from '../hooks/use-otc-report';
+import { useServerTable } from '@/features/admin/accounting/shared/table-utils';
+import {
+  DateRangeInputs,
+  DebouncedSearchInput,
+} from '@/features/admin/accounting/shared/components';
+import { humanize, ymd } from '@/features/admin/accounting/shared/format';
+import {
+  useExportOtcReport,
+  useOtcReport,
+  type OtcFilters,
+  type OtcStatusFilter,
+} from '../hooks/use-otc-report';
+
+const STATUS_TABS: Array<{ value: OtcStatusFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'due', label: 'Due' },
+  { value: 'pending', label: 'Pending' },
+];
+
+const OTC_STATUS_STYLES: Record<string, string> = {
+  paid: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+  due: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+  pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+};
 
 export function OtcReportPage() {
-  const { data: otcReport = [], isLoading, isError, refetch } = useOtcReport();
   const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
   const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
   const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
@@ -52,75 +70,37 @@ export function OtcReportPage() {
     setGlobalTableLayout(mode);
   };
 
-  const [periodFilter, setPeriodFilter] = useState('all'); // all | 7days | 30days
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-
-  const totalCollections = useMemo(
-    () => otcReport.reduce((sum, r) => sum + r.collectionsBdt, 0),
-    [otcReport]
+  const { page, pageSize, search, setPage, onPageSizeChange, onSearchChange, resetPage } =
+    useServerTable(20);
+  const [status, setStatus] = useState<OtcStatusFilter>('all');
+  const [range, setRange] = useState({ from: '', to: '' });
+  const filters: OtcFilters = useMemo(
+    () => ({ status, fromDate: range.from, toDate: range.to, search }),
+    [status, range, search],
   );
-  const totalExpenses = useMemo(
-    () => otcReport.reduce((sum, r) => sum + r.expensesBdt, 0),
-    [otcReport]
+
+  const { data, isPending, isError, error, refetch, isFetching, isPlaceholderData } = useOtcReport(
+    filters,
+    page,
+    pageSize,
   );
-  const netCashFlow = totalCollections - totalExpenses;
-  const latestClosing = otcReport[0]?.closingBdt ?? 0;
+  const exportCsv = useExportOtcReport();
+  const rows = data?.items ?? [];
+  const summary = data?.summary;
 
-  const filtered = useMemo(() => {
-    if (periodFilter === '7days') return otcReport.slice(0, 7);
-    if (periodFilter === '30days') return otcReport.slice(0, 30);
-    return otcReport;
-  }, [otcReport, periodFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const paginatedOtc = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, safeCurrentPage, pageSize]);
-
-  const handleExportCsv = () => {
-    const headers = ['Date', 'Opening Balance (BDT)', 'Collections (BDT)', 'Expenses (BDT)', 'Closing Balance (BDT)'];
-    const rows = filtered.map((r) => [r.date, r.openingBdt, r.collectionsBdt, r.expensesBdt, r.closingBdt]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `otc_cash_report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Daily OTC cash report exported to CSV');
-  };
-
-  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError) {
-    return (
-      <div className="p-6">
-        <EmptyState
-          title="Failed to load OTC report"
-          description="Could not load daily cash position."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
-      </div>
-    );
-  }
+  if (isPending) return <PageSkeleton variant="table" rows={6} />;
 
   return (
     <div
       className={cn(
         'space-y-6 pb-16 transition-all duration-200',
-        layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full'
+        layoutMode === 'centered' ? 'mx-auto max-w-6xl' : 'w-full',
       )}
     >
       {/* Header */}
       <PageHeader
-        title="OTC & Daily Cash Flow"
-        subtitle="One-time installation charges, field hardware collections, operational cash outflows, and daily closing balances."
+        title="OTC Report — One-time connection charges"
+        subtitle="One-time installation / connection charges billed per customer connection, with their payment status."
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Reports' },
@@ -131,134 +111,174 @@ export function OtcReportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => toast.success('Daily cash flow statement printed')}
-              className="text-xs h-8 border-border/80 hover:bg-accent"
+              onClick={() => refetch()}
+              className="border-border/80 hover:bg-accent h-8 text-xs"
             >
-              <Printer className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Print Statement
+              <RefreshCw
+                className={cn(
+                  'text-muted-foreground mr-1.5 h-3.5 w-3.5',
+                  isFetching && 'animate-spin',
+                )}
+              />{' '}
+              Refresh
             </Button>
             <Button
               size="sm"
-              onClick={handleExportCsv}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 gap-1.5 shadow-sm"
+              disabled={exportCsv.isPending}
+              onClick={() =>
+                exportCsv.mutate(filters, {
+                  onSuccess: (n) =>
+                    toast.success(n ? `Exported ${n} OTC records` : 'No OTC records to export'),
+                })
+              }
+              className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 gap-1.5 text-xs font-semibold shadow-sm"
             >
-              <Download className="h-3.5 w-3.5" /> Export Ledger CSV
+              <Download className="h-3.5 w-3.5" />{' '}
+              {exportCsv.isPending ? 'Exporting…' : 'Export CSV'}
             </Button>
           </div>
         }
       />
 
-      {/* KPI Metric Strips */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
+      {/* KPI Metric Strips — summary for the current filters */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total OTC Collected
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Total OTC
             </span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={totalCollections} className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400" />
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Field Expenses
-            </span>
-            <div className="p-2 rounded-lg bg-rose-500/10 text-rose-500">
-              <TrendingDown className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={totalExpenses} className="text-2xl font-bold tracking-tight text-rose-500" />
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Net Cash Flow
-            </span>
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary rounded-lg p-2">
               <Receipt className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={netCashFlow} className="text-2xl font-bold tracking-tight text-foreground" />
+            {summary ? (
+              <CurrencyDisplay
+                amount={summary.totalOtc}
+                className="text-foreground text-2xl font-bold tracking-tight"
+              />
+            ) : (
+              <span className="text-muted-foreground text-2xl font-bold">—</span>
+            )}
           </div>
         </Card>
 
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
+        <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Latest Closing Balance
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Paid OTC
             </span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-              <Wallet className="h-4 w-4" />
+            <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500">
+              <CheckCircle2 className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <CurrencyDisplay amount={latestClosing} className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400" />
+            {summary ? (
+              <>
+                <CurrencyDisplay
+                  amount={summary.paidOtc}
+                  className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400"
+                />
+                <span className="text-muted-foreground text-xs">
+                  {summary.paidCount.toLocaleString()} paid
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground text-2xl font-bold">—</span>
+            )}
+          </div>
+        </Card>
+
+        <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Due OTC
+            </span>
+            <div className="rounded-lg bg-rose-500/10 p-2 text-rose-500">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            {summary ? (
+              <>
+                <CurrencyDisplay
+                  amount={summary.dueOtc}
+                  className="text-2xl font-bold tracking-tight text-rose-500"
+                />
+                <span className="text-muted-foreground text-xs">
+                  {summary.dueCount.toLocaleString()} due
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground text-2xl font-bold">—</span>
+            )}
+          </div>
+        </Card>
+
+        <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Pending
+            </span>
+            <div className="rounded-lg bg-amber-500/10 p-2 text-amber-500">
+              <Clock className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="font-mono text-2xl font-bold tracking-tight text-amber-600 tabular-nums dark:text-amber-400">
+              {summary ? summary.pendingCount.toLocaleString() : '—'}
+            </span>
+            {summary && <span className="text-muted-foreground text-xs">connections</span>}
           </div>
         </Card>
       </div>
 
       {/* Filter Toolbar */}
-      <Card className="border-border/70 shadow-2xs bg-card">
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Period Filter:
-            </span>
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
-              <Button
-                type="button"
-                size="sm"
-                variant={periodFilter === 'all' ? 'default' : 'ghost'}
-                onClick={() => setPeriodFilter('all')}
-                className="text-xs h-7 px-2.5"
-              >
-                All Cycles
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={periodFilter === '7days' ? 'default' : 'ghost'}
-                onClick={() => setPeriodFilter('7days')}
-                className="text-xs h-7 px-2.5"
-              >
-                Last 7 Days
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={periodFilter === '30days' ? 'default' : 'ghost'}
-                onClick={() => setPeriodFilter('30days')}
-                className="text-xs h-7 px-2.5"
-              >
-                Last 30 Days
-              </Button>
-            </div>
-          </div>
+      <Card className="border-border/70 bg-card shadow-2xs">
+        <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+          <DebouncedSearchInput
+            onSearchChange={onSearchChange}
+            placeholder="Search customer, fiber code..."
+          />
 
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-muted-foreground font-mono">
-              {filtered.length} daily ledger cycles
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
+              {STATUS_TABS.map((t) => (
+                <Button
+                  key={t.value}
+                  type="button"
+                  size="sm"
+                  variant={status === t.value ? 'default' : 'ghost'}
+                  onClick={() => {
+                    setStatus(t.value);
+                    resetPage();
+                  }}
+                  className="h-7 px-2.5 text-xs"
+                >
+                  {t.label}
+                </Button>
+              ))}
             </div>
+
+            <DateRangeInputs
+              from={range.from}
+              to={range.to}
+              onChange={(r) => {
+                setRange(r);
+                resetPage();
+              }}
+            />
 
             {/* Table Layout Toggle */}
-            <div className="flex items-center rounded-lg border border-border/70 bg-muted/40 p-0.5">
+            <div className="border-border/70 bg-muted/40 flex items-center rounded-lg border p-0.5">
               <button
                 type="button"
                 onClick={() => toggleLayoutMode('full')}
                 className={cn(
-                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
                   layoutMode === 'full'
                     ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
                 title="Full width layout"
               >
@@ -269,10 +289,10 @@ export function OtcReportPage() {
                 type="button"
                 onClick={() => toggleLayoutMode('centered')}
                 className={cn(
-                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all duration-150',
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
                   layoutMode === 'centered'
                     ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
                 title="Centered container layout"
               >
@@ -285,55 +305,128 @@ export function OtcReportPage() {
       </Card>
 
       {/* Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Opening Balance</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Collections (+)</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Expenses (-)</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Closing Position</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-border/60">
-              {paginatedOtc.map((row) => (
-                <TableRow key={row.date} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-mono text-xs font-medium text-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>{row.date}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                    <CurrencyDisplay amount={row.openingBdt} />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    +<CurrencyDisplay amount={row.collectionsBdt} />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs font-semibold text-rose-500">
-                    -<CurrencyDisplay amount={row.expensesBdt} />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                    <CurrencyDisplay amount={row.closingBdt} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Global Pagination Controls */}
-        <TablePagination
-          currentPage={safeCurrentPage}
-          pageSize={pageSize}
-          totalItems={filtered.length}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[10, 20, 50, 100]}
+      {isError ? (
+        <EmptyState
+          title="Failed to load OTC report"
+          description={error.message}
+          actionLabel="Retry"
+          onAction={() => refetch()}
         />
-      </Card>
+      ) : rows.length === 0 ? (
+        <EmptyState
+          title="No OTC records"
+          description={
+            search || status !== 'all' || range.from || range.to
+              ? 'No connections match the current filters.'
+              : 'Connections with a one-time charge will appear here.'
+          }
+        />
+      ) : (
+        <Card
+          className={cn(
+            'border-border/70 bg-card ring-border/50 overflow-hidden shadow-2xs ring-1 transition-opacity',
+            isPlaceholderData && 'opacity-60',
+          )}
+        >
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Customer
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Connection
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Client Type
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Fiber Code
+                  </TableHead>
+                  <TableHead className="text-right text-xs font-semibold tracking-wider uppercase">
+                    OTC Amount
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    OTC Status
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Billing Status
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
+                    Created
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-border/60 divide-y">
+                {rows.map((row) => (
+                  <TableRow key={row.id} className="group hover:bg-muted/30 transition-colors">
+                    <TableCell className="text-xs">
+                      <div className="text-foreground font-medium">{row.userName || '—'}</div>
+                      {row.userId && (
+                        <div className="text-muted-foreground font-mono text-[10px]">
+                          #{row.userId}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {row.connectionType ? humanize(row.connectionType) : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {row.clientType ? humanize(row.clientType) : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {row.fiberCode || '—'}
+                    </TableCell>
+                    <TableCell className="text-foreground text-right font-mono text-xs font-bold">
+                      <CurrencyDisplay amount={row.otc} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'text-[10px] font-medium',
+                          OTC_STATUS_STYLES[row.otcStatus] ?? 'text-muted-foreground',
+                        )}
+                      >
+                        {humanize(row.otcStatus) || '—'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {row.billingStatus ? (
+                        <Badge
+                          variant="outline"
+                          className="text-muted-foreground border-border/60 text-[10px] font-medium"
+                        >
+                          {humanize(row.billingStatus)}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{ymd(row.createdAt) || '—'}</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Server pagination */}
+          <TablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={data?.meta.total ?? 0}
+            onPageChange={setPage}
+            onPageSizeChange={onPageSizeChange}
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
+        </Card>
+      )}
     </div>
   );
 }

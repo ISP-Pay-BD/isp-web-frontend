@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { themePresetsData } from '@/data/admin/theme-studio.data';
+import { THEME_PRESETS as themePresetsData } from '@/features/admin/theme-studio/presets';
 
 interface ThemeCustomizerState {
   presetId: string;

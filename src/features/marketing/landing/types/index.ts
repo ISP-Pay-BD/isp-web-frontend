@@ -8,11 +8,12 @@ export interface HeroData {
   ctaSecondary: string;
 }
 
+/** Live counts come from GET /api/v1/public/stats (0 / '' = unknown, the figure is hidden); uptimeSla is the published SLA. */
 export interface StatsData {
   trustedIsps: number;
   activeUsers: number;
-  activeAdmins: number;
   paymentsReconciled: string;
+  uptimeSla: string;
 }
 
 export interface FeatureItem {
@@ -57,6 +58,33 @@ export interface ReconcileStep {
   desc: string;
   metric: string;
   metricHighlight?: string;
+  titleBn?: string;
+  descBn?: string;
+  metricHighlightBn?: string;
+}
+
+export type StagePaymentStatus = 'matched' | 'reconnected' | 'review';
+
+export interface StagePayment {
+  time: string;
+  gateway: string;
+  trxId: string;
+  customer: string | null;
+  name: string;
+  amountBdt: number;
+  status: StagePaymentStatus;
+}
+
+export interface HeroStageData {
+  payments: StagePayment[];
+  totals: { collectedBdt: number; matched: number; review: number };
+  subscriber: {
+    name: string;
+    id: string;
+    packageName: string;
+    dueBdt: number;
+    invoices: Array<{ month: string; amountBdt: number }>;
+  };
 }
 
 export interface RoiData {
@@ -150,11 +178,6 @@ export interface CaseStudyData {
   results: Array<{ metric: string; label: string }>;
 }
 
-export interface TrustBadgeItem {
-  label: string;
-  sub: string;
-}
-
 export interface ConnectItem {
   name: string;
   desc: string;
@@ -170,6 +193,7 @@ export interface PermissionMatrixRow {
 
 export interface LandingSectionsData {
   hero: HeroData;
+  heroStage: HeroStageData;
   stats: StatsData;
   features: FeatureItem[];
   benefits: BenefitItem[];
@@ -196,7 +220,6 @@ export interface LandingSectionsData {
   rolesAccess: RoleAccessItem[];
   caseStudy: CaseStudyData;
   partners: string[];
-  trustBadges: TrustBadgeItem[];
   connects: ConnectItem[];
   permissionsMatrix: PermissionMatrixRow[];
 }

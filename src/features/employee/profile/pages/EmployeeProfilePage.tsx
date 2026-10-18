@@ -3,43 +3,43 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2, Mail, Phone, User } from 'lucide-react';
+import { Building2, Mail, MapPin, Phone, User } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DateDisplay } from '@/components/shared/DateDisplay';
-import { formatBdPhone } from '@/lib/format';
+import { Textarea } from '@/components/ui/textarea';
+import { formatBdPhone, normalizeBdPhone } from '@/lib/format';
 import {
   EmployeePageShell,
   EmployeeLoadingSkeleton,
   EmployeeErrorState,
 } from '@/features/employee/shared';
+import { formatDay } from '@/features/employee/shared/lib/datetime';
 import { useEmployeeProfile, useUpdateEmployeeProfile } from '../hooks/use-employee-profile';
 import { profileUpdateSchema, type ProfileUpdateFormValues } from '../schemas/profile.schema';
 
 export function EmployeeProfilePage() {
-  const { data: profile, isLoading, isError, refetch } = useEmployeeProfile();
-  const updateMutation = useUpdateEmployeeProfile();
+  const { data: profile, isLoading, isError, error, refetch } = useEmployeeProfile();
+  const updateMutation = useUpdateEmployeeProfile(profile);
 
   const form = useForm<ProfileUpdateFormValues>({
     resolver: zodResolver(profileUpdateSchema),
-    defaultValues: { name: '', phone: '', email: '' },
+    defaultValues: { name: '', phone: '', email: '', address: '' },
   });
 
   useEffect(() => {
     if (profile) {
       form.reset({
         name: profile.name,
-        phone: profile.phone,
+        phone: normalizeBdPhone(profile.mobile),
         email: profile.email,
+        address: profile.address,
       });
     }
   }, [profile, form]);
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    await updateMutation.mutateAsync(values);
-  });
+  const onSubmit = form.handleSubmit((values) => updateMutation.mutate(values));
 
   if (isLoading) {
     return (
@@ -52,10 +52,20 @@ export function EmployeeProfilePage() {
   if (isError || !profile) {
     return (
       <EmployeePageShell title="My Profile" subtitle="Manage your account details">
-        <EmployeeErrorState onRetry={() => refetch()} />
+        <EmployeeErrorState message={error?.message} onRetry={() => refetch()} />
       </EmployeePageShell>
     );
   }
+
+  const facts: [string, string][] = [
+    ['Employer', profile.employerName || '—'],
+    ['Service Areas', profile.areaNames.join(', ') || '—'],
+    ['National ID', profile.nidNumber || '—'],
+    [
+      'Location Tracking',
+      profile.locationRequired ? `Required${profile.locationInterval ? ` · every ${profile.locationInterval} min` : ''}` : 'Off',
+    ],
+  ];
 
   return (
     <EmployeePageShell
@@ -74,29 +84,25 @@ export function EmployeeProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex items-start gap-3">
-              <Building2 className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+              <User className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                <p className="text-muted-foreground">Department</p>
-                <p className="font-medium">{profile.department}</p>
+                <p className="text-muted-foreground">Designation</p>
+                <p className="font-medium">{profile.designationLabel || '—'}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <User className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+              <Building2 className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
               <div>
-                <p className="text-muted-foreground">Role</p>
-                <p className="font-medium">{profile.role}</p>
+                <p className="text-muted-foreground">Joined</p>
+                <p className="font-medium">{formatDay(profile.joinedAt) || '—'}</p>
               </div>
             </div>
-            <div>
-              <p className="text-muted-foreground">Reporting Manager</p>
-              <p className="font-medium">{profile.manager}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Joined</p>
-              <p className="font-medium">
-                <DateDisplay value={profile.joinedAt} />
-              </p>
-            </div>
+            {facts.map(([label, value]) => (
+              <div key={label}>
+                <p className="text-muted-foreground">{label}</p>
+                <p className="font-medium">{value}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -111,12 +117,7 @@ export function EmployeeProfilePage() {
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
                   <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                  <Input
-                    id="name"
-                    className="pl-9"
-                    {...form.register('name')}
-                    disabled={updateMutation.isPending}
-                  />
+                  <Input id="name" className="pl-9" {...form.register('name')} disabled={updateMutation.isPending} />
                 </div>
                 {form.formState.errors.name ? (
                   <p className="text-destructive text-xs">{form.formState.errors.name.message}</p>
@@ -137,11 +138,9 @@ export function EmployeeProfilePage() {
                 </div>
                 {form.formState.errors.phone ? (
                   <p className="text-destructive text-xs">{form.formState.errors.phone.message}</p>
-                ) : (
-                  <p className="text-muted-foreground text-xs">
-                    Current: {formatBdPhone(profile.phone)}
-                  </p>
-                )}
+                ) : profile.mobile ? (
+                  <p className="text-muted-foreground text-xs">Current: {formatBdPhone(profile.mobile)}</p>
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -161,8 +160,19 @@ export function EmployeeProfilePage() {
                 ) : null}
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <div className="relative">
+                  <MapPin className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
+                  <Textarea id="address" rows={2} className="pl-9" {...form.register('address')} disabled={updateMutation.isPending} />
+                </div>
+                {form.formState.errors.address ? (
+                  <p className="text-destructive text-xs">{form.formState.errors.address.message}</p>
+                ) : null}
+              </div>
+
               <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={updateMutation.isPending}>
+                <Button type="submit" disabled={updateMutation.isPending || !form.formState.isDirty}>
                   {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>

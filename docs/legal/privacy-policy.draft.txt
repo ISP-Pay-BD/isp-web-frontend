@@ -1,0 +1,56 @@
+# Privacy Policy
+
+This policy explains what information [COMPANY LEGAL NAME] ("ISP Pay BD", "we") handles when you use the ISP Pay BD platform and websites, why we handle it, and the choices you have.
+
+## Who is responsible for your information
+
+ISP Pay BD is software that internet service providers (ISPs) and their resellers use to manage subscribers, billing and their network.
+
+- If you are a customer of an ISP, your ISP decides what to collect about you and why. We process that information on the ISP's behalf, to run its account.
+- If you are an ISP, reseller or staff member who signs up to or uses the platform, we are responsible for your account and registration details.
+
+For questions about a particular ISP's records, contact that ISP first.
+
+## What we collect
+
+- Account details: name, mobile number, email address, address and, where the ISP records it, national ID number and map location.
+- Service details: package, expiry date, PPPoE username, IP and MAC address, connection status and data-usage counters.
+- Payments: amount, date, method and transaction reference. Wallet and card credentials are entered with the payment provider and are not stored by us.
+- Support: tickets, messages and feedback ratings you send.
+- Technical data: browser and device type, IP address, sign-in and security logs, and the local storage the site needs to keep you signed in.
+
+## How we use it
+
+- To provide the service: sign-in, billing, renewals, receipts and customer support.
+- To send service messages such as expiry reminders, payment confirmations and outage notices, by SMS, WhatsApp, email or in-app, according to your notification settings.
+- To keep the platform secure, prevent fraud and fix problems.
+- To meet legal and regulatory obligations that apply to ISPs in Bangladesh.
+
+## Who we share it with
+
+- Your ISP, and its authorised staff and resellers.
+- Payment providers (such as bKash, Nagad and SSLCommerz) to complete the payments you start.
+- Messaging providers that deliver SMS, voice and WhatsApp messages.
+- Service providers we rely on for hosting, maps and bot protection.
+- Authorities such as the BTRC, where the ISP or we are legally required to provide information.
+
+We do not sell personal information.
+
+## Security and retention
+
+We protect information with access controls, encrypted connections and activity logs. We keep information for as long as the account is active and for as long afterwards as billing records or the law require, then delete or anonymise it.
+
+## Your choices
+
+- Review and update your details, and change SMS, WhatsApp and email preferences, from your account.
+- Ask your ISP (or us, for platform accounts) to correct or delete information, subject to legal record-keeping duties.
+
+## Changes to this policy
+
+We will publish updates on this page and change the date at the top of it.
+
+## Contact
+
+[COMPANY LEGAL NAME], [ADDRESS]
+Email: [SUPPORT EMAIL]
+Phone: [SUPPORT PHONE]

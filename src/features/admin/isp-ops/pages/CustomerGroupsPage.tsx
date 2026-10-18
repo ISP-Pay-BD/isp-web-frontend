@@ -1,24 +1,27 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
   Users,
   Search,
   Plus,
-  Layers,
   Edit,
   Trash2,
   Building2,
   Receipt,
-  Download,
-  CheckCircle2,
   CreditCard,
   X,
-  ArrowRight,
+  UserPlus,
+  UserMinus,
 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +34,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -40,106 +44,89 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { toast } from 'sonner';
+import { Can } from '@/components/shared/Can';
 import { cn } from '@/lib/utils';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
+import { errorMessage, handleApiError } from '@/lib/api/utils/error-handler';
+import { useDebouncedValue } from '@/features/admin/customers/hooks/use-debounced-value';
+import { useCustomers } from '@/features/admin/customers/hooks/use-customers';
+import {
+  useCustomerGroupMutations,
+  useCustomerGroupSummary,
+  useCustomerGroups,
+  useGroupMembers,
+} from '@/features/admin/customers/hooks/use-customer-groups';
+import type { CustomerGroup } from '@/features/admin/customers/types';
 
-type GroupRow = IspOpsData['customerGroups'][number];
+const groupSchema = z.object({
+  name: z.string().trim().min(2, 'Enter a group name').max(150),
+  parent_name: z.string().trim().max(150).optional(),
+  billing_mode: z.enum(['consolidated', 'individual']),
+  note: z.string().trim().max(255).optional(),
+});
+type GroupForm = z.infer<typeof groupSchema>;
+
+const BILLING_LABEL = { consolidated: 'Consolidated (one invoice)', individual: 'Individual (per member)' };
 
 export function CustomerGroupsPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
   const [search, setSearch] = useState('');
-  const [billingFilter, setBillingFilter] = useState('all'); // all | consolidated | individual
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editGroup, setEditGroup] = useState<GroupRow | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search.trim());
+  const [billingFilter, setBillingFilter] = useState('all');
+  const [pageSize, setPageSize] = useState(20);
+  const pageKey = `${debouncedSearch}|${billingFilter}|${pageSize}`;
+  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
+  const page = pageState.key === pageKey ? pageState.page : 1;
 
-  // Form State
-  const [groupName, setGroupName] = useState('');
-  const [parentName, setParentName] = useState('');
-  const [billingMode, setBillingMode] = useState<'consolidated' | 'individual'>('consolidated');
+  const { data, isLoading, isError, error, isFetching, refetch } = useCustomerGroups({
+    page,
+    perPage: pageSize,
+    search: debouncedSearch,
+    billingMode: billingFilter,
+  });
+  const summaryQuery = useCustomerGroupSummary();
+  const m = useCustomerGroupMutations();
 
-  const rows: GroupRow[] = useMemo(() => data?.customerGroups ?? [], [data?.customerGroups]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editGroup, setEditGroup] = useState<CustomerGroup | null>(null);
+  const [deleteGroup, setDeleteGroup] = useState<CustomerGroup | null>(null);
+  const [membersOf, setMembersOf] = useState<CustomerGroup | null>(null);
 
-  const totalMembers = useMemo(() => rows.reduce((s, r) => s + r.members, 0), [rows]);
-  const consolidatedCount = useMemo(
-    () => rows.filter((r) => r.billingMode === 'consolidated').length,
-    [rows]
-  );
+  const form = useForm<GroupForm>({
+    resolver: zodResolver(groupSchema),
+    defaultValues: { name: '', parent_name: '', billing_mode: 'consolidated', note: '' },
+  });
 
-  const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (search) {
-        const q = search.toLowerCase().trim();
-        const matches =
-          r.name.toLowerCase().includes(q) ||
-          r.parentName.toLowerCase().includes(q) ||
-          String(r.members).includes(q) ||
-          r.billingMode.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-
-      if (billingFilter !== 'all' && r.billingMode !== billingFilter) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [rows, search, billingFilter]);
+  const rows = data?.items ?? [];
+  const summary = summaryQuery.data;
+  const kpi = (n: number | undefined) => (summary ? n ?? 0 : '…');
 
   const openCreate = () => {
     setEditGroup(null);
-    setGroupName('');
-    setParentName('');
-    setBillingMode('consolidated');
-    setCreateModalOpen(true);
+    form.reset({ name: '', parent_name: '', billing_mode: 'consolidated', note: '' });
+    setDialogOpen(true);
   };
 
-  const openEdit = (group: GroupRow) => {
+  const openEdit = (group: CustomerGroup) => {
     setEditGroup(group);
-    setGroupName(group.name);
-    setParentName(group.parentName);
-    setBillingMode(group.billingMode);
-    setCreateModalOpen(true);
+    form.reset({ name: group.name, parent_name: group.parentName ?? '', billing_mode: group.billingMode, note: group.note ?? '' });
+    setDialogOpen(true);
   };
 
-  const handleSaveGroup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupName.trim()) {
-      toast.error('Please enter a group name');
-      return;
+  const onSubmit = async (values: GroupForm) => {
+    try {
+      if (editGroup) await m.update.mutateAsync({ id: editGroup.id, body: values });
+      else await m.create.mutateAsync(values);
+      setDialogOpen(false);
+    } catch (err) {
+      handleApiError(err, form.setError);
     }
-    if (editGroup) {
-      toast.success(`Group "${groupName}" updated`);
-    } else {
-      toast.success(`New group "${groupName}" created`);
-    }
-    setCreateModalOpen(false);
-  };
-
-  const handleExportCsv = () => {
-    const headers = ['Group Name', 'Parent Organization', 'Member Count', 'Billing Mode'];
-    const dataRows = filtered.map((r) => [r.name, r.parentName, r.members, r.billingMode]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...dataRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `customer_groups_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Exported customer groups report to CSV');
   };
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError || !data) {
+  if (isError) {
     return (
       <EmptyState
         title="Failed to load customer groups"
-        description="Could not query corporate and parent-child billing groups."
+        description={errorMessage(error)}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -148,25 +135,16 @@ export function CustomerGroupsPage() {
 
   return (
     <div className="space-y-6 w-full pb-16">
-      {/* Page Header */}
       <PageHeader
         title="Customer Groups"
-        subtitle="Corporate parent-child billing groups, multi-branch franchises, and consolidated payment accounts."
+        subtitle="Corporate and multi-branch accounts: group customer lines under one organization."
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Customers', url: '/admin/customers' },
           { label: 'Customer Groups' },
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs h-8 border-border/80 hover:bg-accent"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export
-            </Button>
+          <Can menu="customer" action="create">
             <Button
               size="sm"
               onClick={openCreate}
@@ -174,79 +152,33 @@ export function CustomerGroupsPage() {
             >
               <Plus className="h-3.5 w-3.5" /> Create Group
             </Button>
-          </div>
+          </Can>
         }
       />
 
-      {/* KPI Metric Strips */}
+      {/* KPI Metric Strips (backend summary) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Groups
-            </span>
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <Building2 className="h-4 w-4" />
+        {(
+          [
+            { label: 'Total Groups', value: kpi(summary?.totalGroups), unit: 'organizations', icon: Building2, tone: 'bg-primary/10 text-primary', valueTone: 'text-foreground' },
+            { label: 'Total Members', value: kpi(summary?.totalMembers), unit: 'subscribers', icon: Users, tone: 'bg-blue-500/10 text-blue-500', valueTone: 'text-blue-600 dark:text-blue-400' },
+            { label: 'Consolidated', value: kpi(summary?.consolidated), unit: 'single-bill', icon: Receipt, tone: 'bg-emerald-500/10 text-emerald-500', valueTone: 'text-emerald-600 dark:text-emerald-400' },
+            { label: 'Individual', value: kpi(summary?.individual), unit: 'per-member bill', icon: CreditCard, tone: 'bg-muted text-muted-foreground', valueTone: 'text-muted-foreground' },
+          ] as const
+        ).map((k) => (
+          <Card key={k.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</span>
+              <div className={cn('p-2 rounded-lg', k.tone)}>
+                <k.icon className="h-4 w-4" />
+              </div>
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
-              {rows.length}
-            </span>
-            <span className="text-xs text-muted-foreground">organizations</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Total Members
-            </span>
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-              <Users className="h-4 w-4" />
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className={cn('text-2xl font-bold tracking-tight tabular-nums', k.valueTone)}>{k.value}</span>
+              <span className="text-xs text-muted-foreground">{k.unit}</span>
             </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 tabular-nums">
-              {totalMembers}
-            </span>
-            <span className="text-xs text-muted-foreground">subscribers</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Consolidated Invoicing
-            </span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-              <Receipt className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {consolidatedCount}
-            </span>
-            <span className="text-xs text-muted-foreground">single-bill</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Individual Split
-            </span>
-            <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-              <CreditCard className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-muted-foreground tabular-nums">
-              {rows.length - consolidatedCount}
-            </span>
-            <span className="text-xs text-muted-foreground">per-branch pay</span>
-          </div>
-        </Card>
+          </Card>
+        ))}
       </div>
 
       {/* Toolbar & Filters */}
@@ -271,24 +203,26 @@ export function CustomerGroupsPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Select value={billingFilter} onValueChange={(v) => setBillingFilter(v || 'all')}>
-              <SelectTrigger className="h-9 text-xs w-[160px] bg-background border-border/60">
-                <Receipt className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                <SelectValue placeholder="All Billing Modes" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Billing Modes</SelectItem>
-                <SelectItem value="consolidated">Consolidated</SelectItem>
-                <SelectItem value="individual">Individual</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={billingFilter}
+            onValueChange={(v) => setBillingFilter(v || 'all')}
+            items={{ all: 'All Billing Modes', consolidated: 'Consolidated', individual: 'Individual' }}
+          >
+            <SelectTrigger className="h-9 text-xs w-[160px] bg-background border-border/60">
+              <Receipt className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="All Billing Modes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Billing Modes</SelectItem>
+              <SelectItem value="consolidated">Consolidated</SelectItem>
+              <SelectItem value="individual">Individual</SelectItem>
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
       {/* Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50">
+      <Card className={cn('border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50', isFetching && 'opacity-80')}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -301,21 +235,21 @@ export function CustomerGroupsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filtered.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-16 text-muted-foreground">
                     <div className="max-w-xs mx-auto space-y-2">
                       <Building2 className="h-8 w-8 mx-auto text-muted-foreground/60" />
-                      <p className="font-semibold text-foreground">No matching customer groups</p>
-                      <p className="text-xs text-muted-foreground">
-                        Try resetting your search query or creating a new corporate group.
+                      <p className="font-semibold text-foreground">
+                        {debouncedSearch || billingFilter !== 'all' ? 'No matching customer groups' : 'No customer groups yet'}
                       </p>
+                      <p className="text-xs text-muted-foreground">Create a group to bundle a corporate client&apos;s lines.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((r, i) => (
-                  <tr key={r.id || i} className="hover:bg-muted/30 transition-colors">
+                rows.map((r) => (
+                  <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs border border-primary/20">
@@ -323,24 +257,19 @@ export function CustomerGroupsPage() {
                         </div>
                         <div>
                           <span className="font-bold text-foreground text-sm">{r.name}</span>
-                          <div className="text-[10px] text-muted-foreground font-mono">
-                            ID: {r.id || `grp_${i + 1}`}
-                          </div>
+                          {r.note && <div className="text-[10px] text-muted-foreground truncate max-w-[220px]">{r.note}</div>}
                         </div>
                       </div>
                     </td>
-
-                    <td className="py-3.5 px-4 font-medium text-foreground">
-                      {r.parentName || '—'}
-                    </td>
-
+                    <td className="py-3.5 px-4 font-medium text-foreground">{r.parentName || '—'}</td>
                     <td className="py-3.5 px-4">
-                      <Badge variant="secondary" className="font-mono text-xs px-2.5 py-0.5 bg-muted">
-                        <Users className="h-3 w-3 mr-1 text-muted-foreground" />
-                        {r.members} lines
-                      </Badge>
+                      <button type="button" onClick={() => setMembersOf(r)}>
+                        <Badge variant="secondary" className="font-mono text-xs px-2.5 py-0.5 bg-muted hover:bg-muted/70 cursor-pointer">
+                          <Users className="h-3 w-3 mr-1 text-muted-foreground" />
+                          {r.memberCount} lines
+                        </Badge>
+                      </button>
                     </td>
-
                     <td className="py-3.5 px-4">
                       <Badge
                         variant="outline"
@@ -354,27 +283,21 @@ export function CustomerGroupsPage() {
                         {r.billingMode}
                       </Badge>
                     </td>
-
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                          onClick={() => openEdit(r)}
-                          title="Edit group"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
+                        <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => setMembersOf(r)} title="Members">
+                          <Users className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                          onClick={() => setDeleteId(r.id || `grp_${i + 1}`)}
-                          title="Delete group"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <Can menu="customer" action="update">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(r)} title="Edit group">
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                        </Can>
+                        <Can menu="customer" action="delete">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setDeleteGroup(r)} title="Delete group">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </Can>
                       </div>
                     </td>
                   </tr>
@@ -383,10 +306,20 @@ export function CustomerGroupsPage() {
             </tbody>
           </table>
         </div>
+        {(data?.meta.total ?? 0) > 0 && (
+          <TablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={data?.meta.total ?? 0}
+            onPageChange={(p) => setPageState({ key: pageKey, page: p })}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 20, 50, 100]}
+          />
+        )}
       </Card>
 
       {/* Create / Edit Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -394,55 +327,48 @@ export function CustomerGroupsPage() {
               {editGroup ? 'Edit Customer Group' : 'New Customer Group'}
             </DialogTitle>
             <DialogDescription>
-              {editGroup
-                ? 'Update corporate entity details and billing rules.'
-                : 'Define a consolidated billing account or multi-branch customer group.'}
+              {editGroup ? 'Update the organization details and billing mode.' : 'Define a corporate or multi-branch customer group.'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSaveGroup} className="space-y-4 py-2">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2" noValidate>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Group / Organization Name *</Label>
-              <Input
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="e.g. Acme Corporation Branch Network"
-                className="h-9 text-xs"
-                required
-              />
+              <Input {...form.register('name')} className="h-9 text-xs" />
+              {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
             </div>
-
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Parent Holding Company</Label>
-              <Input
-                value={parentName}
-                onChange={(e) => setParentName(e.target.value)}
-                placeholder="e.g. Acme Group Holdings Ltd."
-                className="h-9 text-xs"
-              />
+              <Label className="text-xs font-semibold">Parent Company</Label>
+              <Input {...form.register('parent_name')} className="h-9 text-xs" />
+              {form.formState.errors.parent_name && <p className="text-xs text-destructive">{form.formState.errors.parent_name.message}</p>}
             </div>
-
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Billing Mode</Label>
               <Select
-                value={billingMode}
-                onValueChange={(v) => setBillingMode(v as 'consolidated' | 'individual')}
+                value={form.watch('billing_mode')}
+                onValueChange={(v) => form.setValue('billing_mode', v === 'individual' ? 'individual' : 'consolidated')}
+                items={BILLING_LABEL}
               >
-                <SelectTrigger className="h-9 text-xs">
+                <SelectTrigger className="h-9 text-xs w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="consolidated">Consolidated (One master monthly invoice)</SelectItem>
-                  <SelectItem value="individual">Individual (Separate invoices per member line)</SelectItem>
+                  <SelectItem value="consolidated">{BILLING_LABEL.consolidated}</SelectItem>
+                  <SelectItem value="individual">{BILLING_LABEL.individual}</SelectItem>
                 </SelectContent>
               </Select>
+              {form.formState.errors.billing_mode && <p className="text-xs text-destructive">{form.formState.errors.billing_mode.message}</p>}
             </div>
-
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Note</Label>
+              <Input {...form.register('note')} className="h-9 text-xs" />
+              {form.formState.errors.note && <p className="text-xs text-destructive">{form.formState.errors.note.message}</p>}
+            </div>
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setCreateModalOpen(false)}>
+              <Button type="button" variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="bg-primary text-primary-foreground">
-                {editGroup ? 'Save Changes' : 'Create Group'}
+              <Button type="submit" size="sm" disabled={form.formState.isSubmitting} className="bg-primary text-primary-foreground">
+                {form.formState.isSubmitting ? 'Saving…' : editGroup ? 'Save Changes' : 'Create Group'}
               </Button>
             </DialogFooter>
           </form>
@@ -451,17 +377,139 @@ export function CustomerGroupsPage() {
 
       {/* Delete Confirmation */}
       <ConfirmDialog
-        open={Boolean(deleteId)}
-        onOpenChange={(open) => !open && setDeleteId(null)}
+        open={deleteGroup !== null}
+        onOpenChange={(open) => !open && setDeleteGroup(null)}
         title="Delete Customer Group"
-        description="Are you sure you want to delete this customer group? Member lines will revert to standalone unlinked accounts."
+        description="The group is removed; its member customers stay as standalone accounts."
         confirmLabel="Delete Group"
         destructive
-        onConfirm={() => {
-          toast.success('Customer group deleted');
-          setDeleteId(null);
+        onConfirm={async () => {
+          if (deleteGroup) {
+            await m.remove.mutateAsync(deleteGroup.id);
+            setDeleteGroup(null);
+          }
         }}
       />
+
+      {membersOf && <MembersSheet group={membersOf} onClose={() => setMembersOf(null)} />}
     </div>
+  );
+}
+
+/** Members of one group + add customers (server search). */
+function MembersSheet({ group, onClose }: { group: CustomerGroup | null; onClose: () => void }) {
+  const [page, setPage] = useState(1);
+  const [memberSearch, setMemberSearch] = useState('');
+  const debouncedMembers = useDebouncedValue(memberSearch.trim());
+  const [customerSearch, setCustomerSearch] = useState('');
+  const debouncedCustomers = useDebouncedValue(customerSearch.trim());
+  const members = useGroupMembers(group?.id ?? null, page, 10, debouncedMembers);
+  const candidates = useCustomers({ search: debouncedCustomers, perPage: 8 }, { enabled: debouncedCustomers !== '' });
+  const m = useCustomerGroupMutations();
+
+  const memberIds = new Set((members.data?.items ?? []).map((x) => x.id));
+
+  return (
+    <Sheet
+      open={group !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+          setPage(1);
+          setMemberSearch('');
+          setCustomerSearch('');
+        }
+      }}
+    >
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-6 space-y-5">
+        <SheetHeader>
+          <SheetTitle>{group?.name}</SheetTitle>
+          <SheetDescription>{members.data?.meta.total ?? group?.memberCount ?? 0} member lines</SheetDescription>
+        </SheetHeader>
+
+        <Can menu="customer" action="update">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold">Add customers</Label>
+            <Input placeholder="Search customers by name, mobile or PPPoE..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} className="h-9 text-xs" />
+            {debouncedCustomers && (
+              <div className="rounded-lg border divide-y">
+                {candidates.isLoading ? (
+                  <p className="p-3 text-xs text-muted-foreground">Searching…</p>
+                ) : (candidates.data?.items.length ?? 0) === 0 ? (
+                  <p className="p-3 text-xs text-muted-foreground">No customers found.</p>
+                ) : (
+                  candidates.data?.items.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 text-xs">
+                      <div>
+                        <div className="font-medium">{c.name}</div>
+                        <div className="text-muted-foreground font-mono">{c.phone || c.username || `#${c.id}`}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1"
+                        disabled={!group || memberIds.has(c.id) || m.addMembers.isPending}
+                        onClick={() => group && m.addMembers.mutate({ groupId: group.id, ids: [c.id] })}
+                      >
+                        <UserPlus className="h-3 w-3" /> {memberIds.has(c.id) ? 'Added' : 'Add'}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </Can>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold">Members</Label>
+          <Input placeholder="Filter members..." value={memberSearch} onChange={(e) => { setMemberSearch(e.target.value); setPage(1); }} className="h-9 text-xs" />
+          {members.isLoading ? (
+            <PageSkeleton variant="table" rows={3} />
+          ) : members.isError ? (
+            <EmptyState title="Could not load members" description={errorMessage(members.error)} actionLabel="Retry" onAction={() => members.refetch()} />
+          ) : (members.data?.items.length ?? 0) === 0 ? (
+            <p className="text-xs text-muted-foreground py-6 text-center">No members yet.</p>
+          ) : (
+            <div className="rounded-lg border divide-y">
+              {members.data?.items.map((mem) => (
+                <div key={mem.id} className="flex items-center justify-between p-2.5 text-xs">
+                  <div>
+                    <Link href={`/admin/customers/${mem.id}`} className="font-medium hover:text-primary hover:underline">
+                      {mem.name || `#${mem.id}`}
+                    </Link>
+                    <div className="text-muted-foreground font-mono">
+                      {mem.mobile || '—'}
+                      {mem.willExpire ? ` · expires ${mem.willExpire.slice(0, 10)}` : ''}
+                    </div>
+                  </div>
+                  <Can menu="customer" action="update">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-destructive gap-1"
+                      disabled={m.removeMembers.isPending}
+                      onClick={() => group && m.removeMembers.mutate({ groupId: group.id, ids: [mem.id] })}
+                    >
+                      <UserMinus className="h-3 w-3" /> Remove
+                    </Button>
+                  </Can>
+                </div>
+              ))}
+            </div>
+          )}
+          {(members.data?.meta.totalPages ?? 1) > 1 && (
+            <TablePagination
+              currentPage={page}
+              pageSize={10}
+              totalItems={members.data?.meta.total ?? 0}
+              onPageChange={setPage}
+              onPageSizeChange={() => undefined}
+              pageSizeOptions={[10]}
+            />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

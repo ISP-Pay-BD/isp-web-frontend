@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { platformService } from '@/lib/api/services/platform.service';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { AlertTriangle, Wrench } from 'lucide-react';
@@ -12,19 +14,24 @@ import { toast } from 'sonner';
 
 export function MaintenancePage() {
   const queryClient = useQueryClient();
+  const [pendingOn, setPendingOn] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'settings'],
-    queryFn: () => mockFetch('platform.settings'),
+    queryFn: () => platformService.getSoftwareSettings(),
+  });
+
+  const stats = useQuery({
+    queryKey: ['platform', 'dashboard'],
+    queryFn: () => platformService.getDashboard(),
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => mockFetch('platform.maintenance', enabled),
-    onSuccess: (_, enabled) => {
-      toast.success(enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
-      queryClient.invalidateQueries({ queryKey: ['platform', 'settings'] });
+    mutationFn: (enabled: boolean) => platformService.updateSoftwareSettings({ maintenance_mode: enabled }),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(['platform', 'settings'], saved);
+      toast.success(saved.maintenanceMode ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
     },
-    onError: (err: Error) => toast.error(err.message),
   });
 
   if (isLoading) return <PageSkeleton variant="form" rows={3} />;
@@ -32,18 +39,20 @@ export function MaintenancePage() {
     return (
       <EmptyState
         title="Failed to load maintenance status"
-        description="Could not retrieve platform settings."
+        description={error instanceof Error ? error.message : 'Could not retrieve platform settings.'}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
     );
   }
 
+  const on = data.maintenanceMode;
+
   return (
     <div className="space-y-6">
       <PlatformPageHeader
         title="Maintenance Mode"
-        subtitle="Temporarily disable all tenant portals for system upgrades and database migrations"
+        subtitle="Temporarily take tenant portals and APIs offline for upgrades and database migrations"
         breadcrumb={[
           { label: 'Platform', href: '/platform/dashboard' },
           { label: 'Settings', href: '/platform/settings' },
@@ -51,77 +60,89 @@ export function MaintenancePage() {
         ]}
       />
 
-      {/* KPI Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className={`font-semibold tabular-nums ${data.maintenanceMode ? 'text-amber-500' : 'text-emerald-500'}`}>
-            {data.maintenanceMode ? 'ACTIVE' : 'NORMAL'}
-          </span>{' '}
+          <span className={`font-semibold tabular-nums ${on ? 'text-amber-500' : 'text-emerald-500'}`}>{on ? 'ACTIVE' : 'NORMAL'}</span>{' '}
           <span className="text-muted-foreground">platform status</span>
         </p>
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">18</span>{' '}
-          <span className="text-muted-foreground">managed tenant instances</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-500">99.98%</span>{' '}
-          <span className="text-muted-foreground">30-day SLA uptime</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-primary">0</span>{' '}
-          <span className="text-muted-foreground">active maintenance windows</span>
-        </p>
+        {stats.data ? (
+          <>
+            <p>
+              <span className="font-semibold tabular-nums text-foreground">{stats.data.totalTenants}</span>{' '}
+              <span className="text-muted-foreground">ISP tenants affected</span>
+            </p>
+            <p>
+              <span className="font-semibold tabular-nums text-foreground">{stats.data.totalActiveEndUsers.toLocaleString()}</span>{' '}
+              <span className="text-muted-foreground">active subscribers</span>
+            </p>
+          </>
+        ) : null}
       </div>
 
       <div className="grid gap-6 md:grid-cols-12">
-        {/* Main Switch Card */}
-        <Card className={`md:col-span-8 border-border/60 ${data.maintenanceMode ? 'border-amber-500/50 bg-amber-500/5' : 'bg-card'}`}>
+        <Card className={`md:col-span-8 border-border/60 ${on ? 'border-amber-500/50 bg-amber-500/5' : 'bg-card'}`}>
           <CardContent className="p-6">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-4">
-                <div className={`p-3.5 rounded-2xl ${data.maintenanceMode ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/10 text-primary'}`}>
-                  {data.maintenanceMode ? (
-                    <AlertTriangle className="h-7 w-7" />
-                  ) : (
-                    <Wrench className="h-7 w-7" />
-                  )}
+                <div className={`p-3.5 rounded-2xl ${on ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/10 text-primary'}`}>
+                  {on ? <AlertTriangle className="h-7 w-7" /> : <Wrench className="h-7 w-7" />}
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-bold text-lg text-foreground">
-                    {data.maintenanceMode ? 'Maintenance Mode is Active' : 'All Tenant Portals are Live'}
+                    {on ? 'Maintenance Mode is Active' : 'All Tenant Portals are Live'}
                   </h3>
                   <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">
-                    {data.maintenanceMode
-                      ? 'All tenant broadband subscriber portals and staff dashboards are currently showing the maintenance standby banner. Super-admin access remains online.'
-                      : 'Tenant portals are running normally. Enable maintenance mode prior to running database schema migrations or core server updates.'}
+                    {on
+                      ? 'Tenant portals, customer apps and APIs answer HTTP 503 with a maintenance notice. Super-admin sessions, payment gateway callbacks and the public status page keep working.'
+                      : 'Enable maintenance mode before running database migrations or core server updates. Non-admin traffic receives HTTP 503 until you turn it off.'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Switch
-                  checked={data.maintenanceMode}
-                  onCheckedChange={(v) => toggleMutation.mutate(v)}
+                  checked={on}
+                  onCheckedChange={(v) => (v ? setPendingOn(true) : toggleMutation.mutate(false))}
                   disabled={toggleMutation.isPending}
+                  aria-label="Maintenance mode"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Security & Bypass Card */}
         <Card className="md:col-span-4 border-border/60 bg-card">
           <CardContent className="p-6 space-y-3">
-            <h4 className="font-semibold text-sm text-foreground">Maintenance IP Whitelist</h4>
+            <h4 className="font-semibold text-sm text-foreground">Bypass during maintenance</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Super-admin IP ranges (<code>103.145.0.0/24</code>) are granted perpetual bypass to test tenant environments during maintenance.
+              Signed-in platform super admins always pass. IP addresses in the server&apos;s MAINTENANCE_ALLOW_IPS setting also pass.
             </p>
-            <div className="pt-2 border-t text-[11px] text-muted-foreground flex justify-between">
-              <span>Bypass status:</span>
-              <span className="font-mono text-emerald-500 font-semibold">ENABLED</span>
+            <div className="pt-2 border-t text-[11px] text-muted-foreground">
+              {data.maintenanceAllowIps.length === 0 ? (
+                <span>No allow-listed IP addresses configured.</span>
+              ) : (
+                <ul className="space-y-1 font-mono">
+                  {data.maintenanceAllowIps.map((ip) => (
+                    <li key={ip}>{ip}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={pendingOn}
+        onOpenChange={setPendingOn}
+        title="Enable maintenance mode?"
+        description="Every tenant portal, customer app and API (except super-admin sessions, payment callbacks and the status page) starts answering HTTP 503 immediately."
+        confirmLabel="Enable maintenance"
+        destructive
+        onConfirm={() => {
+          setPendingOn(false);
+          toggleMutation.mutate(true);
+        }}
+      />
     </div>
   );
 }

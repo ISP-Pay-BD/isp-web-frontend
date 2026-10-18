@@ -1,18 +1,43 @@
+export type PaymentStatus = 'successful' | 'pending' | 'failed';
+
 export interface SalaryPaymentItem {
   id: string;
+  invoice: string;
   employeeId: string;
   employeeName: string;
-  amountBdt: number;
+  employeeDesignation: string;
+  amount: number;
+  advanceDeducted: number;
   month: string;
+  status: PaymentStatus;
+  paidVia: string;
   paidAt: string;
-  paidVia?: string;
-  status: 'paid' | 'pending';
+  createdAt: string;
+}
+
+export interface SalaryPaymentSummary {
+  totalCount: number;
+  successfulCount: number;
+  successfulTotal: number;
+  pendingCount: number;
+  pendingTotal: number;
+  failedCount: number;
+}
+
+export interface SalaryBreakdown {
+  salary: number;
+  advance: number;
+  netPaid: number;
+  remaining: number;
 }
 
 export interface SalaryPaymentFormData {
   employeeId: string;
   month: string;
-  amountBdt: number;
+  year: number;
+  amount: number;
+  status: PaymentStatus;
   paidVia: string;
-  notes?: string;
+  methodTrx: string;
+  deductAdvances: boolean;
 }

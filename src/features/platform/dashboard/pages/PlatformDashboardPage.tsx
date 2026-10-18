@@ -2,7 +2,6 @@
 
 import type { SVGProps } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
 import {
   Globe,
   Users,
@@ -19,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { formatBdt } from '@/lib/format';
-import { PlatformPageHeader } from '@/features/platform/shared';
+import { PlatformPageHeader, compactBdt, platformDate } from '@/features/platform/shared';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -31,10 +30,12 @@ import {
 } from 'recharts';
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 
+import { platformService } from '@/lib/api/services/platform.service';
+
 export function PlatformDashboardPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'dashboard'],
-    queryFn: () => mockFetch('platform.dashboard'),
+    queryFn: () => platformService.getDashboard(),
   });
 
   if (isLoading) {
@@ -72,19 +73,27 @@ export function PlatformDashboardPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums">{data.totalTenants}</span>{' '}
-          <span className="text-muted-foreground">tenants</span>
+          <span className="text-muted-foreground">ISP tenants</span>
           <span className="text-muted-foreground">
             {' '}
-            · {data.activeTenants} active · {data.trialTenants} trial
+            · {data.activeTenants} active · {data.trialTenants} trial · {data.suspendedTenants} suspended
           </span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">৳{formatBdt(data.mrrBdt)}</span>{' '}
-          <span className="text-muted-foreground">MRR</span>
+          <span className="font-semibold tabular-nums">{data.portalsTotal}</span>{' '}
+          <span className="text-muted-foreground">subdomain portals</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">৳{formatBdt(data.monthRevenue)}</span>{' '}
+          <span className="text-muted-foreground">collected this month</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{data.openTickets}</span>{' '}
-          <span className="text-muted-foreground">open tickets</span>
+          <span className="text-muted-foreground">open tenant tickets</span>
+        </p>
+        <p>
+          <span className="font-semibold tabular-nums">{data.totalActiveEndUsers.toLocaleString()}</span>{' '}
+          <span className="text-muted-foreground">active subscribers</span>
         </p>
       </div>
 
@@ -96,11 +105,21 @@ export function PlatformDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base font-semibold">Revenue trend</CardTitle>
-                <CardDescription>Monthly BDT volume over the last 6 months</CardDescription>
+                <CardDescription>Tenant payments collected per month (last 6 months)</CardDescription>
               </div>
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                +{data.growthPercentage}% growth
-              </Badge>
+              {data.growthPercentage !== null ? (
+                <Badge
+                  variant="outline"
+                  className={
+                    data.growthPercentage >= 0
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      : 'bg-red-500/10 text-red-600 border-red-500/20'
+                  }
+                >
+                  {data.growthPercentage >= 0 ? '+' : ''}
+                  {data.growthPercentage}% vs last month
+                </Badge>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent>
@@ -133,7 +152,7 @@ export function PlatformDashboardPage() {
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                   />
                   <YAxis
-                    tickFormatter={(v) => `৳${(v / 1000000).toFixed(1)}M`}
+                    tickFormatter={(v: number) => compactBdt(v)}
                     tickLine={false}
                     axisLine={false}
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
@@ -211,7 +230,7 @@ export function PlatformDashboardPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium">Plugins & Addons Marketplace</div>
-                  <div className="text-xs text-muted-foreground">OLT, bKash Plus, WhatsApp Business</div>
+                  <div className="text-xs text-muted-foreground">Catalog, pricing & publishing</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -227,7 +246,7 @@ export function PlatformDashboardPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium">Platform File Manager</div>
-                  <div className="text-xs text-muted-foreground">Tenant logos, documents & assets</div>
+                  <div className="text-xs text-muted-foreground">Browse uploaded files (read-only)</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -243,7 +262,7 @@ export function PlatformDashboardPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium">Software Settings</div>
-                  <div className="text-xs text-muted-foreground">Base domain, discounts & auth</div>
+                  <div className="text-xs text-muted-foreground">Branding, discounts & registration</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -258,54 +277,62 @@ export function PlatformDashboardPage() {
         <Card className="border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Top Tenants by Subscribers</CardTitle>
-              <CardDescription>Highest subscriber volume networks</CardDescription>
+              <CardTitle className="text-base font-semibold">Top Tenants by Revenue</CardTitle>
+              <CardDescription>Highest platform payments over the last 6 months</CardDescription>
             </div>
-            <Link href="/platform/tenants">
+            <Link href="/platform/admins">
               <Button variant="ghost" size="sm" className="text-xs">
                 View all <ChevronRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {data.topTenants.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-9 w-9 rounded-md flex items-center justify-center text-white font-bold text-xs"
-                      style={{ backgroundColor: t.primaryColor || '#e85a1a' }}
-                    >
-                      {t.name.slice(0, 2).toUpperCase()}
+            {data.topTenants.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No tenant payments in the last 6 months.</p>
+            ) : (
+              <div className="space-y-3">
+                {data.topTenants.map((t) => (
+                  <div
+                    key={t.adminId}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-9 w-9 rounded-md flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs"
+                        style={t.primaryColor ? { backgroundColor: t.primaryColor } : undefined}
+                      >
+                        {t.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <Link
+                          href={t.tenantId ? `/platform/tenants/${t.tenantId}` : `/platform/admins/${t.adminId}/billing`}
+                          className="font-semibold text-sm hover:underline"
+                        >
+                          {t.name}
+                        </Link>
+                        <div className="text-xs text-muted-foreground font-mono">{t.domain ?? t.ownerName}</div>
+                      </div>
                     </div>
-                    <div>
-                      <Link href={`/platform/tenants/${t.id}`} className="font-semibold text-sm hover:underline">
-                        {t.name}
-                      </Link>
-                      <div className="text-xs text-muted-foreground font-mono">{t.slug}.isppaybd.com</div>
+                    <div className="text-right">
+                      <div className="font-bold text-sm text-foreground">৳{formatBdt(t.revenueBdt)}</div>
+                      <div className="text-[11px] text-muted-foreground">{t.customers.toLocaleString()} subs</div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          t.status === 'active'
+                            ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs'
+                            : t.status === 'trial'
+                            ? 'border-amber-500/30 text-amber-600 bg-amber-500/10 text-xs'
+                            : 'border-red-500/30 text-red-600 bg-red-500/10 text-xs'
+                        }
+                      >
+                        {t.status}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-sm text-foreground">{t.customers.toLocaleString()} subs</div>
-                    <Badge
-                      variant="outline"
-                      className={
-                        t.status === 'active'
-                          ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs'
-                          : t.status === 'trial'
-                          ? 'border-amber-500/30 text-amber-600 bg-amber-500/10 text-xs'
-                          : 'border-red-500/30 text-red-600 bg-red-500/10 text-xs'
-                      }
-                    >
-                      {t.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -323,6 +350,9 @@ export function PlatformDashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
+            {data.recentContacts.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No contact requests yet.</p>
+            ) : (
             <div className="space-y-3">
               {data.recentContacts.map((c) => (
                 <div
@@ -332,7 +362,8 @@ export function PlatformDashboardPage() {
                   <div>
                     <div className="font-semibold text-sm">{c.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {c.company} · <span className="font-mono">{c.phone}</span>
+                      {c.company ? `${c.company} · ` : ''}
+                      <span className="font-mono">{c.phone}</span>
                     </div>
                     {c.message ? (
                       <div className="text-xs text-muted-foreground/80 line-clamp-1 mt-0.5 max-w-sm">
@@ -344,11 +375,12 @@ export function PlatformDashboardPage() {
                     <Badge variant="secondary" className="capitalize text-xs">
                       {c.status}
                     </Badge>
-                    <div className="text-[11px] text-muted-foreground mt-1">{c.createdAt}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">{platformDate(c.createdAt)}</div>
                   </div>
                 </div>
               ))}
             </div>
+            )}
           </CardContent>
         </Card>
       </div>

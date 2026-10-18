@@ -14,22 +14,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CustomerPageShell } from '@/features/customer/shared';
-import { changePasswordSchema, type ChangePasswordInput } from '@/features/customer/shared';
-import { mockFetch } from '@/lib/mock-api/client';
+import { CustomerPageShell, changePasswordSchema, type ChangePasswordInput } from '@/features/customer/shared';
+import { customerService } from '@/lib/api/services/customer.service';
+import { ApiError } from '@/lib/api/client';
 import { toast } from 'sonner';
+
+/** ProfileService::changePassword field keys → form fields. */
+const FIELD_MAP: Record<string, keyof ChangePasswordInput> = {
+  current_password: 'currentPassword',
+  new_password: 'newPassword',
+};
 
 export function CustomerChangePasswordPage() {
   const router = useRouter();
 
+  /** POST /v1/customer/profile/change-password — user resolved from the JWT. */
   const changePasswordMutation = useMutation({
-    mutationFn: (values: ChangePasswordInput) => mockFetch('customer.password.change', values),
+    meta: { silent: true },
+    mutationFn: (values: ChangePasswordInput) =>
+      customerService.changePassword({ currentPassword: values.currentPassword, newPassword: values.newPassword }),
   });
 
   const {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<ChangePasswordInput>({
     resolver: zodResolver(changePasswordSchema),
@@ -43,11 +53,18 @@ export function CustomerChangePasswordPage() {
   const onSubmit = async (data: ChangePasswordInput) => {
     try {
       await changePasswordMutation.mutateAsync(data);
-      toast.success('Password changed successfully!');
+      toast.success('Password changed successfully.');
       reset();
       router.push('/customer/profile');
-    } catch {
-      toast.error('Failed to change password. Please verify current password.');
+    } catch (err) {
+      if (err instanceof ApiError && err.details) {
+        for (const [key, messages] of Object.entries(err.details)) {
+          const field = FIELD_MAP[key];
+          const message = Array.isArray(messages) ? messages[0] : messages;
+          if (field && message) setError(field, { type: 'server', message: String(message) });
+        }
+      }
+      toast.error(err instanceof Error && err.message ? err.message : 'Could not change your password.');
     }
   };
 

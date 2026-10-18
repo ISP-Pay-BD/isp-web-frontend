@@ -1,11 +1,10 @@
 /**
  * WT01 — Landing sections 1–14 content (hero through integrations).
- * Composed from base marketing data files for mock-api + landing page.
+ * Marketing site copy for the landing page (plan prices come from the public plans API).
  */
 
 import { landingData } from './landing.data';
 import { landingSections } from './sections.data';
-import { paygCalculator, pricingTiers } from './pricing.data';
 
 const featureBullets: Record<string, string[]> = {
   f1: ['Business Dashboard', 'Accounting Dashboard', 'Real-time KPIs'],
@@ -259,6 +258,67 @@ export const landingSectionsAData = {
       ],
     },
   ],
+  /** Illustrative rows for the hero's product stage. The page labels them "Sample data". */
+  heroStage: {
+    payments: [
+      {
+        time: '14:02:11',
+        gateway: 'bKash',
+        trxId: '9A81BC249F',
+        customer: 'CUST-4091',
+        name: 'Kamrul Hasan',
+        amountBdt: 1200,
+        status: 'reconnected' as const,
+      },
+      {
+        time: '14:01:58',
+        gateway: 'Nagad',
+        trxId: 'NG8821045X',
+        customer: 'CUST-2104',
+        name: 'Farhana Akhter',
+        amountBdt: 800,
+        status: 'reconnected' as const,
+      },
+      {
+        time: '13:58:40',
+        gateway: 'bKash',
+        trxId: '7C20QK118A',
+        customer: 'CUST-3882',
+        name: 'Rafiq Islam',
+        amountBdt: 600,
+        status: 'matched' as const,
+      },
+      {
+        time: '13:55:02',
+        gateway: 'Nagad',
+        trxId: 'NG7710392K',
+        customer: 'CUST-3301',
+        name: 'Tanvir Ahmed',
+        amountBdt: 1500,
+        status: 'matched' as const,
+      },
+      {
+        time: '13:51:27',
+        gateway: 'bKash',
+        trxId: '5H72LM904D',
+        customer: null,
+        name: 'Unknown sender',
+        amountBdt: 1000,
+        status: 'review' as const,
+      },
+    ],
+    totals: { collectedBdt: 48200, matched: 212, review: 2 },
+    subscriber: {
+      name: 'Kamrul',
+      id: 'CUST-4091',
+      packageName: '25 Mbps',
+      dueBdt: 1200,
+      invoices: [
+        { month: 'Sep', amountBdt: 1200 },
+        { month: 'Aug', amountBdt: 1200 },
+      ],
+    },
+  },
   reconciliation: [
     {
       step: 'Step 1',
@@ -266,6 +326,10 @@ export const landingSectionsAData = {
       desc: 'A subscriber pays via bKash, Nagad, or the customer app. The SMS or gateway callback reaches ISP Pay BD immediately.',
       metric: 'Real-time',
       metricHighlight: 'Instant ingest',
+      titleBn: 'পেমেন্টের খবর এসেছে',
+      descBn:
+        'গ্রাহক bKash, Nagad বা গ্রাহক অ্যাপ দিয়ে পরিশোধ করেন। SMS বা গেটওয়ে কলব্যাক সাথে সাথে ISP Pay BD-তে পৌঁছে যায়।',
+      metricHighlightBn: 'সাথে সাথে গ্রহণ',
     },
     {
       step: 'Step 2',
@@ -273,6 +337,10 @@ export const landingSectionsAData = {
       desc: 'TrxID, sender mobile number, and amount are checked against open invoices so the payment lands on the correct subscriber.',
       metric: '98%+',
       metricHighlight: 'Matched first try',
+      titleBn: 'খোলা ইনভয়েসের সাথে মিলেছে',
+      descBn:
+        'TrxID, প্রেরকের মোবাইল নম্বর ও টাকার পরিমাণ খোলা ইনভয়েসের সাথে মেলানো হয়, তাই পেমেন্ট ঠিক গ্রাহকের হিসাবেই জমা হয়।',
+      metricHighlightBn: 'প্রথম চেষ্টাতেই মিলেছে',
     },
     {
       step: 'Step 3',
@@ -280,6 +348,10 @@ export const landingSectionsAData = {
       desc: 'The invoice closes, expiry moves forward, and RouterOS API restores the PPPoE or hotspot session in under a second.',
       metric: '~0.8s',
       metricHighlight: 'End-to-end latency',
+      titleBn: 'মেয়াদ বেড়েছে, লাইন আবার চালু',
+      descBn:
+        'ইনভয়েস বন্ধ হয়, মেয়াদ সামনে যায়, আর RouterOS API এক সেকেন্ডের কম সময়ে PPPoE বা হটস্পট সেশন ফিরিয়ে আনে।',
+      metricHighlightBn: 'শুরু থেকে শেষ সময়',
     },
   ],
   desire: {
@@ -312,7 +384,8 @@ export const landingSectionsAData = {
     featuresSubtitle:
       'OLT and MikroTik on one side; billing, resellers, and BTRC-ready reports on the other.',
     partnersTitle: 'Trusted on the ground by ISPs in 30+ districts',
-    partnersSubtitle: 'Neighborhood networks to multi-branch fiber operators run billing on ISP Pay BD.',
+    partnersSubtitle:
+      'Neighborhood networks to multi-branch fiber operators run billing on ISP Pay BD.',
     pricingTitle: 'Priced per subscriber, not per promise',
     pricingSubtitle:
       'Lock a fixed monthly plan for predictable billing, or go pay-as-you-go: base fee plus a low per-customer rate, wallet-funded, no tier ceiling to outgrow.',
@@ -324,29 +397,25 @@ export const landingSectionsAData = {
       'How billing, MikroTik sync, bKash/Nagad reconciliation, and reseller payouts work on ISP Pay BD.',
   },
   roi: landingSections.roi,
-  pricing: {
-    plans: pricingTiers.map((tier) => ({
-      id: tier.id,
-      name: tier.name,
-      priceBdt: tier.priceBdt,
-      period: tier.period,
-      customers: tier.customers ? `Up to ${tier.customers.toLocaleString()}` : 'Unlimited',
-      features: [...tier.features],
-      highlighted: tier.highlight,
-    })),
-    payg: { ...paygCalculator },
-  },
   comparison: {
     headers: ['Capability', 'ISP Pay BD', 'The panel you have now'],
     rows: [
       { capability: 'Auto bKash/Nagad reconciliation', us: true, legacy: 'Manual SMS matching' },
-      { capability: 'Scoped staff & reseller roles, 24 permission modules', us: true, legacy: 'One shared admin login' },
+      {
+        capability: 'Scoped staff & reseller roles, 24 permission modules',
+        us: true,
+        legacy: 'One shared admin login',
+      },
       { capability: 'Branded customer app included', us: true, legacy: 'Not available' },
       { capability: 'Unlimited MikroTik routers', us: true, legacy: 'Per-router license fees' },
       { capability: 'No-cap Pay-As-You-Go billing', us: true, legacy: 'Rigid tier limits' },
       { capability: 'Local Bangla support & training', us: true, legacy: 'English-only docs' },
       { capability: 'Free migration from current panel', us: true, legacy: 'DIY manual import' },
-      { capability: 'Auto disconnect/reconnect on billing', us: true, legacy: 'Semi-manual SSH scripting' },
+      {
+        capability: 'Auto disconnect/reconnect on billing',
+        us: true,
+        legacy: 'Semi-manual SSH scripting',
+      },
     ],
   },
   testimonials: landingData.testimonials,
@@ -355,18 +424,26 @@ export const landingSectionsAData = {
     {
       q: 'How does POP reseller billing work?',
       a: 'You fund POP wallets. Resellers sell packages to their customers. The ledger tracks funding, sales, and commissions automatically.',
+      qBn: 'POP রিসেলার বিলিং কীভাবে কাজ করে?',
+      aBn: 'আপনি POP ওয়ালেটে ফান্ড দেন। রিসেলাররা তাদের গ্রাহকদের কাছে প্যাকেজ বিক্রি করে। লেজার নিজে থেকেই ফান্ডিং, বিক্রি ও কমিশনের হিসাব রাখে।',
     },
     {
       q: 'Do you support fiber OLT hardware?',
       a: 'Yes. Huawei and ZTE OLT modules cover ONU provisioning, optical power monitoring, and MAC bind controls.',
+      qBn: 'ফাইবার OLT হার্ডওয়্যার সাপোর্ট করে?',
+      aBn: 'হ্যাঁ। Huawei ও ZTE OLT মডিউলে ONU প্রভিশনিং, অপটিক্যাল পাওয়ার মনিটরিং আর MAC বাইন্ড কন্ট্রোল আছে।',
     },
     {
       q: 'Can customers use Bangla in the portal and app?',
       a: 'Yes. The customer portal, SMS templates, and mobile app support a full Bangla interface alongside English.',
+      qBn: 'গ্রাহকরা কি পোর্টাল ও অ্যাপে বাংলা ব্যবহার করতে পারবে?',
+      aBn: 'হ্যাঁ। গ্রাহক পোর্টাল, SMS টেমপ্লেট ও মোবাইল অ্যাপে ইংরেজির পাশাপাশি পুরো বাংলা ইন্টারফেস আছে।',
     },
     {
       q: 'What about BTRC compliance reports?',
       a: 'ISP Pay BD includes BTRC-ready subscriber and bandwidth report exports for regulatory filing.',
+      qBn: 'BTRC কমপ্লায়েন্স রিপোর্টের কী হবে?',
+      aBn: 'ISP Pay BD-তে রেগুলেটরি ফাইলিংয়ের জন্য BTRC-উপযোগী সাবস্ক্রাইবার ও ব্যান্ডউইথ রিপোর্ট এক্সপোর্ট আছে।',
     },
   ],
   integrations: [
@@ -382,19 +459,61 @@ export const landingSectionsAData = {
     { name: 'RADIUS AAA & vBNG', category: 'Auth', icon: 'ShieldCheck' },
   ],
   pluginsList: [
-    { id: 'whatsapp', name: 'WhatsApp Business', category: 'Communications', priceBdt: 500, installed: true, rating: 4.8, installs: 85, desc: 'Expiry alerts, payment confirmations, and bulk campaign broadcasts via WhatsApp Business API.' },
-    { id: 'olt-huawei', name: 'Huawei OLT Manager', category: 'Fiber', priceBdt: 1200, installed: false, rating: 4.6, installs: 42, desc: 'GPON/EPON ONU provisioning, signal diagnostics, and MAC bind controls for Huawei OLT hardware.' },
-    { id: 'hr-payroll', name: 'HR & Payroll', category: 'Operations', priceBdt: 800, installed: true, rating: 4.5, installs: 63, desc: 'Staff attendance, salary disbursement, advance salary requests, and employee ledger tracking.' },
-    { id: 'merchant-webhook', name: 'Merchant Webhooks', category: 'Payment', priceBdt: 300, installed: false, rating: 4.7, installs: 91, desc: 'Real-time HTTP callbacks for payment, expiry, and subscriber events to your internal systems.' },
+    {
+      id: 'whatsapp',
+      name: 'WhatsApp Business',
+      category: 'Communications',
+      priceBdt: 500,
+      installed: true,
+      rating: 4.8,
+      installs: 85,
+      desc: 'Expiry alerts, payment confirmations, and bulk campaign broadcasts via WhatsApp Business API.',
+    },
+    {
+      id: 'olt-huawei',
+      name: 'Huawei OLT Manager',
+      category: 'Fiber',
+      priceBdt: 1200,
+      installed: false,
+      rating: 4.6,
+      installs: 42,
+      desc: 'GPON/EPON ONU provisioning, signal diagnostics, and MAC bind controls for Huawei OLT hardware.',
+    },
+    {
+      id: 'hr-payroll',
+      name: 'HR & Payroll',
+      category: 'Operations',
+      priceBdt: 800,
+      installed: true,
+      rating: 4.5,
+      installs: 63,
+      desc: 'Staff attendance, salary disbursement, advance salary requests, and employee ledger tracking.',
+    },
+    {
+      id: 'merchant-webhook',
+      name: 'Merchant Webhooks',
+      category: 'Payment',
+      priceBdt: 300,
+      installed: false,
+      rating: 4.7,
+      installs: 91,
+      desc: 'Real-time HTTP callbacks for payment, expiry, and subscriber events to your internal systems.',
+    },
   ],
   mobileApp: {
     title: 'ISP Pay BD Customer App',
-    features: ['Check balance & expiry date instantly', 'Pay via bKash or Nagad in-app', 'Open and track support tickets', 'Full Bangla + English interface'],
+    features: [
+      'Check balance & expiry date instantly',
+      'Pay via bKash or Nagad in-app',
+      'Open and track support tickets',
+      'Full Bangla + English interface',
+    ],
     stores: { android: '#', ios: '#' },
   },
   resellerHierarchy: {
     levels: ['Platform (SaaS)', 'Tenant ISP', 'POP Reseller', 'Sub-POP', 'Customer'],
-    description: 'Fund POPs, set packages, and scope permissions per level — commission splits automatically on every payment.',
+    description:
+      'Fund POPs, set packages, and scope permissions per level — commission splits automatically on every payment.',
   },
   rolesAccess: [
     { role: 'Super Admin', access: 'All tenants, revenue, platform settings' },
@@ -415,14 +534,18 @@ export const landingSectionsAData = {
     ],
   },
   partners: [
-    'FastNet BD', 'NetLink CTG', 'SkyConnect', 'CityNet Sylhet', 'LinkWave', 'FiberOne BD',
-    'SpeedNet Khulna', 'WaveISP', 'ConnectBD', 'NetZone', 'DhakaNet', 'GreenLink',
-  ],
-  trustBadges: [
-    { label: '149+ ISPs', sub: 'Across Bangladesh' },
-    { label: '85K+ users', sub: 'Managed daily' },
-    { label: '2M+ payments', sub: 'Reconciled' },
-    { label: '99.9% uptime', sub: 'Platform SLA' },
+    'FastNet BD',
+    'NetLink CTG',
+    'SkyConnect',
+    'CityNet Sylhet',
+    'LinkWave',
+    'FiberOne BD',
+    'SpeedNet Khulna',
+    'WaveISP',
+    'ConnectBD',
+    'NetZone',
+    'DhakaNet',
+    'GreenLink',
   ],
   connects: [
     { name: 'API Access', desc: 'REST API for custom integrations' },

@@ -1,14 +1,18 @@
-# Design brief: Marketing landing motion polish
+# Design brief: Marketing landing (`/`)
 
-1. Product and job: Bangladesh ISP owners deciding to trial; job is trust + convert
-2. Design read: marketing landing, modern dark ISP product, cinematic but usable, leaning isppaybd.com + Linear motion taste
-3. References: isppaybd.com narrative; Linear scroll progress; Stripe product tabs; Magic UI spotlight cards (pattern only)
-4. Existing system: `#0c0118` / `#f75803` / `#2E8BFF`, Plus Jakarta + Inter, Framer Reveal, GSAP Desire, Unsplash media
-5. Type: Plus Jakarta display + Inter body
-6. Color: dark canvas, CTA orange glow sparingly, azure for flagship labels only
-7. Shape: rounded-2xl glass panels, rounded-full CTAs
-8. Spacing: py-32 md:py-48 chapters
-9. Motion: scroll progress bar; grain atmosphere; hero live-row pulse; floating media; spotlight cards; NumberFlow proof; tab layoutId; Desire GSAP pin; reduced-motion off for decorative loops
-10. Signature: live operator console highlight cycle + cursor spotlight feature bento
-11. Platform: web marketing `/`
-12. Deliberately not doing: heavy 3D shaders, dual reverse marquees, purple AI kits
+Rewritten 2026-10-11 from `docs/uiux-suggestion.md` (audit against the sibling `Micro-Task-job` landing).
+
+1. **Product and job:** Bangladesh ISP owners deciding whether to trial. They need to believe one thing fast: it matches every bKash/Nagad payment to the right customer and reconnects the MikroTik line. Then start a trial or open the demo.
+2. **Design read:** dark B2B ops SaaS, product-first, calm. One story in eleven sections instead of 28.
+3. **References:** Micro-Task landing (hero stage, scroll-driven `Reveal`, hairline proof grid, one `SectionTitle`, journey); 21st.dev hero/feature-tab/pricing layouts (patterns only); Stripe Billing (product-first hero).
+4. **Existing system:** `--landing-bg` / `--landing-cta` tokens, Plus Jakarta display + Inter body + Noto Sans Bengali, shadcn `Button`, Lucide, Framer only for interactions (tabs, accordion, scroll progress).
+5. **Type:** one `SectionTitle` for every section heading. One orange accent phrase in the h1 only. No eyebrow badge above headings.
+6. **Color:** dark canvas, vermilion for actions and the accent phrase only. Emerald = done/reconnected, amber = needs review. No purple or azure washes, and no inline hex in components.
+7. **Shape:** cards 16px, stage 32px, pills full; hairline grids instead of a box per number.
+8. **Order:** Hero (promise → one CTA + demo link → 4 facts → product stage) → Proof strip → Follow one payment → Product tour → Hierarchy + permissions → Subscriber app → Integrations + plugins → Try the demo → Pricing + ROI → FAQ → Final CTA. The contact form lives on `/contact`.
+9. **Motion and depth:** hero entrance is CSS (`.lp-rise`, headline words rise out of a blur with `.lp-rise-word`), so it plays before hydration. Sections and headings reveal with CSS scroll timelines (`.lp-reveal`, `.lp-word`), so content is visible without JS. A warm aurora drifts behind the hero (the page's one ambient loop). The journey card lights its steps as chapters cross the viewport middle. Payment cards tilt toward the mouse with a sheen (`TiltCard`), hero layers parallax, the primary CTAs are magnetic, and the closing block's light follows the pointer. No GSAP and no `animate-ping`. Reduced motion shows everything static.
+   **3D (three.js, `FiberScene`):** ISP hardware, not money: glossy routers with lit port LEDs and antennas, Wi-Fi signals whose arcs pulse outward, iridescent glass fiber rings, and fiber strands whose light pulses (traffic and payments) run down into the product stage, in the hero and again behind the closing CTA. It loads only on desktops with a fine pointer, 4+ cores, WebGL2 and motion allowed (`webgl-support.ts`, which never imports three.js). three.js is fetched when the block nears the viewport, and the loop pauses off screen. Everyone else gets the CSS aurora, grid and glow, so nothing depends on it. No custom shaders and no globes.
+   **Assets:** an isometric ISP illustration set drawn in code (`illustrations.tsx`: router, OLT server, phone payment, invoice, homes, network mast, shield, lock; no coins or money imagery), coloured by the `.il-*` token mixes. Used in the proof strip, the journey chapters (the router's LEDs turn green on "reconnected") and the permissions block. Real assets where they exist: the partners' own logos (MikroTik, bKash, Nagad) on the integration cards and real screenshots of the branded subscriber app (`landingAssets` in `src/config/assets.ts`). A fiber-circuit motif (`.lp-circuit`) marks the journey band and the closing CTA.
+10. **Signature:** the **Payment matched** card (`PaymentMatchedCard`): gateway, amount, TrxID → customer, and Received → Matched → Reconnected. It appears in the hero and the journey. Same customer (CUST-4091, ৳1,200) in the console, the phone and the card.
+11. **Truth rules:** every number comes from `stats` (one source; a missing figure is hidden). Stage data is illustrative and labelled "Sample data". Testimonials, partner logos and case studies stay off the page until they are real and permissioned.
+12. **Deliberately not doing:** light theme or theme toggle (marketing stays dark), 3D on phones or under reduced motion, custom shaders, stock-photo hero, new fonts, repeating stats/roles/features in several sections. The only new dependency is `three`.

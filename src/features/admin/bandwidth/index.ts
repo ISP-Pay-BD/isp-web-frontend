@@ -7,4 +7,3 @@ export { BandwidthInvoicesPage } from './pages/BandwidthInvoicesPage';
 export { BandwidthDailyBillPage } from './pages/BandwidthDailyBillPage';
 export { BandwidthBuyHubPage } from './pages/BandwidthBuyHubPage';
 export { BandwidthSellHubPage } from './pages/BandwidthSellHubPage';
-export { useBandwidthData } from './hooks/useBandwidthData';

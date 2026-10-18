@@ -1,72 +1,73 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/motion/Reveal';
 import { useTranslations } from '@/features/marketing/shared';
-import { useMotionSafe } from '@/lib/animations';
-import { landingMedia } from '../media';
+import { FiberScene } from './FiberScene';
+import { Magnetic, PointerGlow, RevealWords } from './motion-kit';
 
+/**
+ * The closing call to action: the 3D coins and fiber pulses return (capable desktops), over a circuit
+ * motif and a warm light that follows the mouse.
+ */
 export function CTASection() {
   const t = useTranslations();
-  const { reduced } = useMotionSafe();
 
   return (
-    <section id="cta" className="relative z-[1] overflow-hidden py-32 md:py-48">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-30"
-        aria-hidden
-        style={{
-          backgroundImage: `radial-gradient(ellipse 80% 55% at 50% 100%, color-mix(in srgb, var(--landing-cta) 32%, transparent), transparent 70%), url('${landingMedia.heroAtmosphere}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center bottom',
-          filter: 'grayscale(1) contrast(1.1) brightness(0.45)',
-          mixBlendMode: 'luminosity',
-        }}
-      />
-
-      {!reduced ? (
-        <motion.div
-          className="pointer-events-none absolute bottom-[-20%] left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-landing-cta/20 blur-3xl"
-          animate={{ opacity: [0.25, 0.45, 0.25], scale: [0.92, 1.05, 0.92] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+    <section id="cta" className="relative z-[1] border-t border-white/10">
+      <PointerGlow className="py-32 md:py-48">
+        <div className="lp-circuit text-white opacity-[0.06]" aria-hidden />
+        <div
+          className="pointer-events-none absolute inset-0"
           aria-hidden
+          style={{
+            backgroundImage:
+              'radial-gradient(ellipse 70% 55% at 50% 100%, color-mix(in srgb, var(--landing-cta) 22%, transparent), transparent 70%)',
+          }}
         />
-      ) : null}
+        <div className="absolute inset-0" aria-hidden>
+          <FiberScene variant="cta" className="absolute inset-0 size-full" />
+        </div>
 
-      <Reveal className="relative mx-auto max-w-4xl px-4 text-center md:px-6">
-        <h2 className="font-landing-display text-[clamp(2.5rem,6vw,4.5rem)] font-semibold tracking-[-0.04em] text-white text-balance">
-          {t('marketing.sections.ctaFinal.title')}
-        </h2>
-        <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-          {t('marketing.sections.ctaFinal.desc')}
-        </p>
+        <Reveal className="relative mx-auto max-w-4xl px-4 text-center md:px-6">
+          <h2 className="font-landing-display text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.02] font-semibold tracking-[-0.04em] text-balance text-white">
+            <RevealWords text={t('marketing.sections.ctaFinal.title')} />
+          </h2>
+          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
+            {t('marketing.sections.ctaFinal.desc')}
+          </p>
 
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-3.5">
-          <Link href="/register">
-            <Button className="group bg-landing-cta hover:bg-landing-cta-hover relative h-13 overflow-hidden rounded-full pl-8 pr-2 text-sm font-semibold text-white shadow-[0_0_40px_rgba(247,88,3,0.28)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_60px_rgba(247,88,3,0.5)] active:scale-[0.98] sm:h-14 sm:pl-9 sm:text-base">
-              <span className="mr-3">{t('marketing.sections.ctaFinal.primary')}</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105 sm:h-10 sm:w-10">
-                ↗
-              </span>
-            </Button>
-          </Link>
-          <a href="/contact">
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-3.5">
+            <Magnetic>
+              <Button
+                nativeButton={false}
+                render={<Link href="/register" />}
+                className="group bg-landing-cta hover:bg-landing-cta-hover h-13 rounded-full pr-2 pl-8 text-sm font-semibold text-white shadow-[0_10px_40px_-8px_color-mix(in_srgb,var(--landing-cta)_70%,transparent)] active:scale-[0.98] sm:h-14 sm:pl-9 sm:text-base"
+              >
+                <span className="mr-3">{t('marketing.sections.ctaFinal.primary')}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 transition-transform duration-300 group-hover:translate-x-0.5 sm:h-10 sm:w-10">
+                  <ArrowRight className="size-4" aria-hidden />
+                </span>
+              </Button>
+            </Magnetic>
             <Button
               variant="ghost"
-              className="h-13 rounded-full border border-white/20 bg-white/4 px-8 text-sm font-medium text-white backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/35 hover:bg-white/8 active:scale-[0.98] sm:h-14 sm:px-9 sm:text-base"
+              nativeButton={false}
+              render={<Link href="/contact" />}
+              className="h-13 rounded-full border border-white/20 bg-white/4 px-8 text-sm font-medium text-white backdrop-blur transition-colors hover:border-white/35 hover:bg-white/8 active:scale-[0.98] sm:h-14 sm:px-9 sm:text-base"
             >
               {t('marketing.sections.ctaFinal.sales')}
             </Button>
-          </a>
-        </div>
+          </div>
 
-        <p className="mt-8 text-xs text-white/40 sm:text-sm">
-          {t('marketing.sections.ctaFinal.bullet1')} · {t('marketing.sections.ctaFinal.bullet2')} ·{' '}
-          {t('marketing.sections.ctaFinal.bullet3')}
-        </p>
-      </Reveal>
+          <p className="mt-8 text-xs text-white/40 sm:text-sm">
+            {t('marketing.sections.ctaFinal.bullet1')} · {t('marketing.sections.ctaFinal.bullet2')}{' '}
+            · {t('marketing.sections.ctaFinal.bullet3')}
+          </p>
+        </Reveal>
+      </PointerGlow>
     </section>
   );
 }

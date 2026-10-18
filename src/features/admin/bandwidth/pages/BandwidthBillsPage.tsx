@@ -1,233 +1,144 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { Plus, FileText, Printer, Receipt, Pencil, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { useBandwidthData } from '../hooks/useBandwidthData';
-import type { BandwidthPurchaseBillItem } from '@/data/admin/bandwidth.data';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { DataTable } from '@/features/shared/data-table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Plus, Download, FileText, Calendar, CheckCircle2, Clock, AlertTriangle, Printer, Receipt } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useBandwidthBills, useDeleteBandwidthBills } from '../hooks/useBandwidthBills';
+import { useBandwidthProviderOptions } from '../hooks/useBandwidthCatalog';
+import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
+import type { BandwidthPurchaseBill } from '../types';
+import { BillFormDialog } from '../components/BillFormDialog';
+import { OptionSelect } from '../components/OptionSelect';
+import { RefreshState } from '../components/RefreshState';
+import { periodLabel } from '../utils';
 
-const billSearchFilter = (
-  row: LegacyRow<BandwidthPurchaseBillItem>,
-  _columnId: string,
-  filterValue: unknown,
-) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const b = row.original;
-  return (
-    b.billNumber.toLowerCase().includes(q) ||
-    b.providerName.toLowerCase().includes(q) ||
-    b.month.toLowerCase().includes(q) ||
-    b.status.toLowerCase().includes(q)
-  );
-};
+const statusKey = (s: BandwidthPurchaseBill['paymentStatus']) => (s === 'Paid' ? 'paid' : 'pending');
 
 export function BandwidthBillsPage() {
-  const { data, isLoading, isError, refetch } = useBandwidthData();
-  const [bills, setBills] = useState<BandwidthPurchaseBillItem[]>([]);
-  const [selectedBill, setSelectedBill] = useState<BandwidthPurchaseBillItem | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [billNo, setBillNo] = useState('');
-  const [provider, setProvider] = useState('Summit Communications Ltd.');
-  const [amount, setAmount] = useState(250000);
-  const [capacity, setCapacity] = useState(1000);
+  const table = useServerTable();
+  const [providerId, setProviderId] = useState('');
+  const [status, setStatus] = useState<'' | 'Paid' | 'Due'>('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const { data, isLoading, isError, error, refetch, isFetching } = useBandwidthBills({
+    page: table.page,
+    pageSize: table.pageSize,
+    search: table.search,
+    providerId,
+    status,
+    from,
+    to,
+  });
+  const providers = useBandwidthProviderOptions();
+  const remove = useDeleteBandwidthBills();
+  const [voucher, setVoucher] = useState<BandwidthPurchaseBill | null>(null);
+  const [form, setForm] = useState<{ bill: BandwidthPurchaseBill | null } | null>(null);
+  const [toDelete, setToDelete] = useState<BandwidthPurchaseBill[] | null>(null);
 
-  const initial = data?.purchaseBills ?? [];
-  if (bills.length === 0 && initial.length > 0) {
-    setBills(initial);
-  }
+  const bills = useMemo(() => data?.items ?? [], [data]);
+  const totals = data?.totals;
+  const filtered = Boolean(providerId || status || from || to || table.search);
 
-  const list = bills.length > 0 ? bills : initial;
-
-  const stats = useMemo(() => {
-    const totalBills = list.length;
-    const paidBills = list.filter((b) => b.status === 'paid');
-    const pendingBills = list.filter((b) => b.status === 'pending');
-    const totalAmount = list.reduce((s, b) => s + b.totalBdt, 0);
-    const paidAmount = paidBills.reduce((s, b) => s + b.totalBdt, 0);
-    const pendingAmount = pendingBills.reduce((s, b) => s + b.totalBdt, 0);
-    return { totalBills, totalAmount, paidAmount, pendingAmount, pendingCount: pendingBills.length };
-  }, [list]);
-
-  const handleAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newBill: BandwidthPurchaseBillItem = {
-      id: `bpb_${Date.now()}`,
-      billNumber: billNo || `BILL-${Date.now()}`,
-      providerId: 'bwp_1',
-      providerName: provider,
-      month: 'September 2026',
-      billingDate: '2026-09-02',
-      dueDate: '2026-09-20',
-      capacityMbps: capacity,
-      amountBdt: amount,
-      vatBdt: Math.round(amount * 0.05),
-      totalBdt: Math.round(amount * 1.05),
-      status: 'pending',
-    };
-    setBills((prev) => [newBill, ...prev]);
-    toast.success('Carrier purchase invoice entered into accounts payable.');
-    setModalOpen(false);
-    setBillNo('');
+  const filter = <T,>(setter: (v: T) => void) => (v: T) => {
+    setter(v);
+    table.resetPage();
   };
 
-  const handleExportCsv = () => {
-    const headers = ['Bill Number', 'Carrier Provider', 'Month', 'Capacity (Mbps)', 'Base Amount (BDT)', 'VAT (BDT)', 'Total (BDT)', 'Due Date', 'Status'];
-    const rows = list.map((b) => [
-      b.billNumber,
-      b.providerName,
-      b.month,
-      b.capacityMbps,
-      b.amountBdt,
-      b.vatBdt,
-      b.totalBdt,
-      b.dueDate,
-      b.status,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `bandwidth_purchase_bills_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Carrier purchase invoices exported to CSV');
+  const confirmDelete = () => {
+    if (!toDelete?.length) return;
+    const ids = toDelete.map((b) => b.id);
+    remove.mutate(ids, { onSuccess: () => toast.success(ids.length === 1 ? 'Bill deleted' : `${ids.length} bills deleted`) });
+    setToDelete(null);
   };
 
-  const columns = useMemo<LegacyColumnDef<BandwidthPurchaseBillItem, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<BandwidthPurchaseBill, unknown>[]>(
     () => [
       {
-        accessorKey: 'billNumber',
-        header: 'Bill Reference #',
+        accessorKey: 'invoiceNumber',
+        header: 'Invoice #',
         enableHiding: false,
-        size: 210,
+        size: 190,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
               <FileText className="h-3.5 w-3.5" />
             </div>
             <div>
-              <span
-                className="font-mono font-bold text-xs text-foreground cursor-pointer hover:text-primary transition-colors"
-                onClick={() => setSelectedBill(row.original)}
-              >
-                {row.original.billNumber}
-              </span>
-              <div className="text-[10px] text-muted-foreground font-mono">
-                {row.original.billingDate}
-              </div>
+              <button type="button" className="font-mono font-bold text-xs text-foreground hover:text-primary transition-colors" onClick={() => setVoucher(row.original)}>
+                {row.original.invoiceNumber || `#${row.original.id}`}
+              </button>
+              <div className="text-[10px] text-muted-foreground font-mono">{row.original.billingDate}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'providerName',
-        header: 'Carrier Provider',
-        size: 200,
+        header: 'Provider',
+        size: 190,
         cell: ({ row }) => (
           <div>
-            <div className="font-bold text-xs text-foreground">{row.original.providerName}</div>
-            <div className="text-[10px] text-muted-foreground">{row.original.month}</div>
+            <div className="font-bold text-xs text-foreground">{row.original.providerName || '—'}</div>
+            <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
+              {row.original.items.map((l) => l.item).filter(Boolean).join(', ') || `${row.original.items.length} lines`}
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: 'capacityMbps',
-        header: 'Bandwidth',
-        size: 110,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs font-bold text-primary">
-            {row.original.capacityMbps} Mbps
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'amountBdt',
-        header: 'Base Amount',
+        accessorKey: 'total',
+        header: 'Total',
         size: 130,
+        cell: ({ row }) => <span className="font-mono text-sm font-bold text-foreground">{formatBdtWithSymbol(row.original.total)}</span>,
+      },
+      {
+        accessorKey: 'paid',
+        header: 'Paid',
+        size: 120,
+        cell: ({ row }) => <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(row.original.paid)}</span>,
+      },
+      {
+        accessorKey: 'due',
+        header: 'Due',
+        size: 120,
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-foreground">
-            {formatBdtWithSymbol(row.original.amountBdt)}
+          <span className={row.original.due > 0 ? 'font-mono text-xs font-bold text-amber-600 dark:text-amber-400' : 'font-mono text-xs text-muted-foreground'}>
+            {formatBdtWithSymbol(row.original.due)}
           </span>
         ),
       },
       {
-        accessorKey: 'vatBdt',
-        header: '5% VAT',
-        size: 100,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">
-            {formatBdtWithSymbol(row.original.vatBdt)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'totalBdt',
-        header: 'Total Payable',
-        size: 140,
-        cell: ({ row }) => (
-          <span className="font-mono text-sm font-bold text-foreground">
-            {formatBdtWithSymbol(row.original.totalBdt)}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'dueDate',
-        header: 'Due Date',
-        size: 110,
-        cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted-foreground">{row.original.dueDate}</span>
-        ),
-      },
-      {
-        accessorKey: 'status',
+        accessorKey: 'paymentStatus',
         header: 'Status',
-        size: 110,
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        size: 100,
+        cell: ({ row }) => <StatusBadge status={statusKey(row.original.paymentStatus)} label={row.original.paymentStatus} />,
       },
       {
         id: 'actions',
         header: '',
-        size: 80,
+        size: 150,
         cell: ({ row }) => (
-          <div className="text-right">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-primary hover:bg-primary/10"
-              onClick={() => setSelectedBill(row.original)}
-            >
+          <div className="flex justify-end gap-1">
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10" onClick={() => setVoucher(row.original)}>
               Voucher
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setForm({ bill: row.original })}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete([row.original])}>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
@@ -236,16 +147,11 @@ export function BandwidthBillsPage() {
     [],
   );
 
-  if (isLoading && bills.length === 0) return <PageSkeleton variant="table" rows={6} />;
-  if (isError && bills.length === 0) {
+  if (isLoading) return <PageSkeleton variant="table" rows={6} />;
+  if (isError && !data) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load purchase bills"
-          description="Could not fetch bandwidth purchase bills."
-          actionLabel="Retry"
-          onAction={() => refetch()}
-        />
+        <EmptyState title="Failed to load purchase bills" description="Could not fetch bandwidth purchase bills." actionLabel="Retry" onAction={() => refetch()} />
       </div>
     );
   }
@@ -254,219 +160,189 @@ export function BandwidthBillsPage() {
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Bandwidth Purchase Bills"
-        subtitle="Upstream carrier invoices, NTTN transmission bills, 5% NBR VAT, and payment reconciliation"
+        subtitle="Upstream provider bills with line VAT, payments and outstanding dues"
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
           { label: 'Purchase Bills' },
         ]}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Bills
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setModalOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" /> Record Purchase Bill
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => setForm({ bill: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Record Purchase Bill
+          </Button>
         }
       />
 
-      {/* Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{list.length}</span>{' '}
-          <span className="text-muted-foreground">carrier invoices</span>
+          <span className="font-semibold tabular-nums text-foreground">{totals?.count ?? 0}</span>{' '}
+          <span className="text-muted-foreground">{filtered ? 'matching bills' : 'bills'}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-foreground">
-            {formatBdtWithSymbol(stats.totalAmount)}
-          </span>{' '}
-          <span className="text-muted-foreground">total billed volume</span>
+          <span className="font-semibold tabular-nums text-foreground">{formatBdtWithSymbol(totals?.total ?? 0)}</span>{' '}
+          <span className="text-muted-foreground">billed</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            {formatBdtWithSymbol(stats.paidAmount)}
-          </span>{' '}
-          <span className="text-muted-foreground">disbursed settlements</span>
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(totals?.paid ?? 0)}</span>{' '}
+          <span className="text-muted-foreground">paid</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-            {formatBdtWithSymbol(stats.pendingAmount)} ({stats.pendingCount})
-          </span>{' '}
-          <span className="text-muted-foreground">pending approval</span>
+          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(totals?.due ?? 0)}</span>{' '}
+          <span className="text-muted-foreground">outstanding · {totals?.dueCount ?? 0} marked due</span>
         </p>
+        <RefreshState fetching={isFetching} error={isError ? error : null} onRetry={() => refetch()} />
       </div>
 
-      {/* Main Table */}
+      <div className="flex flex-wrap items-end gap-2.5">
+        <div className="w-56">
+          <OptionSelect
+            value={providerId}
+            onChange={filter(setProviderId)}
+            emptyLabel="All providers"
+            options={(providers.data ?? []).map((p) => ({ value: String(p.id), label: p.companyName }))}
+          />
+        </div>
+        <div className="w-36">
+          <OptionSelect
+            value={status}
+            onChange={filter((v: string) => setStatus(v === 'Paid' || v === 'Due' ? v : ''))}
+            emptyLabel="All statuses"
+            options={[
+              { value: 'Due', label: 'Due' },
+              { value: 'Paid', label: 'Paid' },
+            ]}
+          />
+        </div>
+        <Input type="date" aria-label="From date" value={from} onChange={(e) => filter(setFrom)(e.target.value)} className="h-9 w-40 text-xs" />
+        <Input type="date" aria-label="To date" value={to} onChange={(e) => filter(setTo)(e.target.value)} className="h-9 w-40 text-xs" />
+        {providerId || status || from || to ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 text-xs gap-1"
+            onClick={() => {
+              setProviderId('');
+              setStatus('');
+              setFrom('');
+              setTo('');
+              table.resetPage();
+            }}
+          >
+            <X className="h-3.5 w-3.5" /> Clear filters
+          </Button>
+        ) : null}
+      </div>
+
       <DataTable
         columns={columns}
-        data={list}
-        getRowId={(row) => row.id}
-        searchKey="billNumber"
-        searchPlaceholder="Search bill reference #, provider, or month..."
-        searchFilterFn={billSearchFilter}
-        facetFilters={[
-          { columnId: 'providerName', title: 'Carrier' },
-          { columnId: 'status', title: 'Payment Status' },
-        ]}
-        emptyTitle="No purchase bills"
-        emptyDescription="Enter a carrier billing statement to get started."
+        data={bills}
+        getRowId={(row) => String(row.id)}
+        searchPlaceholder="Search invoice #, provider, or remarks..."
+        enableRowSelection
+        onDeleteSelected={(rows) => setToDelete(rows)}
+        server={table.server(data?.meta.total ?? 0)}
+        emptyTitle={filtered ? 'No bills match these filters' : 'No purchase bills'}
+        emptyDescription={filtered ? undefined : 'Record a provider bill to get started.'}
       />
 
-      {/* Bill Details Modal */}
-      <Dialog open={!!selectedBill} onOpenChange={(open) => !open && setSelectedBill(null)}>
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
+      <Dialog open={voucher !== null} onOpenChange={(open) => !open && setVoucher(null)}>
+        <DialogContent className="sm:max-w-2xl p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div>
                   <DialogTitle className="text-base font-bold">Purchase Bill Voucher</DialogTitle>
-                  <DialogDescription className="text-xs font-mono">
-                    {selectedBill?.billNumber}
-                  </DialogDescription>
+                  <DialogDescription className="text-xs font-mono">{voucher?.invoiceNumber}</DialogDescription>
                 </div>
               </div>
-              {selectedBill && <StatusBadge status={selectedBill.status} />}
+              {voucher ? <StatusBadge status={statusKey(voucher.paymentStatus)} label={voucher.paymentStatus} /> : null}
             </div>
           </DialogHeader>
 
-          {selectedBill && (
+          {voucher ? (
             <div className="space-y-4 pt-2 text-xs">
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Carrier / Provider:</span>
-                  <span className="font-bold text-foreground">{selectedBill.providerName}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Billing Period:</span>
-                  <span className="font-medium text-foreground">{selectedBill.month}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Contracted Capacity:</span>
-                  <span className="font-mono font-bold text-primary">{selectedBill.capacityMbps} Mbps</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Due Date:</span>
-                  <span className="font-mono text-foreground">{selectedBill.dueDate}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-muted-foreground">VAT Portion (5%):</span>
-                  <span className="font-mono text-muted-foreground">৳{selectedBill.vatBdt.toLocaleString()}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['Provider', voucher.providerName || '—'],
+                  ['Billing date', voucher.billingDate || '—'],
+                  ['Payment method', voucher.paymentMethod || '—'],
+                  ['Paid by', voucher.paidBy || '—'],
+                  ['Received by', voucher.receivedBy || '—'],
+                  ['Remarks', voucher.remarks || '—'],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between gap-2 border-b border-border/40 py-1">
+                    <span className="text-muted-foreground">{k}</span>
+                    <span className="font-medium text-foreground text-right">{v}</span>
+                  </div>
+                ))}
               </div>
 
-              <div className="flex justify-between items-center p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-sm font-bold">
-                <span>Total Invoice Value:</span>
-                <span className="font-mono text-primary text-base">
-                  ৳{selectedBill.totalBdt.toLocaleString()}
-                </span>
+              <div className="rounded-xl border border-border/60 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead>Item</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-right">VAT</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {voucher.items.map((l, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-xs">
+                          <div className="font-semibold">{l.item || '—'}</div>
+                          {l.description ? <div className="text-[10px] text-muted-foreground">{l.description}</div> : null}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">{periodLabel(l.fromDate, l.toDate)}</TableCell>
+                        <TableCell className="text-xs font-mono text-right">
+                          {l.qty} {l.unit}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono text-right">{formatBdtWithSymbol(l.rate)}</TableCell>
+                        <TableCell className="text-xs font-mono text-right">{l.vat}%</TableCell>
+                        <TableCell className="text-xs font-mono text-right font-bold">{formatBdtWithSymbol(l.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex justify-end">
+                <div className="w-64 space-y-1.5 p-3.5 rounded-xl bg-muted/20 border border-border/50">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono font-bold">{formatBdtWithSymbol(voucher.total)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="font-mono">{formatBdtWithSymbol(voucher.paid)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-mono">{formatBdtWithSymbol(voucher.discount)}</span></div>
+                  <div className="flex justify-between border-t border-border/60 pt-1.5 text-sm font-bold"><span>Due</span><span className="font-mono text-primary">{formatBdtWithSymbol(voucher.due)}</span></div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="text-xs">
                   <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
                 </Button>
-                <Button size="sm" onClick={() => setSelectedBill(null)} className="text-xs font-semibold">
-                  Close
-                </Button>
+                <Button size="sm" onClick={() => setVoucher(null)} className="text-xs font-semibold">Close</Button>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 
-      {/* Add Bill Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" /> Enter Carrier Purchase Bill
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Record a new billing statement received from an upstream IIG or NTTN carrier.
-            </DialogDescription>
-          </DialogHeader>
+      <BillFormDialog open={form !== null} bill={form?.bill ?? null} onOpenChange={(open) => !open && setForm(null)} />
 
-          <form onSubmit={handleAdd} className="space-y-3.5 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Bill Reference / Invoice # *</Label>
-              <Input
-                placeholder="e.g. BILL-SCL-2026-0901"
-                value={billNo}
-                onChange={(e) => setBillNo(e.target.value)}
-                className="text-xs h-9 font-mono"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Carrier / Provider *</Label>
-              <Select value={provider} onValueChange={(v) => v && setProvider(v)}>
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Summit Communications Ltd.">Summit Communications Ltd.</SelectItem>
-                  <SelectItem value="Fiber@Home Limited">Fiber@Home Limited</SelectItem>
-                  <SelectItem value="Link3 Technologies Ltd.">Link3 Technologies Ltd.</SelectItem>
-                  <SelectItem value="ADN Telecom Ltd.">ADN Telecom Ltd.</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Capacity (Mbps)</Label>
-                <Input
-                  type="number"
-                  value={capacity}
-                  onChange={(e) => setCapacity(Number(e.target.value))}
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Base Amount (BDT) *</Label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
-                  className="text-xs h-9 font-mono font-bold"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-muted/20 border border-border/50 text-xs flex justify-between">
-              <span className="text-muted-foreground">Computed Total (+ 5% VAT):</span>
-              <span className="font-mono font-bold text-foreground">
-                ৳{Math.round(amount * 1.05).toLocaleString()}
-              </span>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="text-xs font-semibold">
-                Submit Bill
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={toDelete !== null}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title={toDelete?.length === 1 ? `Delete bill ${toDelete[0]?.invoiceNumber ?? ''}?` : `Delete ${toDelete?.length ?? 0} bills?`}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

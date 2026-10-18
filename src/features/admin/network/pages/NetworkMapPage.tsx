@@ -1,28 +1,26 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { PageHeader } from '@/features/admin/shared';
-import { useNetworkMap } from '../hooks/useNetwork';
-import type { NetworkMapNodeItem } from '@/data/admin/network-ops.data';
-import { MapboxMap } from '@/components/shared/MapboxMap';
+import { useNetworkNodes } from '../hooks/useNetwork';
+import { MAP_LEVELS, type MapLevel, type MapNode } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import {
-  MapPin,
-  Layers,
-  RadioTower,
-  Wifi,
-  WifiOff,
-  Server,
-  Globe,
-} from 'lucide-react';
+import { MapPin, MapPinOff, Layers, RadioTower, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// mapbox-gl is heavy and browser-only: load the shared map on the client only.
+const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
+  ssr: false,
+  loading: () => <div className="absolute inset-4 animate-pulse rounded-xl bg-muted/60 md:inset-5" />,
+});
+
 const levelColors: Record<
-  string,
+  MapLevel,
   { bg: string; border: string; text: string; dot: string; ring: string; hex: string }
 > = {
   Root: {
@@ -75,29 +73,39 @@ const levelColors: Record<
   },
 };
 
-export function NetworkMapPage() {
-  const { data: nodes = [], isLoading, isError, refetch } = useNetworkMap();
-  const [selectedLevel, setSelectedLevel] = useState<string>('all');
-  const [activeNode, setActiveNode] = useState<NetworkMapNodeItem | null>(null);
+const isPlaced = (n: MapNode) => n.latitude !== null && n.longitude !== null;
 
-  const filtered = nodes.filter((n) => selectedLevel === 'all' || n.level === selectedLevel);
+export function NetworkMapPage() {
+  const { data, isLoading, isError, refetch } = useNetworkNodes();
+  const [selectedLevel, setSelectedLevel] = useState<'all' | MapLevel>('all');
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const nodes = useMemo(() => data?.nodes ?? [], [data]);
+  const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  const activeNode = activeId ? (byId.get(activeId) ?? null) : null;
+  const filtered = useMemo(
+    () => nodes.filter((n) => selectedLevel === 'all' || n.level === selectedLevel),
+    [nodes, selectedLevel],
+  );
+  const placed = useMemo(() => filtered.filter(isPlaced), [filtered]);
+  const unplaced = useMemo(() => filtered.filter((n) => !isPlaced(n)), [filtered]);
 
   const markers = useMemo(
     () =>
-      filtered.map((node) => ({
+      placed.map((node) => ({
         id: node.id,
-        latitude: node.lat,
-        longitude: node.lng,
-        color: levelColors[node.level]?.hex ?? '#e85a1a',
-        label: node.name,
+        latitude: node.latitude as number,
+        longitude: node.longitude as number,
+        color: levelColors[node.level].hex,
+        label: node.label,
       })),
-    [filtered],
+    [placed],
   );
 
   if (isLoading) {
     return <PageSkeleton variant="dashboard" rows={5} />;
   }
-  if (isError) {
+  if (isError || !data) {
     return (
       <div className="p-6">
         <EmptyState
@@ -114,14 +122,20 @@ export function NetworkMapPage() {
     <div className="w-full space-y-6 pb-12">
       <PageHeader
         title="Network Geographic Mapping"
-        subtitle="Geographic distribution of NOC core, distribution POPs, OLT headends, and customer fiber nodes"
+        subtitle="Geographic distribution of your network nodes and their parent hierarchy"
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
+          { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Network' },
           { label: 'Mapping' },
         ]}
       />
 
+      {nodes.length === 0 ? (
+        <EmptyState
+          title="No network nodes yet"
+          description="Nodes added to your network map (with their coordinates) appear here."
+        />
+      ) : (
       <Card className="overflow-hidden border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader className="flex flex-col gap-4 border-b border-border/50 bg-muted/20 px-5 py-3.5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2.5">
@@ -129,9 +143,10 @@ export function NetworkMapPage() {
               <RadioTower className="h-4 w-4 text-primary" />
             </span>
             <div>
-              <CardTitle className="text-sm font-semibold">Live Bangladesh Topology Map</CardTitle>
+              <CardTitle className="text-sm font-semibold">Network Topology Map</CardTitle>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {filtered.length} of {nodes.length} nodes on Mapbox
+                {placed.length} of {filtered.length} nodes placed on the map
+                {data.truncated ? ` · first ${nodes.length} of ${data.total} nodes loaded` : ''}
               </p>
             </div>
           </div>
@@ -141,7 +156,7 @@ export function NetworkMapPage() {
               type="button"
               onClick={() => setSelectedLevel('all')}
               className={cn(
-                'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-200',
+                'rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition duration-200',
                 selectedLevel === 'all'
                   ? 'border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20'
                   : 'border-border/60 bg-card text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-foreground',
@@ -149,8 +164,9 @@ export function NetworkMapPage() {
             >
               All Nodes ({nodes.length})
             </button>
-            {(['Root', 'L1', 'L2', 'L3', 'L4', 'L5+'] as const).map((lvl) => {
+            {MAP_LEVELS.map((lvl) => {
               const count = nodes.filter((n) => n.level === lvl).length;
+              if (count === 0) return null;
               const style = levelColors[lvl];
               const isSelected = selectedLevel === lvl;
               return (
@@ -159,15 +175,13 @@ export function NetworkMapPage() {
                   type="button"
                   onClick={() => setSelectedLevel(lvl)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-200',
+                    'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition duration-200',
                     isSelected
                       ? `ring-2 ${style.ring} border-current bg-card ${style.text}`
                       : 'border-border/60 bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
                   )}
                 >
-                  <span
-                    className={cn('h-2 w-2 rounded-full', style.dot, isSelected && 'animate-pulse')}
-                  />
+                  <span className={cn('h-2 w-2 rounded-full', style.dot)} />
                   <span>{lvl}</span>
                   <span className="text-[10px] opacity-60">({count})</span>
                 </button>
@@ -176,34 +190,27 @@ export function NetworkMapPage() {
           </div>
         </CardHeader>
 
-          <CardContent className="relative flex min-h-[560px] flex-col overflow-hidden bg-background p-0 md:flex-row">
+        <CardContent className="relative flex min-h-[560px] flex-col overflow-hidden bg-background p-0 md:flex-row">
           <div className="relative min-h-[480px] flex-1 bg-muted/40 p-4 md:p-5">
             <MapboxMap
               markers={markers}
-              selectedId={activeNode?.id ?? null}
-              onSelect={(id) => {
-                const node = nodes.find((n) => n.id === id) ?? null;
-                setActiveNode(node);
-              }}
+              selectedId={activeId}
+              onSelect={(id) => setActiveId(id)}
               height="100%"
               className="absolute inset-4 md:inset-5 ring-1 ring-border/40"
+              emptyMessage="None of these nodes has coordinates yet — see the list beside the map."
               renderMarker={(marker, selected) => {
-                const node = nodes.find((n) => n.id === marker.id);
+                const node = byId.get(marker.id);
                 const style = levelColors[node?.level ?? 'L1'];
                 return (
                   <div className="relative flex items-center justify-center">
-                    <span
-                      className={cn(
-                        'absolute h-8 w-8 rounded-full opacity-35',
-                        style?.dot ?? 'bg-primary',
-                      )}
-                    />
+                    <span className={cn('absolute h-8 w-8 rounded-full opacity-35', style.dot)} />
                     <div
                       className={cn(
                         'flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/90 text-[10px] font-bold text-white shadow-lg',
-                        style?.dot ?? 'bg-primary',
+                        style.dot,
                         selected && 'ring-2 ring-offset-2 ring-offset-background',
-                        selected && style?.ring,
+                        selected && style.ring,
                       )}
                     >
                       {(node?.level ?? 'N').charAt(0)}
@@ -225,100 +232,103 @@ export function NetworkMapPage() {
             {activeNode ? (
               <div key={activeNode.id} className="space-y-4">
                 <div className="space-y-1">
-                  <div className="text-sm font-bold text-foreground">{activeNode.name}</div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {activeNode.zone}
+                  <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    {activeNode.color && (
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full border border-border/60"
+                        style={{ backgroundColor: activeNode.color }}
+                        aria-hidden
+                      />
+                    )}
+                    {activeNode.label}
                   </div>
+                  {activeNode.parentLabel && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <GitBranch className="h-3 w-3" />
+                      Under {activeNode.parentLabel}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'font-mono text-[10px]',
-                      levelColors[activeNode.level].text,
-                      levelColors[activeNode.level].border,
-                    )}
-                  >
-                    {activeNode.level}
-                  </Badge>
-                  <Badge
-                    variant={activeNode.status === 'online' ? 'default' : 'destructive'}
-                    className="gap-1 text-[10px] capitalize"
-                  >
-                    {activeNode.status === 'online' ? (
-                      <Wifi className="h-2.5 w-2.5" />
-                    ) : (
-                      <WifiOff className="h-2.5 w-2.5" />
-                    )}
-                    {activeNode.status}
-                  </Badge>
-                </div>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'font-mono text-[10px]',
+                    levelColors[activeNode.level].text,
+                    levelColors[activeNode.level].border,
+                  )}
+                >
+                  {activeNode.level}
+                </Badge>
 
                 <div className="space-y-2.5 border-t border-border/50 pt-3">
-                  {activeNode.ip && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Globe className="h-3 w-3" />
-                        IP Address
-                      </span>
-                      <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs">
-                        {activeNode.ip}
-                      </code>
-                    </div>
-                  )}
-                  {activeNode.deviceModel && (
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Server className="h-3 w-3" />
-                        Hardware
-                      </span>
-                      <span className="text-xs font-medium">{activeNode.deviceModel}</span>
-                    </div>
-                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Coordinates</span>
                     <span className="font-mono text-xs">
-                      {activeNode.lat}, {activeNode.lng}
+                      {isPlaced(activeNode) ? `${activeNode.latitude}, ${activeNode.longitude}` : 'Not set'}
                     </span>
                   </div>
-                  {activeNode.connectedCount !== undefined && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Connected</span>
-                      <span className="text-xs font-bold text-foreground">
-                        {activeNode.connectedCount} users
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Child nodes</span>
+                    <span className="text-xs font-bold text-foreground">{activeNode.childCount}</span>
+                  </div>
                 </div>
 
                 <Button
                   size="sm"
                   variant="outline"
                   className="mt-2 w-full text-xs"
-                  onClick={() => setActiveNode(null)}
+                  onClick={() => setActiveId(null)}
                 >
                   Clear Selection
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3 py-12 text-center">
+              <div className="space-y-3 py-8 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
                   <MapPin className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-foreground">No node selected</p>
                   <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                    Click any node on the map to inspect telemetry, IP assignment, and fiber
-                    hierarchy.
+                    Click a node on the map or in the list below to inspect it.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {unplaced.length > 0 && (
+              <div className="space-y-2 border-t border-border/50 pt-4">
+                <h4 className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <MapPinOff className="h-3.5 w-3.5" />
+                  Without coordinates ({unplaced.length})
+                </h4>
+                <ul className="max-h-64 space-y-1 overflow-y-auto">
+                  {unplaced.map((n) => (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveId(n.id)}
+                        className={cn(
+                          'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted/50',
+                          activeId === n.id && 'bg-muted/60',
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className={cn('h-2 w-2 shrink-0 rounded-full', levelColors[n.level].dot)} />
+                          <span className="truncate">{n.label}</span>
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground">{n.level}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

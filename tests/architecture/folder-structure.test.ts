@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 const root = process.cwd();
 
@@ -10,14 +10,9 @@ const requiredPaths = [
   'src/components/ui',
   'src/components/layout',
   'src/components/shared',
-  'src/lib/mock-api',
+  'src/lib/api',
   'src/lib/permissions',
-  'src/data',
-  'src/data/users',
   'src/data/marketing',
-  'src/data/customer',
-  'src/data/admin',
-  'src/data/platform',
   'src/stores',
   'src/config',
   'src/types',
@@ -26,6 +21,14 @@ const requiredPaths = [
   'tests/setup',
   'docs',
 ];
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) return sourceFiles(full);
+    return /\.(ts|tsx)$/.test(name) ? [full] : [];
+  });
+}
 
 describe('architecture / folder structure', () => {
   it('has all required top-level architecture folders', () => {
@@ -41,16 +44,36 @@ describe('architecture / folder structure', () => {
   });
 });
 
-describe('architecture / mock-api boundary', () => {
-  it('mock-api client exists as single data access entry', () => {
-    expect(existsSync(join(root, 'src/lib/mock-api/client.ts'))).toBe(true);
+/**
+ * Every portal screen reads the zapi backend. The only static content left is
+ * the marketing site copy in src/data/marketing; the mock API layer and the
+ * dummy datasets are gone and must not come back.
+ */
+describe('architecture / live data boundary', () => {
+  const files = sourceFiles(join(root, 'src')).filter((f) => !relative(root, f).startsWith('src/data/'));
+
+  it('has no mock API layer', () => {
+    expect(existsSync(join(root, 'src/lib/mock-api'))).toBe(false);
   });
 
-  it('demo users data exists for offline auth', () => {
-    expect(existsSync(join(root, 'src/data/users/users.data.ts'))).toBe(true);
+  it('never imports mock data or the mock client', () => {
+    const offenders = files.filter((f) => /mock-api|mockFetch/.test(readFileSync(f, 'utf8')));
+    expect(offenders.map((f) => relative(root, f))).toEqual([]);
   });
 
-  it('central data index exists', () => {
-    expect(existsSync(join(root, 'src/data/index.ts'))).toBe(true);
+  it('imports static data only from the marketing site content', () => {
+    const offenders = files.filter((f) => {
+      const imports = readFileSync(f, 'utf8').match(/from ['"]@\/data\/[^'"]+['"]/g) ?? [];
+      return imports.some((i) => !i.includes('@/data/marketing/'));
+    });
+    expect(offenders.map((f) => relative(root, f))).toEqual([]);
+  });
+
+  it('keeps marketing content out of the portals', () => {
+    const portalFiles = files.filter((f) =>
+      /^src\/(features\/(admin|customer|employee|platform)|lib\/api|stores)\//.test(relative(root, f)),
+    );
+    const offenders = portalFiles.filter((f) => /from ['"]@\/data\//.test(readFileSync(f, 'utf8')));
+    expect(offenders.map((f) => relative(root, f))).toEqual([]);
   });
 });

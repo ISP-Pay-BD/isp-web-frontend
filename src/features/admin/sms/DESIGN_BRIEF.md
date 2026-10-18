@@ -3,7 +3,7 @@
 1. Product and job: ops sending bulk/template messages to subscribers
 2. Design read: compose + log; audience picker then message; calm portal
 3. References: Stripe messaging logs; Resend audience send; this app’s Areas strip
-4. Existing system: Satoshi, shadcn forms/tables, mockFetch domains `sms` / `whatsapp`
+4. Existing system: Satoshi, shadcn forms/tables, zapi `/v1/reseller/sms*` + `/v1/reseller/sms-center/*` (queue, preview, gateway) and `/v1/reseller/whatsapp/*`
 5. Type: Satoshi; mono for phone/Trx
 6. Color: muted + primary send CTA; semantic delivery status
 7. Shape: form + recipient list + log table — no decorative KPI icons

@@ -1,35 +1,60 @@
-import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+'use client';
 
-export interface AccountingReportItem {
-  id: string;
-  name: string;
-  period: string;
-  netBdt: number;
-  grossRevenueBdt?: number;
-  totalExpensesBdt?: number;
-  marginPct?: number;
-  type?: string;
-  activePops?: number;
-  topPerformer?: string;
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { http } from '@/lib/api/client';
+import { num, str } from '@/lib/api/case';
+import { accountingKeys } from '../../shared/query-keys';
+
+export interface AccountingSummary {
+  fromDate: string;
+  toDate: string;
+  income: {
+    total: number;
+    customersPaymentReceived: number;
+    otherIncome: number;
+    bandwidthSell: number;
+    otc: number;
+  };
+  expense: { total: number; employeePayment: number; otherExpenses: number; bandwidthBuy: number };
+  netAmount: number;
 }
 
-export function useAccountingReports() {
-  const query = useQuery({
-    queryKey: ['admin', 'accounting', 'reports'],
-    queryFn: async () => {
-      const data = await mockFetch('admin.domain', 'accounting');
-      const acc = data as { accountingReports: AccountingReportItem[]; otcReport: unknown[] };
-      return {
-        reports: acc.accountingReports ?? [],
-        otc: acc.otcReport ?? [],
-      };
-    },
-  });
+type Row = Record<string, unknown>;
 
+function mapSummary(d: Row): AccountingSummary {
+  const inc = (d.income ?? {}) as Row;
+  const exp = (d.expense ?? {}) as Row;
   return {
-    ...query,
-    reports: query.data?.reports ?? [],
-    otcReport: query.data?.otc ?? [],
+    fromDate: str(d.from_date),
+    toDate: str(d.to_date),
+    income: {
+      total: num(inc.total),
+      customersPaymentReceived: num(inc.customers_payment_received),
+      otherIncome: num(inc.other_income),
+      bandwidthSell: num(inc.bandwidth_sell),
+      otc: num(inc.otc),
+    },
+    expense: {
+      total: num(exp.total),
+      employeePayment: num(exp.employee_payment),
+      otherExpenses: num(exp.other_expenses),
+      bandwidthBuy: num(exp.bandwidth_buy),
+    },
+    netAmount: num(d.net_amount),
   };
+}
+
+/** Period income/expense summary (GET /v1/accounting/summary). */
+export function useAccountingSummary(fromDate: string, toDate: string) {
+  return useQuery({
+    queryKey: [...accountingKeys.summary, { fromDate, toDate }],
+    queryFn: async () =>
+      mapSummary(
+        (await http.get<Row>('/v1/accounting/summary', {
+          from_date: fromDate || undefined,
+          to_date: toDate || undefined,
+        })) ?? {},
+      ),
+    placeholderData: keepPreviousData,
+  });
 }

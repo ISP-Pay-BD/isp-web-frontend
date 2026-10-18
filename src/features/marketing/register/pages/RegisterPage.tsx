@@ -2,20 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import {
-  Rocket,
-  Gift,
-  Headset,
-  CheckCircle2,
-} from 'lucide-react';
+import { Rocket, Headset, CheckCircle2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { handleApiError } from '@/lib/api/utils/error-handler';
+import { formatBdtWithSymbol } from '@/lib/format';
 import { registrationSchema, type RegistrationFormData } from '../schemas/register.schema';
+import { useRegisterIsp, useRegistrationPlans } from '../hooks/use-registration';
+import { ReferralRegisterForm } from '../components/ReferralRegisterForm';
 import { useTranslations } from '@/features/marketing/shared';
 import { Reveal } from '@/components/motion/Reveal';
+import type { RegisterIspResult, RegistrationPlans } from '../types';
 
 const divisionDistricts: Record<string, string[]> = {
   Dhaka: ['Dhaka', 'Gazipur', 'Faridpur', 'Gopalganj', 'Kishoreganj', 'Madaripur', 'Manikganj', 'Munshiganj', 'Narayanganj', 'Narsingdi', 'Rajbari', 'Shariatpur', 'Tangail'],
@@ -28,49 +27,29 @@ const divisionDistricts: Record<string, string[]> = {
   Mymensingh: ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
 };
 
+/** Connection protocols the backend accepts for `customer_type[]`. */
+const CUSTOMER_TYPES = ['PPPOE', 'Static', 'Hotspot'] as const;
+
+const inputClass =
+  'w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none';
+const selectClass =
+  'w-full rounded-xl border border-white/15 bg-landing-panel px-4 py-2.5 text-sm text-white focus:border-landing-cta focus:outline-none';
+const labelClass = 'block text-xs font-semibold text-white/80 mb-1';
+
 interface RegisterPageProps {
   initialReferralCode?: string;
   isReferralFlow?: boolean;
 }
 
 export function RegisterPage({ initialReferralCode = '', isReferralFlow = false }: RegisterPageProps) {
-  const router = useRouter();
+  if (isReferralFlow) return <ReferralRegisterForm initialCode={initialReferralCode} />;
+  return <IspRegisterPage />;
+}
+
+function IspRegisterPage() {
   const t = useTranslations();
-  const [submitting, setSubmitting] = useState(false);
-  const [selectedDivision, setSelectedDivision] = useState('Dhaka');
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
-    defaultValues: {
-      division: 'Dhaka',
-      district: 'Dhaka',
-      package: 'growth',
-      customer_type: ['PPPOE', 'Static'],
-      referral_code: initialReferralCode,
-    },
-  });
-
-  const availableDistricts = divisionDistricts[selectedDivision] ?? [];
-
-  const onSubmit = async (data: RegistrationFormData) => {
-    setSubmitting(true);
-    // Simulate tenant onboarding dispatch
-    await new Promise((r) => setTimeout(r, 700));
-    setSubmitting(false);
-
-    toast.success('Account created successfully!', {
-      description: `${data.organization_name} — your 14-day full platform trial is now active. Redirecting to login…`,
-    });
-
-    setTimeout(() => {
-      router.push('/login?registered=1');
-    }, 1200);
-  };
+  const plansQuery = useRegistrationPlans();
+  const [result, setResult] = useState<RegisterIspResult | null>(null);
 
   return (
     <div className="py-12 md:py-20">
@@ -79,338 +58,45 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
           {/* Left Column: Form */}
           <Reveal className="rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10 lg:col-span-8">
             <div className="mb-6 border-b border-white/10 pb-6">
-              <div>
-                <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
-                  {isReferralFlow ? t('marketing.pages.register.referralBadge') : t('marketing.pages.register.badge')}
-                </p>
-                <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
-                  {isReferralFlow ? t('marketing.pages.register.referralTitle') : t('marketing.pages.register.title')}
-                </h1>
-                <p className="mt-1 text-sm text-white/55">
-                  {isReferralFlow ? t('marketing.pages.register.referralSubtitle') : t('marketing.pages.register.subtitle')}
-                </p>
-              </div>
+              <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
+                {t('marketing.pages.register.badge')}
+              </p>
+              <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
+                {t('marketing.pages.register.title')}
+              </h1>
+              <p className="mt-1 text-sm text-white/55">
+                Set up your ISP organization — connect MikroTik, import subscribers and reconcile bKash payments.
+              </p>
             </div>
 
-            {isReferralFlow && (
-              <div className="mb-6 rounded-xl border border-landing-cta/40 bg-landing-cta/10 p-4 text-xs text-white/90 flex items-center gap-3">
-                <Gift className="h-5 w-5 text-landing-cta shrink-0" />
-                <div>
-                  <strong>Special Referral Offer Applied:</strong> You will receive an extended 30-day trial + ৳1,000 credit towards your first Pay-As-You-Grow wallet reload!
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Organization Info */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
-                  01. ISP Organization Details
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Organization / Company Name *
-                    </label>
-                    <input
-                      {...register('organization_name')}
-                      placeholder="e.g. FastNet Broadband"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.organization_name && (
-                      <p className="mt-1 text-xs text-red-400">{errors.organization_name.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Admin Full Name *
-                    </label>
-                    <input
-                      {...register('admin_name')}
-                      placeholder="Abdul Karim"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.admin_name && (
-                      <p className="mt-1 text-xs text-red-400">{errors.admin_name.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Mobile Number (BD) *
-                    </label>
-                    <input
-                      {...register('mobile')}
-                      placeholder="017XXXXXXXX"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none font-mono"
-                    />
-                    {errors.mobile && (
-                      <p className="mt-1 text-xs text-red-400">{errors.mobile.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      National ID (NID) *
-                    </label>
-                    <input
-                      {...register('nationalid')}
-                      placeholder="NID 10/17 digit number"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none font-mono"
-                    />
-                    {errors.nationalid && (
-                      <p className="mt-1 text-xs text-red-400">{errors.nationalid.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Admin Email *
-                    </label>
-                    <input
-                      {...register('email')}
-                      type="email"
-                      placeholder="admin@ispcompany.com"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.email && (
-                      <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Password *
-                    </label>
-                    <input
-                      {...register('password')}
-                      type="password"
-                      placeholder="Min. 4 characters"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.password && (
-                      <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Confirm Password *
-                    </label>
-                    <input
-                      {...register('confirm_password')}
-                      type="password"
-                      placeholder="Repeat password"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.confirm_password && (
-                      <p className="mt-1 text-xs text-red-400">{errors.confirm_password.message}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Geographic Location */}
-              <div className="space-y-4 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
-                  02. Area &amp; Coverage POP
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Division *
-                    </label>
-                    <select
-                      {...register('division')}
-                      onChange={(e) => {
-                        setSelectedDivision(e.target.value);
-                        setValue('division', e.target.value);
-                        const firstDist = divisionDistricts[e.target.value]?.[0] ?? '';
-                        setValue('district', firstDist);
-                      }}
-                      className="w-full rounded-xl border border-white/15 bg-landing-panel px-4 py-2.5 text-sm text-white focus:border-landing-cta focus:outline-none"
-                    >
-                      {Object.keys(divisionDistricts).map((div) => (
-                        <option key={div} value={div}>
-                          {div}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      District *
-                    </label>
-                    <select
-                      {...register('district')}
-                      className="w-full rounded-xl border border-white/15 bg-landing-panel px-4 py-2.5 text-sm text-white focus:border-landing-cta focus:outline-none"
-                    >
-                      {availableDistricts.map((dst) => (
-                        <option key={dst} value={dst}>
-                          {dst}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Upazilla / Thana *
-                    </label>
-                    <input
-                      {...register('upazilla')}
-                      placeholder="e.g. Uttara / Mirpur"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.upazilla && (
-                      <p className="mt-1 text-xs text-red-400">{errors.upazilla.message}</p>
-                    )}
-                  </div>
-
-                  <div className="sm:col-span-3">
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      NOC / Office Street Address *
-                    </label>
-                    <input
-                      {...register('address')}
-                      placeholder="House, road, sector or village"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                    {errors.address && (
-                      <p className="mt-1 text-xs text-red-400">{errors.address.message}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Plan & Customer Types */}
-              <div className="space-y-4 pt-4 border-t border-white/10">
-                <h3 className="text-sm font-semibold tracking-wide text-landing-accent">
-                  03. Service Setup &amp; Plan
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Initial Plan *
-                    </label>
-                    <select
-                      {...register('package')}
-                      className="w-full rounded-xl border border-white/15 bg-landing-panel px-4 py-2.5 text-sm text-white focus:border-landing-cta focus:outline-none"
-                    >
-                      <option value="starter">Starter — Up to 500 Subscribers (৳2,999/mo after trial)</option>
-                      <option value="growth">Growth — Up to 2,000 Subscribers (৳5,999/mo after trial)</option>
-                      <option value="scale">Scale — Unlimited Subscribers (৳9,999/mo after trial)</option>
-                      <option value="payg">Pay-As-You-Grow Wallet (৳1.5/subscriber, no monthly cap)</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-white/80 mb-2">
-                      Customer Connection Types Handled *
-                    </label>
-                    <div className="flex flex-wrap gap-4">
-                      {['PPPOE', 'Static', 'Hotspot'].map((type) => (
-                        <label
-                          key={type}
-                          className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 hover:bg-white/10"
-                        >
-                          <input
-                            type="checkbox"
-                            value={type}
-                            {...register('customer_type')}
-                            className="accent-landing-cta"
-                          />
-                          <span>{type}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {errors.customer_type && (
-                      <p className="mt-1 text-xs text-red-400">{errors.customer_type.message}</p>
-                    )}
-                  </div>
-
-                  {/* Referral Code */}
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Referral Code (Optional)
-                    </label>
-                    <input
-                      {...register('referral_code')}
-                      placeholder="e.g. BD-ISP-77"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1">
-                      Reference Name / ISP Owner (Optional)
-                    </label>
-                    <input
-                      {...register('reference_name')}
-                      placeholder="Who recommended us?"
-                      className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-white/40 focus:border-landing-cta focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-landing-cta hover:bg-landing-cta-hover text-white h-12 text-base font-semibold shadow-[var(--shadow-primary)]"
+            {result ? (
+              <SuccessPanel result={result} />
+            ) : plansQuery.isLoading ? (
+              <p className="py-10 text-center text-sm text-white/50">Loading registration options…</p>
+            ) : plansQuery.isError || !plansQuery.data ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-white/70">Couldn&apos;t load registration options.</p>
+                <button
+                  type="button"
+                  onClick={() => plansQuery.refetch()}
+                  className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white"
                 >
-                  {submitting ? 'Creating Organization Account…' : 'Create Free Trial Account'}
-                  <Rocket className="ml-2 h-5 w-5" />
-                </Button>
+                  Retry
+                </button>
               </div>
-
-              <div className="text-center text-xs text-white/50 pt-2">
-                Already have an operator account?{' '}
-                <Link href="/login" className="text-landing-accent hover:underline font-medium">
-                  Sign in here
-                </Link>
-              </div>
-            </form>
+            ) : !plansQuery.data.allowSelfRegistration ? (
+              <ClosedNotice />
+            ) : (
+              <IspRegisterForm
+                options={plansQuery.data}
+                onRegistered={setResult}
+                onClosed={() => plansQuery.refetch()}
+              />
+            )}
           </Reveal>
 
-          {/* Right Column: Trust & Highlights */}
+          {/* Right Column */}
           <Reveal className="space-y-6 lg:col-span-4" delay={0.06}>
-            <div className="space-y-6 rounded-xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-landing-cta/30 bg-landing-cta/20 text-landing-cta">
-                  <Rocket className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-landing-display text-base font-bold text-white">
-                    Launch Your ISP Platform
-                  </h3>
-                  <p className="text-xs text-white/50">14 days full access, zero lock-in</p>
-                </div>
-              </div>
-
-              <ul className="space-y-3.5 text-xs text-white/75">
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>Unlimited MikroTik router sync over RouterOS API</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>Automated bKash &amp; Nagad payment reconciliation</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>Multi-POP reseller ledger with auto commission splits</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>Branded Bangla customer portal and Android self-care</span>
-                </li>
-              </ul>
-            </div>
-
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 backdrop-blur-md">
               <div className="mb-4 flex items-center gap-3">
                 <Headset className="h-5 w-5 text-landing-accent" />
@@ -419,16 +105,352 @@ export function RegisterPage({ initialReferralCode = '', isReferralFlow = false 
                 </h4>
               </div>
               <p className="text-xs leading-relaxed text-white/70">
-                Our Dhaka engineering team is ready to guide you through initial RouterOS API setup and subscriber Excel import over phone or remote AnyDesk session.
+                Our team can guide you through RouterOS API setup and importing your existing subscribers.
               </p>
-              <div className="mt-4 flex justify-between border-t border-white/10 pt-3 text-xs">
-                <span className="text-white/40">Hotline:</span>
-                <span className="font-mono font-bold text-landing-cta">+880 1781-808231</span>
-              </div>
+              <Link href="/contact" className="mt-4 inline-block text-xs font-medium text-landing-accent hover:underline">
+                Contact us
+              </Link>
             </div>
           </Reveal>
         </div>
       </div>
     </div>
   );
+}
+
+function ClosedNotice() {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-5 text-sm text-white/80">
+      <Lock className="mt-0.5 h-5 w-5 shrink-0 text-landing-cta" />
+      <div>
+        <p className="font-semibold text-white">Self-registration is currently closed</p>
+        <p className="mt-1 text-white/60">
+          New ISP accounts are being set up by our team for now. Get in touch and we&apos;ll help you get started.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-4 text-xs">
+          <Link href="/contact" className="font-medium text-landing-accent hover:underline">
+            Contact us
+          </Link>
+          <Link href="/login" className="text-white/60 hover:underline">
+            Sign in
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SuccessPanel({ result }: { result: RegisterIspResult }) {
+  return (
+    <div className="space-y-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 text-sm text-white/90">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+        <div className="space-y-1">
+          <p className="font-semibold text-white">{result.message || 'Registration received.'}</p>
+          {result.trialEndsAt ? (
+            <p className="text-xs text-white/60">Trial ends {result.trialEndsAt}</p>
+          ) : null}
+        </div>
+      </div>
+      <Link href="/login?registered=1">
+        <Button className="bg-landing-cta hover:bg-landing-cta-hover text-white">Go to sign in</Button>
+      </Link>
+    </div>
+  );
+}
+
+function IspRegisterForm({
+  options,
+  onRegistered,
+  onClosed,
+}: {
+  options: RegistrationPlans;
+  onRegistered: (result: RegisterIspResult) => void;
+  onClosed: () => void;
+}) {
+  const registerIsp = useRegisterIsp();
+  const [selectedDivision, setSelectedDivision] = useState('Dhaka');
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    control,
+    formState: { errors },
+  } = useForm<RegistrationFormData>({
+    resolver: zodResolver(registrationSchema),
+    defaultValues: {
+      division: 'Dhaka',
+      district: 'Dhaka',
+      package: '',
+      customer_type: ['PPPOE'],
+      payg_addons: [],
+    },
+  });
+
+  const selectedPackage = useWatch({ control, name: 'package' });
+  const availableDistricts = divisionDistricts[selectedDivision] ?? [];
+
+  const onSubmit = (data: RegistrationFormData) => {
+    registerIsp.mutate(data, {
+      onSuccess: (res) => {
+        toast.success(res.message || 'Registration received.');
+        onRegistered(res);
+      },
+      onError: (err) => {
+        handleApiError(err, setError);
+        if (err.code === 'REGISTRATION_CLOSED') onClosed();
+      },
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+      {/* Organization Info */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold tracking-wide text-landing-accent">01. ISP Organization Details</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Organization / Company Name *</label>
+            <input {...register('organization_name')} placeholder="Your ISP's registered name" className={inputClass} />
+            <FieldError message={errors.organization_name?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Admin Full Name *</label>
+            <input {...register('admin_name')} autoComplete="name" className={inputClass} />
+            <FieldError message={errors.admin_name?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Mobile Number (BD) *</label>
+            <input {...register('mobile')} inputMode="tel" placeholder="017XXXXXXXX" className={`${inputClass} font-mono`} />
+            <FieldError message={errors.mobile?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>National ID (NID) *</label>
+            <input {...register('nationalid')} placeholder="NID 10/17 digit number" className={`${inputClass} font-mono`} />
+            <FieldError message={errors.nationalid?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Admin Email *</label>
+            <input {...register('email')} type="email" autoComplete="email" className={inputClass} />
+            <FieldError message={errors.email?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Password *</label>
+            <input {...register('password')} type="password" autoComplete="new-password" placeholder="Min. 4 characters" className={inputClass} />
+            <FieldError message={errors.password?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Confirm Password *</label>
+            <input {...register('confirm_password')} type="password" autoComplete="new-password" placeholder="Repeat password" className={inputClass} />
+            <FieldError message={errors.confirm_password?.message} />
+          </div>
+        </div>
+      </div>
+
+      {/* Geographic Location */}
+      <div className="space-y-4 border-t border-white/10 pt-4">
+        <h3 className="text-sm font-semibold tracking-wide text-landing-accent">02. Area &amp; Coverage POP</h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className={labelClass}>Division *</label>
+            <select
+              {...register('division')}
+              onChange={(e) => {
+                setSelectedDivision(e.target.value);
+                setValue('division', e.target.value);
+                setValue('district', divisionDistricts[e.target.value]?.[0] ?? '');
+              }}
+              className={selectClass}
+            >
+              {Object.keys(divisionDistricts).map((div) => (
+                <option key={div} value={div}>
+                  {div}
+                </option>
+              ))}
+            </select>
+            <FieldError message={errors.division?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>District *</label>
+            <select {...register('district')} className={selectClass}>
+              {availableDistricts.map((dst) => (
+                <option key={dst} value={dst}>
+                  {dst}
+                </option>
+              ))}
+            </select>
+            <FieldError message={errors.district?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Upazilla / Thana *</label>
+            <input {...register('upazilla')} className={inputClass} />
+            <FieldError message={errors.upazilla?.message} />
+          </div>
+
+          <div className="sm:col-span-3">
+            <label className={labelClass}>NOC / Office Street Address *</label>
+            <input {...register('address')} placeholder="House, road, sector or village" className={inputClass} />
+            <FieldError message={errors.address?.message} />
+          </div>
+        </div>
+      </div>
+
+      {/* Plan & Customer Types */}
+      <div className="space-y-4 border-t border-white/10 pt-4">
+        <h3 className="text-sm font-semibold tracking-wide text-landing-accent">03. Service Setup &amp; Plan</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Plan *</label>
+            <select {...register('package')} className={selectClass}>
+              <option value="">Choose a plan</option>
+              {options.plans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {formatBdtWithSymbol(p.priceBdt)} / {p.pricingType || 'month'}
+                  {p.freeDays > 0 ? ` · ${p.freeDays} days free` : ''}
+                </option>
+              ))}
+              {options.payg ? (
+                <option value="payg">{options.payg.name || 'Pay-As-You-Go'} — pay as you go</option>
+              ) : null}
+              <option value="custom">Custom plan — tell us what you need</option>
+            </select>
+            <FieldError message={errors.package?.message} />
+            <PlanSummary options={options} selected={selectedPackage} />
+          </div>
+
+          {selectedPackage === 'payg' && options.payg && options.payg.addons.length > 0 ? (
+            <div className="sm:col-span-2">
+              <span className="mb-2 block text-xs font-semibold text-white/80">Optional add-ons</span>
+              <div className="flex flex-wrap gap-3">
+                {options.payg.addons.map((addon) => (
+                  <label
+                    key={addon.key}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 hover:bg-white/10"
+                  >
+                    <input type="checkbox" value={addon.key} {...register('payg_addons')} className="accent-landing-cta" />
+                    <span>
+                      {addon.name} (+{formatBdtWithSymbol(addon.price)})
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {selectedPackage === 'custom' ? (
+            <div className="sm:col-span-2">
+              <label className={labelClass}>What do you need? *</label>
+              <textarea
+                {...register('custom_plan_note')}
+                rows={3}
+                placeholder="Expected subscriber count, branches, white label, budget…"
+                className={inputClass}
+              />
+              <FieldError message={errors.custom_plan_note?.message} />
+            </div>
+          ) : null}
+
+          <div className="sm:col-span-2">
+            <span className="mb-2 block text-xs font-semibold text-white/80">Customer Connection Types Handled *</span>
+            <div className="flex flex-wrap gap-4">
+              {CUSTOMER_TYPES.map((type) => (
+                <label
+                  key={type}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/80 hover:bg-white/10"
+                >
+                  <input type="checkbox" value={type} {...register('customer_type')} className="accent-landing-cta" />
+                  <span>{type}</span>
+                </label>
+              ))}
+            </div>
+            <FieldError message={errors.customer_type?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Reference Name (Optional)</label>
+            <input {...register('reference_name')} placeholder="Who recommended us?" className={inputClass} />
+            <FieldError message={errors.reference_name?.message} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Reference Mobile (Optional)</label>
+            <input {...register('reference_mobile')} inputMode="tel" className={`${inputClass} font-mono`} />
+            <FieldError message={errors.reference_mobile?.message} />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-6">
+        <Button
+          type="submit"
+          disabled={registerIsp.isPending}
+          className="h-12 w-full bg-landing-cta text-base font-semibold text-white shadow-[var(--shadow-primary)] hover:bg-landing-cta-hover"
+        >
+          {registerIsp.isPending ? 'Creating Organization Account…' : 'Create Account'}
+          <Rocket className="ml-2 h-5 w-5" />
+        </Button>
+      </div>
+
+      <div className="pt-2 text-center text-xs text-white/50">
+        Already have an operator account?{' '}
+        <Link href="/login" className="font-medium text-landing-accent hover:underline">
+          Sign in here
+        </Link>
+      </div>
+    </form>
+  );
+}
+
+/** What the selected plan includes — straight from the plans endpoint. */
+function PlanSummary({ options, selected }: { options: RegistrationPlans; selected: string }) {
+  const plan = options.plans.find((p) => p.id === selected);
+  const payg = selected === 'payg' ? options.payg : null;
+
+  if (!plan && !payg && selected !== 'custom') return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs text-white/75">
+      {plan ? (
+        <>
+          <p className="text-white/90">
+            <span className="font-semibold">{plan.name}</span> · {formatBdtWithSymbol(plan.priceBdt)}
+            {plan.pricingType ? ` / ${plan.pricingType}` : ''}
+            {plan.trialDays > 0 ? ` · ${plan.trialDays}-day trial` : ''}
+          </p>
+          {plan.features.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {plan.features.map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
+      ) : payg ? (
+        <p>
+          Base fee {formatBdtWithSymbol(payg.baseFee)} · {formatBdtWithSymbol(payg.perUserRate)} per subscriber · minimum
+          top-up {formatBdtWithSymbol(payg.minTopup)}
+          {payg.trialDays > 0 ? ` · ${payg.trialDays}-day trial` : ''}
+        </p>
+      ) : (
+        <p>Describe what you need below and our team will get back to you with a quote.</p>
+      )}
+    </div>
+  );
+}
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="mt-1 text-xs text-red-400">{message}</p> : null;
 }

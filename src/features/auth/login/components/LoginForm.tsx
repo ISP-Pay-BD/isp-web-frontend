@@ -14,11 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuthStore } from '@/stores/auth-store';
 import { getPostLoginRedirect } from '@/lib/auth/route-access';
-import { MockApiError } from '@/lib/mock-api/errors';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
+import { ApiError } from '@/lib/api/client';
 import { loginSchema, type LoginFormValues } from '../schemas/login.schema';
-import { DemoUserPicker } from './DemoUserPicker';
 
 export function LoginForm() {
   const router = useRouter();
@@ -26,11 +25,11 @@ export function LoginForm() {
   const login = useAuthStore((s) => s.login);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsOtp, setNeedsOtp] = useState(false);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -40,21 +39,17 @@ export function LoginForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setError(null);
     try {
-      const user = await login(values.email, values.password);
+      const user = await login(values.email, values.password, needsOtp ? values.otp?.trim() : undefined);
       toast.success(`Welcome back, ${user.name}`);
       const redirect = searchParams.get('redirect');
       const destination = getPostLoginRedirect(user.role, redirect);
       router.replace(destination);
     } catch (err) {
-      const message =
-        err instanceof MockApiError ? err.message : 'Sign in failed. Please try again.';
-      setError(message);
+      if (err instanceof ApiError && (err.code === 'TWO_FACTOR_REQUIRED' || err.code === 'TWO_FACTOR_INVALID')) {
+        setNeedsOtp(true);
+      }
+      setError(err instanceof Error && err.message ? err.message : 'Sign in failed. Please try again.');
     }
-  };
-
-  const fillDemo = (email: string, password: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', password, { shouldValidate: true });
   };
 
   return (
@@ -71,6 +66,12 @@ export function LoginForm() {
           <h2 className="font-landing-display text-2xl font-bold tracking-tight text-foreground">Welcome back</h2>
           <p className="text-muted-foreground text-sm">Sign in to your ISP Pay BD operations dashboard</p>
         </div>
+
+        {!error && searchParams.get('expired') ? (
+          <Alert className="rounded-xl text-xs">
+            <AlertDescription className="text-xs font-medium">Your session expired. Please sign in again.</AlertDescription>
+          </Alert>
+        ) : null}
 
         {error ? (
           <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/10 text-destructive">
@@ -126,9 +127,25 @@ export function LoginForm() {
             ) : null}
           </div>
 
+          {needsOtp ? (
+            <div className="space-y-2">
+              <Label htmlFor="otp" className="text-xs font-semibold">Authentication code</Label>
+              <Input
+                id="otp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                autoFocus
+                placeholder="6-digit code from your authenticator app"
+                className="h-11 rounded-xl bg-background/80 font-mono tracking-widest text-sm"
+                {...register('otp')}
+              />
+            </div>
+          ) : null}
+
           <Button
             type="submit"
-            className="w-full h-11 rounded-xl bg-landing-cta text-white font-semibold text-sm shadow-[0_4px_14px_rgba(247,88,3,0.3)] hover:bg-landing-cta-hover hover:shadow-[0_6px_20px_rgba(247,88,3,0.4)] transition-all active:scale-[0.99] mt-2"
+            className="w-full h-11 rounded-xl bg-landing-cta text-white font-semibold text-sm shadow-[0_4px_14px_rgba(247,88,3,0.3)] hover:bg-landing-cta-hover hover:shadow-[0_6px_20px_rgba(247,88,3,0.4)] transition active:scale-[0.99] mt-2"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
@@ -141,8 +158,6 @@ export function LoginForm() {
             )}
           </Button>
         </form>
-
-        <DemoUserPicker onSelect={fillDemo} disabled={isSubmitting} />
 
         <p className="text-muted-foreground text-center text-xs pt-2">
           Don&apos;t have an account?{' '}

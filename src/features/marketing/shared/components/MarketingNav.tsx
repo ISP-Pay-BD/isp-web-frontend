@@ -10,9 +10,10 @@ import { marketingNavLinks } from '@/config/navigation/index';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { useTranslations } from '../context/LocaleContext';
+import { LocaleToggle } from './LocaleToggle';
 
 const navI18nKeys: Record<string, string> = {
-  '/#auto-reconcile': 'marketing.nav.features',
+  '/#product-preview': 'marketing.nav.features',
   '/#how-it-works': 'marketing.nav.howItWorks',
   '/#pricing': 'marketing.nav.pricing',
   '/#faq': 'marketing.nav.faq',
@@ -45,9 +46,20 @@ export function MarketingNav() {
 
   return (
     <header className="lp-nav pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-4 md:px-6 md:pt-5">
-      <div className="pointer-events-auto mx-auto flex max-w-5xl items-center justify-between gap-3 rounded-full border border-white/12 bg-landing-bg/55 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl supports-[backdrop-filter]:bg-landing-bg/45">
-        <Link href="/" className="flex items-center gap-2.5 pl-1" aria-label={`${siteConfig.name} home`}>
-          <Image src={brandAssets.logo} alt="" width={32} height={32} className="h-8 w-8" priority />
+      <div className="bg-landing-bg/55 supports-[backdrop-filter]:bg-landing-bg/45 pointer-events-auto mx-auto flex max-w-5xl items-center justify-between gap-3 rounded-full border border-white/12 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 pl-1"
+          aria-label={`${siteConfig.name} home`}
+        >
+          <Image
+            src={brandAssets.logo}
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8"
+            priority
+          />
           <span className="font-landing-display hidden text-sm font-semibold tracking-tight text-white sm:inline">
             {siteConfig.name}
           </span>
@@ -67,6 +79,7 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <LocaleToggle />
           <Link href="/login">
             <Button
               variant="ghost"
@@ -82,7 +95,8 @@ export function MarketingNav() {
           </Link>
         </div>
 
-        <div className="flex items-center lg:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
+          <LocaleToggle />
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
@@ -90,7 +104,7 @@ export function MarketingNav() {
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </SheetTrigger>
-            <SheetContent side="right" className="border-white/10 bg-landing-panel text-white">
+            <SheetContent side="right" className="bg-landing-panel border-white/10 text-white">
               <nav className="mt-8 flex flex-col gap-4" aria-label="Mobile">
                 {marketingNavLinks.map((link) => (
                   <a

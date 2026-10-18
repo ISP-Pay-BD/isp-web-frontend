@@ -1,100 +1,149 @@
 'use client';
 
+import { useState } from 'react';
+import Link from 'next/link';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PlatformPageHeader } from '@/features/platform/shared';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DataTable } from '@/features/shared/data-table';
 import { usePlatformSla } from '@/features/platform/shared/hooks/use-platform-catalog';
+import type { SlaRow } from '@/features/platform/types';
 import { cn } from '@/lib/utils';
 
+const columns: LegacyColumnDef<SlaRow, unknown>[] = [
+  {
+    accessorKey: 'name',
+    header: 'Tenant',
+    size: 240,
+    enableHiding: false,
+    cell: ({ row }) => (
+      <div>
+        {row.original.tenantId ? (
+          <Link href={`/platform/tenants/${row.original.tenantId}/health`} className="font-medium hover:underline">
+            {row.original.name}
+          </Link>
+        ) : (
+          <span className="font-medium">{row.original.name}</span>
+        )}
+        <div className="font-mono text-[11px] text-muted-foreground">{row.original.tenantSlug ?? 'No portal'}</div>
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'routerAvailabilityPct',
+    header: 'Routers active',
+    size: 170,
+    cell: ({ row }) => {
+      const r = row.original;
+      if (r.routerAvailabilityPct === null) return <span className="text-muted-foreground">No routers</span>;
+      return (
+        <div>
+          <span className="tabular-nums font-semibold">{r.routerAvailabilityPct.toFixed(1)}%</span>
+          <span className="ml-1 text-xs text-muted-foreground">
+            ({r.routersActive}/{r.routersTotal}, target {r.targetPct}%)
+          </span>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: 'openTickets',
+    header: 'Open tickets',
+    size: 110,
+    cell: ({ row }) => <span className="tabular-nums font-semibold text-primary">{row.original.openTickets}</span>,
+  },
+  {
+    accessorKey: 'severity',
+    header: 'Posture',
+    size: 110,
+    cell: ({ row }) => (
+      <Badge
+        variant="outline"
+        className={cn(
+          'capitalize font-semibold text-xs px-2 py-0.5',
+          row.original.severity === 'ok' && 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+          row.original.severity === 'watch' && 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
+          row.original.severity === 'critical' && 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
+        )}
+      >
+        {row.original.severity}
+      </Badge>
+    ),
+  },
+];
+
 export function PlatformSlaPage() {
-  const { data, isLoading, isError, refetch } = usePlatformSla();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, isError, error, refetch } = usePlatformSla(page, pageSize, search);
 
   if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
-    return <EmptyState title="Failed to load SLA" actionLabel="Retry" onAction={() => refetch()} />;
-  }
-  if (data.length === 0) {
     return (
       <EmptyState
-        title="No SLA rows"
-        description="Tenant uptime targets will show here."
+        title="Failed to load SLA"
+        description={error instanceof Error ? error.message : undefined}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
     );
   }
 
-  const watching = data.filter((r) => r.severity !== 'ok').length;
-  const avgUptime = (data.reduce((s, r) => s + r.uptimePct, 0) / (data.length || 1)).toFixed(2);
-  const totalOpenTickets = data.reduce((s, r) => s + r.openTickets, 0);
+  const watching = data.items.filter((r) => r.severity !== 'ok').length;
+  const openTickets = data.items.reduce((s, r) => s + r.openTickets, 0);
 
   return (
     <div className="space-y-6">
       <PlatformPageHeader
         title="Tenant SLA Monitoring"
-        subtitle="Real-time multi-tenant uptime tracking, availability targets, and escalated tickets"
+        subtitle="Router availability (share of each tenant's routers currently marked active) and open support tickets"
         breadcrumb={[
           { label: 'Platform', href: '/platform/dashboard' },
           { label: 'Tenant SLA' },
         ]}
       />
 
-      {/* KPI Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{data.length}</span>{' '}
+          <span className="font-semibold tabular-nums text-foreground">{data.total}</span>{' '}
           <span className="text-muted-foreground">monitored tenants</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-emerald-500">{avgUptime}%</span>{' '}
-          <span className="text-muted-foreground">average cluster uptime</span>
+          <span className={`font-semibold tabular-nums ${watching > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>{watching}</span>{' '}
+          <span className="text-muted-foreground">need attention on this page</span>
         </p>
         <p>
-          <span className={`font-semibold tabular-nums ${watching > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-            {watching}
-          </span>{' '}
-          <span className="text-muted-foreground">tenants requiring attention</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-primary">{totalOpenTickets}</span>{' '}
-          <span className="text-muted-foreground">open support tickets</span>
+          <span className="font-semibold tabular-nums text-primary">{openTickets}</span>{' '}
+          <span className="text-muted-foreground">open tickets on this page</span>
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {data.map((r) => (
-          <Card key={r.tenantId} className="border-border/60 bg-card hover:border-primary/40 transition-all">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border/40">
-              <CardTitle className="font-mono text-base font-bold text-foreground">{r.tenantSlug}.isppaybd.com</CardTitle>
-              <Badge
-                variant="outline"
-                className={cn(
-                  'capitalize font-semibold text-xs px-2 py-0.5',
-                  r.severity === 'ok' && 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
-                  r.severity === 'watch' && 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
-                  r.severity === 'critical' && 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
-                )}
-              >
-                {r.severity}
-              </Badge>
-            </CardHeader>
-            <CardContent className="flex justify-between items-center text-sm pt-4">
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground">Live Uptime</div>
-                <div className="tabular-nums font-bold text-base text-foreground mt-0.5">{r.uptimePct.toFixed(2)}%</div>
-                <div className="text-[10px] font-mono text-muted-foreground mt-0.5">Target: {r.targetPct}%</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] font-medium text-muted-foreground">Open Tickets</div>
-                <div className="tabular-nums font-bold text-base text-primary mt-0.5">{r.openTickets}</div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">Priority Escalated</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DataTable
+        columns={columns}
+        data={data.items}
+        getRowId={(row) => row.adminId}
+        searchPlaceholder="Search tenant admin name, email or phone..."
+        server={{
+          page,
+          pageSize,
+          total: data.total,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+          search,
+          onSearchChange: (q) => {
+            setSearch(q);
+            setPage(1);
+          },
+        }}
+        emptyTitle="No tenants found"
+        emptyDescription="Tenant posture appears here once ISP admins exist."
+      />
     </div>
   );
 }

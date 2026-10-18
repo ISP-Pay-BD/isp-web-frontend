@@ -1,253 +1,195 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PageHeader } from '@/features/shared/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import {
-  Check,
-  Palette,
-  RotateCcw,
-  Download,
-  Upload,
-  Copy,
-  Info,
-  Sliders,
-  Eye,
-  Layers,
-} from 'lucide-react';
+import { Check, Palette, RotateCcw, Download, Upload, Copy, Info, Sliders, Eye, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateColorRamp } from '@/lib/theme/generate-color-ramp';
-import type { ThemePreset } from '@/data/admin/theme-studio.data';
-import { useThemeStudio } from '../hooks/use-theme-studio';
 import { useTheme } from 'next-themes';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Can } from '@/components/shared/Can';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useSoftwareSettings } from '@/features/admin/settings/hooks/use-settings';
+import { useSaveTenantTheme, useTenantTheme, type TenantTheme } from '../hooks/use-theme-studio';
+import { DEFAULT_PRESET, THEME_PRESETS, type ThemePreset } from '../presets';
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+function fromPreset(preset: ThemePreset): TenantTheme {
+  return {
+    presetId: preset.id,
+    primary: preset.primary,
+    secondary: preset.sidebar,
+    radius: preset.radius,
+    density: 'comfortable',
+    fontScale: 'md',
+    reduceMotion: false,
+  };
+}
 
 export function ThemeStudioPage() {
-  const { theme, setTheme } = useTheme();
-  const { data, isLoading, isError, refetch } = useThemeStudio();
-  const { tableLayout, setTableLayout } = useThemeCustomizerStore();
-  const themePresetsData = data?.presets ?? [];
-
-  // Selected preset or custom colors
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('isp_default');
-  const [primaryColor, setPrimaryColor] = useState<string>('#e85a1a');
-  const [secondaryColor, setSecondaryColor] = useState<string>('#10141a');
-  const [radius, setRadius] = useState<number>(12);
-
-  // Display Preferences
-  const [uiDensity, setUiDensity] = useState<'comfortable' | 'compact'>('comfortable');
-  const [tableDensity, setTableDensity] = useState<'comfortable' | 'compact'>('comfortable');
-  const [fontScale, setFontScale] = useState<'sm' | 'md' | 'lg'>('md');
-  const [colorfulCards, setColorfulCards] = useState<boolean>(true);
-  const [compactSidebar, setCompactSidebar] = useState<boolean>(false);
-  const [reduceMotion, setReduceMotion] = useState<boolean>(false);
-
-  // Ramps
-  const primaryRamp = useMemo(() => generateColorRamp(primaryColor), [primaryColor]);
-  const secondaryRamp = useMemo(() => generateColorRamp(secondaryColor), [secondaryColor]);
-
-  // Apply a preset
-  const applyPreset = (preset: ThemePreset) => {
-    setSelectedPresetId(preset.id);
-    setPrimaryColor(preset.primary);
-    setSecondaryColor(preset.sidebar);
-    setRadius(preset.radius);
-    toast.success(`Preset "${preset.name}" applied`);
-  };
-
-  // Reset to default
-  const handleReset = () => {
-    const defaultPreset = themePresetsData[0];
-    if (!defaultPreset) return;
-    applyPreset(defaultPreset);
-    setUiDensity('comfortable');
-    setTableDensity('comfortable');
-    setFontScale('md');
-    setColorfulCards(true);
-    setCompactSidebar(false);
-    setReduceMotion(false);
-    toast.info('Theme reset to ISP Pay BD default settings');
-  };
-
-  // Save / Apply
-  const handleApplyTheme = () => {
-    toast.success('Theme preferences saved successfully');
-  };
-
-  // Export JSON
-  const handleExport = () => {
-    const config = {
-      presetId: selectedPresetId,
-      primaryColor,
-      secondaryColor,
-      radius,
-      uiDensity,
-      tableDensity,
-      fontScale,
-      darkMode: theme === 'dark',
-      colorfulCards,
-      compactSidebar,
-      reduceMotion,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ipb-brand-theme.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Exported ipb-brand-theme.json');
-  };
-
-  // Copy JSON
-  const handleCopyJson = () => {
-    const config = {
-      primaryColor,
-      secondaryColor,
-      radius,
-      uiDensity,
-      tableDensity,
-      fontScale,
-      colorfulCards,
-    };
-    navigator.clipboard.writeText(JSON.stringify(config, null, 2));
-    toast.success('Theme JSON copied to clipboard');
-  };
-
-  // Import JSON
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target?.result as string);
-        if (data.primaryColor) setPrimaryColor(data.primaryColor);
-        if (data.secondaryColor) setSecondaryColor(data.secondaryColor);
-        if (data.radius) setRadius(data.radius);
-        if (data.uiDensity) setUiDensity(data.uiDensity);
-        if (data.tableDensity) setTableDensity(data.tableDensity);
-        if (data.fontScale) setFontScale(data.fontScale);
-        if (typeof data.colorfulCards === 'boolean') setColorfulCards(data.colorfulCards);
-        toast.success('Theme imported successfully');
-      } catch {
-        toast.error('Invalid theme JSON file format');
-      }
-    };
-    reader.readAsText(file);
-  };
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useTenantTheme();
 
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (isError) {
     return (
       <EmptyState
-        title="Failed to load theme presets"
-        description="Could not load Theme Studio configuration."
+        title="Failed to load your theme"
+        description={errorMessage(error)}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
     );
   }
 
+  return <ThemeEditor key={dataUpdatedAt} saved={data ?? null} />;
+}
+
+function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
+  const { theme: colorMode, setTheme: setColorMode } = useTheme();
+  const { tableLayout, setTableLayout } = useThemeCustomizerStore();
+  const save = useSaveTenantTheme();
+  const brand = useSoftwareSettings();
+  const brandName = brand.data?.appName || 'Your ISP';
+
+  const [draft, setDraft] = useState<TenantTheme>(saved ?? fromPreset(DEFAULT_PRESET));
+  const set = <K extends keyof TenantTheme>(key: K, value: TenantTheme[K]) =>
+    setDraft((prev) => ({ ...prev, [key]: value, ...(key === 'primary' || key === 'secondary' ? { presetId: null } : {}) }));
+
+  const primaryRamp = useMemo(() => generateColorRamp(draft.primary), [draft.primary]);
+  const secondaryRamp = useMemo(() => generateColorRamp(draft.secondary), [draft.secondary]);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const valid = HEX.test(draft.primary) && HEX.test(draft.secondary);
+
+  const applyPreset = (preset: ThemePreset) => {
+    setDraft((prev) => ({ ...prev, presetId: preset.id, primary: preset.primary, secondary: preset.sidebar, radius: preset.radius }));
+  };
+
+  const handleSave = () => {
+    if (!valid) {
+      toast.error('Colours must be #RRGGBB hex values');
+      return;
+    }
+    save.mutate(draft, { onSuccess: () => toast.success('Theme saved for your whole team') });
+  };
+
+  const handleReset = () => {
+    setDraft(fromPreset(DEFAULT_PRESET));
+    toast.info('Default theme loaded — save to apply it');
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify({ ...draft, exportedAt: new Date().toISOString() }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'brand-theme.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyJson = () => {
+    void navigator.clipboard.writeText(JSON.stringify(draft, null, 2)).then(() => toast.success('Theme JSON copied to clipboard'));
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(String(event.target?.result ?? '')) as Partial<TenantTheme>;
+        if (!HEX.test(String(parsed.primary)) || !HEX.test(String(parsed.secondary))) throw new Error('invalid');
+        setDraft({
+          presetId: typeof parsed.presetId === 'string' ? parsed.presetId : null,
+          primary: String(parsed.primary),
+          secondary: String(parsed.secondary),
+          radius: Number.isFinite(Number(parsed.radius)) ? Math.min(24, Math.max(0, Number(parsed.radius))) : draft.radius,
+          density: parsed.density === 'compact' ? 'compact' : 'comfortable',
+          fontScale: parsed.fontScale === 'sm' || parsed.fontScale === 'lg' ? parsed.fontScale : 'md',
+          reduceMotion: parsed.reduceMotion === true,
+        });
+        toast.success('Theme imported — save to apply it');
+      } catch {
+        toast.error('Invalid theme JSON file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Theme Studio"
-        subtitle="Brand colors, density, radius and presets — customized for your ISP organization"
+        subtitle="Brand colours, radius, density and text size — saved for everyone on your team"
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Theme Studio' }]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset Default
             </Button>
-            <Button size="sm" onClick={handleApplyTheme} className="text-xs font-semibold">
-              <Check className="mr-1.5 h-3.5 w-3.5" /> Apply theme
-            </Button>
+            <Can menu="software_settings" action="update">
+              <Button size="sm" onClick={handleSave} disabled={!dirty || save.isPending} className="text-xs font-semibold">
+                <Check className="mr-1.5 h-3.5 w-3.5" /> {save.isPending ? 'Saving…' : 'Save & apply'}
+              </Button>
+            </Can>
           </div>
         }
       />
 
-      {/* Row 1: Brand Colors & Live Preview */}
+      {!saved && (
+        <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          <Info className="h-4 w-4 text-primary shrink-0" />
+          No custom theme saved yet — your team sees the default theme.
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* Brand Colors Controls */}
         <Card className="lg:col-span-6 border-border/70 shadow-2xs">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Palette className="h-4 w-4 text-primary" /> Brand Colors & Geometry
+              <Palette className="h-4 w-4 text-primary" /> Brand Colours & Geometry
             </CardTitle>
-            <CardDescription className="text-xs">
-              Pick any primary & secondary hex — a 50–900 luminance ramp generates automatically.
-            </CardDescription>
+            <CardDescription className="text-xs">Pick a primary and a secondary colour — a 10-step ramp is generated for preview.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Primary Color */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>Primary Brand Color (Action CTAs & Highlights)</span>
-                <span className="font-mono text-[11px] text-muted-foreground">{primaryColor}</span>
-              </label>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="h-9 w-12 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
-                  aria-label="Primary color picker"
-                />
-                <Input
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="font-mono text-xs h-9 uppercase"
-                  placeholder="#e85a1a"
-                />
-              </div>
-              {/* 10-step ramp */}
-              <div className="flex h-3 w-full rounded-md overflow-hidden border border-border/60 mt-1">
-                {primaryRamp.map((step, idx) => (
-                  <div key={idx} className="flex-1" style={{ backgroundColor: step }} title={`Step ${idx + 1}: ${step}`} />
-                ))}
-              </div>
-            </div>
+            {(['primary', 'secondary'] as const).map((key) => {
+              const ramp = key === 'primary' ? primaryRamp : secondaryRamp;
+              return (
+                <div key={key} className="space-y-2">
+                  <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                    <span>{key === 'primary' ? 'Primary colour (actions & highlights)' : 'Secondary colour (sidebar & deep panels)'}</span>
+                    <span className="font-mono text-[11px] text-muted-foreground">{draft[key]}</span>
+                  </label>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="color"
+                      value={HEX.test(draft[key]) ? draft[key] : '#000000'}
+                      onChange={(e) => set(key, e.target.value)}
+                      className="h-9 w-12 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
+                      aria-label={`${key} colour picker`}
+                    />
+                    <Input value={draft[key]} onChange={(e) => set(key, e.target.value)} className="font-mono text-xs h-9 uppercase" />
+                  </div>
+                  <div className="flex h-3 w-full rounded-md overflow-hidden border border-border/60 mt-1">
+                    {ramp.map((step, idx) => (
+                      <div key={idx} className="flex-1" style={{ backgroundColor: step }} title={step} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
 
-            {/* Secondary Color */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>Secondary Color (Sidebar & Deep Panels)</span>
-                <span className="font-mono text-[11px] text-muted-foreground">{secondaryColor}</span>
-              </label>
-              <div className="flex items-center gap-2.5">
-                <input
-                  type="color"
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="h-9 w-12 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
-                  aria-label="Secondary color picker"
-                />
-                <Input
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="font-mono text-xs h-9 uppercase"
-                  placeholder="#10141a"
-                />
-              </div>
-              {/* 10-step ramp */}
-              <div className="flex h-3 w-full rounded-md overflow-hidden border border-border/60 mt-1">
-                {secondaryRamp.map((step, idx) => (
-                  <div key={idx} className="flex-1" style={{ backgroundColor: step }} title={`Step ${idx + 1}: ${step}`} />
-                ))}
-              </div>
-            </div>
-
-            {/* Corner Radius Selector */}
             <div className="space-y-2 pt-1">
-              <label className="text-xs font-semibold text-foreground">Corner Radius</label>
+              <label className="text-xs font-semibold text-foreground">Corner radius</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: 'Sharp', val: 4 },
@@ -258,110 +200,64 @@ export function ThemeStudioPage() {
                   <Button
                     key={item.val}
                     type="button"
-                    variant={radius === item.val ? 'default' : 'outline'}
+                    variant={draft.radius === item.val ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setRadius(item.val)}
+                    onClick={() => set('radius', item.val)}
                     className="text-xs h-9 font-medium"
                   >
-                    <span
-                      className="inline-block h-2 w-2 border border-current mr-1.5"
-                      style={{ borderRadius: `${item.val}px` }}
-                    />
+                    <span className="inline-block h-2 w-2 border border-current mr-1.5" style={{ borderRadius: `${item.val}px` }} />
                     {item.label}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Safety note */}
             <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
               <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-              <span>
-                System safety rule: Success, warning, and error colors stay fixed — red always means overdue/trouble regardless of chosen brand theme.
-              </span>
+              <span>Success, warning and error colours stay fixed — red always means overdue or trouble.</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Live Preview Card */}
         <Card className="lg:col-span-6 border-border/70 shadow-2xs">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Eye className="h-4 w-4 text-primary" /> Live Interactive Preview
+              <Eye className="h-4 w-4 text-primary" /> Live Preview
             </CardTitle>
-            <CardDescription className="text-xs">
-              Updates in real-time — preview how buttons, badges, and stats appear to your staff.
-            </CardDescription>
+            <CardDescription className="text-xs">How buttons, badges and panels look with these colours.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Mock Mini-Portal Preview Box */}
-            <div
-              className="rounded-xl border border-border/70 overflow-hidden flex flex-col sm:flex-row min-h-[220px] shadow-xs"
-              style={{ borderRadius: `${radius}px` }}
-            >
-              {/* Mini Sidebar */}
-              <div
-                className="w-full sm:w-44 p-3.5 text-white flex flex-col justify-between shrink-0"
-                style={{ backgroundColor: secondaryColor }}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded bg-white/20 flex items-center justify-center font-bold text-[10px]">
-                      IP
-                    </div>
-                    <span className="font-bold text-xs tracking-tight">ISP Pay BD</span>
+            <div className="rounded-xl border border-border/70 overflow-hidden flex flex-col sm:flex-row min-h-[200px]" style={{ borderRadius: `${draft.radius}px` }}>
+              <div className="w-full sm:w-44 p-3.5 text-white flex flex-col gap-3 shrink-0" style={{ backgroundColor: draft.secondary }}>
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded bg-white/20 flex items-center justify-center font-bold text-[10px]">
+                    {brandName.slice(0, 2).toUpperCase()}
                   </div>
-                  <div className="space-y-1 text-[11px]">
-                    <div
-                      className="px-2 py-1 rounded font-semibold flex items-center justify-between text-white"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      <span>Dashboard</span>
-                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                    </div>
-                    <div className="px-2 py-1 opacity-70 hover:opacity-100 cursor-pointer">Customers</div>
-                    <div className="px-2 py-1 opacity-70 hover:opacity-100 cursor-pointer">Billing</div>
-                    <div className="px-2 py-1 opacity-70 hover:opacity-100 cursor-pointer">Routers</div>
-                  </div>
+                  <span className="font-bold text-xs tracking-tight truncate">{brandName}</span>
                 </div>
-                <div className="pt-3 border-t border-white/10 text-[10px] opacity-60">
-                  v3.2 SaaS Edition
+                <div className="space-y-1 text-[11px]">
+                  <div className="px-2 py-1 rounded font-semibold text-white" style={{ backgroundColor: draft.primary }}>
+                    Dashboard
+                  </div>
+                  <div className="px-2 py-1 opacity-70">Customers</div>
+                  <div className="px-2 py-1 opacity-70">Billing</div>
+                  <div className="px-2 py-1 opacity-70">Routers</div>
                 </div>
               </div>
-
-              {/* Mini Body */}
               <div className="flex-1 bg-card p-4 space-y-4">
-                {/* Buttons Showcase */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    style={{ backgroundColor: primaryColor, borderRadius: `${radius}px` }}
-                    className="px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:opacity-90 active:scale-95 transition-all"
-                  >
+                  <span className="px-3 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: draft.primary, borderRadius: `${draft.radius}px` }}>
                     Primary Action
-                  </button>
-                  <button
-                    type="button"
-                    style={{ backgroundColor: secondaryColor, borderRadius: `${radius}px` }}
-                    className="px-3 py-1.5 text-xs font-medium text-white shadow-2xs hover:opacity-90 active:scale-95 transition-all"
-                  >
+                  </span>
+                  <span className="px-3 py-1.5 text-xs font-medium text-white" style={{ backgroundColor: draft.secondary, borderRadius: `${draft.radius}px` }}>
                     Secondary
-                  </button>
-                  <button
-                    type="button"
-                    style={{ borderRadius: `${radius}px` }}
-                    className="px-3 py-1.5 text-xs font-medium border border-border/80 hover:bg-accent active:scale-95 transition-all"
-                  >
+                  </span>
+                  <span className="px-3 py-1.5 text-xs font-medium border border-border/80" style={{ borderRadius: `${draft.radius}px` }}>
                     Outline
-                  </button>
+                  </span>
                 </div>
-
-                {/* Status Badges Showcase */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span
-                    className="px-2 py-0.5 text-[11px] font-semibold text-white rounded-full"
-                    style={{ backgroundColor: primaryColor }}
-                  >
+                  <span className="px-2 py-0.5 text-[11px] font-semibold text-white rounded-full" style={{ backgroundColor: draft.primary }}>
                     Brand Badge
                   </span>
                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">
@@ -371,215 +267,79 @@ export function ThemeStudioPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Payment Due
                   </span>
                 </div>
-
-                {/* Stat Preview Component */}
-                <div
-                  className="p-3 rounded-lg border border-border/60 bg-muted/20 flex items-center justify-between"
-                  style={{ borderRadius: `${radius}px` }}
-                >
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground">Payment Received</div>
-                    <div className="text-lg font-bold font-mono mt-0.5">৳30,820</div>
-                  </div>
-                  <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px]">
-                    +8.4%
-                  </Badge>
+                <div className="p-3 border border-border/60 bg-muted/20" style={{ borderRadius: `${draft.radius}px` }}>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Stat card</div>
+                  <div className="mt-1 h-2 w-24 rounded-full" style={{ backgroundColor: draft.primary }} />
                 </div>
-              </div>
-            </div>
-
-            {/* Secondary Hero Panel */}
-            <div
-              className="p-3.5 text-white rounded-xl flex items-center justify-between shadow-2xs"
-              style={{
-                borderRadius: `${radius}px`,
-                background: `linear-gradient(135deg, ${secondaryColor} 0%, #0a0c10 100%)`,
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            >
-              <div>
-                <span className="text-[10px] font-mono tracking-wider opacity-80 uppercase">Secondary Gradient</span>
-                <div className="text-sm font-bold mt-0.5">Hero Panels & Invoices</div>
-              </div>
-              <div
-                className="h-7 px-2.5 rounded text-xs font-bold flex items-center text-white"
-                style={{ backgroundColor: primaryColor }}
-              >
-                Preview
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Row 2: Display Preferences */}
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
             <Sliders className="h-4 w-4 text-primary" /> Display Preferences
           </CardTitle>
           <CardDescription className="text-xs">
-            Density, type scale, sidebar and motion toggles — saved directly on this browser profile.
+            Density, text size and motion are saved with the team theme; colour mode and table layout are kept on this browser.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {/* UI Density */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">UI Density</label>
+              <label className="text-xs font-semibold text-foreground">UI density</label>
               <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={uiDensity === 'comfortable' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setUiDensity('comfortable')}
-                  className="text-xs"
-                >
-                  Comfortable
-                </Button>
-                <Button
-                  type="button"
-                  variant={uiDensity === 'compact' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setUiDensity('compact')}
-                  className="text-xs"
-                >
-                  Compact
-                </Button>
+                {(['comfortable', 'compact'] as const).map((d) => (
+                  <Button key={d} type="button" size="sm" variant={draft.density === d ? 'default' : 'outline'} onClick={() => set('density', d)} className="text-xs capitalize">
+                    {d}
+                  </Button>
+                ))}
               </div>
             </div>
-
-            {/* Table Density */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">Table Density</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={tableDensity === 'comfortable' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTableDensity('comfortable')}
-                  className="text-xs"
-                >
-                  Comfortable
-                </Button>
-                <Button
-                  type="button"
-                  variant={tableDensity === 'compact' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setTableDensity('compact')}
-                  className="text-xs"
-                >
-                  Compact
-                </Button>
-              </div>
-            </div>
-
-            {/* Table & Data Layout (Global) */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>Default Table Layout</span>
-                <span className="text-[10px] text-muted-foreground font-normal">
-                  {tableLayout === 'centered' ? 'Centered' : 'Full Width'}
-                </span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={tableLayout === 'full' || !tableLayout ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setTableLayout('full');
-                    toast.success('Default table layout set to Full Width');
-                  }}
-                  className="text-xs"
-                >
-                  Full Width
-                </Button>
-                <Button
-                  type="button"
-                  variant={tableLayout === 'centered' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setTableLayout('centered');
-                    toast.success('Default table layout set to Centered');
-                  }}
-                  className="text-xs"
-                >
-                  Centered
-                </Button>
-              </div>
-            </div>
-
-            {/* Text Scale */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">Text Size</label>
+              <label className="text-xs font-semibold text-foreground">Text size</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['sm', 'md', 'lg'] as const).map((scale) => (
-                  <Button
-                    key={scale}
-                    type="button"
-                    variant={fontScale === scale ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setFontScale(scale)}
-                    className="text-xs capitalize"
-                  >
+                  <Button key={scale} type="button" size="sm" variant={draft.fontScale === scale ? 'default' : 'outline'} onClick={() => set('fontScale', scale)} className="text-xs">
                     {scale === 'sm' ? 'Small' : scale === 'md' ? 'Default' : 'Large'}
                   </Button>
                 ))}
               </div>
             </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-foreground">Default table layout (this browser)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" size="sm" variant={tableLayout !== 'centered' ? 'default' : 'outline'} onClick={() => setTableLayout('full')} className="text-xs">
+                  Full Width
+                </Button>
+                <Button type="button" size="sm" variant={tableLayout === 'centered' ? 'default' : 'outline'} onClick={() => setTableLayout('centered')} className="text-xs">
+                  Centered
+                </Button>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-6 pt-6 border-t border-border/60">
-            {/* Dark Mode */}
+          <div className="grid gap-4 sm:grid-cols-2 mt-6 pt-6 border-t border-border/60">
             <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-primary/30 cursor-pointer transition-colors">
               <input
                 type="checkbox"
-                checked={theme === 'dark'}
-                onChange={(e) => setTheme(e.target.checked ? 'dark' : 'light')}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer"
+                checked={colorMode === 'dark'}
+                onChange={(e) => setColorMode(e.target.checked ? 'dark' : 'light')}
+                className="h-4 w-4 rounded border-border text-primary cursor-pointer"
               />
               <div className="text-xs">
                 <div className="font-semibold text-foreground">Dark mode</div>
-                <div className="text-[10px] text-muted-foreground">Deep obsidian theme</div>
+                <div className="text-[10px] text-muted-foreground">This browser only</div>
               </div>
             </label>
-
-            {/* Colorful Cards */}
             <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-primary/30 cursor-pointer transition-colors">
               <input
                 type="checkbox"
-                checked={colorfulCards}
-                onChange={(e) => setColorfulCards(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer"
-              />
-              <div className="text-xs">
-                <div className="font-semibold text-foreground">Colorful cards</div>
-                <div className="text-[10px] text-muted-foreground">Category tinted KPI cards</div>
-              </div>
-            </label>
-
-            {/* Compact Sidebar */}
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-primary/30 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={compactSidebar}
-                onChange={(e) => setCompactSidebar(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer"
-              />
-              <div className="text-xs">
-                <div className="font-semibold text-foreground">Compact sidebar</div>
-                <div className="text-[10px] text-muted-foreground">Icon-first collapsed mode</div>
-              </div>
-            </label>
-
-            {/* Reduce Motion */}
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-primary/30 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={reduceMotion}
-                onChange={(e) => setReduceMotion(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary/40 cursor-pointer"
+                checked={draft.reduceMotion}
+                onChange={(e) => set('reduceMotion', e.target.checked)}
+                className="h-4 w-4 rounded border-border text-primary cursor-pointer"
               />
               <div className="text-xs">
                 <div className="font-semibold text-foreground">Reduce motion</div>
@@ -590,33 +350,28 @@ export function ThemeStudioPage() {
         </CardContent>
       </Card>
 
-      {/* Row 3: Official Theme Templates */}
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" /> Theme Templates
           </CardTitle>
-          <CardDescription className="text-xs">
-            Professionally paired broadband presets — click to apply instantly.
-          </CardDescription>
+          <CardDescription className="text-xs">Paired presets — pick one, then save to apply it.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {themePresetsData.map((preset) => {
-              const isSelected = selectedPresetId === preset.id;
+            {THEME_PRESETS.map((preset) => {
+              const isSelected = draft.presetId === preset.id;
+              const isSaved = saved?.presetId === preset.id;
               return (
                 <button
                   key={preset.id}
                   type="button"
                   onClick={() => applyPreset(preset)}
                   className={cn(
-                    'text-left rounded-xl border overflow-hidden transition-all hover:shadow-md group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                    isSelected
-                      ? 'border-primary ring-2 ring-primary/30 bg-card'
-                      : 'border-border/80 hover:border-primary/40 bg-card/60'
+                    'text-left rounded-xl border overflow-hidden transition hover:shadow-md group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    isSelected ? 'border-primary ring-2 ring-primary/30 bg-card' : 'border-border/80 hover:border-primary/40 bg-card/60',
                   )}
                 >
-                  {/* Preset Banner */}
                   <div className="h-16 flex relative overflow-hidden border-b border-border/60">
                     <div className="w-1/3" style={{ backgroundColor: preset.sidebar }} />
                     <div className="flex-1" style={{ backgroundColor: preset.primary }} />
@@ -627,32 +382,16 @@ export function ThemeStudioPage() {
                       </div>
                     )}
                   </div>
-
                   <div className="p-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                        {preset.name}
-                      </span>
-                      {isSelected && (
+                      <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{preset.name}</span>
+                      {isSaved && (
                         <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                          Active
+                          Saved
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
-                      {preset.description}
-                    </p>
-
-                    <div className="flex items-center gap-3 pt-1 border-t border-border/40">
-                      <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-                        <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: preset.primary }} />
-                        {preset.primary}
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
-                        <span className="h-3 w-3 rounded-full border border-border" style={{ backgroundColor: preset.sidebar }} />
-                        {preset.sidebar}
-                      </div>
-                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">{preset.description}</p>
                   </div>
                 </button>
               );
@@ -661,42 +400,28 @@ export function ThemeStudioPage() {
         </CardContent>
       </Card>
 
-      {/* Row 4: Export / Import Tools */}
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            <Download className="h-4 w-4 text-primary" /> Export & Import Configuration
+            <Download className="h-4 w-4 text-primary" /> Export & Import
           </CardTitle>
-          <CardDescription className="text-xs">
-            Download a portable JSON profile or transfer settings between browser workstations.
-          </CardDescription>
+          <CardDescription className="text-xs">Download the current draft as JSON or load one from another account.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
             <Button size="sm" onClick={handleExport} className="text-xs">
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Export JSON File
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Export JSON
             </Button>
             <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="application/json,.json"
-                onChange={handleImportFile}
-                className="hidden"
-              />
+              <input type="file" accept="application/json,.json" onChange={handleImportFile} className="hidden" />
               <Button size="sm" variant="outline" type="button" className="text-xs pointer-events-none">
-                <Upload className="mr-1.5 h-3.5 w-3.5" /> Import JSON File
+                <Upload className="mr-1.5 h-3.5 w-3.5" /> Import JSON
               </Button>
             </label>
             <Button size="sm" variant="outline" onClick={handleCopyJson} className="text-xs">
               <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy JSON
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground">
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset Default
-            </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-3">
-            Export downloads <code className="font-mono text-foreground font-semibold">ipb-brand-theme.json</code>. Import accepts valid brand configuration files from any other device or browser.
-          </p>
         </CardContent>
       </Card>
     </div>

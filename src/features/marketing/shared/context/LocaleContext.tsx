@@ -30,7 +30,13 @@ function readStoredLocale(): AppLocale {
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<AppLocale>(readStoredLocale);
+  // Start from the default so server and first client render match; the saved choice applies after mount.
+  const [locale, setLocaleState] = useState<AppLocale>(defaultLocale);
+
+  useEffect(() => {
+    const saved = readStoredLocale();
+    if (saved !== defaultLocale) setLocaleState(saved);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale;

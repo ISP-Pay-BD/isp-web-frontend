@@ -1,289 +1,180 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
+import { ArrowRight, Monitor, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { siteConfig } from '@/config/site';
-import { useMotionSafe, easeOutExpo } from '@/lib/animations';
-import { landingMedia } from '../media';
-import type { HeroData, StatsData } from '../types';
-
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+import { useTranslations } from '@/features/marketing/shared';
+import { FiberScene } from './FiberScene';
+import { Magnetic, Parallax } from './motion-kit';
+import { OperatorConsole } from './OperatorConsole';
+import { PaymentMatchedCard } from './PaymentMatchedCard';
+import { SubscriberPhone } from './SubscriberPhone';
+import { TiltCard } from './TiltCard';
+import type { HeroStageData, StatsData } from '../types';
 
 interface HeroSectionProps {
-  data: HeroData;
-  stats?: StatsData;
+  stats: StatsData;
+  stage: HeroStageData;
 }
 
-const LIVE_ROWS = [
-  { time: '14:02:11', event: 'bKash TrxID', detail: 'CUST-4091 · ৳800 matched', tone: 'accent' as const },
-  { time: '14:02:11', event: 'PPPoE', detail: 'Mirpur-GW-02 · secret active', tone: 'muted' as const },
-  { time: '14:01:58', event: 'Expiry', detail: 'CUST-3882 · session cleared', tone: 'muted' as const },
-  { time: '14:01:41', event: 'Nagad', detail: 'CUST-2104 · ৳1,200 matched', tone: 'muted' as const },
-] as const;
+const FACT_KEYS = ['fact1', 'fact2', 'fact3', 'fact4'] as const;
 
-const TRUST_CHIPS = ['Set up in minutes', 'No credit card', 'Cancel anytime'] as const;
+/** `--d` staggers the CSS entrances (`.lp-rise`, `.lp-rise-word`), which play on first paint. */
+const delay = (ms: number) => ({ ['--d' as string]: `${ms}ms` });
 
-const FEATURE_PILLS = [
-  'Auto-reconciliation',
-  'MikroTik sync',
-  'Pay-as-you-go',
-  'Bangla app',
-] as const;
-
-function cleanCopy(text: string) {
-  return text.replace(/\s*[—–]\s*/g, ', ');
-}
-
-export function HeroSection({ data, stats }: HeroSectionProps) {
-  const { reduced } = useMotionSafe();
-  const rootRef = useRef<HTMLElement>(null);
-  const planeRef = useRef<HTMLDivElement>(null);
-  const [activeRow, setActiveRow] = useState(0);
-  const trustedCount = stats?.trustedIsps ?? 149;
-
-  useEffect(() => {
-    if (reduced) return;
-    const id = window.setInterval(() => {
-      setActiveRow((i) => (i + 1) % LIVE_ROWS.length);
-    }, 2200);
-    return () => window.clearInterval(id);
-  }, [reduced]);
-
-  useGSAP(
-    () => {
-      if (reduced || !rootRef.current) return;
-
-      const ctx = gsap.context(() => {
-        gsap.from('[data-hero-copy]', {
-          opacity: 0,
-          y: 28,
-          duration: 0.9,
-          ease: 'power3.out',
-          stagger: 0.08,
-        });
-
-        if (planeRef.current) {
-          gsap.fromTo(
-            planeRef.current,
-            { scale: 0.94, opacity: 0.45 },
-            {
-              scale: 1,
-              opacity: 1,
-              ease: 'none',
-              scrollTrigger: {
-                trigger: planeRef.current,
-                start: 'top 90%',
-                end: 'top 42%',
-                scrub: true,
-              },
-            },
-          );
-        }
-      }, rootRef);
-
-      return () => ctx.revert();
-    },
-    { dependencies: [reduced], scope: rootRef },
-  );
+/**
+ * One promise, one action, then the product itself: the operator console in a browser, the
+ * subscriber app in a phone, and the signature payment card, all telling the same payment's story.
+ * Behind it: a warm aurora for everyone, and on capable desktops a three.js layer of ৳ coins, glass
+ * and fiber strands whose light pulses run down into the stage.
+ */
+export function HeroSection({ stats, stage }: HeroSectionProps) {
+  const t = useTranslations();
+  const k = (key: string) => t(`marketing.landing.hero.${key}`);
+  const payment = stage.payments[0];
+  const leadWords = k('titleLead').split(' ');
 
   return (
-    <section id="hero" ref={rootRef} className="relative z-[1] min-h-[100dvh] overflow-hidden pt-24 md:pt-28">
-      <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden
-        style={{
-          backgroundImage: `radial-gradient(ellipse 70% 50% at 18% 0%, color-mix(in srgb, var(--landing-cta) 16%, transparent), transparent 55%), url('${landingMedia.heroAtmosphere}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.22,
-          filter: 'grayscale(1) contrast(1.15) brightness(0.48)',
-          mixBlendMode: 'luminosity',
-        }}
-      />
+    <section id="hero" className="relative z-[1] overflow-hidden pt-28 pb-8 md:pt-36">
+      <div className="lp-aurora" aria-hidden />
+      <div className="bg-grid-ambient absolute inset-x-0 top-0 h-[80svh] opacity-60" aria-hidden />
+      <div className="absolute inset-x-0 top-0 h-[100svh]" aria-hidden>
+        <FiberScene variant="hero" className="absolute inset-0 size-full" />
+      </div>
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 pt-10 pb-14 md:grid-cols-12 md:gap-8 md:px-6 md:pt-16 md:pb-20">
-        <div className="md:col-span-7 lg:col-span-8">
-          <p data-hero-copy className="text-sm font-medium text-white/55">
-            {data.badge ?? `Trusted by ${trustedCount}+ ISPs across Bangladesh`}
-          </p>
+      <div className="relative mx-auto max-w-6xl px-4 text-center md:px-6">
+        <a
+          href="#proof"
+          className="lp-rise group inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pr-3.5 pl-3 text-sm text-white/60 backdrop-blur transition-colors duration-200 hover:text-white"
+        >
+          <span className="size-2 rounded-full bg-emerald-400" aria-hidden />
+          {stats.trustedIsps > 0
+            ? k('badge').replace('{count}', String(stats.trustedIsps))
+            : k('badgeFallback')}
+          <ArrowRight
+            className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </a>
 
-          <p
-            data-hero-copy
-            className="font-landing-display mt-4 text-sm font-semibold tracking-tight text-white"
+        {/* Each word rises out of a blur in turn; the orange accent lands last. */}
+        <h1 className="font-landing-display mx-auto mt-7 max-w-4xl text-[clamp(2.75rem,1.4rem+5.6vw,5.75rem)] leading-[0.98] font-semibold tracking-[-0.045em] text-balance text-white">
+          {leadWords.map((word, index) => (
+            <span key={`${word}-${index}`}>
+              <span className="lp-rise-word" style={delay(80 + index * 70)}>
+                {word}
+              </span>{' '}
+            </span>
+          ))}
+          <span
+            className="lp-rise-word text-landing-cta"
+            style={delay(80 + leadWords.length * 70 + 60)}
           >
-            {siteConfig.name}
-          </p>
+            {k('titleAccent')}
+          </span>
+        </h1>
 
-          <h1
-            data-hero-copy
-            className="font-landing-display mt-4 w-full max-w-5xl text-[clamp(2.5rem,5vw,4.75rem)] leading-[1.05] font-semibold tracking-[-0.04em] text-white text-balance"
-          >
-            Run your whole{' '}
-            <motion.span
-              className="mx-1.5 inline-block h-9 w-20 align-middle overflow-hidden rounded-full bg-cover bg-center sm:h-11 sm:w-28"
-              style={{
-                backgroundImage: `url('${landingMedia.heroInlineRack}')`,
-                filter: 'grayscale(0.25) contrast(1.1)',
-              }}
-              aria-hidden
-              animate={reduced ? undefined : { y: [0, -3, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-            />{' '}
-            ISP from one console
-          </h1>
+        <p
+          className="lp-rise mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl"
+          style={delay(520)}
+        >
+          {k('subtitle')}
+        </p>
 
-          <p
-            data-hero-copy
-            className="mt-6 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg"
-          >
-            {cleanCopy(data.subtitleEn)}
-          </p>
-
-          <div data-hero-copy className="mt-9 flex flex-wrap items-center gap-3.5">
+        <div
+          className="lp-rise mt-9 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-3"
+          style={delay(620)}
+        >
+          <Magnetic className="w-full sm:w-auto">
             <Button
               nativeButton={false}
               render={<Link href="/register" />}
-              className="group bg-landing-cta hover:bg-landing-cta-hover relative h-13 overflow-hidden rounded-full pl-7 pr-2 text-sm font-semibold text-white shadow-[0_0_0_0_rgba(247,88,3,0.35)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:shadow-[0_0_40px_rgba(247,88,3,0.45)] active:scale-[0.98]"
+              className="bg-landing-cta hover:bg-landing-cta-hover h-13 w-full rounded-full px-8 text-base font-semibold text-white shadow-[0_10px_40px_-8px_color-mix(in_srgb,var(--landing-cta)_70%,transparent)] active:scale-[0.98] sm:w-auto"
             >
-              <span className="mr-3">{data.ctaPrimary}</span>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
-                ↗
-              </span>
+              {t('marketing.cta.primary')}
+              <ArrowRight className="ml-1 size-4" aria-hidden />
             </Button>
-            <Button
-              variant="ghost"
-              nativeButton={false}
-              render={<a href="#auto-reconcile" />}
-              className="h-13 rounded-full border border-white/15 bg-white/4 px-7 text-sm font-medium text-white backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-white/30 hover:bg-white/8 active:scale-[0.98]"
-            >
-              {data.ctaSecondary}
-            </Button>
-          </div>
-
-          <ul
-            data-hero-copy
-            className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/45 sm:text-sm"
+          </Magnetic>
+          <a
+            href="#try-it"
+            className="group inline-flex h-13 items-center gap-1.5 rounded-full px-5 text-base font-medium text-white/85 transition-colors duration-200 hover:text-white"
           >
-            {TRUST_CHIPS.map((chip) => (
-              <li key={chip} className="flex items-center gap-2">
-                <span className="h-1 w-1 rounded-full bg-landing-cta" aria-hidden />
-                {chip}
-              </li>
-            ))}
-          </ul>
-
-          <ul data-hero-copy className="mt-8 flex flex-wrap gap-2">
-            {FEATURE_PILLS.map((pill, i) => (
-              <motion.li
-                key={pill}
-                className="rounded-full border border-white/10 bg-white/4 px-3 py-1.5 text-xs font-medium text-white/70 backdrop-blur-sm"
-                initial={reduced ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.55 + i * 0.06, duration: 0.4, ease: easeOutExpo }}
-              >
-                {pill}
-              </motion.li>
-            ))}
-          </ul>
+            {k('demo')}
+            <ArrowRight
+              className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </a>
         </div>
 
-        <div data-hero-copy className="relative hidden md:col-span-5 md:block lg:col-span-4">
-          {/* Subtle Ambient Glow Behind Card */}
-          <div className="pointer-events-none absolute -inset-4 rounded-full bg-gradient-to-tr from-landing-cta/20 via-purple-500/10 to-transparent blur-2xl" />
-
-          <motion.div
-            className="group relative overflow-hidden rounded-[2rem] bg-white/[0.04] p-1.5 ring-1 ring-white/10 shadow-[0_24px_80px_rgba(12,1,24,0.7)] backdrop-blur-xl transition-all duration-700 hover:ring-white/20"
-            animate={reduced ? undefined : { y: [0, -8, 0] }}
-            transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel shadow-[inset_0_1px_1px_rgba(255,255,255,0.18)]">
-              <div
-                className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-105"
-                style={{
-                  backgroundImage: `url('${landingMedia.features[1]}')`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'contrast(1.15) brightness(0.72)',
-                }}
-                aria-hidden
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-landing-bg via-landing-bg/25 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between p-5">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <p className="font-mono text-xs font-medium tracking-wide text-white/80">NOC · live fiber telemetry</p>
-                </div>
-                <span className="rounded-full border border-white/15 bg-black/40 px-2.5 py-0.5 font-mono text-[10px] text-white/60 backdrop-blur-sm">
-                  10Gbps
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+        <ul
+          className="lp-rise mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/50"
+          style={delay(720)}
+        >
+          {FACT_KEYS.map((key) => (
+            <li key={key} className="flex items-center gap-2">
+              <span className="bg-landing-cta size-1 rounded-full" aria-hidden />
+              {k(key)}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div
-        ref={planeRef}
-        className="relative mx-auto max-w-6xl px-4 md:px-6 will-change-transform"
-      >
-        <div className="overflow-hidden rounded-[2rem] bg-white/[0.04] p-1.5 ring-1 ring-white/10 backdrop-blur-xl">
-          <div className="overflow-hidden rounded-[calc(2rem-0.375rem)] bg-landing-panel/95 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]">
-            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-3.5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="font-landing-display truncate text-sm font-semibold text-white">
-                  Operator console
-                </span>
-                <span className="hidden font-mono text-[11px] text-white/35 sm:inline">
-                  collections · live
-                </span>
+      {/* The stage: the console behind, the subscriber app in front, the payment card in the corner. */}
+      <div className="relative mx-auto mt-14 max-w-6xl px-4 md:px-6 lg:mt-20">
+        <div
+          className="lp-rise bg-landing-panel/60 relative h-[460px] overflow-hidden rounded-[2rem] border border-white/10 shadow-[0_40px_120px_-40px_color-mix(in_srgb,var(--landing-cta)_45%,transparent)] backdrop-blur-sm sm:h-[540px] lg:h-[600px]"
+          style={delay(780)}
+        >
+          {/* A lit top edge and a warm floor light, so the product sits in the scene, not on it. */}
+          <div
+            className="via-landing-cta/80 absolute inset-x-[12%] top-0 z-30 h-px bg-gradient-to-r from-transparent to-transparent"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0"
+            aria-hidden
+            style={{
+              backgroundImage:
+                'radial-gradient(60% 50% at 50% 100%, color-mix(in srgb, var(--landing-cta) 16%, transparent), transparent 70%), radial-gradient(40% 30% at 50% 0%, color-mix(in srgb, var(--landing-cta) 12%, transparent), transparent 70%)',
+            }}
+          />
+          <div className="bg-grid-ambient absolute inset-0" aria-hidden />
+
+          <p className="bg-landing-bg/80 absolute top-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-medium whitespace-nowrap text-white/80 backdrop-blur sm:top-5 sm:text-sm">
+            <Monitor className="text-landing-cta size-4" aria-hidden />
+            {k('stageConsole')}
+            <span className="text-white/30">·</span>
+            <Smartphone className="text-landing-cta size-4" aria-hidden />
+            {k('stageApp')}
+            <span className="hidden text-white/40 sm:inline">· {k('sample')}</span>
+          </p>
+
+          {/* Layers move at different speeds as the stage scrolls: console, phone, then the card. */}
+          <div aria-hidden>
+            <div className="absolute top-20 left-[5%] hidden w-[68%] lg:block">
+              <Parallax offset={24}>
+                <OperatorConsole stage={stage} />
+              </Parallax>
+            </div>
+
+            <div className="absolute top-16 left-1/2 z-20 -translate-x-1/2 lg:top-28 lg:right-[5%] lg:left-auto lg:translate-x-0">
+              <Parallax offset={60}>
+                <SubscriberPhone subscriber={stage.subscriber} />
+              </Parallax>
+            </div>
+
+            {payment ? (
+              <div className="absolute bottom-8 left-[2%] z-20 hidden w-[270px] xl:block">
+                <Parallax offset={40}>
+                  <div className="lp-rise" style={delay(1200)}>
+                    <TiltCard className="rounded-2xl">
+                      <PaymentMatchedCard payment={payment} />
+                    </TiltCard>
+                  </div>
+                </Parallax>
               </div>
-              <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </span>
-                Online
-              </span>
-            </div>
-            <div className="px-5">
-              <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/10 text-[11px] tracking-wide text-white/35">
-                <th className="py-3 pr-3 font-medium">Time</th>
-                <th className="py-3 pr-3 font-medium">Event</th>
-                <th className="hidden py-3 font-medium sm:table-cell">Detail</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-xs sm:text-[13px]">
-              {LIVE_ROWS.map((row, i) => {
-                const hot = i === activeRow;
-                return (
-                  <tr
-                    key={`${row.time}-${row.event}`}
-                    className={`border-b border-white/6 last:border-0 transition-colors duration-500 ${
-                      hot ? 'bg-landing-cta/8' : ''
-                    }`}
-                  >
-                    <td className="whitespace-nowrap py-3.5 pr-3 text-white/40">{row.time}</td>
-                    <td
-                      className={`whitespace-nowrap py-3.5 pr-3 transition-colors duration-500 ${
-                        hot || row.tone === 'accent' ? 'text-landing-cta' : 'text-white/80'
-                      }`}
-                    >
-                      {row.event}
-                    </td>
-                    <td className="hidden py-3.5 text-white/55 sm:table-cell">{row.detail}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-            </div>
+            ) : null}
           </div>
         </div>
       </div>

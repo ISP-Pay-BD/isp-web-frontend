@@ -1,205 +1,405 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import {
-  Building2,
-  Users,
-  Award,
-  Plus,
-  Download,
-  Phone,
-  MapPin,
-  ShieldCheck,
-  Star,
-  CheckCircle2,
-  AlertTriangle,
-  UserCheck,
-  TrendingUp,
-  LogIn,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import { Users, Award, Plus, Download, Phone, MapPin, Pencil, Trash2, UserPlus, X } from 'lucide-react';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { PageSkeleton, TableSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { DataTable } from '@/features/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { handleApiError } from '@/lib/api/utils/error-handler';
+import { downloadCsv } from '@/features/admin/accounting/shared/table-utils';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+  useAreaOptions,
+  useAssignDealerCustomers,
+  useDealerCustomers,
+  useDealers,
+  useDeleteCatalogItem,
+  useSaveCatalogItem,
+  useUnassignDealerCustomer,
+} from '../hooks/use-catalog';
+import { CatalogCustomerPicker } from '../components/CatalogCustomerPicker';
+import type { CustomerOption, Dealer } from '../catalog.types';
 
-type Row = IspOpsData['dealers'][number];
+type StatusFilter = '' | 'active' | 'inactive';
 
-const TIER_LABELS: Record<number, { label: string; badgeClass: string; stars: number }> = {
-  1: { label: 'Tier-1 Super Master', badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', stars: 5 },
-  2: { label: 'Tier-2 Master Dealer', badgeClass: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', stars: 4 },
-  3: { label: 'Tier-3 Regional Hub', badgeClass: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', stars: 3 },
-  4: { label: 'Tier-4 Local Franchise', badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', stars: 2 },
-  5: { label: 'Tier-5 Sub Dealer', badgeClass: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20', stars: 1 },
-  6: { label: 'Tier-6 Field Agent', badgeClass: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20', stars: 1 },
-};
+interface DealerForm {
+  name: string;
+  contact_person: string;
+  mobile: string;
+  area_id: string;
+  commission_percent: string;
+  status: 'active' | 'inactive';
+}
 
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
-  const q = String(filterValue ?? '').toLowerCase().trim();
-  if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.name).toLowerCase().includes(q) ||
-    String(r.area).toLowerCase().includes(q) ||
-    String(r.tier).includes(q) ||
-    String(r.status).toLowerCase().includes(q)
-  );
-};
+const toForm = (d?: Dealer | null): DealerForm => ({
+  name: d?.name ?? '',
+  contact_person: d?.contactPerson ?? '',
+  mobile: d?.mobile ?? '',
+  area_id: d?.areaId ?? '',
+  commission_percent: d ? String(d.commissionPercent) : '',
+  status: d?.status ?? 'active',
+});
 
-export function DealersPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
-  const [selectedDealer, setSelectedDealer] = useState<Row | null>(null);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newDealer, setNewDealer] = useState({
-    name: '',
-    tier: '1',
-    area: '',
-    customers: 50,
+function DealerFormDialog({ dealer, open, onOpenChange }: { dealer: Dealer | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const save = useSaveCatalogItem('dealers');
+  const areasQuery = useAreaOptions();
+  const areas = areasQuery.data ?? [];
+  const { register, handleSubmit, setValue, watch, reset, setError, formState: { errors } } = useForm<DealerForm>({
+    defaultValues: toForm(dealer),
   });
+  useEffect(() => {
+    if (open) reset(toForm(dealer));
+  }, [open, dealer, reset]);
+  const areaId = watch('area_id');
+  const status = watch('status');
 
-  const rows = data?.dealers ?? [];
-
-  const stats = useMemo(() => {
-    const totalDealers = rows.length;
-    const activeDealers = rows.filter((r) => r.status === 'active').length;
-    const totalCustomers = rows.reduce((s, r) => s + r.customers, 0);
-    const avgCustomers = totalDealers ? Math.round(totalCustomers / totalDealers) : 0;
-    return { totalDealers, activeDealers, totalCustomers, avgCustomers };
-  }, [rows]);
-
-  const handleExportCsv = () => {
-    const headers = ['Dealer Name', 'Tier', 'Tier Label', 'Area', 'Customers', 'Status'];
-    const csvRows = rows.map((r) => [
-      r.name,
-      r.tier,
-      TIER_LABELS[r.tier]?.label ?? `Tier ${r.tier}`,
-      r.area,
-      r.customers,
-      r.status,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `dealers_6tier_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Dealer directory exported to CSV');
-  };
-
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newDealer.name || !newDealer.area) {
-      toast.error('Please enter dealer name and coverage territory');
-      return;
-    }
-    toast.success(`Dealer partner "${newDealer.name}" registered under Tier ${newDealer.tier} (mock)`);
-    setAddDialogOpen(false);
-    setNewDealer({ name: '', tier: '1', area: '', customers: 50 });
-  };
-
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
-    () => [
+  const onSubmit = (v: DealerForm) =>
+    save.mutate(
       {
-        accessorKey: 'name',
-        header: 'Dealer Entity',
-        enableHiding: false,
-        size: 240,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0 font-bold text-xs">
-              <Award className="h-4 w-4" />
-            </div>
-            <div>
-              <div
-                className="font-bold text-sm text-foreground hover:text-primary transition-colors cursor-pointer"
-                onClick={() => setSelectedDealer(row.original)}
-              >
-                {row.original.name}
-              </div>
-              <div className="text-[10px] text-muted-foreground font-mono">
-                {row.original.id}
-              </div>
-            </div>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'tier',
-        header: 'Tier Level (1-6)',
-        size: 180,
-        cell: ({ row }) => {
-          const tier = row.original.tier;
-          const tierInfo = TIER_LABELS[tier] ?? { label: `Tier-${tier}`, badgeClass: 'bg-muted', stars: 1 };
-          return (
-            <div className="space-y-1">
-              <Badge variant="outline" className={cn('text-[10px] font-semibold', tierInfo.badgeClass)}>
-                {tierInfo.label}
-              </Badge>
-              <div className="flex items-center gap-0.5 text-amber-500">
-                {Array.from({ length: tierInfo.stars }).map((_, i) => (
-                  <Star key={i} className="h-2.5 w-2.5 fill-current" />
-                ))}
-              </div>
-            </div>
-          );
+        id: dealer?.id,
+        body: {
+          name: v.name,
+          contact_person: v.contact_person,
+          mobile: v.mobile,
+          area_id: v.area_id || '',
+          commission_percent: v.commission_percent === '' ? 0 : Number(v.commission_percent),
+          status: v.status,
         },
       },
       {
-        accessorKey: 'area',
-        header: 'Franchise Territory',
-        size: 180,
+        onSuccess: () => {
+          toast.success(dealer ? 'Dealer updated' : `Dealer "${v.name}" registered`);
+          onOpenChange(false);
+        },
+        onError: (err) => handleApiError(err, setError),
+      },
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
+        <DialogHeader>
+          <DialogTitle className="text-base font-bold flex items-center gap-2">
+            <Award className="h-4 w-4 text-primary" /> {dealer ? 'Edit Dealer' : 'Register New Dealer'}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Dealers bring in customers; the commission rate is recorded per dealer.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="dealer-name" className="text-xs font-semibold">Dealer Name *</Label>
+            <Input id="dealer-name" className="text-xs h-9" {...register('name', { required: 'Name is required' })} />
+            {errors.name && <p className="text-[11px] text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="dealer-contact" className="text-xs font-semibold">Contact Person</Label>
+              <Input id="dealer-contact" className="text-xs h-9" {...register('contact_person')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="dealer-mobile" className="text-xs font-semibold">Mobile</Label>
+              <Input id="dealer-mobile" inputMode="tel" className="text-xs h-9 font-mono" {...register('mobile')} />
+              {errors.mobile && <p className="text-[11px] text-destructive">{errors.mobile.message}</p>}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Coverage Area</Label>
+            <Select value={areaId || 'none'} onValueChange={(v) => setValue('area_id', v && v !== 'none' ? String(v) : '')}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue>
+                  {(v: string | null) =>
+                    v && v !== 'none'
+                      ? (areas.find((a) => a.id === v)?.name ?? dealer?.areaName ?? v)
+                      : areasQuery.isLoading
+                        ? 'Loading areas…'
+                        : 'No area'
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none" className="text-xs">No area</SelectItem>
+                {areas.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.area_id && <p className="text-[11px] text-destructive">{errors.area_id.message}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="dealer-commission" className="text-xs font-semibold">Commission (%)</Label>
+              <Input
+                id="dealer-commission"
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                className="text-xs h-9 font-mono"
+                {...register('commission_percent')}
+              />
+              {errors.commission_percent && <p className="text-[11px] text-destructive">{errors.commission_percent.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Status</Label>
+              <Select value={status} onValueChange={(v) => setValue('status', v === 'inactive' ? 'inactive' : 'active')}>
+                <SelectTrigger className="text-xs h-9 capitalize">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active" className="text-xs">Active</SelectItem>
+                  <SelectItem value="inactive" className="text-xs">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t">
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)} className="text-xs">
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" className="text-xs font-semibold" disabled={save.isPending}>
+              {dealer ? 'Save Changes' : 'Register Dealer'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DealerCustomersDialog({ dealer, onClose }: { dealer: Dealer | null; onClose: () => void }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<CustomerOption[]>([]);
+  const customersQuery = useDealerCustomers(dealer?.id ?? null, { page, pageSize });
+  const assign = useAssignDealerCustomers();
+  const unassign = useUnassignDealerCustomer();
+
+  useEffect(() => {
+    setPage(1);
+    setPicking(false);
+    setPicked([]);
+  }, [dealer?.id]);
+
+  const handleAssign = () => {
+    if (!dealer || picked.length === 0) return;
+    assign.mutate(
+      { dealerId: dealer.id, customerIds: picked.map((c) => c.id) },
+      {
+        onSuccess: (res) => {
+          toast.success(`${Number(res?.assigned ?? picked.length)} customer(s) assigned to ${dealer.name}`);
+          setPicked([]);
+          setPicking(false);
+        },
+      },
+    );
+  };
+
+  const rows = customersQuery.data?.items ?? [];
+
+  return (
+    <Dialog open={!!dealer} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg p-6 border-border/80 shadow-[var(--shadow-md)] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="border-b pb-4">
+          <DialogTitle className="text-base font-bold flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" /> {dealer?.name}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {dealer?.areaName || 'No area'} · {dealer?.commissionPercent}% commission ·{' '}
+            {customersQuery.data?.meta.total ?? dealer?.customerCount ?? 0} customers
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 pt-2 text-xs">
+          {picking ? (
+            <div className="space-y-3 rounded-xl border border-border/60 p-3">
+              <CatalogCustomerPicker selected={picked} onChange={setPicked} multiple />
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" className="text-xs" onClick={() => setPicking(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" className="text-xs" disabled={picked.length === 0 || assign.isPending} onClick={handleAssign}>
+                  Assign {picked.length || ''}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">A customer already credited to another dealer is moved here.</p>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={() => setPicking(true)}>
+              <UserPlus className="h-3.5 w-3.5" /> Assign customers
+            </Button>
+          )}
+
+          {customersQuery.isLoading ? (
+            <TableSkeleton rows={3} />
+          ) : customersQuery.isError ? (
+            <EmptyState
+              title="Failed to load customers"
+              description={customersQuery.error?.message}
+              actionLabel="Retry"
+              onAction={() => customersQuery.refetch()}
+            />
+          ) : rows.length === 0 ? (
+            <p className="py-6 text-center text-muted-foreground">No customers assigned to this dealer yet.</p>
+          ) : (
+            <div className="rounded-xl border border-border/50 divide-y divide-border/40">
+              {rows.map((c) => (
+                <div key={c.customerId} className="flex items-center justify-between gap-2 px-3 py-2">
+                  <div>
+                    <span className="font-semibold text-foreground">{c.name || `#${c.customerId}`}</span>
+                    <span className="ml-2 font-mono text-muted-foreground">{c.mobile}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                    disabled={unassign.isPending}
+                    onClick={() =>
+                      dealer &&
+                      unassign.mutate(
+                        { dealerId: dealer.id, customerId: c.customerId },
+                        { onSuccess: () => toast.success(`${c.name || 'Customer'} unassigned`) },
+                      )
+                    }
+                    aria-label={`Unassign ${c.name}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {(customersQuery.data?.meta.total ?? 0) > pageSize && (
+            <TablePagination
+              currentPage={page}
+              pageSize={pageSize}
+              totalItems={customersQuery.data?.meta.total ?? 0}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function DealersPage() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('');
+  const { data, isLoading, isError, error, refetch } = useDealers({ page, pageSize, search, filters: { status } });
+  const remove = useDeleteCatalogItem('dealers');
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Dealer | null>(null);
+  const [customersOf, setCustomersOf] = useState<Dealer | null>(null);
+  const [deleting, setDeleting] = useState<Dealer | null>(null);
+
+  const onSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
+
+  const rows = useMemo(() => data?.items ?? [], [data?.items]);
+  const summary = data?.summary;
+
+  const handleExportCsv = () =>
+    downloadCsv(
+      `dealers_${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Dealer ID', 'Name', 'Contact Person', 'Mobile', 'Area', 'Commission %', 'Customers', 'Status'],
+      rows.map((r) => [r.id, r.name, r.contactPerson, r.mobile, r.areaName, r.commissionPercent, r.customerCount, r.status]),
+    );
+
+  const columns = useMemo<LegacyColumnDef<Dealer, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: 'Dealer',
+        enableHiding: false,
+        size: 220,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 text-xs text-foreground">
-            <MapPin className="h-3 w-3 text-primary shrink-0" />
-            <span>{row.original.area}</span>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+              <Award className="h-4 w-4" />
+            </div>
+            <div>
+              <button
+                type="button"
+                className="font-bold text-sm text-foreground hover:text-primary transition-colors text-left"
+                onClick={() => setCustomersOf(row.original)}
+              >
+                {row.original.name}
+              </button>
+              <div className="text-[10px] text-muted-foreground">{row.original.contactPerson || '—'}</div>
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: 'customers',
-        header: 'Subscribers',
-        size: 130,
+        accessorKey: 'mobile',
+        header: 'Contact',
+        size: 140,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary/80 border border-border/50 text-xs font-bold font-mono text-foreground">
-              <Users className="h-3 w-3 mr-1 text-primary" />
-              {row.original.customers}
-            </span>
+          <span className="flex items-center gap-1.5 font-mono text-xs text-foreground">
+            <Phone className="h-3 w-3 text-muted-foreground" /> {row.original.mobile || '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'areaName',
+        header: 'Area',
+        size: 150,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5 text-xs text-foreground">
+            <MapPin className="h-3 w-3 text-primary shrink-0" />
+            <span>{row.original.areaName || '—'}</span>
           </div>
+        ),
+      },
+      {
+        accessorKey: 'commissionPercent',
+        header: 'Commission',
+        size: 110,
+        cell: ({ row }) => (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary/80 border border-border/50 text-xs font-mono font-bold text-foreground">
+            {row.original.commissionPercent}%
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'customerCount',
+        header: 'Customers',
+        size: 110,
+        cell: ({ row }) => (
+          <span className="inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary/80 border border-border/50 text-xs font-bold font-mono text-foreground">
+            <Users className="h-3 w-3 mr-1 text-primary" />
+            {row.original.customerCount}
+          </span>
         ),
       },
       {
         accessorKey: 'status',
         header: 'Status',
         size: 110,
-        cell: ({ row }) => (
+        cell: ({ row }) =>
           row.original.status === 'active' ? (
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
@@ -208,32 +408,39 @@ export function DealersPage() {
           ) : (
             <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 text-[10px] font-medium gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-rose-500 inline-block" />
-              Suspended
+              Inactive
             </Badge>
-          )
-        ),
+          ),
       },
       {
         id: 'actions',
         header: '',
-        size: 120,
+        size: 150,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelectedDealer(row.original)}
-              className="h-7 text-xs text-primary hover:bg-primary/10"
-            >
-              Details
+            <Button size="sm" variant="ghost" onClick={() => setCustomersOf(row.original)} className="h-7 text-xs text-primary hover:bg-primary/10">
+              Customers
             </Button>
             <Button
               size="sm"
-              variant="outline"
-              onClick={() => toast.success(`Impersonating dealer portal session for ${row.original.name}`)}
+              variant="ghost"
+              onClick={() => {
+                setEditing(row.original);
+                setFormOpen(true);
+              }}
               className="h-7 px-2 text-xs"
+              aria-label={`Edit ${row.original.name}`}
             >
-              <LogIn className="h-3 w-3" />
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDeleting(row.original)}
+              className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+              aria-label={`Delete ${row.original.name}`}
+            >
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         ),
@@ -243,11 +450,11 @@ export function DealersPage() {
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
-  if (isError || !data) {
+  if (isError) {
     return (
       <EmptyState
         title="Failed to load dealers"
-        description="Could not fetch dealer hierarchy records."
+        description={error?.message ?? 'Could not fetch dealer records.'}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -257,213 +464,111 @@ export function DealersPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Dealers (6-Tier Hierarchy)"
-        subtitle="Multi-level franchise dealer network management, tier commissions, and subscriber distribution"
-        breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Dealers' },
-        ]}
+        title="Dealers"
+        subtitle="Field sales partners, their coverage areas, commission rates and the customers they brought in"
+        breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'Dealers' }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
+              disabled={rows.length === 0}
               className="text-xs border-border/80 hover:bg-accent"
             >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Directory
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Page
             </Button>
             <Button
               size="sm"
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Dealer Partner
+              <Plus className="h-3.5 w-3.5" /> Add Dealer
             </Button>
           </div>
         }
       />
 
-      {/* KPI Stats Ribbon */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">{stats.totalDealers}</span>{' '}
-          <span className="text-muted-foreground">registered dealers · {stats.activeDealers} active</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">{stats.totalCustomers.toLocaleString()}</span>{' '}
-          <span className="text-muted-foreground">total served subscribers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-primary">{stats.avgCustomers}</span>{' '}
-          <span className="text-muted-foreground">average customer footprint / dealer</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">6 Tiers</span>{' '}
-          <span className="text-muted-foreground">revenue sharing hierarchy active</span>
-        </p>
-      </div>
+      {summary && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+          <p>
+            <span className="font-semibold tabular-nums text-foreground">{summary.total}</span>{' '}
+            <span className="text-muted-foreground">registered dealers · {summary.active} active</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-foreground">{summary.assignedCustomers.toLocaleString()}</span>{' '}
+            <span className="text-muted-foreground">customers credited to dealers</span>
+          </p>
+          <p>
+            <span className="font-semibold tabular-nums text-primary">{summary.avgCommission}%</span>{' '}
+            <span className="text-muted-foreground">average commission</span>
+          </p>
+        </div>
+      )}
 
-      {/* Main Table */}
       <DataTable
         columns={columns}
         data={rows}
         getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search dealer name, area, or tier..."
-        searchFilterFn={searchFilter}
-        facetFilters={[
-          { columnId: 'status', title: 'Status' },
-        ]}
-        emptyTitle="No dealers found"
-        emptyDescription="Register a dealer partner to expand your localized network presence."
+        searchPlaceholder="Search dealer name, contact or mobile..."
+        emptyTitle={search || status ? 'No dealers match your filters' : 'No dealers yet'}
+        emptyDescription="Register a dealer partner to track the customers they bring in."
+        server={{
+          page,
+          pageSize,
+          total: data?.meta.total ?? 0,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+          search,
+          onSearchChange,
+        }}
+        toolbarActions={
+          <Select
+            value={status || 'all'}
+            onValueChange={(v) => {
+              setStatus(v === 'active' || v === 'inactive' ? v : '');
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[130px] text-xs">
+              <SelectValue>
+                {(v: string | null) => (v === 'active' ? 'Active' : v === 'inactive' ? 'Inactive' : 'All statuses')}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        }
       />
 
-      {/* Dealer Details Dialog */}
-      <Dialog open={!!selectedDealer} onOpenChange={(open) => !open && setSelectedDealer(null)}>
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-                  <Award className="h-4 w-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base font-bold">{selectedDealer?.name}</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    {selectedDealer && TIER_LABELS[selectedDealer.tier]?.label}
-                  </DialogDescription>
-                </div>
-              </div>
-              {selectedDealer && (
-                <Badge variant="outline" className="capitalize text-xs">
-                  {selectedDealer.status}
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
-
-          {selectedDealer && (
-            <div className="space-y-4 pt-2 text-xs">
-              <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Entity ID:</span>
-                  <span className="font-mono font-semibold text-foreground">{selectedDealer.id}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Coverage Territory:</span>
-                  <span className="font-medium text-foreground">{selectedDealer.area}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Active Customer Base:</span>
-                  <span className="font-mono font-bold text-foreground">{selectedDealer.customers} Subscribers</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-muted-foreground">Revenue Share Split:</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedDealer.tier === 1 ? '12% Top Tier' : `${10 - selectedDealer.tier}% Standard`}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button size="sm" variant="outline" onClick={() => setSelectedDealer(null)} className="text-xs">
-                  Close
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    toast.success(`Switched portal session to dealer "${selectedDealer.name}"`);
-                    setSelectedDealer(null);
-                  }}
-                  className="text-xs font-semibold"
-                >
-                  <LogIn className="mr-1.5 h-3.5 w-3.5" /> Impersonate Dealer
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Dealer Partner Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Award className="h-4 w-4 text-primary" /> Register New Franchise Dealer
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Establish a new 6-tier partner with assigned territory and subscriber allocation.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAddSubmit} className="space-y-3.5 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Dealer Enterprise Name *</Label>
-              <Input
-                placeholder="e.g. Uttara North Broadband Franchise"
-                value={newDealer.name}
-                onChange={(e) => setNewDealer({ ...newDealer, name: e.target.value })}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Hierarchy Tier *</Label>
-                <Select
-                  value={newDealer.tier}
-                  onValueChange={(v) => v && setNewDealer({ ...newDealer, tier: v })}
-                >
-                  <SelectTrigger className="text-xs h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Tier 1 — Super Master</SelectItem>
-                    <SelectItem value="2">Tier 2 — Master Dealer</SelectItem>
-                    <SelectItem value="3">Tier 3 — Regional Hub</SelectItem>
-                    <SelectItem value="4">Tier 4 — Local Franchise</SelectItem>
-                    <SelectItem value="5">Tier 5 — Sub Dealer</SelectItem>
-                    <SelectItem value="6">Tier 6 — Field Agent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Initial Subscribers</Label>
-                <Input
-                  type="number"
-                  value={newDealer.customers}
-                  onChange={(e) => setNewDealer({ ...newDealer, customers: Number(e.target.value) })}
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Coverage Territory / Area *</Label>
-              <Input
-                placeholder="e.g. Uttara Sector 4 & 6, Dhaka"
-                value={newDealer.area}
-                onChange={(e) => setNewDealer({ ...newDealer, area: e.target.value })}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" size="sm" onClick={() => setAddDialogOpen(false)} className="text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="text-xs font-semibold">
-                Register Dealer
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <DealerFormDialog dealer={editing} open={formOpen} onOpenChange={setFormOpen} />
+      <DealerCustomersDialog dealer={customersOf} onClose={() => setCustomersOf(null)} />
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title={`Delete ${deleting?.name ?? 'dealer'}?`}
+        description="The dealer and its customer links are removed. Customers themselves are not affected."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() =>
+          deleting &&
+          remove.mutate(deleting.id, {
+            onSuccess: () => {
+              toast.success('Dealer deleted');
+              setDeleting(null);
+            },
+          })
+        }
+      />
     </div>
   );
 }

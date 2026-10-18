@@ -1,0 +1,57 @@
+# Terms of Service
+
+These terms apply when you use the ISP Pay BD platform and websites provided by [COMPANY LEGAL NAME] ("ISP Pay BD", "we"). By creating an account or using the service you agree to them.
+
+## Accounts
+
+- You must give accurate information and keep your sign-in details secret.
+- You are responsible for activity under your account, including that of staff, resellers and customers you add.
+- Tell us promptly if you suspect unauthorised access.
+
+## Plans, trial and payment
+
+- Each plan has a price, a billing period and limits (such as the number of subscribers) shown on the pricing page or in your account.
+- A free trial or preview period may apply to new accounts as shown at sign-up.
+- Fees are due before the period starts, or from your prepaid wallet where the plan works that way. Pay-as-you-go usage is charged at the rates shown in your account.
+- Unpaid accounts may be limited or suspended after the grace period shown in your account, and restored once payment is received.
+- Taxes, where they apply, are added to the amounts shown.
+
+## If you are an ISP or reseller
+
+- You are responsible for the information you and your staff enter about your subscribers, and for having the right to use it.
+- You must follow the laws and licence conditions that apply to your service, including those set by the BTRC.
+- You must not use the platform to send unlawful, misleading or unsolicited messages.
+
+## Acceptable use
+
+Do not attempt to break, overload or reverse-engineer the platform, access data that is not yours, or use it for anything unlawful.
+
+## Availability and support
+
+We work to keep the platform available and may carry out maintenance, which we will announce where practical. Support is provided through the contact details below.
+
+## Intellectual property
+
+The platform, its design and its software belong to us or our licensors. These terms give you the right to use it, not to own or copy it. Your data remains yours.
+
+## Ending the service
+
+You may stop using the service at any time. We may suspend or end access for non-payment or breach of these terms. After the account ends we keep records only as long as the law and our privacy policy allow.
+
+## Liability
+
+The service is provided as available. To the extent the law allows, we are not liable for indirect or consequential loss, or for outages of networks, payment providers or other third parties outside our control.
+
+## Changes
+
+We may update these terms and will publish the new version here. Continued use after a change means you accept it.
+
+## Governing law
+
+These terms are governed by the laws of [GOVERNING LAW, e.g. Bangladesh], and disputes are subject to the courts of [CITY].
+
+## Contact
+
+[COMPANY LEGAL NAME], [ADDRESS]
+Email: [SUPPORT EMAIL]
+Phone: [SUPPORT PHONE]

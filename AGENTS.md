@@ -6,6 +6,7 @@ Build a **high-quality, professional, modern ISP Pay BD platform** — complete 
 
 ## Start every session (in order)
 
+0. **`docs/GOAL-STATE.md`** — if a goal is ACTIVE, resume it first (skill `goal`); it never closes until its completion criteria pass
 1. **Skill `isp-pay-bd`** — `.cursor/skills/isp-pay-bd/SKILL.md` (project default)
 2. **`docs/PROJECT-MEMORY.md`** — project context
 3. **`docs/13-STRICT-AGENT-MANDATE.md`** — non-negotiable rules
@@ -53,16 +54,18 @@ USE/DO NOT →  docs/UI-REFERENCES-LIBS.md + skill isp-pay-bd
 ```
 src/app/           → thin routes only
 src/features/      → one module = one folder (pages, components, hooks, schemas, types)
-src/data/          → ALL static dummy data
-src/lib/mock-api/  → ONLY data access
+src/lib/api/       → zapi client (http, getPage, ApiError), services, adapters, case mappers
+src/data/marketing → marketing site copy ONLY (portals never import src/data)
 tests/             → outside src/app
 ```
 
 Reference backend (read-only): `../isppaybd_isp` — path map in **`docs/REFERENCE-MAP.md`**
 
-## Phase 1 scope
+## Data rule
 
-Static mock UI only. No backend API. All data from `src/data/` via mock-api.
+Every portal screen reads the real `zapi/` backend — no mock API, no dummy
+datasets, no `setTimeout` fakes, no hardcoded business numbers. Enforced by
+`tests/architecture/folder-structure.test.ts`. See `docs/API-INTEGRATION-TRACKER.md`.
 
 ## Current status
 
@@ -70,7 +73,7 @@ Static mock UI only. No backend API. All data from `src/data/` via mock-api.
 - **P0:** ✅ Complete — see `docs/P0-READY.md`
 - **Plan docs (MD):** ✅ Complete — see `docs/PLAN-STATUS.md`
 - **Phases 1–7:** ✅ Mock UI complete (dummy data) — inventory synced
-- **Phase 8:** ⏳ API integration — await go
+- **Phase 8:** ✅ **API integration complete (verified 2026-10-11)** — every screen live on `zapi/`; mock layer deleted. Status, deploy steps (migrations/env/cron) and open decisions: `docs/API-INTEGRATION-TRACKER.md`
 - **Permissions nav filter:** ✅ `useFilteredNav` wired
 
 ## Git
@@ -96,3 +99,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## graphify (STRICT MANDATE)
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- MANDATORY: ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
+- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files.
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files.
+- MANDATORY AUTO-UPDATE: Immediately after modifying, creating, or refactoring code files in any session, you MUST AUTOMATICALLY run `graphify update .` to keep the graph current (AST-only, no API cost). Do not wait for user prompting.

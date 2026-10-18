@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Cpu, Search } from 'lucide-react';
-import { toast } from 'sonner';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { AlertTriangle, Cpu, Loader2, RefreshCw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { OnuPortItem, OltDiagnostics } from '@/data/admin/network-ops.data';
-import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
+import { errorMessage } from '@/lib/api/utils/error-handler';
+import { formatDateTime } from '@/lib/format/date';
+import { useOltDiagnostics } from '../hooks/useOltDiagnostics';
+import { onuHealth, parseBackendDate, rxBand, type OltOnu, type OnuHealth } from '../types';
 
 interface OltDiagnosticsModalProps {
   open: boolean;
@@ -24,91 +25,39 @@ interface OltDiagnosticsModalProps {
   oltName: string;
 }
 
+/** Rows rendered at once; search narrows the rest (a live read can hold every ONU of the OLT). */
+const MAX_ROWS = 200;
+
+const RX_CLASS: Record<ReturnType<typeof rxBand>, string> = {
+  good: 'text-emerald-600 dark:text-emerald-400',
+  weak: 'text-amber-600 dark:text-amber-400',
+  critical: 'text-red-600 dark:text-red-400',
+  unknown: 'text-muted-foreground',
+};
+
 export function OltDiagnosticsModal({
   open,
   onOpenChange,
   oltId,
   oltName,
 }: OltDiagnosticsModalProps) {
-  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'wire_down' | 'offline'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | OnuHealth>('all');
   const [search, setSearch] = useState('');
-  const [contentVisible, setContentVisible] = useState(false);
-
-  const { data: diagnosticsMap, isLoading } = useQuery({
-    queryKey: ['admin', 'network', 'olt-diagnostics'],
-    queryFn: async () => {
-      const network = await mockFetch('admin.domain', 'network');
-      return (network as { oltDiagnostics?: Record<string, OltDiagnostics> }).oltDiagnostics ?? {};
-    },
-    enabled: open,
-  });
-
-  useEffect(() => {
-    if (!open) {
-      const id = requestAnimationFrame(() => setContentVisible(false));
-      return () => cancelAnimationFrame(id);
-    }
-    let cancelled = false;
-    const raf = requestAnimationFrame(() => {
-      setTimeout(() => {
-        if (!cancelled) setContentVisible(true);
-      }, 60);
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-    };
-  }, [open]);
-
-  const data = useMemo(() => {
-    if (!diagnosticsMap) return null;
-    return diagnosticsMap[oltId] ?? diagnosticsMap['olt_1'] ?? null;
-  }, [diagnosticsMap, oltId]);
-
-  const summary = useMemo(() => {
-    if (!data) return { online: 0, wireDown: 0, offline: 0 };
-    const online = data.onus.filter((p: OnuPortItem) => p.status === 'online').length;
-    const wireDown = data.onus.filter((p: OnuPortItem) => p.status === 'wire_down').length;
-    const offline = data.onus.filter((p: OnuPortItem) => p.status === 'offline').length;
-    return { online, wireDown, offline };
-  }, [data]);
-
-  const portsByPon = useMemo(() => {
-    if (!data) return [] as [string, OnuPortItem[]][];
-    const groups = new Map<string, OnuPortItem[]>();
-    data.onus.forEach((p: OnuPortItem) => {
-      const g = groups.get(p.ponPort) ?? [];
-      g.push(p);
-      groups.set(p.ponPort, g);
-    });
-    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [data]);
+  const { data, isLoading, isFetching, isError, error, refetch } = useOltDiagnostics(oltId, open);
 
   const filteredOnus = useMemo(() => {
-    if (!data) return [] as OnuPortItem[];
-    let list = data.onus;
-    if (statusFilter !== 'all') {
-      list = list.filter((onu: OnuPortItem) => onu.status === statusFilter);
-    }
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      list = list.filter(
-        (onu: OnuPortItem) =>
-          (onu.customerName?.toLowerCase().includes(s) ?? false) ||
-          onu.macAddress.toLowerCase().includes(s) ||
-          onu.pppoeId?.toLowerCase().includes(s) ||
-          onu.ponPort.toLowerCase().includes(s)
+    if (!data) return [] as OltOnu[];
+    const q = search.trim().toLowerCase();
+    return data.items.filter((onu) => {
+      if (statusFilter !== 'all' && onuHealth(onu) !== statusFilter) return false;
+      if (!q) return true;
+      return [onu.customerName, onu.description, onu.mac, onu.pppoeId, onu.ponPort, onu.onuId].some((v) =>
+        (v ?? '').toLowerCase().includes(q),
       );
-    }
-    return list;
+    });
   }, [data, statusFilter, search]);
 
-  const rxColor = (db: number | null) => {
-    if (db === null) return 'text-muted-foreground';
-    if (db >= -20) return 'text-emerald-600 dark:text-emerald-400';
-    if (db >= -25) return 'text-amber-600 dark:text-amber-400';
-    return 'text-red-600 dark:text-red-400';
-  };
+  const syncedAt = parseBackendDate(data?.lastSyncedAt ?? null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -123,7 +72,9 @@ export function OltDiagnosticsModal({
               <div>
                 <DialogTitle className="text-lg font-bold">{oltName} Diagnostics</DialogTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  PON telemetry snapshot — {data?.onus.length ?? 0} ONUs registered
+                  {data
+                    ? `${data.summary.total} ONUs — ${data.isCached ? 'last synchronized data' : 'read live from the OLT'}`
+                    : 'Live ONU status read from the OLT'}
                 </p>
               </div>
             </div>
@@ -132,73 +83,85 @@ export function OltDiagnosticsModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          {isLoading || !data ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading diagnostics…</div>
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Reading ONU status from the OLT — this can take up to a minute…
+            </div>
+          ) : isError || !data ? (
+            <EmptyState
+              title="Diagnostics unavailable"
+              description={errorMessage(error, 'The OLT could not be read.')}
+              actionLabel="Retry"
+              onAction={() => refetch()}
+            />
           ) : (
-          <div
-            className={cn(
-              'space-y-6 transition-opacity duration-200',
-              contentVisible ? 'opacity-100' : 'opacity-0'
+          <div className="space-y-6">
+            {data.isCached && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Live read failed{data.liveError ? `: ${data.liveError}` : ''}. Showing the last synchronized data
+                  {syncedAt ? ` from ${formatDateTime(syncedAt)}` : ''}.
+                </span>
+              </div>
             )}
-          >
+
             <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
               <p>
-                <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{summary.online}</span>{' '}
+                <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{data.summary.online}</span>{' '}
                 <span className="text-muted-foreground">online</span>
               </p>
               <p>
-                <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{summary.wireDown}</span>{' '}
-                <span className="text-muted-foreground">wire down</span>
+                <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{data.summary.wireDown}</span>{' '}
+                <span className="text-muted-foreground">wire down / LOS</span>
               </p>
               <p>
-                <span className="font-semibold tabular-nums text-destructive">{summary.offline}</span>{' '}
-                <span className="text-muted-foreground">offline / LOS</span>
+                <span className="font-semibold tabular-nums text-destructive">{data.summary.powerOff}</span>{' '}
+                <span className="text-muted-foreground">offline / power off</span>
               </p>
             </div>
 
             {/* PON Port grid */}
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-foreground">PON Ports ({portsByPon.length})</h4>
+              <h4 className="text-sm font-semibold text-foreground">PON Ports ({data.ponPorts.length})</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {portsByPon.map(([port, onus], i) => {
-                  const online = onus.filter((o: OnuPortItem) => o.status === 'online').length;
-                  return (
-                    <div
-                      key={port}
-                      className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition-all duration-200"
-                      style={{ animationDelay: `${240 + i * 60}ms` }}
-                    >
-                      <div className="flex items-center justify-between mb-2.5">
-                        <span className="text-xs font-bold text-foreground">{port}</span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-                          {online}/{onus.length}
-                        </Badge>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
-                          style={{ width: onus.length > 0 ? `${(online / onus.length) * 100}%` : '0%', transitionDelay: `${350 + i * 60}ms` }}
-                        />
-                      </div>
+                {data.ponPorts.map((port) => (
+                  <div
+                    key={port.port}
+                    className="rounded-xl border bg-card/80 p-3.5 hover:shadow-md hover:border-border/80 transition duration-200"
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-bold text-foreground">{port.port}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                        {port.online}/{port.total}
+                      </Badge>
                     </div>
-                  );
-                })}
+                    <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
+                        style={{ width: port.total > 0 ? `${(port.online / port.total) * 100}%` : '0%' }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
               {[
-                { key: 'all', label: 'All ONUs', count: data.onus.length },
-                { key: 'online', label: 'Online', count: summary.online },
-                { key: 'wire_down', label: 'Wire Down', count: summary.wireDown },
-                { key: 'offline', label: 'Offline', count: summary.offline },
+                { key: 'all', label: 'All ONUs', count: data.summary.total },
+                { key: 'online', label: 'Online', count: data.summary.online },
+                { key: 'wire_down', label: 'Wire Down', count: data.summary.wireDown },
+                { key: 'power_off', label: 'Power Off', count: data.summary.powerOff },
               ].map((f) => (
                 <button
                   key={f.key}
+                  type="button"
                   onClick={() => setStatusFilter(f.key as typeof statusFilter)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150',
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
                     statusFilter === f.key
                       ? 'bg-foreground text-background border-foreground'
                       : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
@@ -214,7 +177,7 @@ export function OltDiagnosticsModal({
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Search customer, MAC, or PPPoE ID..."
+                placeholder="Search customer, MAC, PPPoE ID or port..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-9 transition-shadow duration-200 focus:shadow-[0_0_0_2px] focus:shadow-primary/20"
@@ -227,7 +190,7 @@ export function OltDiagnosticsModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">#</th>
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">ONU</th>
                       <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">PON Port</th>
                       <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Customer</th>
                       <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide hidden sm:table-cell">MAC Address</th>
@@ -237,40 +200,42 @@ export function OltDiagnosticsModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOnus.map((onu: OnuPortItem, i: number) => (
-                      <tr
-                        key={onu.id}
-                        className="border-b last:border-b-0 hover:bg-muted/20 transition-colors duration-100"
-                        style={{ animationDelay: `${400 + i * 30}ms` }}
-                      >
-                        <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{onu.onuIndex}</td>
-                        <td className="px-4 py-2.5 font-medium text-foreground">{onu.ponPort}</td>
-                        <td className="px-4 py-2.5 font-medium text-foreground">
-                          {onu.customerName ?? <span className="text-muted-foreground italic">Unassigned</span>}
-                          {onu.pppoeId && (
-                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{onu.pppoeId}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 font-mono text-[11px] text-muted-foreground hidden sm:table-cell">{onu.macAddress}</td>
-                        <td className="px-4 py-2.5">
-                          <span className={cn(
-                            'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide',
-                            onu.status === 'online' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-                            onu.status === 'wire_down' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                            onu.status === 'offline' && 'bg-red-500/10 text-red-600 dark:text-red-400',
-                          )}>
-                            {onu.status === 'online' ? '● Online' : onu.status === 'wire_down' ? '▲ Wire Down' : '○ Offline'}
-                          </span>
-                          {onu.deregisterReason && (
-                            <div className="text-[9px] text-muted-foreground mt-0.5">{onu.deregisterReason}</div>
-                          )}
-                        </td>
-                        <td className={cn('px-4 py-2.5 font-mono text-xs font-semibold tabular-nums', rxColor(onu.rxPower))}>
-                          {onu.rxPower !== null ? `${onu.rxPower.toFixed(1)} dBm` : '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{onu.vendor}</td>
-                      </tr>
-                    ))}
+                    {filteredOnus.slice(0, MAX_ROWS).map((onu) => {
+                      const health = onuHealth(onu);
+                      return (
+                        <tr
+                          key={`${onu.onuId}-${onu.mac ?? ''}`}
+                          className="border-b last:border-b-0 hover:bg-muted/20 transition-colors duration-100"
+                        >
+                          <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{onu.onuIndex || '—'}</td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">{onu.ponPort || '—'}</td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">
+                            {onu.customerName ?? onu.description ?? <span className="text-muted-foreground italic">Unassigned</span>}
+                            {onu.pppoeId && (
+                              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{onu.pppoeId}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 font-mono text-[11px] text-muted-foreground hidden sm:table-cell">{onu.mac ?? '—'}</td>
+                          <td className="px-4 py-2.5">
+                            <span className={cn(
+                              'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide',
+                              health === 'online' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                              health === 'wire_down' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                              health === 'power_off' && 'bg-red-500/10 text-red-600 dark:text-red-400',
+                            )}>
+                              {health === 'online' ? '● Online' : health === 'wire_down' ? '▲ Wire Down' : '○ Offline'}
+                            </span>
+                            {onu.reason && (
+                              <div className="text-[9px] text-muted-foreground mt-0.5">{onu.reason}</div>
+                            )}
+                          </td>
+                          <td className={cn('px-4 py-2.5 font-mono text-xs font-semibold tabular-nums', RX_CLASS[rxBand(onu.rxPower)])}>
+                            {onu.rxPower !== null ? `${onu.rxPower.toFixed(1)} dBm` : '—'}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">{onu.vendor ?? '—'}</td>
+                        </tr>
+                      );
+                    })}
                     {filteredOnus.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">
@@ -286,18 +251,17 @@ export function OltDiagnosticsModal({
             {/* Footer */}
             <div className="flex items-center justify-between pt-2">
               <p className="text-xs text-muted-foreground">
-                Showing {filteredOnus.length} of {data.onus.length} ONUs
+                Showing {Math.min(filteredOnus.length, MAX_ROWS)} of {filteredOnus.length} matching ({data.items.length} total)
               </p>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  toast.success('PON port telemetry refreshed.');
-                  onOpenChange(false);
-                }}
-                className="transition-all duration-150 hover:shadow-md"
+                disabled={isFetching}
+                onClick={() => refetch()}
+                className="gap-1.5 transition duration-150 hover:shadow-md"
               >
-                Refresh
+                <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
+                {isFetching ? 'Reading…' : 'Refresh'}
               </Button>
             </div>
           </div>

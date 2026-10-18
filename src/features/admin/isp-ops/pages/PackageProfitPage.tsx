@@ -1,114 +1,56 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import {
-  TrendingUp,
-  Boxes,
-  Building2,
-  Download,
-  Percent,
-  DollarSign,
-  Users,
-  Layers,
-  ArrowUpRight,
-  ShieldAlert,
-  Sparkles,
-  Zap,
-} from 'lucide-react';
+import { Boxes, Building2, Download, DollarSign, Users, TrendingUp, UserCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { DataTable } from '@/features/shared/data-table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useIspOps } from '../hooks/use-isp-ops';
-import type { IspOpsData } from '@/data/admin/isp-ops.data';
-import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { saveBlob } from '@/lib/api/client';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import { cn } from '@/lib/utils';
+import { monthToDateRange, usePackageRevenue, type PackageRevenueRow } from '@/features/admin/reports/hooks/use-billing-reports';
 
-type Row = IspOpsData['packageProfitRows'][number];
-
-const searchFilter = (row: LegacyRow<Row>, _columnId: string, filterValue: unknown) => {
+const searchFilter = (row: LegacyRow<PackageRevenueRow>, _columnId: string, filterValue: unknown) => {
   const q = String(filterValue ?? '').toLowerCase().trim();
   if (!q) return true;
-  const r = row.original;
-  return (
-    String(r.popName).toLowerCase().includes(q) ||
-    String(r.packageName).toLowerCase().includes(q)
-  );
+  return row.original.ownerName.toLowerCase().includes(q) || row.original.packageName.toLowerCase().includes(q);
 };
 
+const csvCell = (v: string | number) => {
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+/** Collected revenue per POP / package — only money actually received; no invented cost or margin. */
 export function PackageProfitPage() {
-  const { data, isLoading, isError, refetch } = useIspOps();
+  const [range, setRange] = useState(monthToDateRange);
+  const { data, isLoading, isError, error, refetch } = usePackageRevenue(range);
+  const rows = useMemo(() => data?.items ?? [], [data]);
+  const totals = data?.totals;
+  const top = rows[0];
 
-  const rows = data?.packageProfitRows ?? [];
-
-  const stats = useMemo(() => {
-    const totalRevenue = rows.reduce((s, r) => s + r.revenueBdt, 0);
-    const totalCost = rows.reduce((s, r) => s + r.costBdt, 0);
-    const totalProfit = rows.reduce((s, r) => s + r.profitBdt, 0);
-    const totalCustomers = rows.reduce((s, r) => s + r.customers, 0);
-    const marginPct = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
-
-    // Find top package
-    const topPackage = [...rows].sort((a, b) => b.profitBdt - a.profitBdt)[0];
-
-    return {
-      totalRevenue,
-      totalCost,
-      totalProfit,
-      totalCustomers,
-      marginPct,
-      topPackage,
-    };
-  }, [rows]);
-
+  // The endpoint returns the complete (non-paginated) set, so this CSV is the whole report.
   const handleExportCsv = () => {
-    const headers = [
-      'POP Hub',
-      'Package Name',
-      'Customers',
-      'Revenue (BDT)',
-      'Cost (BDT)',
-      'Profit (BDT)',
-      'Margin (%)',
-    ];
-    const csvRows = rows.map((r) => {
-      const margin = r.revenueBdt > 0 ? Math.round((r.profitBdt / r.revenueBdt) * 100) : 0;
-      return [
-        r.popName,
-        r.packageName,
-        r.customers,
-        r.revenueBdt,
-        r.costBdt,
-        r.profitBdt,
-        `${margin}%`,
-      ];
-    });
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...csvRows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `package_profitability_${new Date().toISOString().split('T')[0]}.csv`,
+    const header = ['Owner', 'Role', 'Package', 'List price (BDT)', 'Customers', 'Active', 'Collected (BDT)', 'Payments'];
+    const lines = rows.map((r) =>
+      [r.ownerName, r.ownerRole, r.packageName, r.listPriceBdt ?? '', r.customers, r.activeCustomers, r.collectedBdt, r.payments].map(csvCell).join(','),
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Package profitability statement exported to CSV');
+    saveBlob(new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }), `package_revenue_${range.from}_${range.to}.csv`);
+    toast.success('Package revenue exported to CSV');
   };
 
-  const columns = useMemo<LegacyColumnDef<Row, unknown>[]>(
+  const columns = useMemo<LegacyColumnDef<PackageRevenueRow, unknown>[]>(
     () => [
       {
-        accessorKey: 'popName',
-        header: 'POP Reseller Hub',
+        accessorKey: 'ownerName',
+        header: 'Owner (tenant / POP)',
         enableHiding: false,
         size: 220,
         cell: ({ row }) => (
@@ -117,93 +59,52 @@ export function PackageProfitPage() {
               <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <div className="font-bold text-sm text-foreground">{row.original.popName}</div>
-              <div className="text-[10px] text-muted-foreground font-mono">
-                {row.original.id}
-              </div>
+              <div className="font-bold text-sm text-foreground">{row.original.ownerName || `#${row.original.ownerId}`}</div>
+              <div className="text-[10px] text-muted-foreground">{row.original.ownerRole === 'resellerAdmin' ? 'POP reseller' : 'Direct'}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'packageName',
-        header: 'Internet Package Plan',
+        header: 'Package',
         size: 200,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-secondary/80 border border-border/50 text-foreground">
-              <Boxes className="h-3.5 w-3.5" />
-            </div>
-            <div className="font-semibold text-xs text-foreground">
-              {row.original.packageName}
-            </div>
+            <div className="p-1.5 rounded-lg bg-secondary/80 border border-border/50 text-foreground"><Boxes className="h-3.5 w-3.5" /></div>
+            <div className="font-semibold text-xs text-foreground">{row.original.packageName || 'No package'}</div>
           </div>
         ),
+      },
+      {
+        accessorKey: 'listPriceBdt',
+        header: 'List price',
+        size: 110,
+        cell: ({ row }) => (row.original.listPriceBdt === null ? <span className="text-muted-foreground">—</span> : <CurrencyDisplay amount={row.original.listPriceBdt} />),
       },
       {
         accessorKey: 'customers',
-        header: 'Subscribers',
-        size: 120,
-        cell: ({ row }) => (
-          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-foreground">
-            <Users className="h-3 w-3 text-muted-foreground" />
-            <span>{row.original.customers}</span>
-          </div>
-        ),
+        header: 'Customers',
+        size: 100,
+        cell: ({ row }) => <span className="font-mono">{row.original.customers}</span>,
       },
       {
-        accessorKey: 'revenueBdt',
-        header: 'Gross Revenue',
-        size: 140,
-        cell: ({ row }) => (
-          <div className="font-mono text-xs font-bold text-foreground">
-            <CurrencyDisplay amount={row.original.revenueBdt} />
-          </div>
-        ),
+        accessorKey: 'activeCustomers',
+        header: 'Active',
+        size: 90,
+        cell: ({ row }) => <span className="font-mono text-emerald-600 dark:text-emerald-400">{row.original.activeCustomers}</span>,
       },
       {
-        accessorKey: 'costBdt',
-        header: 'Bandwidth Cost',
+        accessorKey: 'collectedBdt',
+        header: 'Collected',
         size: 130,
-        cell: ({ row }) => (
-          <div className="font-mono text-xs font-medium text-muted-foreground">
-            <CurrencyDisplay amount={row.original.costBdt} />
-          </div>
-        ),
+        cell: ({ row }) => <CurrencyDisplay amount={row.original.collectedBdt} className="font-bold text-foreground" />,
       },
       {
-        accessorKey: 'profitBdt',
-        header: 'Net Gross Profit',
-        size: 140,
-        cell: ({ row }) => (
-          <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={row.original.profitBdt} />
-          </div>
-        ),
-      },
-      {
-        id: 'margin',
-        header: 'Margin %',
-        size: 130,
-        cell: ({ row }) => {
-          const rev = row.original.revenueBdt;
-          const profit = row.original.profitBdt;
-          const margin = rev > 0 ? Math.round((profit / rev) * 100) : 0;
-          return (
-            <div className="space-y-1 w-full max-w-[100px]">
-              <div className="flex justify-between text-[11px] font-mono font-bold">
-                <span className="text-emerald-600 dark:text-emerald-400">{margin}%</span>
-                <span className="text-muted-foreground text-[9px]">margin</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500"
-                  style={{ width: `${Math.min(margin, 100)}%` }}
-                />
-              </div>
-            </div>
-          );
-        },
+        accessorKey: 'payments',
+        header: 'Payments',
+        size: 90,
+        cell: ({ row }) => <span className="font-mono text-muted-foreground">{row.original.payments}</span>,
       },
     ],
     [],
@@ -211,138 +112,61 @@ export function PackageProfitPage() {
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError || !data) {
-    return (
-      <EmptyState
-        title="Failed to load profitability records"
-        description="Could not fetch package profit analytics."
-        actionLabel="Retry"
-        onAction={() => refetch()}
-      />
-    );
+    return <EmptyState title="Failed to load package revenue" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
   }
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Package Profit by POP"
-        subtitle="Revenue vs bandwidth delivery cost per package plan across all Point-of-Presence reseller hubs"
-        breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'POP Suite' },
-          { label: 'Package Profit' },
-        ]}
+        title="Package Revenue"
+        subtitle="Money collected per package and POP for the selected period"
+        breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'POP Suite' }, { label: 'Package revenue' }]}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportCsv}
-              className="text-xs border-border/80 hover:bg-accent"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Analytics
+          <div className="flex items-center gap-2">
+            <Input type="date" value={range.from} max={range.to} onChange={(e) => e.target.value && setRange((r) => ({ ...r, from: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label="From" />
+            <Input type="date" value={range.to} min={range.from} onChange={(e) => e.target.value && setRange((r) => ({ ...r, to: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label="To" />
+            <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={!rows.length} className="text-xs h-8">
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
             </Button>
           </div>
         }
       />
 
-      {/* KPI Stats Ribbon */}
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">
-            <CurrencyDisplay amount={stats.totalRevenue} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">total gross revenue</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-muted-foreground">
-            <CurrencyDisplay amount={stats.totalCost} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">upstream bandwidth costs</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={stats.totalProfit} className="inline font-semibold" />
-          </span>{' '}
-          <span className="text-muted-foreground">net aggregate profit</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-primary">{stats.marginPct}%</span>{' '}
-          <span className="text-muted-foreground">overall gross profit margin</span>
-        </p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label="Collected" icon={<DollarSign className="h-4 w-4" />} tone="bg-emerald-500/10 text-emerald-500">
+          <CurrencyDisplay amount={totals?.collectedBdt ?? 0} />
+        </Kpi>
+        <Kpi label="Customers" icon={<Users className="h-4 w-4" />} tone="bg-primary/10 text-primary">{totals?.customers ?? 0}</Kpi>
+        <Kpi label="Active customers" icon={<UserCheck className="h-4 w-4" />} tone="bg-blue-500/10 text-blue-500">{totals?.activeCustomers ?? 0}</Kpi>
+        <Kpi label="Top package" icon={<TrendingUp className="h-4 w-4" />} tone="bg-amber-500/10 text-amber-500">
+          <span className="text-base">{top && top.collectedBdt > 0 ? top.packageName || 'No package' : '—'}</span>
+        </Kpi>
       </div>
 
-      {/* Top Performer Highlights */}
-      {stats.topPackage && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                    Top Profitable Package
-                  </span>
-                  <div className="font-bold text-sm text-foreground">
-                    {stats.topPackage.packageName}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {stats.topPackage.popName} &middot; {stats.topPackage.customers} Users
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                  ৳{stats.topPackage.profitBdt.toLocaleString()}
-                </div>
-                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                  {Math.round((stats.topPackage.profitBdt / stats.topPackage.revenueBdt) * 100)}% Margin
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-                  <Zap className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                    Subscriber Footprint
-                  </span>
-                  <div className="font-bold text-sm text-foreground">
-                    {stats.totalCustomers.toLocaleString()} Active Reseller Lines
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Across {rows.length} Package SKU deployments
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-bold font-mono text-foreground">
-                  ৳{stats.totalCustomers > 0 ? Math.round(stats.totalRevenue / stats.totalCustomers) : 0}
-                </div>
-                <span className="text-[10px] text-muted-foreground">ARPU / Subscriber</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Main Table */}
       <DataTable
         columns={columns}
         data={rows}
-        getRowId={(row) => row.id}
-        searchKey="popName"
-        searchPlaceholder="Search by POP hub or package plan..."
+        getRowId={(r) => r.key}
+        searchKey="packageName"
         searchFilterFn={searchFilter}
-        emptyTitle="No package profitability records"
-        emptyDescription="Profitability breakdown by package will appear once bandwidth telemetry is processed."
+        searchPlaceholder="Search owner or package..."
+        emptyTitle="No packages"
+        emptyDescription="No customers are assigned to packages yet."
       />
     </div>
+  );
+}
+
+function Kpi({ label, icon, tone, children }: { label: string; icon: ReactNode; tone: string; children: ReactNode }) {
+  return (
+    <Card className="border-border/60 bg-card/80 shadow-sm">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+          <div className={cn('p-2 rounded-lg', tone)}>{icon}</div>
+        </div>
+        <div className="mt-2 text-xl font-bold tracking-tight text-foreground tabular-nums truncate">{children}</div>
+      </CardContent>
+    </Card>
   );
 }

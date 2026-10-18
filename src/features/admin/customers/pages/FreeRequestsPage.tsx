@@ -1,93 +1,101 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  XCircle,
-  ThumbsUp,
-  ThumbsDown,
-  Search,
-  Mail,
-  MapPin,
-  Calendar,
-} from 'lucide-react';
-import { useFreeRequests } from '../hooks/use-customers';
+import { useState } from 'react';
+import Link from 'next/link';
+import { CheckCircle2, XCircle, ThumbsUp, ThumbsDown, Search, Calendar } from 'lucide-react';
+import { useCustomerActions, useFreeRequestCounts, useFreeRequests } from '../hooks/use-customers';
+import { useDebouncedValue } from '../hooks/use-debounced-value';
+import type { FreeRequest } from '../types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { TablePagination } from '@/components/shared/TablePagination';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { toast } from 'sonner';
+import { errorMessage } from '@/lib/api/utils/error-handler';
 import { cn } from '@/lib/utils';
 
-interface FreeRequestItem {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string | null;
-  area: string;
-  reseller?: string | null;
-  temporaryExpiry?: string;
-  requestedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
+
+const fmtDate = (v: string | null) =>
+  v ? new Date(v.replace(' ', 'T')).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 export function FreeRequestsPage() {
-  const { data, isLoading, isError, refetch } = useFreeRequests();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [rejectId, setRejectId] = useState<string | null>(null);
+  const debouncedSearch = useDebouncedValue(search.trim());
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [pageSize, setPageSize] = useState(20);
+  const pageKey = `${statusFilter}|${debouncedSearch}|${pageSize}`;
+  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
+  const page = pageState.key === pageKey ? pageState.page : 1;
+  const [rejectTarget, setRejectTarget] = useState<FreeRequest | null>(null);
 
-  const requests = (data as FreeRequestItem[]) || [];
-
-  const filtered = useMemo(() => {
-    return requests.filter((r) => {
-      const matchSearch =
-        search === '' ||
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.phone.includes(search) ||
-        r.area.toLowerCase().includes(search.toLowerCase()) ||
-        (r.email?.toLowerCase().includes(search.toLowerCase()) ?? false);
-      const matchStatus = statusFilter === 'all' || r.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [requests, search, statusFilter]);
-
-  const pendingCount = useMemo(() => requests.filter((r) => r.status === 'pending').length, [requests]);
-  const approvedCount = useMemo(() => requests.filter((r) => r.status === 'approved').length, [requests]);
-  const rejectedCount = useMemo(() => requests.filter((r) => r.status === 'rejected').length, [requests]);
-
-  const handleApprove = (item: FreeRequestItem) => {
-    toast.success(`Lead "${item.name}" approved — 7-day free trial activated.`);
-  };
-
-  const handleReject = () => {
-    if (!rejectId) return;
-    const item = requests.find((r) => r.id === rejectId);
-    toast.success(`Lead "${item?.name}" rejected.`);
-    setRejectId(null);
-  };
+  const { data, isLoading, isError, error, isFetching, refetch } = useFreeRequests({
+    status: statusFilter,
+    search: debouncedSearch,
+    page,
+    perPage: pageSize,
+  });
+  const countsQuery = useFreeRequestCounts();
+  const { approveFreeRequest, rejectFreeRequest } = useCustomerActions();
 
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (isError) {
     return (
       <EmptyState
         title="Error loading free user requests"
+        description={errorMessage(error)}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
     );
   }
 
+  const requests = data?.items ?? [];
+  const counts = countsQuery.data;
+  const busy = approveFreeRequest.isPending || rejectFreeRequest.isPending;
+  const n = (v: number | undefined) => (counts ? v ?? 0 : '…');
+
+  const actionCell = (req: FreeRequest, compact = false) =>
+    req.status === 'pending' ? (
+      <div className={cn('flex items-center gap-1.5', compact ? 'pt-1' : 'justify-end')}>
+        <Button
+          size="sm"
+          disabled={busy}
+          className={cn('bg-emerald-500 hover:bg-emerald-600 text-white', compact ? 'flex-1 h-8 text-xs' : 'h-7 text-[11px]')}
+          onClick={() => approveFreeRequest.mutate(req.id)}
+        >
+          <ThumbsUp className="mr-1 h-3 w-3" /> Approve
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          className={cn('text-destructive border-destructive/30 hover:bg-destructive/10', compact ? 'h-8 text-xs' : 'h-7 text-[11px]')}
+          onClick={() => setRejectTarget(req)}
+        >
+          <ThumbsDown className="mr-1 h-3 w-3" /> Reject
+        </Button>
+      </div>
+    ) : req.status === 'approved' ? (
+      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium justify-end">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Approved
+      </span>
+    ) : (
+      <span className="flex items-center gap-1 text-xs text-red-500 font-medium justify-end">
+        <XCircle className="h-3.5 w-3.5" /> Rejected
+      </span>
+    );
+
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
         title="Free User Requests"
-        subtitle="Prospective leads and trial broadband requests pending verification and line commissioning."
+        subtitle="POP requests to make a customer's connection free. Approving sets the customer's expiry far in the future; rejecting restores normal billing."
         breadcrumb={[
           { label: 'Admin', url: '/admin/dashboard' },
           { label: 'Customers', url: '/admin/customers' },
@@ -98,15 +106,15 @@ export function FreeRequestsPage() {
       {/* KPI strip */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{pendingCount}</span>{' '}
+          <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{n(counts?.pending)}</span>{' '}
           <span className="text-muted-foreground">pending</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{approvedCount}</span>{' '}
+          <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{n(counts?.approved)}</span>{' '}
           <span className="text-muted-foreground">approved</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-destructive">{rejectedCount}</span>{' '}
+          <span className="font-semibold tabular-nums text-destructive">{n(counts?.rejected)}</span>{' '}
           <span className="text-muted-foreground">rejected</span>
         </p>
       </div>
@@ -117,7 +125,7 @@ export function FreeRequestsPage() {
           <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search name, phone, area, or email..."
+              placeholder="Search customer name or mobile..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9 text-xs"
@@ -125,25 +133,27 @@ export function FreeRequestsPage() {
           </div>
 
           <div className="flex items-center gap-1.5 self-start sm:self-center">
-            {[
-              { key: 'all', label: 'All', count: requests.length },
-              { key: 'pending', label: 'Pending', count: pendingCount },
-              { key: 'approved', label: 'Approved', count: approvedCount },
-              { key: 'rejected', label: 'Rejected', count: rejectedCount },
-            ].map((f) => (
+            {(
+              [
+                { key: 'all', label: 'All', count: counts ? counts.pending + counts.approved + counts.rejected : undefined },
+                { key: 'pending', label: 'Pending', count: counts?.pending },
+                { key: 'approved', label: 'Approved', count: counts?.approved },
+                { key: 'rejected', label: 'Rejected', count: counts?.rejected },
+              ] as { key: StatusFilter; label: string; count?: number }[]
+            ).map((f) => (
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setStatusFilter(f.key as typeof statusFilter)}
+                onClick={() => setStatusFilter(f.key)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150',
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
                   statusFilter === f.key
                     ? 'bg-foreground text-background border-foreground'
                     : 'bg-card text-muted-foreground border-border hover:border-foreground/30',
                 )}
               >
                 {f.label}
-                <span className={cn('tabular-nums', statusFilter === f.key ? 'text-background/70' : 'text-muted-foreground')}>{f.count}</span>
+                <span className={cn('tabular-nums', statusFilter === f.key ? 'text-background/70' : 'text-muted-foreground')}>{n(f.count)}</span>
               </button>
             ))}
           </div>
@@ -151,178 +161,98 @@ export function FreeRequestsPage() {
       </Card>
 
       {/* Desktop Table */}
-      <Card className="border-border/70 shadow-2xs bg-card overflow-hidden hidden sm:block">
+      <Card className={cn('border-border/70 shadow-2xs bg-card overflow-hidden hidden sm:block', isFetching && 'opacity-80')}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-medium tracking-wide">
                 <th className="py-3.5 px-4">#</th>
-                <th className="py-3.5 px-4">Applicant Lead</th>
-                <th className="py-3.5 px-4 hidden lg:table-cell">Email</th>
-                <th className="py-3.5 px-4">Coverage Area</th>
-                <th className="py-3.5 px-4 hidden lg:table-cell">Reseller</th>
-                <th className="py-3.5 px-4 hidden xl:table-cell">Temporary Expiry</th>
+                <th className="py-3.5 px-4">Customer</th>
+                <th className="py-3.5 px-4 hidden lg:table-cell">Requested by</th>
+                <th className="py-3.5 px-4 hidden xl:table-cell">Current Expiry</th>
                 <th className="py-3.5 px-4">Request Date</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
-              {filtered.length === 0 ? (
+              {requests.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     No requests match the current filter.
                   </td>
                 </tr>
               ) : (
-                filtered.map((req, i) => (
-                  <tr
-                    key={req.id}
-                    className="hover:bg-muted/30 transition-colors group"
-                    style={{ animationDelay: `${320 + i * 40}ms` }}
-                  >
-                    <td className="py-3.5 px-4 text-muted-foreground font-mono text-xs">{i + 1}</td>
+                requests.map((req, i) => (
+                  <tr key={req.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="py-3.5 px-4 text-muted-foreground font-mono text-xs">{(page - 1) * pageSize + i + 1}</td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 transition-transform duration-200 shrink-0">
-                          {req.name.slice(-1).toUpperCase()}
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 shrink-0">
+                          {req.customerName.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-semibold text-foreground text-sm">{req.name}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{req.phone}</div>
+                          <Link href={`/admin/customers/${req.customerId}`} className="font-semibold text-foreground text-sm hover:text-primary hover:underline">
+                            {req.customerName || `#${req.customerId}`}
+                          </Link>
+                          <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{req.customerMobile || '—'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 hidden lg:table-cell">
-                      {req.email ? (
-                        <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                          <Mail className="h-3 w-3" /> {req.email}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground/50 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="flex items-center gap-1 text-foreground text-xs">
-                        <MapPin className="h-3 w-3 text-muted-foreground" /> {req.area}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 hidden lg:table-cell">
-                      {req.reseller ? (
-                        <Badge variant="outline" className="text-[10px] font-medium bg-muted/30">{req.reseller}</Badge>
+                      {req.resellerName ? (
+                        <Badge variant="outline" className="text-[10px] font-medium bg-muted/30">{req.resellerName}</Badge>
                       ) : (
                         <span className="text-muted-foreground/50 text-xs">Direct</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4 hidden xl:table-cell">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {req.temporaryExpiry ? new Date(req.temporaryExpiry).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">{fmtDate(req.customerExpiry)}</span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {new Date(req.requestedAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">{fmtDate(req.requestedAt)}</span>
                     </td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={req.status} />
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      {req.status === 'pending' ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            className="h-7 text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white"
-                            onClick={() => handleApprove(req)}
-                          >
-                            <ThumbsUp className="mr-1 h-3 w-3" /> Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-[11px] text-destructive border-destructive/30 hover:bg-destructive/10"
-                            onClick={() => setRejectId(req.id)}
-                          >
-                            <ThumbsDown className="mr-1 h-3 w-3" /> Reject
-                          </Button>
-                        </div>
-                      ) : req.status === 'approved' ? (
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium justify-end">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs text-red-500 font-medium justify-end">
-                          <XCircle className="h-3.5 w-3.5" /> Rejected
-                        </span>
-                      )}
-                    </td>
+                    <td className="py-3.5 px-4 text-right">{actionCell(req)}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
+        <TablePagination
+          currentPage={page}
+          pageSize={pageSize}
+          totalItems={data?.meta.total ?? 0}
+          onPageChange={(p) => setPageState({ key: pageKey, page: p })}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+        />
       </Card>
 
       {/* Mobile Card Layout */}
       <div className="sm:hidden space-y-3">
-        {filtered.length === 0 ? (
+        {requests.length === 0 ? (
           <Card className="border-border/70 shadow-2xs bg-card p-8 text-center text-muted-foreground text-sm">
             No requests match the current filter.
           </Card>
         ) : (
-          filtered.map((req, i) => (
-            <Card
-              key={req.id}
-              className="border-border/70 bg-card shadow-2xs p-4 space-y-3 hover:shadow-md transition-all duration-200"
-              style={{ animationDelay: `${i * 60}ms` }}
-            >
+          requests.map((req) => (
+            <Card key={req.id} className="border-border/70 bg-card shadow-2xs p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 shrink-0">
-                    {req.name.slice(-1).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground text-sm truncate">{req.name}</h3>
-                    <p className="text-[11px] text-muted-foreground font-mono">{req.phone}</p>
-                  </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm truncate">{req.customerName || `#${req.customerId}`}</h3>
+                  <p className="text-[11px] text-muted-foreground font-mono">{req.customerMobile || '—'}</p>
                 </div>
                 <StatusBadge status={req.status} />
               </div>
-
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <MapPin className="h-3 w-3" /> {req.area}
-                </div>
-                {req.email && (
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Mail className="h-3 w-3" /> {req.email}
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Calendar className="h-3 w-3" /> {new Date(req.requestedAt).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" /> {fmtDate(req.requestedAt)}
+                {req.resellerName ? ` · ${req.resellerName}` : ''}
               </div>
-
-              {req.status === 'pending' && (
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    className="flex-1 h-8 text-xs bg-emerald-500 hover:bg-emerald-600 text-white"
-                    onClick={() => handleApprove(req)}
-                  >
-                    <ThumbsUp className="mr-1 h-3 w-3" /> Approve Trial
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                    onClick={() => setRejectId(req.id)}
-                  >
-                    <ThumbsDown className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              {req.status === 'pending' && actionCell(req, true)}
             </Card>
           ))
         )}
@@ -330,13 +260,18 @@ export function FreeRequestsPage() {
 
       {/* Reject Confirmation */}
       <ConfirmDialog
-        open={!!rejectId}
-        onOpenChange={(open) => !open && setRejectId(null)}
+        open={rejectTarget !== null}
+        onOpenChange={(open) => !open && setRejectTarget(null)}
         title="Reject Free User Request?"
-        description="This will decline the trial application. The applicant will not receive access."
+        description="The customer's billing status goes back to active (normal billing)."
         confirmLabel="Reject Request"
         destructive
-        onConfirm={handleReject}
+        onConfirm={async () => {
+          if (rejectTarget) {
+            await rejectFreeRequest.mutateAsync(rejectTarget.id);
+            setRejectTarget(null);
+          }
+        }}
       />
     </div>
   );

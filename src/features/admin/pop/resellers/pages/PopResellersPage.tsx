@@ -1,119 +1,58 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import {
-  Building2,
-  Users,
-  Phone,
-  LogIn,
-  Plus,
-  Download,
-  Search,
-  Wallet,
-  Activity,
-  ArrowUpRight,
-  ShieldCheck,
-  MapPin,
-  UserCheck,
-  TrendingUp,
-  CreditCard,
-  Wifi,
-  ExternalLink,
-} from 'lucide-react';
-import { usePopData } from '../../hooks/use-pop';
+import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Building2, Users, Phone, Plus, Download, Wallet, MapPin, CreditCard } from 'lucide-react';
+import { usePops, type PopReseller } from '../../hooks/use-pop';
+import { RegisterPopDialog } from '../../components/RegisterPopDialog';
+import { LoginAsPopDialog } from '../../components/LoginAsPopDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/features/shared/data-table';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import type { LegacyColumnDef, LegacyRow } from '@tanstack/react-table/legacy';
-import type { PopReseller } from '../../hooks/use-pop';
-import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { downloadCsv } from '@/features/admin/accounting/shared/table-utils';
+
+type StatusFilter = '' | 'active' | 'inactive';
 
 export function PopResellersPage() {
-  const { data, isLoading, isError, refetch } = usePopData();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<StatusFilter>('');
+  const { data, isLoading, isError, error, refetch } = usePops({ page, pageSize, search, status });
   const [selectedReseller, setSelectedReseller] = useState<PopReseller | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newPop, setNewPop] = useState({
-    name: '',
-    area: '',
-    contact: '',
-    manager: '',
-    initialBalance: 50000,
-  });
+  const [loginAs, setLoginAs] = useState<PopReseller | null>(null);
 
-  const resellers = data?.resellers ?? [];
+  const onSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, []);
 
-  const stats = useMemo(() => {
-    const totalBalance = resellers.reduce((s, r) => s + r.balanceBdt, 0);
-    const totalCustomers = resellers.reduce((s, r) => s + r.customers, 0);
-    const activeCount = resellers.filter((r) => r.status === 'active').length;
-    const avgCustomers = resellers.length ? Math.round(totalCustomers / resellers.length) : 0;
-    return { totalBalance, totalCustomers, activeCount, avgCustomers };
-  }, [resellers]);
+  const resellers = useMemo(() => data?.items ?? [], [data?.items]);
+  const total = data?.meta.total ?? 0;
 
-  const handleExportCsv = () => {
-    const headers = ['POP Name', 'Area', 'Balance (BDT)', 'Customers', 'Contact', 'Status'];
-    const rows = resellers.map((r) => [
-      r.name,
-      r.area,
-      r.balanceBdt,
-      r.customers,
-      r.contact,
-      r.status,
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `pop_resellers_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('POP Reseller directory exported to CSV');
-  };
+  const pageStats = useMemo(
+    () => ({
+      balance: resellers.reduce((s, r) => s + r.balanceBdt, 0),
+      customers: resellers.reduce((s, r) => s + r.customers, 0),
+      active: resellers.filter((r) => r.status === 'active').length,
+    }),
+    [resellers],
+  );
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPop.name || !newPop.area) {
-      toast.error('Please enter POP name and coverage area');
-      return;
-    }
-    toast.success(`POP Reseller "${newPop.name}" registered successfully (mock)`);
-    setAddDialogOpen(false);
-    setNewPop({ name: '', area: '', contact: '', manager: '', initialBalance: 50000 });
-  };
-
-  const popSearchFilter = (
-    row: LegacyRow<PopReseller>,
-    _columnId: string,
-    filterValue: unknown,
-  ) => {
-    const q = String(filterValue ?? '').toLowerCase().trim();
-    if (!q) return true;
-    const r = row.original;
-    return (
-      r.name.toLowerCase().includes(q) ||
-      r.area.toLowerCase().includes(q) ||
-      r.contact.toLowerCase().includes(q)
+  const handleExportCsv = () =>
+    downloadCsv(
+      `pop_resellers_${new Date().toISOString().slice(0, 10)}.csv`,
+      ['POP ID', 'POP Name', 'Mobile', 'Email', 'Address', 'Billing', 'Balance (BDT)', 'Customers', 'Status'],
+      resellers.map((r) => [r.id, r.name, r.mobile, r.email, r.address, r.billingType, r.balanceBdt, r.customers, r.status]),
     );
-  };
 
   const columns = useMemo<LegacyColumnDef<PopReseller, unknown>[]>(
     () => [
@@ -130,13 +69,19 @@ export function PopResellersPage() {
                 <Building2 className="h-4 w-4" />
               </div>
               <div>
-                <div className="font-bold text-sm text-foreground hover:text-primary transition-colors cursor-pointer" onClick={() => setSelectedReseller(r)}>
+                <button
+                  type="button"
+                  className="font-bold text-sm text-foreground hover:text-primary transition-colors text-left"
+                  onClick={() => setSelectedReseller(r)}
+                >
                   {r.name}
-                </div>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
-                  <MapPin className="h-3 w-3 text-primary/70 shrink-0" />
-                  <span>{r.area}</span>
-                </div>
+                </button>
+                {r.address && (
+                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-0.5">
+                    <MapPin className="h-3 w-3 text-primary/70 shrink-0" />
+                    <span className="line-clamp-1">{r.address}</span>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -146,47 +91,47 @@ export function PopResellersPage() {
         accessorKey: 'balanceBdt',
         header: 'Wallet Balance',
         size: 140,
-        cell: ({ row }) => {
-          const bal = row.original.balanceBdt;
-          const isLow = bal < 10000;
-          return (
-            <div>
-              <div className={cn('font-mono font-bold text-sm', isLow ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400')}>
-                <CurrencyDisplay amount={bal} />
-              </div>
-              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                <Wallet className="h-2.5 w-2.5" />
-                {isLow ? 'Low balance alert' : 'Prepaid balance'}
-              </div>
+        cell: ({ row }) => (
+          <div>
+            <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+              <CurrencyDisplay amount={row.original.balanceBdt} />
             </div>
-          );
-        },
+            <div className="text-[10px] text-muted-foreground flex items-center gap-1 capitalize">
+              <Wallet className="h-2.5 w-2.5" />
+              {row.original.billingType}
+              {!row.original.fundEnabled && ' · funding off'}
+            </div>
+          </div>
+        ),
       },
       {
         accessorKey: 'customers',
         header: 'Subscribers',
         size: 130,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5">
+          <div className="space-y-0.5">
             <span className="inline-flex items-center justify-center h-6 px-2 rounded-md bg-secondary/80 border border-border/50 text-xs font-bold font-mono">
               <Users className="h-3 w-3 mr-1 text-primary" />
               {row.original.customers}
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              {row.original.clientsEnabled} enabled · {row.original.clientsDisabled} expired
             </span>
           </div>
         ),
       },
       {
-        accessorKey: 'contact',
+        accessorKey: 'mobile',
         header: 'Primary Contact',
-        size: 160,
+        size: 170,
         cell: ({ row }) => (
           <div className="space-y-0.5">
             <span className="flex items-center gap-1.5 font-mono text-xs font-medium text-foreground">
-              <Phone className="h-3 w-3 text-muted-foreground" /> {row.original.contact}
+              <Phone className="h-3 w-3 text-muted-foreground" /> {row.original.mobile || '—'}
             </span>
-            <span className="text-[10px] text-muted-foreground block">
-              Direct Desk Contact
-            </span>
+            {row.original.email && (
+              <span className="text-[10px] text-muted-foreground block truncate max-w-[160px]">{row.original.email}</span>
+            )}
           </div>
         ),
       },
@@ -199,31 +144,29 @@ export function PopResellersPage() {
       {
         id: 'actions',
         header: '',
-        size: 160,
-        cell: ({ row }) => {
-          const r = row.original;
-          return (
-            <div className="flex items-center justify-end gap-1.5">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2.5 text-xs hover:bg-primary/10 hover:text-primary gap-1"
-                onClick={() => setSelectedReseller(r)}
-              >
-                Details
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 px-2.5 text-xs gap-1 border-border/80 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 shadow-2xs"
-                onClick={() => toast.success(`Switched portal session to POP "${r.name}" (mock)`)}
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                Login POP
-              </Button>
-            </div>
-          );
-        },
+        size: 170,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2.5 text-xs hover:bg-primary/10 hover:text-primary gap-1"
+              disabled={row.original.status !== 'active'}
+              title={row.original.status !== 'active' ? 'Inactive POPs cannot be accessed' : undefined}
+              onClick={() => setLoginAs(row.original)}
+            >
+              Log in as
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2.5 text-xs hover:bg-primary/10 hover:text-primary gap-1"
+              onClick={() => setSelectedReseller(row.original)}
+            >
+              Details
+            </Button>
+          </div>
+        ),
       },
     ],
     [],
@@ -234,7 +177,7 @@ export function PopResellersPage() {
     return (
       <EmptyState
         title="Failed to load POP resellers"
-        description="Could not fetch POP directory from system database."
+        description={error?.message ?? 'Could not fetch the POP directory.'}
         actionLabel="Retry"
         onAction={() => refetch()}
       />
@@ -257,9 +200,10 @@ export function PopResellersPage() {
               variant="outline"
               size="sm"
               onClick={handleExportCsv}
+              disabled={resellers.length === 0}
               className="text-xs border-border/80 hover:bg-accent"
             >
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Directory
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Page
             </Button>
             <Button
               size="sm"
@@ -275,41 +219,65 @@ export function PopResellersPage() {
       {/* KPI Stats Ribbon */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{resellers.length}</span>{' '}
-          <span className="text-muted-foreground">registered POPs · {stats.activeCount} active</span>
+          <span className="font-semibold tabular-nums text-foreground">{total}</span>{' '}
+          <span className="text-muted-foreground">
+            registered POPs{status ? ` (${status})` : ''}
+          </span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-            <CurrencyDisplay amount={stats.totalBalance} className="inline font-semibold" />
+            <CurrencyDisplay amount={pageStats.balance} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">combined wallet balance</span>
+          <span className="text-muted-foreground">wallet balance on this page</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{stats.totalCustomers.toLocaleString()}</span>{' '}
-          <span className="text-muted-foreground">downstream customers</span>
-        </p>
-        <p>
-          <span className="font-semibold tabular-nums text-foreground">{stats.avgCustomers}</span>{' '}
-          <span className="text-muted-foreground">avg customers / POP</span>
+          <span className="font-semibold tabular-nums text-foreground">{pageStats.customers.toLocaleString()}</span>{' '}
+          <span className="text-muted-foreground">customers on this page · {pageStats.active} active POPs</span>
         </p>
       </div>
 
-      {/* Main Table */}
       <DataTable
         columns={columns}
         data={resellers}
         getRowId={(row) => row.id}
-        searchKey="name"
-        searchPlaceholder="Search POP name, coverage area, contact phone..."
-        searchFilterFn={popSearchFilter}
-        facetFilters={[
-          { columnId: 'status', title: 'Status' },
-        ]}
-        emptyTitle="No POP resellers found"
+        searchPlaceholder="Search POP name, mobile or email..."
+        emptyTitle={search || status ? 'No POPs match your filters' : 'No POP resellers yet'}
         emptyDescription="Add POP reseller partners to distribute packages in remote and suburban zones."
+        server={{
+          page,
+          pageSize,
+          total,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size);
+            setPage(1);
+          },
+          search,
+          onSearchChange,
+        }}
+        toolbarActions={
+          <Select
+            value={status || 'all'}
+            onValueChange={(v) => {
+              setStatus(v === 'active' || v === 'inactive' ? v : '');
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[130px] text-xs">
+              <SelectValue>
+                {(v: string | null) => (v === 'active' ? 'Active' : v === 'inactive' ? 'Inactive' : 'All statuses')}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        }
       />
 
-      {/* POP Inspector Details Dialog */}
+      {/* POP Details Dialog */}
       <Dialog open={!!selectedReseller} onOpenChange={(open) => !open && setSelectedReseller(null)}>
         <DialogContent className="max-w-lg p-6 border-border/80 shadow-[var(--shadow-md)]">
           <DialogHeader className="border-b pb-4">
@@ -321,7 +289,7 @@ export function PopResellersPage() {
                 <div>
                   <DialogTitle className="text-base font-bold">{selectedReseller?.name}</DialogTitle>
                   <DialogDescription className="text-xs flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-3 w-3 text-primary" /> {selectedReseller?.area}
+                    <MapPin className="h-3 w-3 text-primary" /> {selectedReseller?.address || '—'}
                   </DialogDescription>
                 </div>
               </div>
@@ -335,141 +303,55 @@ export function PopResellersPage() {
                 <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
                   <span className="text-muted-foreground text-[11px] block">Wallet Balance</span>
                   <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    ৳{selectedReseller.balanceBdt.toLocaleString()}
+                    <CurrencyDisplay amount={selectedReseller.balanceBdt} />
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
-                  <span className="text-muted-foreground text-[11px] block">Active Subscribers</span>
-                  <div className="text-lg font-bold font-mono text-foreground">
-                    {selectedReseller.customers} Users
-                  </div>
+                  <span className="text-muted-foreground text-[11px] block">Subscribers</span>
+                  <div className="text-lg font-bold font-mono text-foreground">{selectedReseller.customers} Users</div>
                 </div>
               </div>
 
               <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Reseller ID:</span>
-                  <span className="font-mono font-semibold text-foreground">{selectedReseller.id}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Contact Phone:</span>
-                  <span className="font-mono font-semibold text-foreground">{selectedReseller.contact}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Coverage Territory:</span>
-                  <span className="font-medium text-foreground">{selectedReseller.area}</span>
-                </div>
-                <div className="flex justify-between items-center py-0.5">
-                  <span className="text-muted-foreground">Assigned Billing Policy:</span>
-                  <span className="font-medium text-primary">Prepaid Reseller Allocation</span>
-                </div>
+                {[
+                  ['Reseller ID', selectedReseller.id],
+                  ['Contact Phone', selectedReseller.mobile || '—'],
+                  ['Email', selectedReseller.email || '—'],
+                  ['Billing Type', selectedReseller.billingType],
+                  ['Wallet Funding', selectedReseller.fundEnabled ? 'Enabled' : 'Disabled'],
+                  [
+                    'Clients (enabled / expired / left)',
+                    `${selectedReseller.clientsEnabled} / ${selectedReseller.clientsDisabled} / ${selectedReseller.clientsLeft}`,
+                  ],
+                ].map(([label, value], i, arr) => (
+                  <div
+                    key={label}
+                    className={`flex justify-between items-center py-0.5 ${i < arr.length - 1 ? 'border-b border-border/40' : ''}`}
+                  >
+                    <span className="text-muted-foreground">{label}:</span>
+                    <span className="font-mono font-semibold text-foreground capitalize">{value}</span>
+                  </div>
+                ))}
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    toast.success(`Funding request opened for ${selectedReseller.name}`);
-                    setSelectedReseller(null);
-                  }}
-                  className="text-xs"
-                >
-                  <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Top-Up Wallet
+                <Button size="sm" variant="outline" onClick={() => setSelectedReseller(null)} className="text-xs">
+                  Close
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    toast.success(`Switched portal session to POP "${selectedReseller.name}" (mock)`);
-                    setSelectedReseller(null);
-                  }}
-                  className="text-xs font-semibold"
+                <Link
+                  href="/admin/pop/funding"
+                  className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
                 >
-                  <LogIn className="mr-1.5 h-3.5 w-3.5" /> Impersonate POP
-                </Button>
+                  <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Fund Wallet
+                </Link>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Register New POP Partner Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-md p-6 border-border/80 shadow-[var(--shadow-md)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-primary" /> Register New POP Reseller
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Establish a new Point-of-Presence franchise partner with an allocated wallet.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAddSubmit} className="space-y-3.5 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">POP Reseller Name *</Label>
-              <Input
-                placeholder="e.g. Skyline POP Uttara Sector 14"
-                value={newPop.name}
-                onChange={(e) => setNewPop({ ...newPop, name: e.target.value })}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Coverage Territory / Area *</Label>
-              <Input
-                placeholder="e.g. Sector 14, Uttara, Dhaka"
-                value={newPop.area}
-                onChange={(e) => setNewPop({ ...newPop, area: e.target.value })}
-                className="text-xs h-9"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Contact Person</Label>
-                <Input
-                  placeholder="Manager Name"
-                  value={newPop.manager}
-                  onChange={(e) => setNewPop({ ...newPop, manager: e.target.value })}
-                  className="text-xs h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Phone Number</Label>
-                <Input
-                  placeholder="+880 1700-000000"
-                  value={newPop.contact}
-                  onChange={(e) => setNewPop({ ...newPop, contact: e.target.value })}
-                  className="text-xs h-9 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Initial Wallet Funding (BDT)</Label>
-              <Input
-                type="number"
-                value={newPop.initialBalance}
-                onChange={(e) => setNewPop({ ...newPop, initialBalance: Number(e.target.value) })}
-                className="text-xs h-9 font-mono"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <Button type="button" variant="outline" size="sm" onClick={() => setAddDialogOpen(false)} className="text-xs">
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" className="text-xs font-semibold">
-                Register POP
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <RegisterPopDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <LoginAsPopDialog pop={loginAs} onClose={() => setLoginAs(null)} />
     </div>
   );
 }

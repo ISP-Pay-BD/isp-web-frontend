@@ -1,45 +1,51 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { mockFetch } from '@/lib/mock-api/client';
-import type { MeteringRow, SlaRow, TenantHealthCard, BillingModeRow } from '@/data/platform/catalog.data';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { platformService } from '@/lib/api/services/platform.service';
 
-export function usePlatformMetering() {
+export function usePlatformMetering(page: number, perPage: number, search: string) {
   return useQuery({
-    queryKey: ['platform', 'domain', 'metering'],
-    queryFn: async () => {
-      const res = (await mockFetch('platform.domain', 'metering')) as { items: MeteringRow[] };
-      return res.items;
-    },
+    queryKey: ['platform', 'metering', { page, perPage, search }],
+    queryFn: () => platformService.getMetering({ page, perPage, search }),
+    placeholderData: keepPreviousData,
   });
 }
 
-export function usePlatformSla() {
+export function usePlatformSla(page: number, perPage: number, search: string) {
   return useQuery({
-    queryKey: ['platform', 'domain', 'sla'],
-    queryFn: async () => {
-      const res = (await mockFetch('platform.domain', 'sla')) as { items: SlaRow[] };
-      return res.items;
-    },
+    queryKey: ['platform', 'sla', { page, perPage, search }],
+    queryFn: () => platformService.getSla({ page, perPage, search }),
+    placeholderData: keepPreviousData,
   });
 }
 
 export function useTenantHealth(tenantId: string) {
   return useQuery({
-    queryKey: ['platform', 'domain', 'tenantHealth', tenantId],
-    queryFn: async () => {
-      const map = (await mockFetch('platform.domain', 'tenantHealth')) as Record<string, TenantHealthCard>;
-      return map[tenantId] ?? map.tenant_demo ?? map.ten_01;
-    },
+    queryKey: ['platform', 'tenants', tenantId, 'health'],
+    queryFn: () => platformService.getTenantHealth(tenantId),
+    enabled: Boolean(tenantId),
   });
 }
 
-export function useBillingMode(adminId: string) {
+export function useAdminBilling(adminId: string) {
   return useQuery({
-    queryKey: ['platform', 'domain', 'billingModes', adminId],
-    queryFn: async () => {
-      const res = (await mockFetch('platform.domain', 'billingModes')) as { items: BillingModeRow[] };
-      return res.items.find((r) => r.adminId === adminId) ?? res.items[0];
+    queryKey: ['platform', 'admins', adminId, 'billing'],
+    queryFn: () => platformService.getAdminBilling(adminId),
+    enabled: Boolean(adminId),
+  });
+}
+
+export function useUpdateAdminBilling(adminId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { mode: 'fixed' | 'payg'; package_id?: number }) =>
+      platformService.updateAdminBilling(adminId, payload),
+    onSuccess: (data) => {
+      qc.setQueryData(['platform', 'admins', adminId, 'billing'], data);
+      void qc.invalidateQueries({ queryKey: ['platform', 'admins', 'list'] });
+      void qc.invalidateQueries({ queryKey: ['platform', 'revenue'] });
+      toast.success(data.mode === 'payg' ? 'Switched to Pay-As-You-Go' : `Package set to ${data.package?.name ?? 'the selected plan'}`);
     },
   });
 }
