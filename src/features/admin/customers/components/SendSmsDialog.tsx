@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useTranslations } from '@/i18n/locale-context';
 import { useCustomerActions } from '../hooks/use-customers';
 
 interface SendSmsDialogProps {
@@ -24,7 +25,8 @@ interface SendSmsDialogProps {
 }
 
 /** SMS to selected customers through the reseller SMS gateway. */
-export function SendSmsDialog({ open, onOpenChange, ids, title = 'Send SMS', onSent }: SendSmsDialogProps) {
+export function SendSmsDialog({ open, onOpenChange, ids, title, onSent }: SendSmsDialogProps) {
+  const t = useTranslations();
   const { sendSms } = useCustomerActions();
   const [message, setMessage] = useState('');
 
@@ -47,28 +49,28 @@ export function SendSmsDialog({ open, onOpenChange, ids, title = 'Send SMS', onS
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-blue-500" />
-            {title}
+            {title ?? t('admin.customers.sms.title', 'Send SMS')}
           </DialogTitle>
           <DialogDescription>
-            Message <strong className="text-foreground">{ids.length}</strong> selected customer{ids.length === 1 ? '' : 's'}.
+            {t('admin.customers.sms.description', 'Message {count} selected customer(s).', { count: ids.length })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5 py-2">
-          <Label className="text-xs font-semibold">Message</Label>
+          <Label className="text-xs font-semibold">{t('admin.customers.sms.message', 'Message')}</Label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
-            placeholder="Type the SMS text…"
+            placeholder={t('admin.customers.sms.placeholder', 'Type the SMS text…')}
             className="w-full rounded-md border border-border/80 bg-background p-2.5 text-xs focus:ring-1 focus:ring-primary shadow-inner"
           />
-          <p className="text-[11px] text-muted-foreground">
-            {message.length} characters · {Math.max(1, Math.ceil(message.length / 160))} SMS part(s)
+          <p className="text-xs text-muted-foreground">
+            {t('admin.customers.sms.counter', '{chars} characters · {parts} SMS part(s)', { chars: message.length, parts: Math.max(1, Math.ceil(message.length / 160)) })}
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('admin.customers.sms.cancel', 'Cancel')}
           </Button>
           <Button
             size="sm"
@@ -76,7 +78,7 @@ export function SendSmsDialog({ open, onOpenChange, ids, title = 'Send SMS', onS
             disabled={!message.trim() || ids.length === 0 || sendSms.isPending}
             className="bg-blue-600 hover:bg-blue-700 text-white gap-1"
           >
-            <Send className="h-3.5 w-3.5" /> {sendSms.isPending ? 'Sending…' : 'Send'}
+            <Send className="h-3.5 w-3.5" /> {sendSms.isPending ? t('admin.customers.sms.sending', 'Sending…') : t('admin.customers.sms.send', 'Send')}
           </Button>
         </DialogFooter>
       </DialogContent>

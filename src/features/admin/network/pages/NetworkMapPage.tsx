@@ -12,6 +12,8 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { MapPin, MapPinOff, Layers, RadioTower, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 // mapbox-gl is heavy and browser-only: load the shared map on the client only.
 const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
@@ -76,6 +78,7 @@ const levelColors: Record<
 const isPlaced = (n: MapNode) => n.latitude !== null && n.longitude !== null;
 
 export function NetworkMapPage() {
+  const t = useTranslations();
   const { data, isLoading, isError, refetch } = useNetworkNodes();
   const [selectedLevel, setSelectedLevel] = useState<'all' | MapLevel>('all');
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -108,10 +111,10 @@ export function NetworkMapPage() {
   if (isError || !data) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load network map"
-          description="Could not fetch network map nodes."
-          actionLabel="Retry"
+        <EmptyState variant="error"
+          title={t('admin.network.map.loadFailed', 'Failed to load network map')}
+          description={t('admin.network.map.loadFailedDesc', 'Could not fetch network map nodes.')}
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => refetch()}
         />
       </div>
@@ -121,19 +124,19 @@ export function NetworkMapPage() {
   return (
     <div className="w-full space-y-6 pb-12">
       <PageHeader
-        title="Network Geographic Mapping"
-        subtitle="Geographic distribution of your network nodes and their parent hierarchy"
+        title={t('admin.network.map.title', 'Network Geographic Mapping')}
+        subtitle={t('admin.network.map.subtitle', 'Geographic distribution of your network nodes and their parent hierarchy')}
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Network' },
-          { label: 'Mapping' },
+          { label: t('admin.network.map.crumb', 'Mapping') },
         ]}
       />
 
       {nodes.length === 0 ? (
         <EmptyState
-          title="No network nodes yet"
-          description="Nodes added to your network map (with their coordinates) appear here."
+          title={t('admin.network.map.empty', 'No network nodes yet')}
+          description={t('admin.network.map.emptyDesc', 'Nodes added to your network map (with their coordinates) appear here.')}
         />
       ) : (
       <Card className="overflow-hidden border-border/60 shadow-sm ring-1 ring-border/60">
@@ -143,15 +146,17 @@ export function NetworkMapPage() {
               <RadioTower className="h-4 w-4 text-primary" />
             </span>
             <div>
-              <CardTitle className="text-sm font-semibold">Network Topology Map</CardTitle>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {placed.length} of {filtered.length} nodes placed on the map
-                {data.truncated ? ` · first ${nodes.length} of ${data.total} nodes loaded` : ''}
+              <CardTitle className="text-sm font-semibold">{t('admin.network.map.cardTitle', 'Network Topology Map')}</CardTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t('admin.network.map.placed', '{placed} of {total} nodes placed on the map', { placed: formatCount(placed.length), total: formatCount(filtered.length) })}
+                {data.truncated
+                  ? ` · ${t('admin.network.map.truncated', 'first {shown} of {total} nodes loaded', { shown: formatCount(nodes.length), total: formatCount(data.total) })}`
+                  : ''}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5" aria-label="Marker hierarchy levels">
+          <div className="flex flex-wrap items-center gap-1.5" aria-label={t('admin.network.map.levels', 'Marker hierarchy levels')}>
             <button
               type="button"
               onClick={() => setSelectedLevel('all')}
@@ -162,7 +167,7 @@ export function NetworkMapPage() {
                   : 'border-border/60 bg-card text-muted-foreground hover:border-primary/30 hover:bg-primary/5 hover:text-foreground',
               )}
             >
-              All Nodes ({nodes.length})
+              {t('admin.network.map.allNodes', 'All Nodes ({n})', { n: formatCount(nodes.length) })}
             </button>
             {MAP_LEVELS.map((lvl) => {
               const count = nodes.filter((n) => n.level === lvl).length;
@@ -183,7 +188,7 @@ export function NetworkMapPage() {
                 >
                   <span className={cn('h-2 w-2 rounded-full', style.dot)} />
                   <span>{lvl}</span>
-                  <span className="text-[10px] opacity-60">({count})</span>
+                  <span className="text-xs opacity-60">({formatCount(count)})</span>
                 </button>
               );
             })}
@@ -198,7 +203,7 @@ export function NetworkMapPage() {
               onSelect={(id) => setActiveId(id)}
               height="100%"
               className="absolute inset-4 md:inset-5 ring-1 ring-border/40"
-              emptyMessage="None of these nodes has coordinates yet — see the list beside the map."
+              emptyMessage={t('admin.network.map.noCoords', 'None of these nodes has coordinates yet — see the list beside the map.')}
               renderMarker={(marker, selected) => {
                 const node = byId.get(marker.id);
                 const style = levelColors[node?.level ?? 'L1'];
@@ -207,7 +212,7 @@ export function NetworkMapPage() {
                     <span className={cn('absolute h-8 w-8 rounded-full opacity-35', style.dot)} />
                     <div
                       className={cn(
-                        'flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/90 text-[10px] font-bold text-white shadow-lg',
+                        'flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/90 text-xs font-bold text-white shadow-lg',
                         style.dot,
                         selected && 'ring-2 ring-offset-2 ring-offset-background',
                         selected && style.ring,
@@ -226,7 +231,7 @@ export function NetworkMapPage() {
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/15">
                 <Layers className="h-3.5 w-3.5 text-primary" />
               </span>
-              Node Inspector
+              {t('admin.network.map.inspector', 'Node Inspector')}
             </h3>
 
             {activeNode ? (
@@ -245,7 +250,7 @@ export function NetworkMapPage() {
                   {activeNode.parentLabel && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <GitBranch className="h-3 w-3" />
-                      Under {activeNode.parentLabel}
+                      {t('admin.network.map.under', 'Under {name}', { name: activeNode.parentLabel })}
                     </div>
                   )}
                 </div>
@@ -253,7 +258,7 @@ export function NetworkMapPage() {
                 <Badge
                   variant="outline"
                   className={cn(
-                    'font-mono text-[10px]',
+                    'font-mono text-xs',
                     levelColors[activeNode.level].text,
                     levelColors[activeNode.level].border,
                   )}
@@ -263,14 +268,14 @@ export function NetworkMapPage() {
 
                 <div className="space-y-2.5 border-t border-border/50 pt-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Coordinates</span>
+                    <span className="text-xs text-muted-foreground">{t('admin.network.map.coordinates', 'Coordinates')}</span>
                     <span className="font-mono text-xs">
-                      {isPlaced(activeNode) ? `${activeNode.latitude}, ${activeNode.longitude}` : 'Not set'}
+                      {isPlaced(activeNode) ? `${activeNode.latitude}, ${activeNode.longitude}` : t('admin.network.map.notSet', 'Not set')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Child nodes</span>
-                    <span className="text-xs font-bold text-foreground">{activeNode.childCount}</span>
+                    <span className="text-xs text-muted-foreground">{t('admin.network.map.children', 'Child nodes')}</span>
+                    <span className="text-xs font-bold text-foreground">{formatCount(activeNode.childCount)}</span>
                   </div>
                 </div>
 
@@ -280,7 +285,7 @@ export function NetworkMapPage() {
                   className="mt-2 w-full text-xs"
                   onClick={() => setActiveId(null)}
                 >
-                  Clear Selection
+                  {t('admin.network.map.clearSelection', 'Clear Selection')}
                 </Button>
               </div>
             ) : (
@@ -289,9 +294,9 @@ export function NetworkMapPage() {
                   <MapPin className="h-6 w-6 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-foreground">No node selected</p>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                    Click a node on the map or in the list below to inspect it.
+                  <p className="text-xs font-semibold text-foreground">{t('admin.network.map.noneSelected', 'No node selected')}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                    {t('admin.network.map.selectHint', 'Click a node on the map or in the list below to inspect it.')}
                   </p>
                 </div>
               </div>
@@ -301,7 +306,7 @@ export function NetworkMapPage() {
               <div className="space-y-2 border-t border-border/50 pt-4">
                 <h4 className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   <MapPinOff className="h-3.5 w-3.5" />
-                  Without coordinates ({unplaced.length})
+                  {t('admin.network.map.withoutCoords', 'Without coordinates ({n})', { n: formatCount(unplaced.length) })}
                 </h4>
                 <ul className="max-h-64 space-y-1 overflow-y-auto">
                   {unplaced.map((n) => (
@@ -318,7 +323,7 @@ export function NetworkMapPage() {
                           <span className={cn('h-2 w-2 shrink-0 rounded-full', levelColors[n.level].dot)} />
                           <span className="truncate">{n.label}</span>
                         </span>
-                        <span className="font-mono text-[10px] text-muted-foreground">{n.level}</span>
+                        <span className="font-mono text-xs text-muted-foreground">{n.level}</span>
                       </button>
                     </li>
                   ))}

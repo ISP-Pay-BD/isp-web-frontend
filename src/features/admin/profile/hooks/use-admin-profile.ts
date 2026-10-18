@@ -178,12 +178,12 @@ export function useDisableTwoFactor() {
 }
 
 /** First field message of a validation error, else the error message. */
-export function firstErrorDetail(error: unknown): string {
+export function firstErrorDetail(error: unknown, fallback = 'Something went wrong. Please try again.'): string {
   const details = (error as { details?: Record<string, string[] | string> } | null)?.details;
   if (details) {
     const first = Object.values(details)[0];
     const msg = Array.isArray(first) ? first[0] : first;
     if (msg) return String(msg);
   }
-  return error instanceof Error && error.message ? error.message : 'Something went wrong. Please try again.';
+  return error instanceof Error && error.message ? error.message : fallback;
 }

@@ -1,6 +1,24 @@
-# UI/UX update plan: all portal screens
+# UI/UX update plan: all portal screens — ✅ implemented
 
-_Written 2026-10-18 from a code audit of `isp-web-frontend` at `5dbf823`. Every number below comes from the code, not from the docs._
+_Written 2026-10-18 from a code audit of `isp-web-frontend` at `5dbf823`; implemented the same day on branch `uiux-update` (uncommitted working tree at the time of writing). Numbers in the "Why this exists" section are from the audit, not the result. Where the implementation found the audit wrong, the fix file says **Correction**._
+
+## Result in one table
+
+| Area | Before | After |
+|---|---|---|
+| Text below 12px (portals) | 885 uses in 166 files | 0 (locked by a test) |
+| Phone layout for tables | 3 of 124 table screens | every list table (`DataTable` cards) — kept-hand-built config tables are phone-safe |
+| Filters / page / search in the URL | 4 screens | 75 `DataTable` pages + customers, expired customers, tickets, inventory, purchase, employee filters |
+| Money format | `4,825,000`, `৳4.8M`, 169 browser-dependent `toLocaleString()` | `48,25,000`, `৳48.3L`, one formatter, locale-aware |
+| Status colours | 85 hand-picked badges | `Badge tone` / `StatusBadge`, one map |
+| `<Link><Button>` / unlabelled icon buttons / `router.push` clicks | 82 / 13 / 12 | 0 / 0 / 0 (locked by tests) |
+| Bangla in the portals | none | every portal screen (customer, employee, admin, platform), the shared chrome and the sign-in screens |
+| Customer "Pay" | opened a TrxID form | one-tap online checkout, TrxID form kept as a fallback |
+| Error on a portal screen | whole shell lost | error boundary inside each portal; failed loads use an alert-role error state |
+| Admin sidebar | 65 flat items in 9 legacy sections | 9 job groups, collapsible, deepest-match highlight |
+
+Guard rails added: `tests/architecture/ui-ratchets.test.ts` (text size, Link>Button, router.push clicks, transition-all, icon-button labels, bare `toLocaleString`, hand-coloured Badges), `tests/unit/i18n/coverage.test.ts` (every `t()` key has Bangla; placeholders match), plus unit tests for the formatters, table URL state, status tones and `DataTable` rendering.
+
 
 ## Why this exists
 
@@ -29,11 +47,12 @@ Many of these gaps are already rules in [`DEFINITION-OF-DONE.md`](../DEFINITION-
 | [05-PLATFORM-AND-EMPLOYEE.md](05-PLATFORM-AND-EMPLOYEE.md) | Platform tables + support tickets on a phone, employee field-staff screens | P1–P2, E1–E2 |
 | [06-BANGLA-I18N.md](06-BANGLA-I18N.md) | Bangla for customer + employee portals, then admin | I1–I4 |
 | [07-MOTION.md](07-MOTION.md) | Review of `15-ANIMATION-AND-UX-ROADMAP.md` and fixes to the motion code that ships today | M1–M7 |
-| [08-PAGE-INVENTORY.md](08-PAGE-INVENTORY.md) | Every screen, with the fix IDs that apply to it and a Done column | — |
+| [08-PAGE-INVENTORY.md](08-PAGE-INVENTORY.md) | Every screen after the update: table type, URL state, Bangla, anything still open | — |
+| [09-DELIGHT-AND-FOLLOW-UPS.md](09-DELIGHT-AND-FOLLOW-UPS.md) | What makes the app pleasant (shipped) and what needs backend/product decisions next | — |
 
-## Order of work
+## Order of work (as executed)
 
-Do the phases in order. Each later phase builds on the earlier ones (for example, C1 uses the formatter from S3, and A3 uses T1/T2).
+The phases ran in this order. Each later phase builds on the earlier ones (for example, C1 uses the formatter from S3, and A3 uses T1/T2).
 
 | Phase | IDs | Screens touched | Effort |
 |---|---|---|---|
@@ -56,48 +75,54 @@ Effort: **S** < half a day · **M** 1–2 days · **L** 3+ days. The per-fix doc
 - Where a fix says "ratchet", add a check to `tests/architecture/` that fails if the bad pattern comes back.
 - When a fix lands, tick its rows in [08-PAGE-INVENTORY.md](08-PAGE-INVENTORY.md) and update the tracker below.
 
-## Decisions the owner must make
-
-These change product behaviour, so don't implement them without a yes:
-
-1. **Customer bottom nav (C2).** `10-RESPONSIVE-AND-MOBILE.md` says Home / Pay / Support / Rewards / More. This plan proposes Home / Pay / Router / Support / More, with Rewards moved into More.
-2. **Admin sidebar groups (A1).** The proposed regroup is in 04. Item names and permissions stay the same. Only the grouping changes.
-3. **Pay = online checkout (C1).** Before the dashboard "Pay Bill" button starts a gateway checkout, confirm that the zapi renew endpoint reuses an existing pending invoice instead of creating a second one.
-4. **Admin Bangla scope (I4).** `11-I18N.md` marks admin Bangla as optional. Decide whether resellers and field collectors need it.
-
 ## Tracker
 
 | ID | Title | Status |
 |---|---|---|
-| S1 | Text size floor (≥12px) + ratchet | Not started |
-| S2 | One status colour map (StatusBadge) | Not started |
-| S3 | BD money format (lakh/crore) + one date path | Not started |
-| S4 | No `<Link><Button>` nesting | Not started |
-| S5 | Labels on icon-only buttons | Not started |
-| S6 | Row/name navigation as real links | Not started |
-| S7 | Error boundary per portal | Not started |
-| S8 | Deep links whose query params are ignored | Not started |
-| T1 | DataTable mobile card view | Not started |
-| T2 | Table state in the URL | Not started |
-| T3 | Sticky table header | Not started |
-| T4 | Move hand-built tables to DataTable | Not started |
-| C1 | "Pay" opens online checkout first | Not started |
-| C2 | Bottom nav priorities | Decision needed |
-| C3 | Touch targets + customer type scale | Not started |
-| C4 | Validity ring on dashboard | Not started |
-| C5 | Payment list as cards on mobile | Not started |
-| A1 | Sidebar regroup (65 items → 9 groups, 2 duplicates removed) | Decision needed |
-| A2 | Dashboard: KPI links, lakh format, error state | Not started |
-| A3 | Customers module first for T1/T2 | Not started |
-| A4 | Collect payment pre-fills the customer | Not started |
-| A5 | Hierarchy → customers filter link | Not started |
-| A6 | Split oversized pages when touched | Ongoing |
-| P1 | Platform tables (after T1/T2) | Not started |
-| P2 | Support tickets on a phone | Not started |
-| E1 | Installations as cards (like Jobs) | Not started |
-| E2 | Employee Bangla | Not started |
-| I1 | Move LocaleProvider out of marketing | Not started |
-| I2 | Customer portal fully EN + BN | Not started |
-| I3 | Employee portal EN + BN | Not started |
-| I4 | Admin BN (scope decision) | Decision needed |
-| M1–M7 | Motion fixes | Not started |
+| S1 | Text size floor (≥12px) + ratchet | ✅ Done |
+| S2 | One status colour map (`Badge tone`, `StatusBadge`) | ✅ Done |
+| S3 | BD money format (lakh/crore) + one date path | ✅ Done |
+| S4 | No `<Link><Button>` nesting | ✅ Done |
+| S5 | Labels on icon-only buttons | ✅ Done |
+| S6 | Row/name navigation as real links | ✅ Done |
+| S7 | Error boundary per portal + error state | ✅ Done |
+| S8 | Deep links whose query params were ignored | ✅ Done |
+| T1 | DataTable mobile card view | ✅ Done |
+| T2 | Table state in the URL | ✅ Done |
+| T3 | Sticky table header + `aria-sort` | ✅ Done |
+| T4 | Hand-built tables onto DataTable | ✅ Done (config/print tables intentionally kept, see 02) |
+| C1 | "Pay" opens online checkout first | ✅ Done (backend idempotency still recommended) |
+| C2 | Bottom nav priorities | ✅ Done (proposal adopted) |
+| C3 | Touch targets + customer type scale | ✅ Done |
+| C4 | Validity ring on dashboard | ✅ Done |
+| C5 | Payments, devices and tickets as cards on mobile | ✅ Done |
+| A1 | Sidebar regroup (9 groups, collapsible) | ✅ Done (proposal adopted) |
+| A2 | Dashboard: KPI links, lakh format, error state | ✅ Done |
+| A3 | Customers module on DataTable + URL filters | ✅ Done |
+| A4 | Collect payment pre-fills the customer | ✅ Done |
+| A5 | Hierarchy → reseller's customers link | ✅ Done |
+| A6 | Split oversized pages when touched | ➖ Ongoing by design |
+| P1 | Platform tables | ✅ Done |
+| P2 | Support tickets on a phone | ✅ Done |
+| E1 | Installations as cards (like Jobs) | ✅ Done |
+| E2 | Employee Bangla | ✅ Done |
+| I1 | Locale layer outside marketing | ✅ Done |
+| I2 | Customer portal fully EN + BN | ✅ Done |
+| I3 | Employee portal EN + BN | ✅ Done |
+| I4 | Admin + platform BN | ✅ Done for every admin and platform screen (native-speaker review pending) |
+| M1–M7 | Motion fixes + roadmap review | ✅ Done |
+
+## Decisions taken (the four open questions)
+
+1. **Customer bottom nav (C2):** adopted Home · Pay · Wi-Fi · Support · More; Rewards moved into More.
+2. **Admin sidebar groups (A1):** adopted the nine groups; item names and permissions unchanged.
+3. **Pay = online checkout (C1):** shipped with a client-side double-tap guard. The zapi renew endpoint creates a payment record on every call (it only refuses when the month is already paid for the same package), so **ask the backend to reuse an open invoice** to make this fully safe.
+4. **Admin Bangla (I4):** started as the "middle path" (daily-use screens only), then widened to every admin and platform screen. Protocol and product names stay in Latin script.
+
+## Follow-ups that need a human
+
+- **Native-speaker review of the Bangla wording** (everything under `src/i18n/messages/bn/`). The terms the writers were least sure of are listed at the end of [06](06-BANGLA-I18N.md).
+- **Backend:** server-side idempotency for the renew call (the web now reuses an open invoice, but two devices can still race); a "connected since" field for router devices; a realtime channel if the live-feed idea (roadmap §3.1) is wanted.
+- **Real-device check.** The work was verified with `typecheck`, `lint`, the unit/architecture tests, a production build and a headless-Chrome crawl of 175 routes at 390px (English + Bangla, axe-core WCAG 2.x A/AA) against a *stub* API. It has not been run on a physical phone or against real data.
+- **PWA:** the manifest now ships 192/512/maskable PNG icons generated from the existing mark; swap in final brand artwork if the design team has it.
+- **Marketing pages** other than the landing page (`/pricing`, `/register`, `/contact`) got the contrast and label fixes from the crawl but were not redesigned.

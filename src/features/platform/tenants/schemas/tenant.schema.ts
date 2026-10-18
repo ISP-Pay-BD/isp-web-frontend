@@ -5,18 +5,18 @@ const hex = /^#([0-9A-Fa-f]{3}){1,2}$/;
 export const tenantFormSchema = z
   .object({
     mode: z.enum(['create', 'edit']),
-    name: z.string().trim().min(2, 'Company name must be at least 2 characters').max(150),
+    name: z.string().trim().min(2, 'Company name must be at least 2 characters').max(150, 'Too long'),
     slug: z
       .string()
       .trim()
       .min(2, 'Subdomain must be at least 2 characters')
       .max(63, 'Subdomain cannot exceed 63 characters')
       .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
-    plan: z.string().max(50).optional(),
+    plan: z.string().max(50, 'Too long').optional(),
     primaryColor: z.string().regex(hex, 'Enter a hex colour such as #2563eb'),
     secondaryColor: z.string().regex(hex, 'Enter a hex colour such as #10141a').or(z.literal('')),
     status: z.enum(['active', 'suspended']),
-    notes: z.string().max(2000).optional(),
+    notes: z.string().max(2000, 'Too long').optional(),
     ownerMode: z.enum(['new', 'existing']),
     ownerUserId: z.string().optional(),
     ownerName: z.string().trim().optional(),
@@ -24,7 +24,7 @@ export const tenantFormSchema = z
     ownerPhone: z.string().trim().optional(),
     ownerPassword: z.string().optional(),
     packageId: z.string().optional(),
-    address: z.string().max(255).optional(),
+    address: z.string().max(255, 'Too long').optional(),
   })
   .superRefine((v, ctx) => {
     const needOwnerContact = v.mode === 'edit' || v.ownerMode === 'new';

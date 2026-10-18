@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PlatformPageHeader } from '@/features/platform/shared';
@@ -10,83 +10,95 @@ import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/features/shared/data-table';
 import { usePlatformSla } from '@/features/platform/shared/hooks/use-platform-catalog';
 import type { SlaRow } from '@/features/platform/types';
-import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
-const columns: LegacyColumnDef<SlaRow, unknown>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Tenant',
-    size: 240,
-    enableHiding: false,
-    cell: ({ row }) => (
-      <div>
-        {row.original.tenantId ? (
-          <Link href={`/platform/tenants/${row.original.tenantId}/health`} className="font-medium hover:underline">
-            {row.original.name}
-          </Link>
-        ) : (
-          <span className="font-medium">{row.original.name}</span>
-        )}
-        <div className="font-mono text-[11px] text-muted-foreground">{row.original.tenantSlug ?? 'No portal'}</div>
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'routerAvailabilityPct',
-    header: 'Routers active',
-    size: 170,
-    cell: ({ row }) => {
-      const r = row.original;
-      if (r.routerAvailabilityPct === null) return <span className="text-muted-foreground">No routers</span>;
-      return (
+type Translate = ReturnType<typeof useTranslations>;
+
+function postureLabel(t: Translate, severity: string): string {
+  if (severity === 'ok') return t('platform.sla.page.postureOk', 'ok');
+  if (severity === 'watch') return t('platform.sla.page.postureWatch', 'watch');
+  if (severity === 'critical') return t('platform.sla.page.postureCritical', 'critical');
+  return severity;
+}
+
+function buildColumns(t: Translate): LegacyColumnDef<SlaRow, unknown>[] {
+  return [
+    {
+      accessorKey: 'name',
+      header: t('platform.sla.page.colTenant', 'Tenant'),
+      size: 240,
+      enableHiding: false,
+      cell: ({ row }) => (
         <div>
-          <span className="tabular-nums font-semibold">{r.routerAvailabilityPct.toFixed(1)}%</span>
-          <span className="ml-1 text-xs text-muted-foreground">
-            ({r.routersActive}/{r.routersTotal}, target {r.targetPct}%)
-          </span>
+          {row.original.tenantId ? (
+            <Link href={`/platform/tenants/${row.original.tenantId}/health`} className="font-medium hover:underline">
+              {row.original.name}
+            </Link>
+          ) : (
+            <span className="font-medium">{row.original.name}</span>
+          )}
+          <div className="font-mono text-xs text-muted-foreground">{row.original.tenantSlug ?? t('platform.sla.page.noPortal', 'No portal')}</div>
         </div>
-      );
+      ),
     },
-  },
-  {
-    accessorKey: 'openTickets',
-    header: 'Open tickets',
-    size: 110,
-    cell: ({ row }) => <span className="tabular-nums font-semibold text-primary">{row.original.openTickets}</span>,
-  },
-  {
-    accessorKey: 'severity',
-    header: 'Posture',
-    size: 110,
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          'capitalize font-semibold text-xs px-2 py-0.5',
-          row.original.severity === 'ok' && 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
-          row.original.severity === 'watch' && 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10',
-          row.original.severity === 'critical' && 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10',
-        )}
-      >
-        {row.original.severity}
-      </Badge>
-    ),
-  },
-];
+    {
+      accessorKey: 'routerAvailabilityPct',
+      header: t('platform.sla.page.colRouters', 'Routers active'),
+      size: 170,
+      cell: ({ row }) => {
+        const r = row.original;
+        if (r.routerAvailabilityPct === null) return <span className="text-muted-foreground">{t('platform.sla.page.noRouters', 'No routers')}</span>;
+        return (
+          <div>
+            <span className="tabular-nums font-semibold">{r.routerAvailabilityPct.toFixed(1)}%</span>
+            <span className="ml-1 text-xs text-muted-foreground">
+              {t('platform.sla.page.routerDetail', '({active}/{total}, target {target}%)', {
+                active: r.routersActive,
+                total: r.routersTotal,
+                target: r.targetPct,
+              })}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'openTickets',
+      header: t('platform.sla.page.colTickets', 'Open tickets'),
+      size: 110,
+      cell: ({ row }) => <span className="tabular-nums font-semibold text-primary">{row.original.openTickets}</span>,
+    },
+    {
+      accessorKey: 'severity',
+      header: t('platform.sla.page.colPosture', 'Posture'),
+      size: 110,
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          tone={row.original.severity === 'ok' ? 'success' : row.original.severity === 'watch' ? 'warning' : row.original.severity === 'critical' ? 'danger' : undefined} className="capitalize font-semibold text-xs px-2 py-0.5"
+        >
+          {postureLabel(t, row.original.severity)}
+        </Badge>
+      ),
+    },
+  ];
+}
 
 export function PlatformSlaPage() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [search, setSearch] = useState('');
   const { data, isLoading, isError, error, refetch } = usePlatformSla(page, pageSize, search);
+  const columns = useMemo(() => buildColumns(t), [t]);
 
   if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load SLA"
+      <EmptyState variant="error"
+        title={t('platform.sla.page.loadFailed', 'Failed to load SLA')}
         description={error instanceof Error ? error.message : undefined}
-        actionLabel="Retry"
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -98,34 +110,34 @@ export function PlatformSlaPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Tenant SLA Monitoring"
-        subtitle="Router availability (share of each tenant's routers currently marked active) and open support tickets"
+        title={t('platform.sla.page.title', 'Tenant SLA Monitoring')}
+        subtitle={t('platform.sla.page.subtitle', "Router availability (share of each tenant's routers currently marked active) and open support tickets")}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Tenant SLA' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('nav.platform-sla', 'Tenant SLA') },
         ]}
       />
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{data.total}</span>{' '}
-          <span className="text-muted-foreground">monitored tenants</span>
+          <span className="text-muted-foreground">{t('platform.sla.page.monitored', 'monitored tenants')}</span>
         </p>
         <p>
           <span className={`font-semibold tabular-nums ${watching > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>{watching}</span>{' '}
-          <span className="text-muted-foreground">need attention on this page</span>
+          <span className="text-muted-foreground">{t('platform.sla.page.attention', 'need attention on this page')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-primary">{openTickets}</span>{' '}
-          <span className="text-muted-foreground">open tickets on this page</span>
+          <span className="text-muted-foreground">{t('platform.sla.page.ticketsOnPage', 'open tickets on this page')}</span>
         </p>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data.items}
         getRowId={(row) => row.adminId}
-        searchPlaceholder="Search tenant admin name, email or phone..."
+        searchPlaceholder={t('platform.sla.page.searchPlaceholder', 'Search tenant admin name, email or phone...')}
         server={{
           page,
           pageSize,
@@ -141,8 +153,8 @@ export function PlatformSlaPage() {
             setPage(1);
           },
         }}
-        emptyTitle="No tenants found"
-        emptyDescription="Tenant posture appears here once ISP admins exist."
+        emptyTitle={t('platform.sla.page.emptyTitle', 'No tenants found')}
+        emptyDescription={t('platform.sla.page.emptyDesc', 'Tenant posture appears here once ISP admins exist.')}
       />
     </div>
   );

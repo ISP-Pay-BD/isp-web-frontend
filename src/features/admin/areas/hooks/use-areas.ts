@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { areasApi } from '../api/areas.api';
 import type { AreaPayload } from '../types';
 
@@ -31,6 +32,7 @@ export function useSubAreas(areaId: string | null, page: number, perPage: number
 /** Area / sub-area writes. Forms handle their own field errors (meta.silent). */
 export function useAreaMutations() {
   const qc = useQueryClient();
+  const t = useTranslations();
   const refresh = (message: string) => () => {
     qc.invalidateQueries({ queryKey: AREAS });
     // Area pickers on the customer screens.
@@ -38,23 +40,23 @@ export function useAreaMutations() {
     toast.success(message);
   };
   return {
-    create: useMutation({ mutationFn: (body: AreaPayload) => areasApi.create(body), meta: { silent: true }, onSuccess: refresh('Service area created') }),
+    create: useMutation({ mutationFn: (body: AreaPayload) => areasApi.create(body), meta: { silent: true }, onSuccess: refresh(t('admin.areas.toast.created', 'Service area created')) }),
     update: useMutation({
       mutationFn: (v: { id: string; body: AreaPayload }) => areasApi.update(v.id, v.body),
       meta: { silent: true },
-      onSuccess: refresh('Service area updated'),
+      onSuccess: refresh(t('admin.areas.toast.updated', 'Service area updated')),
     }),
-    remove: useMutation({ mutationFn: (id: string) => areasApi.remove([id]), onSuccess: refresh('Service area deleted') }),
+    remove: useMutation({ mutationFn: (id: string) => areasApi.remove([id]), onSuccess: refresh(t('admin.areas.toast.deleted', 'Service area deleted')) }),
     createSub: useMutation({
       mutationFn: (v: { areaId: string; body: AreaPayload }) => areasApi.createSub(v.areaId, v.body),
       meta: { silent: true },
-      onSuccess: refresh('Sub-area added'),
+      onSuccess: refresh(t('admin.areas.toast.subAdded', 'Sub-area added')),
     }),
     updateSub: useMutation({
       mutationFn: (v: { id: string; body: AreaPayload }) => areasApi.updateSub(v.id, v.body),
       meta: { silent: true },
-      onSuccess: refresh('Sub-area updated'),
+      onSuccess: refresh(t('admin.areas.toast.subUpdated', 'Sub-area updated')),
     }),
-    removeSub: useMutation({ mutationFn: (id: string) => areasApi.removeSub([id]), onSuccess: refresh('Sub-area deleted') }),
+    removeSub: useMutation({ mutationFn: (id: string) => areasApi.removeSub([id]), onSuccess: refresh(t('admin.areas.toast.subDeleted', 'Sub-area deleted')) }),
   };
 }

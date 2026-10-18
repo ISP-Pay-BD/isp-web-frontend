@@ -32,8 +32,9 @@ import { Can } from '@/components/shared/Can';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { SpotlightCard } from '@/components/motion/SpotlightCard';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatBdtWithSymbol, numberLocale, COMPACT_FORMAT } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import { useAdminDashboard } from '../hooks/use-admin-dashboard';
 
 // Heavy client-only libraries are split out of the initial bundle.
@@ -52,13 +53,15 @@ const PackageDonutChart = dynamic(() => import('../components/DashboardCharts').
   loading: chartFallback,
 });
 
-const bdtK = (v: number) => (Math.abs(v) >= 1000 ? `৳${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : `৳${v.toLocaleString()}`);
+const bdtK = (v: number) => (Math.abs(v) >= 1000 ? `৳${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : `${formatBdtWithSymbol(v)}`);
 
-function NoData({ text = 'No data recorded yet.' }: { text?: string }) {
-  return <p className="py-6 text-center text-xs text-muted-foreground">{text}</p>;
+function NoData({ text }: { text?: string }) {
+  const t = useTranslations();
+  return <p className="py-6 text-center text-xs text-muted-foreground">{text ?? t('admin.dashboard.noData', 'No data recorded yet.')}</p>;
 }
 
 export function AdminDashboardPage() {
+  const t = useTranslations();
   const { data: stats, isLoading, isError, error, isFetching, refetch } = useAdminDashboard();
   const [geoSearch, setGeoSearch] = useState('');
 
@@ -74,10 +77,10 @@ export function AdminDashboardPage() {
 
   if (isError || !stats) {
     return (
-      <EmptyState
-        title="Failed to load dashboard"
-        description={errorMessage(error, 'Could not load dashboard metrics.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.dashboard.error.title', 'Failed to load dashboard')}
+        description={errorMessage(error, t('admin.dashboard.error.fallback', 'Could not load dashboard metrics.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -99,39 +102,35 @@ export function AdminDashboardPage() {
     <div className="w-full space-y-6 pb-12">
       <div>
         <PageHeader
-          title="Operations Command Center"
+          title={t('admin.dashboard.heading', 'Operations Command Center')}
           subtitle={
             stats.generatedAt
-              ? `Subscribers, billing, routers and support at a glance · updated ${formatDateTime(stats.generatedAt)}`
-              : 'Subscribers, billing, routers and support at a glance'
+              ? t('admin.dashboard.subtitleUpdated', 'Subscribers, billing, routers and support at a glance · updated {time}', {
+                  time: formatDateTime(stats.generatedAt),
+                })
+              : t('admin.dashboard.subtitle', 'Subscribers, billing, routers and support at a glance')
           }
           breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'Dashboard' }]}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="outline" className="ui-press text-xs" onClick={() => refetch()} disabled={isFetching}>
                 <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-                Refresh
+                {t('admin.dashboard.refresh', 'Refresh')}
               </Button>
               <Can menu="sms_message" action="read">
-                <Link href="/admin/sms">
-                  <Button size="sm" variant="outline" className="ui-press text-xs">
-                    <Send className="mr-1.5 h-3.5 w-3.5" /> Due SMS
+                <Button size="sm" variant="outline" className="ui-press text-xs" render={<Link href="/admin/sms" />}>
+                    <Send className="mr-1.5 h-3.5 w-3.5" /> {t('admin.dashboard.dueSms', 'Due SMS')}
                   </Button>
-                </Link>
               </Can>
               <Can menu="customer_payment" action="create">
-                <Link href="/admin/customer-payments/new">
-                  <Button size="sm" variant="outline" className="ui-press text-xs">
-                    <Receipt className="mr-1.5 h-3.5 w-3.5" /> Record payment
+                <Button size="sm" variant="outline" className="ui-press text-xs" render={<Link href="/admin/customer-payments/new" />}>
+                    <Receipt className="mr-1.5 h-3.5 w-3.5" /> {t('admin.dashboard.recordPayment', 'Record payment')}
                   </Button>
-                </Link>
               </Can>
               <Can menu="customer" action="create">
-                <Link href="/admin/customers/new">
-                  <Button size="sm" className="ui-press text-xs font-medium bg-landing-cta text-white hover:bg-landing-cta-hover">
-                    <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Add customer
+                <Button size="sm" className="ui-press text-xs font-medium bg-landing-cta text-white hover:bg-landing-cta-hover" render={<Link href="/admin/customers/new" />}>
+                    <UserPlus className="mr-1.5 h-3.5 w-3.5" /> {t('admin.dashboard.addCustomer', 'Add customer')}
                   </Button>
-                </Link>
               </Can>
             </div>
           }
@@ -143,19 +142,19 @@ export function AdminDashboardPage() {
         <Link href="/admin/customers?status=active" className="group block no-underline">
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Active Customers</span>
+              <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.activeCustomers', 'Active Customers')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
                 <UserCheck className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <p className="font-mono text-2xl font-bold text-foreground">
-                <NumberFlow value={stats.activeCustomers} />
+                <NumberFlow locales={numberLocale()} value={stats.activeCustomers} />
               </p>
               <span className="text-muted-foreground text-xs font-normal">/ {stats.totalCustomers}</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              <span>View details</span>
+            <div className="mt-2 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              <span>{t('admin.dashboard.kpi.viewDetails', 'View details')}</span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </SpotlightCard>
@@ -164,19 +163,19 @@ export function AdminDashboardPage() {
         <Link href="/admin/customer-payments" className="group block no-underline">
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Received This Month</span>
+              <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.receivedMonth', 'Received This Month')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
                 <Receipt className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <p className="font-mono text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                ৳<NumberFlow value={stats.monthlyCollectionBdt} format={{ notation: 'compact' }} />
+                ৳<NumberFlow locales={numberLocale()} value={stats.monthlyCollectionBdt} format={COMPACT_FORMAT} />
               </p>
               <span className="text-muted-foreground text-xs font-normal">({stats.customersPaymentReceivedCount})</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              <span>Today: ৳{stats.todayCollectionBdt.toLocaleString()}</span>
+            <div className="mt-2 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              <span>{t('admin.dashboard.kpi.today', 'Today: {amount}', { amount: formatBdtWithSymbol(stats.todayCollectionBdt) })}</span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </SpotlightCard>
@@ -185,19 +184,19 @@ export function AdminDashboardPage() {
         <Link href="/admin/customers?status=expired" className="group block no-underline">
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-amber-500/50">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Payment Due</span>
+              <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.paymentDue', 'Payment Due')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
                 <Clock className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <p className="font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">
-                ৳<NumberFlow value={stats.customersExpaymentTotal} format={{ notation: 'compact' }} />
+                ৳<NumberFlow locales={numberLocale()} value={stats.customersExpaymentTotal} format={COMPACT_FORMAT} />
               </p>
               <span className="text-muted-foreground text-xs font-normal">({stats.customersExpaymentCount})</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-              <span>Collect dues</span>
+            <div className="mt-2 flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-medium">
+              <span>{t('admin.dashboard.kpi.collectDues', 'Collect dues')}</span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </SpotlightCard>
@@ -206,21 +205,23 @@ export function AdminDashboardPage() {
         <Link href="/admin/support" className="group block no-underline">
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-rose-500/50">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Open Tickets</span>
+              <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.openTickets', 'Open Tickets')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
                 <AlertCircle className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
               <p className="font-mono text-2xl font-bold text-foreground">
-                <NumberFlow value={stats.ticketStats.open} />
+                <NumberFlow locales={numberLocale()} value={stats.ticketStats.open} />
               </p>
               {stats.ticketStats.solvedRate !== null ? (
-                <span className="text-muted-foreground text-xs font-normal">{stats.ticketStats.solvedRate}% resolved</span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  {t('admin.dashboard.kpi.resolved', '{rate}% resolved', { rate: stats.ticketStats.solvedRate })}
+                </span>
               ) : null}
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground font-medium group-hover:text-primary transition-colors">
-              <span>Helpdesk</span>
+            <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground font-medium group-hover:text-primary transition-colors">
+              <span>{t('admin.dashboard.kpi.helpdesk', 'Helpdesk')}</span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </SpotlightCard>
@@ -229,7 +230,7 @@ export function AdminDashboardPage() {
         <Link href="/admin/subscription" className="group block no-underline">
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-primary/50">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium tracking-wide">Customer Quota</span>
+              <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.customerQuota', 'Customer Quota')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Users className="h-4 w-4" />
               </span>
@@ -245,7 +246,7 @@ export function AdminDashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="mt-2 text-xs text-muted-foreground">Not available for this account</p>
+              <p className="mt-2 text-xs text-muted-foreground">{t('admin.dashboard.kpi.quotaUnavailable', 'Not available for this account')}</p>
             )}
           </SpotlightCard>
         </Link>
@@ -253,33 +254,33 @@ export function AdminDashboardPage() {
 
       {/* Metric strips */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard icon={<Users className="h-3.5 w-3.5 text-primary" />} title="Customer Metrics" href="/admin/customers" linkLabel="Manage">
-          <MetricRow label="New this month" value={`+${stats.newCustomers}`} accent="text-emerald-600 dark:text-emerald-400" />
-          <MetricRow label="Disconnected" value={stats.inactiveCustomers} />
-          <MetricRow label="Expired" value={stats.expiredCustomers} accent="text-rose-500" />
-          <MetricRow label="Expected monthly billing" value={`৳${stats.customersPaymentTotal.toLocaleString()}`} divider />
-          <MetricRow label="Pending (last 32 days)" value={`৳${stats.customersPaymentPending.toLocaleString()}`} accent="text-amber-500" />
+        <MetricCard icon={<Users className="h-3.5 w-3.5 text-primary" />} title={t('admin.dashboard.customerMetrics.title', 'Customer Metrics')} href="/admin/customers" linkLabel={t('admin.dashboard.customerMetrics.link', 'Manage')}>
+          <MetricRow label={t('admin.dashboard.customerMetrics.newThisMonth', 'New this month')} value={`+${stats.newCustomers}`} accent="text-emerald-600 dark:text-emerald-400" />
+          <MetricRow label={t('admin.dashboard.customerMetrics.disconnected', 'Disconnected')} value={stats.inactiveCustomers} />
+          <MetricRow label={t('admin.dashboard.customerMetrics.expired', 'Expired')} value={stats.expiredCustomers} accent="text-rose-500" />
+          <MetricRow label={t('admin.dashboard.customerMetrics.expectedBilling', 'Expected monthly billing')} value={`${formatBdtWithSymbol(stats.customersPaymentTotal)}`} divider />
+          <MetricRow label={t('admin.dashboard.customerMetrics.pending32', 'Pending (last 32 days)')} value={`${formatBdtWithSymbol(stats.customersPaymentPending)}`} accent="text-amber-500" />
         </MetricCard>
 
-        <MetricCard icon={<Layers className="h-3.5 w-3.5 text-blue-500" />} title="Package & Coverage" href="/admin/packages" linkLabel="Plans">
-          <MetricRow label="Active packages" value={stats.totalPackages} />
-          <MetricRow label="Active service areas" value={stats.totalAreas} />
-          <MetricRow label="Top area" value={topArea ? topArea.area : '—'} divider />
-          <MetricRow label="Top plan" value={topPlan ? `${topPlan.name} (${topPlan.count})` : '—'} />
+        <MetricCard icon={<Layers className="h-3.5 w-3.5 text-blue-500" />} title={t('admin.dashboard.coverage.title', 'Package & Coverage')} href="/admin/packages" linkLabel={t('admin.dashboard.coverage.link', 'Plans')}>
+          <MetricRow label={t('admin.dashboard.coverage.activePackages', 'Active packages')} value={stats.totalPackages} />
+          <MetricRow label={t('admin.dashboard.coverage.activeAreas', 'Active service areas')} value={stats.totalAreas} />
+          <MetricRow label={t('admin.dashboard.coverage.topArea', 'Top area')} value={topArea ? topArea.area : '—'} divider />
+          <MetricRow label={t('admin.dashboard.coverage.topPlan', 'Top plan')} value={topPlan ? `${topPlan.name} (${topPlan.count})` : '—'} />
         </MetricCard>
 
-        <MetricCard icon={<Briefcase className="h-3.5 w-3.5 text-amber-500" />} title="Staff & Payroll" href="/admin/hr/employees" linkLabel="HR Desk">
-          <MetricRow label="Active employees" value={stats.employeeActive} />
-          <MetricRow label="Inactive" value={stats.employeeInactive} />
-          <MetricRow label="Salaries paid (all time)" value={`৳${stats.employeePaymentReceived.toLocaleString()}`} accent="text-emerald-600 dark:text-emerald-400" divider />
-          <MetricRow label="Salary pending this month" value={`৳${stats.employeePaymentPending.toLocaleString()}`} accent="text-amber-500" />
+        <MetricCard icon={<Briefcase className="h-3.5 w-3.5 text-amber-500" />} title={t('admin.dashboard.staff.title', 'Staff & Payroll')} href="/admin/hr/employees" linkLabel={t('admin.dashboard.staff.link', 'HR Desk')}>
+          <MetricRow label={t('admin.dashboard.staff.active', 'Active employees')} value={stats.employeeActive} />
+          <MetricRow label={t('admin.dashboard.staff.inactive', 'Inactive')} value={stats.employeeInactive} />
+          <MetricRow label={t('admin.dashboard.staff.salariesPaid', 'Salaries paid (all time)')} value={`${formatBdtWithSymbol(stats.employeePaymentReceived)}`} accent="text-emerald-600 dark:text-emerald-400" divider />
+          <MetricRow label={t('admin.dashboard.staff.salaryPending', 'Salary pending this month')} value={`${formatBdtWithSymbol(stats.employeePaymentPending)}`} accent="text-amber-500" />
         </MetricCard>
 
-        <MetricCard icon={<Server className="h-3.5 w-3.5 text-emerald-500" />} title="Network Infrastructure" href="/admin/routers" linkLabel="Routers">
-          <MetricRow label="Active routers" value={stats.routerActive} accent="text-emerald-600 dark:text-emerald-400" />
-          <MetricRow label="Inactive routers" value={stats.routerInactive} />
-          <MetricRow label="POP resellers" value={stats.allResellers} />
-          <MetricRow label="Connected customers" value={stats.connectedCustomers} divider />
+        <MetricCard icon={<Server className="h-3.5 w-3.5 text-emerald-500" />} title={t('admin.dashboard.network.title', 'Network Infrastructure')} href="/admin/routers" linkLabel={t('admin.dashboard.network.link', 'Routers')}>
+          <MetricRow label={t('admin.dashboard.network.activeRouters', 'Active routers')} value={stats.routerActive} accent="text-emerald-600 dark:text-emerald-400" />
+          <MetricRow label={t('admin.dashboard.network.inactiveRouters', 'Inactive routers')} value={stats.routerInactive} />
+          <MetricRow label={t('admin.dashboard.network.popResellers', 'POP resellers')} value={stats.allResellers} />
+          <MetricRow label={t('admin.dashboard.network.connectedCustomers', 'Connected customers')} value={stats.connectedCustomers} divider />
         </MetricCard>
       </div>
 
@@ -288,19 +289,19 @@ export function AdminDashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-foreground flex items-center gap-2 text-base font-semibold">
-              <Wifi className="text-primary h-4 w-4" /> Active Routers
+              <Wifi className="text-primary h-4 w-4" /> {t('admin.dashboard.routers.title', 'Active Routers')}
             </h2>
-            <p className="text-muted-foreground text-xs">Customers per router (live counts when the router poller has reported)</p>
+            <p className="text-muted-foreground text-xs">
+              {t('admin.dashboard.routers.subtitle', 'Customers per router (live counts when the router poller has reported)')}
+            </p>
           </div>
-          <Link href="/admin/routers">
-            <Button size="sm" variant="ghost" className="text-primary text-xs">
-              Manage routers <ArrowRight className="ml-1 h-3 w-3" />
+          <Button size="sm" variant="ghost" className="text-primary text-xs" render={<Link href="/admin/routers" />}>
+              {t('admin.dashboard.routers.manage', 'Manage routers')} <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
-          </Link>
         </div>
         {stats.routers.length === 0 ? (
           <Card className="border border-dashed border-border/70">
-            <NoData text="No active routers configured." />
+            <NoData text={t('admin.dashboard.routers.empty', 'No active routers configured.')} />
           </Card>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -311,31 +312,35 @@ export function AdminDashboardPage() {
                     <Link href="/admin/routers" className="font-semibold text-xs text-foreground truncate hover:text-primary transition-colors block">
                       {router.name}
                     </Link>
-                    <span className="font-mono text-[10px] text-muted-foreground">{router.host}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{router.host}</span>
                   </div>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 capitalize">
-                    {router.liveStatus ?? 'active'}
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5 capitalize">
+                    {t(`status.${(router.liveStatus ?? 'active').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, router.liveStatus ?? 'active')}
                   </Badge>
                 </CardHeader>
                 <CardContent className="px-3.5 pb-3 pt-1">
                   <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-muted/30 p-2 text-center">
                     <div>
-                      <div className="text-[10px] text-muted-foreground">Total</div>
+                      <div className="text-xs text-muted-foreground">{t('admin.dashboard.routers.total', 'Total')}</div>
                       <div className="font-mono text-xs font-bold text-foreground">{router.totalUsers}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Online</div>
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('status.online', 'Online')}</div>
                       <div className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{router.activeUsers}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-muted-foreground">Offline</div>
+                      <div className="text-xs text-muted-foreground">{t('status.offline', 'Offline')}</div>
                       <div className="font-mono text-xs font-bold text-muted-foreground">{router.inactiveUsers}</div>
                     </div>
                   </div>
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>{router.lastUpdated ? `Polled ${router.lastUpdated}` : 'From customer records'}</span>
+                  <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {router.lastUpdated
+                        ? t('admin.dashboard.routers.polled', 'Polled {time}', { time: router.lastUpdated })
+                        : t('admin.dashboard.routers.fromRecords', 'From customer records')}
+                    </span>
                     <Link href="/admin/routers" className="text-primary hover:underline font-medium flex items-center gap-0.5">
-                      Details <ChevronRight className="h-2.5 w-2.5" />
+                      {t('admin.dashboard.routers.details', 'Details')} <ChevronRight className="h-2.5 w-2.5" />
                     </Link>
                   </div>
                 </CardContent>
@@ -350,17 +355,17 @@ export function AdminDashboardPage() {
         <Card className="lg:col-span-8 border border-border/70 bg-card/90 shadow-[var(--shadow-xs)] overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle className="text-base font-bold">Collected vs Pending by Month</CardTitle>
-              <CardDescription className="text-xs">Customer payments, year to date</CardDescription>
+              <CardTitle className="text-base font-bold">{t('admin.dashboard.trend.title', 'Collected vs Pending by Month')}</CardTitle>
+              <CardDescription className="text-xs">{t('admin.dashboard.trend.subtitle', 'Customer payments, year to date')}</CardDescription>
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="h-3 w-3 rounded-sm bg-primary" />
-                <span className="font-medium">Collected</span>
+                <span className="font-medium">{t('admin.dashboard.collected', 'Collected')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-0.5 w-3 bg-amber-600 rounded-full" />
-                <span className="font-medium text-muted-foreground">Pending</span>
+                <span className="font-medium text-muted-foreground">{t('admin.dashboard.pending', 'Pending')}</span>
               </div>
             </div>
           </CardHeader>
@@ -369,28 +374,28 @@ export function AdminDashboardPage() {
               {stats.monthlyTrend.length ? <CollectionsTrendChart data={stats.monthlyTrend} /> : <NoData />}
             </div>
             <div className="mt-4 pt-4 border-t border-border/50 grid grid-cols-3 gap-4">
-              <Summary label="Collected" value={bdtK(trendCollected)} />
-              <Summary label="Pending" value={bdtK(trendPending)} muted />
-              <Summary label="Collection rate" value={collectionRate === null ? '—' : `${collectionRate.toFixed(1)}%`} accent />
+              <Summary label={t('admin.dashboard.collected', 'Collected')} value={bdtK(trendCollected)} />
+              <Summary label={t('admin.dashboard.pending', 'Pending')} value={bdtK(trendPending)} muted />
+              <Summary label={t('admin.dashboard.trend.rate', 'Collection rate')} value={collectionRate === null ? '—' : `${collectionRate.toFixed(1)}%`} accent />
             </div>
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-4 border border-border/70 bg-card/90 shadow-[var(--shadow-xs)] overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold">Last 7 Days</CardTitle>
-            <CardDescription className="text-xs">Daily customer collections</CardDescription>
+            <CardTitle className="text-base font-bold">{t('admin.dashboard.week.title', 'Last 7 Days')}</CardTitle>
+            <CardDescription className="text-xs">{t('admin.dashboard.week.subtitle', 'Daily customer collections')}</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="h-56 w-full">
               {stats.weeklyCollections.length ? <WeeklyCollectionsChart data={stats.weeklyCollections} /> : <NoData />}
             </div>
             <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
-              <Summary label="Total" value={bdtK(weeklyTotal)} />
+              <Summary label={t('admin.dashboard.week.total', 'Total')} value={bdtK(weeklyTotal)} />
               <div className="h-8 w-px bg-border/50" />
-              <Summary label="Avg/Day" value={bdtK(Math.round(weeklyTotal / Math.max(1, stats.weeklyCollections.length)))} />
+              <Summary label={t('admin.dashboard.week.avg', 'Avg/Day')} value={bdtK(Math.round(weeklyTotal / Math.max(1, stats.weeklyCollections.length)))} />
               <div className="h-8 w-px bg-border/50" />
-              <Summary label="Peak" value={bdtK(weeklyPeak)} accent />
+              <Summary label={t('admin.dashboard.week.peak', 'Peak')} value={bdtK(weeklyPeak)} accent />
             </div>
           </CardContent>
         </Card>
@@ -401,9 +406,9 @@ export function AdminDashboardPage() {
         <Card className="border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <PieIcon className="h-4 w-4 text-primary" /> Package Distribution
+              <PieIcon className="h-4 w-4 text-primary" /> {t('admin.dashboard.packages.title', 'Package Distribution')}
             </CardTitle>
-            <CardDescription className="text-xs">Customers by package</CardDescription>
+            <CardDescription className="text-xs">{t('admin.dashboard.packages.subtitle', 'Customers by package')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {stats.packageDistribution.length ? (
@@ -436,12 +441,12 @@ export function AdminDashboardPage() {
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-primary" /> Payment Method Mix
+                <Receipt className="h-4 w-4 text-primary" /> {t('admin.dashboard.methods.title', 'Payment Method Mix')}
               </CardTitle>
-              <CardDescription className="text-xs">Customer collections, year to date</CardDescription>
+              <CardDescription className="text-xs">{t('admin.dashboard.methods.subtitle', 'Customer collections, year to date')}</CardDescription>
             </div>
             <Link href="/admin/customer-payments" className="text-xs text-primary hover:underline font-semibold flex items-center gap-0.5">
-              Ledger <ChevronRight className="h-3 w-3" />
+              {t('admin.dashboard.methods.ledger', 'Ledger')} <ChevronRight className="h-3 w-3" />
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -454,7 +459,7 @@ export function AdminDashboardPage() {
                       {method.name}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-muted-foreground">৳{method.amountBdt.toLocaleString()}</span>
+                      <span className="font-mono text-muted-foreground">{formatBdtWithSymbol(method.amountBdt)}</span>
                       <span className="font-bold text-foreground">{method.percent}%</span>
                     </div>
                   </div>
@@ -470,25 +475,25 @@ export function AdminDashboardPage() {
         <Card className="border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center justify-between">
-              <span>Support Tickets</span>
+              <span>{t('admin.dashboard.tickets.title', 'Support Tickets')}</span>
               {stats.ticketStats.solvedRate !== null ? (
-                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">{stats.ticketStats.solvedRate}% resolved</span>
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  {t('admin.dashboard.kpi.resolved', '{rate}% resolved', { rate: stats.ticketStats.solvedRate })}
+                </span>
               ) : null}
             </CardTitle>
-            <CardDescription className="text-xs">Tickets raised by your customers and staff</CardDescription>
+            <CardDescription className="text-xs">{t('admin.dashboard.tickets.subtitle', 'Tickets raised by your customers and staff')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <TicketTile label="Open" value={stats.ticketStats.open} tone="text-amber-600 dark:text-amber-400" />
-              <TicketTile label="Ongoing" value={stats.ticketStats.ongoing} tone="text-blue-600 dark:text-blue-400" />
-              <TicketTile label="Solved" value={stats.ticketStats.solved} tone="text-emerald-600 dark:text-emerald-400" />
-              <TicketTile label="Closed" value={stats.ticketStats.closed} tone="text-muted-foreground" />
+              <TicketTile label={t('admin.dashboard.tickets.open', 'Open')} value={stats.ticketStats.open} tone="text-amber-600 dark:text-amber-400" />
+              <TicketTile label={t('admin.dashboard.tickets.ongoing', 'Ongoing')} value={stats.ticketStats.ongoing} tone="text-blue-600 dark:text-blue-400" />
+              <TicketTile label={t('admin.dashboard.tickets.solved', 'Solved')} value={stats.ticketStats.solved} tone="text-emerald-600 dark:text-emerald-400" />
+              <TicketTile label={t('admin.dashboard.tickets.closed', 'Closed')} value={stats.ticketStats.closed} tone="text-muted-foreground" />
             </div>
-            <Link href="/admin/support">
-              <Button size="sm" variant="outline" className="w-full text-xs">
-                Open Support Desk <ChevronRight className="ml-1 h-3 w-3" />
+            <Button size="sm" variant="outline" className="w-full text-xs" render={<Link href="/admin/support" />}>
+                {t('admin.dashboard.tickets.openDesk', 'Open Support Desk')} <ChevronRight className="ml-1 h-3 w-3" />
               </Button>
-            </Link>
           </CardContent>
         </Card>
       </div>
@@ -499,14 +504,15 @@ export function AdminDashboardPage() {
           <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" /> Revenue by Service Area
+                <MapPin className="h-4 w-4 text-primary" /> {t('admin.dashboard.areas.title', 'Revenue by Service Area')}
               </CardTitle>
-              <CardDescription className="text-xs">This month&apos;s collections and customers per area</CardDescription>
+              <CardDescription className="text-xs">{t('admin.dashboard.areas.subtitle', "This month's collections and customers per area")}</CardDescription>
             </div>
             <div className="relative w-full sm:w-56">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Search area..."
+                placeholder={t('admin.dashboard.areas.search', 'Search area...')}
+                aria-label={t('admin.dashboard.areas.search', 'Search area...')}
                 value={geoSearch}
                 onChange={(e) => setGeoSearch(e.target.value)}
                 className="h-8 pl-8 text-xs bg-background/50 rounded-lg"
@@ -523,16 +529,22 @@ export function AdminDashboardPage() {
                         <span>{geo.area}</span>
                         <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">
-                        {geo.customers} customers ({geo.active} active)
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {t('admin.dashboard.areas.counts', '{customers} customers ({active} active)', { customers: geo.customers, active: geo.active })}
                       </div>
                     </div>
-                    <div className="font-mono font-bold text-xs text-foreground">৳{geo.revenueBdt.toLocaleString()}</div>
+                    <div className="font-mono font-bold text-xs text-foreground">{formatBdtWithSymbol(geo.revenueBdt)}</div>
                   </div>
                 </Link>
               ))
             ) : (
-              <NoData text={geoSearch ? 'No area matches your search.' : 'No customers assigned to areas yet.'} />
+              <NoData
+                text={
+                  geoSearch
+                    ? t('admin.dashboard.areas.noMatch', 'No area matches your search.')
+                    : t('admin.dashboard.areas.empty', 'No customers assigned to areas yet.')
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -540,12 +552,12 @@ export function AdminDashboardPage() {
         <Card className="lg:col-span-3 border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold text-foreground flex items-center justify-between">
-              <span>Recent Payments</span>
+              <span>{t('admin.dashboard.recent.title', 'Recent Payments')}</span>
               <Link href="/admin/customer-payments" className="text-xs text-primary hover:underline font-semibold">
-                View all
+                {t('common.viewAll', 'View all')}
               </Link>
             </CardTitle>
-            <CardDescription className="text-xs">Latest customer payment activity</CardDescription>
+            <CardDescription className="text-xs">{t('admin.dashboard.recent.subtitle', 'Latest customer payment activity')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 pt-1">
             {stats.recentActivities.length ? (
@@ -560,17 +572,18 @@ export function AdminDashboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate">
-                      {act.customerName || 'Customer'} · ৳{act.amountBdt.toLocaleString()} {act.method ? `via ${act.method}` : ''}
+                      {act.customerName || t('admin.dashboard.recent.customer', 'Customer')} · {formatBdtWithSymbol(act.amountBdt)}{' '}
+                      {act.method ? t('admin.dashboard.recent.via', 'via {method}', { method: act.method }) : ''}
                     </p>
-                    <span className="text-muted-foreground text-[10px] capitalize">
-                      {act.status}
+                    <span className="text-muted-foreground text-xs capitalize">
+                      {t(`status.${act.status.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, act.status)}
                       {act.at ? ` · ${formatDateTime(act.at)}` : ''}
                     </span>
                   </div>
                 </Link>
               ))
             ) : (
-              <NoData text="No payments recorded yet." />
+              <NoData text={t('admin.dashboard.recent.empty', 'No payments recorded yet.')} />
             )}
           </CardContent>
         </Card>
@@ -598,7 +611,7 @@ function MetricCard({
         <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           {icon} {title}
         </span>
-        <Link href={href} className="text-[10px] text-primary hover:underline">
+        <Link href={href} className="text-xs text-primary hover:underline">
           {linkLabel}
         </Link>
       </CardHeader>
@@ -619,7 +632,7 @@ function MetricRow({ label, value, accent, divider }: { label: string; value: st
 function Summary({ label, value, muted, accent }: { label: string; value: string; muted?: boolean; accent?: boolean }) {
   return (
     <div className="text-center flex-1">
-      <div className="text-[10px] tracking-wide text-muted-foreground mb-1">{label}</div>
+      <div className="text-xs tracking-wide text-muted-foreground mb-1">{label}</div>
       <div className={`text-sm font-bold font-mono ${accent ? 'text-emerald-500' : muted ? 'text-muted-foreground' : 'text-foreground'}`}>{value}</div>
     </div>
   );
@@ -628,7 +641,7 @@ function Summary({ label, value, muted, accent }: { label: string; value: string
 function TicketTile({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
     <Link href="/admin/support" className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-center block no-underline border border-border/40">
-      <span className={`text-[11px] font-medium ${tone}`}>{label}</span>
+      <span className={`text-xs font-medium ${tone}`}>{label}</span>
       <div className={`text-2xl font-bold mt-1 ${tone}`}>{value}</div>
     </Link>
   );

@@ -13,13 +13,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { LocaleToggle } from '@/components/shared/LocaleToggle';
+import { useTranslations } from '@/i18n/locale-context';
 import { ThemeCustomizerModal } from './ThemeCustomizerModal';
 import { ThemeToggle } from './ThemeToggle';
+import { ShortcutsDialog } from './ShortcutsDialog';
+import { useGlobalShortcuts } from '@/hooks/use-global-shortcuts';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,12 +43,16 @@ interface PortalHeaderProps {
 
 export function PortalHeader({ portal }: PortalHeaderProps) {
   const router = useRouter();
+  const t = useTranslations();
   const hydrated = useAuthHydrated();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [themeCustomizerOpen, setThemeCustomizerOpen] = useState(false);
   const showCommandPalette = true;
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
+  useGlobalShortcuts({ enabled: portal === 'admin', onHelp: openShortcuts });
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -60,13 +68,13 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
 
   const handleLogout = () => {
     logout();
-    toast.success('You are signed out');
+    toast.success(t('common.header.signedOut', 'You are signed out'));
     router.push('/login');
   };
 
   const handleSwitchAccount = () => {
     logout();
-    toast.info('Sign in with another account to continue');
+    toast.info(t('common.header.switchHint', 'Sign in with another account to continue'));
     router.push('/login');
   };
 
@@ -82,14 +90,16 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
 
   const roleDisplayLabel =
     user?.role === 'user'
-      ? 'Customer'
+      ? t('common.role.customer', 'Customer')
       : user?.role === 'admin'
-        ? 'ISP Admin'
+        ? t('common.role.admin', 'ISP Admin')
         : user?.role === 'super_admin'
-          ? 'Platform Super Admin'
+          ? t('common.role.superAdmin', 'Platform Super Admin')
           : user?.role === 'resellerAdmin'
-            ? 'Reseller Admin'
-            : 'Employee';
+            ? t('common.role.reseller', 'Reseller Admin')
+            : t('common.role.employee', 'Employee');
+  const profileHref =
+    portal === 'customer' ? '/customer/profile' : portal === 'employee' ? '/employee/profile' : portal === 'admin' ? '/admin/profile' : null;
 
   return (
     <>
@@ -98,16 +108,8 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           <SidebarTrigger />
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground hidden text-xs font-medium tracking-wide capitalize sm:block">
-              {portal} portal
+              {t(`common.portal.${portal}`, `${portal} portal`)}
             </span>
-            <span className="bg-border/80 hidden h-3 w-px sm:block" />
-            <Badge
-              variant="secondary"
-              className="border-primary/20 bg-primary/10 text-primary hidden h-5 items-center gap-1 px-1.5 font-mono text-[10px] md:inline-flex"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Live gateway
-            </Badge>
           </div>
         </div>
 
@@ -121,8 +123,8 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
               onClick={() => setPaletteOpen(true)}
             >
               <Command className="h-3.5 w-3.5" />
-              <span className="text-xs font-normal">Quick jump</span>
-              <kbd className="bg-muted pointer-events-none rounded border px-1.5 py-0.5 font-mono text-[10px]">
+              <span className="text-xs font-normal">{t('common.header.quickJump', 'Quick jump')}</span>
+              <kbd className="bg-muted pointer-events-none rounded border px-1.5 py-0.5 font-mono text-xs">
                 ⌘K
               </kbd>
             </Button>
@@ -132,25 +134,26 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-8 w-8 rounded-lg border border-transparent transition-colors hover:border-border"
-            onClick={() => toast.info('No unread network notifications')}
-            aria-label="Notifications"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-10 w-10 rounded-lg border border-transparent sm:h-8 sm:w-8 transition-colors hover:border-border"
+            onClick={() => toast.info(t('common.header.noNotifications', 'You are all caught up'))}
+            aria-label={t('common.header.notifications', 'Notifications')}
           >
             <Bell className="h-4 w-4" />
-            <span className="bg-primary ring-background absolute top-2 right-2 h-2 w-2 rounded-full ring-2" />
           </Button>
 
           {/* Theme Studio Customizer Trigger Button */}
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-8 w-8 rounded-lg border border-transparent transition-colors hover:border-border"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-10 w-10 rounded-lg border border-transparent sm:h-8 sm:w-8 transition-colors hover:border-border"
             onClick={() => setThemeCustomizerOpen(true)}
-            aria-label="Theme Studio"
-            title="Theme Studio & Appearance"
+            aria-label={t('common.header.themeStudio', 'Theme Studio')}
+            title={t('common.header.themeStudioTitle', 'Theme Studio & Appearance')}
           >
             <Palette className="text-primary h-4 w-4" />
           </Button>
+
+          <LocaleToggle variant="portal" className="hidden sm:inline-flex" />
 
           {/* Theme Toggle Button */}
           <ThemeToggle />
@@ -182,7 +185,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                   <span className="text-foreground group-hover:text-primary text-xs font-semibold tracking-tight transition-colors">
                     {user.name}
                   </span>
-                  <span className="text-muted-foreground/90 text-[10px] font-medium">
+                  <span className="text-muted-foreground/90 text-xs font-medium">
                     {roleDisplayLabel}
                   </span>
                 </div>
@@ -200,8 +203,8 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                   </Avatar>
                   <div className="flex min-w-0 flex-col">
                     <span className="text-foreground truncate text-xs font-semibold">{user.name}</span>
-                    <span className="text-muted-foreground truncate text-[11px]">{user.email}</span>
-                    <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 mt-0.5 w-fit px-1 py-0 text-[9px] font-medium">
+                    <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+                    <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 mt-0.5 w-fit px-1 py-0 text-xs font-medium">
                       {roleDisplayLabel}
                     </Badge>
                   </div>
@@ -210,38 +213,38 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <Link href={portal === 'customer' ? '/customer/profile' : '/admin/profile'}>
-                    <DropdownMenuItem className="cursor-pointer gap-2 py-2">
+                  {profileHref ? (
+                    <DropdownMenuItem render={<Link href={profileHref} />} className="cursor-pointer gap-2 py-2">
                       <User className="text-muted-foreground h-4 w-4" />
-                      <span>My profile</span>
+                      <span>{t('common.header.profile', 'My profile')}</span>
                     </DropdownMenuItem>
-                  </Link>
+                  ) : null}
 
                   <DropdownMenuItem
                     onClick={() => setThemeCustomizerOpen(true)}
                     className="cursor-pointer gap-2 py-2"
                   >
                     <Palette className="text-muted-foreground h-4 w-4" />
-                    <span>Theme & appearance</span>
+                    <span>{t('common.header.appearance', 'Theme & appearance')}</span>
                   </DropdownMenuItem>
 
                   {portal === 'customer' && (
-                    <Link href="/customer/subscription">
-                      <DropdownMenuItem className="cursor-pointer gap-2 py-2">
-                        <CreditCard className="text-muted-foreground h-4 w-4" />
-                        <span>Subscription & plan</span>
-                      </DropdownMenuItem>
-                    </Link>
+                    <DropdownMenuItem render={<Link href="/customer/subscription" />} className="cursor-pointer gap-2 py-2">
+                      <CreditCard className="text-muted-foreground h-4 w-4" />
+                      <span>{t('common.header.subscription', 'Subscription & plan')}</span>
+                    </DropdownMenuItem>
                   )}
 
                   {portal === 'customer' && (
-                    <Link href="/customer/support">
-                      <DropdownMenuItem className="cursor-pointer gap-2 py-2">
-                        <LifeBuoy className="text-muted-foreground h-4 w-4" />
-                        <span>Support tickets</span>
-                      </DropdownMenuItem>
-                    </Link>
+                    <DropdownMenuItem render={<Link href="/customer/support" />} className="cursor-pointer gap-2 py-2">
+                      <LifeBuoy className="text-muted-foreground h-4 w-4" />
+                      <span>{t('common.header.tickets', 'Support tickets')}</span>
+                    </DropdownMenuItem>
                   )}
+
+                  <div className="px-2 py-1.5 sm:hidden">
+                    <LocaleToggle variant="portal" />
+                  </div>
                 </DropdownMenuGroup>
 
                 <DropdownMenuSeparator />
@@ -252,7 +255,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                   className="hover:text-primary text-foreground cursor-pointer gap-2 py-2"
                 >
                   <ArrowRightLeft className="text-muted-foreground h-4 w-4" />
-                  <span>Switch account</span>
+                  <span>{t('common.header.switchAccount', 'Switch account')}</span>
                 </DropdownMenuItem>
 
                 {/* Logout Action */}
@@ -262,16 +265,14 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                   className="cursor-pointer gap-2 py-2 text-rose-600 focus:bg-rose-500/10 focus:text-rose-600 dark:text-rose-400"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="font-medium">Log out</span>
+                  <span className="font-medium">{t('common.header.logout', 'Log out')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link href="/login">
-              <Button size="sm" className="h-8 text-xs font-semibold">
-                Log in
+            <Button size="sm" className="h-8 text-xs font-semibold" render={<Link href="/login" />}>
+                {t('common.header.login', 'Log in')}
               </Button>
-            </Link>
           )}
         </div>
       </header>
@@ -279,6 +280,8 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
       {showCommandPalette ? (
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       ) : null}
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       {/* Theme Customizer Modal */}
       <ThemeCustomizerModal

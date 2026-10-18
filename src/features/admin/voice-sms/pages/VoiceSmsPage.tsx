@@ -26,6 +26,7 @@ import { DataTable } from '@/features/shared/data-table';
 import { toast } from 'sonner';
 import { Phone, Mic, Radio, Plus, Volume2, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
 import { useMessageBatches, useSmsRecipients } from '@/features/admin/sms/hooks/use-sms';
 import type { MessageBatch } from '@/features/admin/sms/types';
 import {
@@ -40,7 +41,17 @@ import {
 
 const GATEWAY_NAMES: Record<string, string> = { awajdigital: 'Awaj Digital', bulksmsdhaka: 'BulkSMS Dhaka' };
 
+type Translate = ReturnType<typeof useLocale>['t'];
+
+function batchStatusLabel(t: Translate, status: string): string {
+  if (status === 'completed') return t('status.completed', 'Completed');
+  if (status === 'processing') return t('status.processing', 'Processing');
+  if (status === 'queued') return t('status.queued', 'Queued');
+  return status;
+}
+
 export function VoiceSmsPage() {
+  const { t } = useLocale();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -66,7 +77,7 @@ export function VoiceSmsPage() {
 
   const areas = recipients.data?.areas ?? [];
   const audience = recipients.data?.audienceTotal ?? 0;
-  const gatewayName = gatewayKey ? (GATEWAY_NAMES[gatewayKey] ?? gatewayKey) : 'Not configured';
+  const gatewayName = gatewayKey ? (GATEWAY_NAMES[gatewayKey] ?? gatewayKey) : t('admin.voiceSms.page.notConfigured', 'Not configured');
 
   const openEditor = (tpl: VoiceTemplate | null) => {
     setEditing(tpl);
@@ -78,7 +89,7 @@ export function VoiceSmsPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Voice Message',
+        header: t('admin.voiceSms.page.colMessage', 'Voice Message'),
         size: 220,
         enableHiding: false,
         cell: ({ row }) => (
@@ -88,14 +99,16 @@ export function VoiceSmsPage() {
             </div>
             <div>
               <span className="font-semibold text-foreground text-xs block">{row.original.name}</span>
-              <span className="text-[11px] font-mono text-muted-foreground">Gateway ID: {row.original.messageId}</span>
+              <span className="text-xs font-mono text-muted-foreground">
+                {t('admin.voiceSms.page.gatewayId', 'Gateway ID: {id}', { id: row.original.messageId })}
+              </span>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'createdAt',
-        header: 'Added Date',
+        header: t('admin.voiceSms.page.colAdded', 'Added Date'),
         size: 120,
         cell: ({ row }) => (
           <span className="text-xs font-mono text-muted-foreground">{row.original.createdAt ? formatDate(row.original.createdAt) : '—'}</span>
@@ -103,7 +116,7 @@ export function VoiceSmsPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('common.actions', 'Actions')}</span>,
         size: 170,
         enableSorting: false,
         enableHiding: false,
@@ -115,14 +128,14 @@ export function VoiceSmsPage() {
               className="text-xs h-7 gap-1 text-primary hover:bg-primary/10"
               onClick={() => {
                 setSelectedVoiceId(row.original.id);
-                toast.info(`Selected "${row.original.name}" for broadcasting`);
+                toast.info(t('admin.voiceSms.page.selected', 'Selected "{name}" for broadcasting', { name: row.original.name }));
               }}
             >
               <Radio className="h-3 w-3" />
-              Select
+              {t('admin.voiceSms.page.select', 'Select')}
             </Button>
             <Can menu="voice_sms" action="create">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditor(row.original)} title="Edit">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditor(row.original)} title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}>
                 <Edit className="h-3.5 w-3.5" />
               </Button>
             </Can>
@@ -132,7 +145,8 @@ export function VoiceSmsPage() {
                 size="icon"
                 className="h-7 w-7 text-destructive hover:bg-destructive/10"
                 onClick={() => setDeleteId(row.original.id)}
-                title="Delete"
+                title={t('common.delete', 'Delete')}
+                aria-label={t('common.delete', 'Delete')}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -141,73 +155,77 @@ export function VoiceSmsPage() {
         ),
       },
     ],
-    [],
+    [t],
   );
 
   const broadcastColumns = useMemo<LegacyColumnDef<MessageBatch, unknown>[]>(
     () => [
       {
         accessorKey: 'title',
-        header: 'Audio Message',
+        header: t('admin.voiceSms.page.colAudio', 'Audio Message'),
         size: 220,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Volume2 className="h-4 w-4 text-primary shrink-0" />
-            <span className="font-semibold text-foreground text-xs">{row.original.title || `Broadcast #${row.original.id}`}</span>
+            <span className="font-semibold text-foreground text-xs">{row.original.title || t('admin.voiceSms.page.broadcastN', 'Broadcast #{id}', { id: row.original.id })}</span>
           </div>
         ),
       },
       {
         accessorKey: 'total',
-        header: 'Subscribers',
+        header: t('admin.voiceSms.page.colSubscribers', 'Subscribers'),
         size: 160,
         cell: ({ row }) => (
           <div className="space-y-1">
             <Badge variant="secondary" className="font-mono text-xs">
-              {row.original.total} calls
+              {t('admin.voiceSms.page.calls', '{n} calls', { n: row.original.total })}
             </Badge>
-            <div className="text-[10px] text-muted-foreground font-mono">
-              {row.original.sent} placed · {row.original.failed} failed · {row.original.pending} pending
+            <div className="text-xs text-muted-foreground font-mono">
+              {t('admin.voiceSms.page.progress', '{sent} placed · {failed} failed · {pending} pending', {
+                sent: row.original.sent,
+                failed: row.original.failed,
+                pending: row.original.pending,
+              })}
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.voiceSms.page.colStatus', 'Status'),
         size: 120,
         cell: ({ row }) => {
           const s = row.original.status;
           return (
             <Badge
               variant={s === 'completed' ? 'default' : 'secondary'}
-              className={`text-[11px] capitalize ${s === 'completed' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
+              tone={s === 'completed' ? 'success' : undefined} className="text-xs capitalize"
             >
-              {s}
+              {batchStatusLabel(t, s)}
             </Badge>
           );
         },
       },
       {
         accessorKey: 'createdAt',
-        header: 'Initiated At',
+        header: t('admin.voiceSms.page.colInitiated', 'Initiated At'),
         size: 160,
         cell: ({ row }) => (
           <span className="text-xs font-mono text-muted-foreground">{row.original.createdAt ? formatDateTime(row.original.createdAt) : '—'}</span>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (templates.isLoading) return <PageSkeleton variant="table" />;
   if (templates.isError && !templates.data) {
     return (
-      <EmptyState
-        title="Failed to load Voice SMS"
-        description="Could not fetch the voice message library."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.voiceSms.page.loadFailed', 'Failed to load Voice SMS')}
+        description={t('admin.voiceSms.page.loadFailedDesc', 'Could not fetch the voice message library.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => templates.refetch()}
       />
     );
@@ -215,32 +233,43 @@ export function VoiceSmsPage() {
 
   const handleBroadcast = () => {
     if (!selectedVoiceId) {
-      toast.error('Please select a voice message first');
+      toast.error(t('admin.voiceSms.page.errSelect', 'Please select a voice message first'));
       return;
     }
     if (audience === 0) {
-      toast.error('No active subscribers in the selected area');
+      toast.error(t('admin.voiceSms.page.errAudience', 'No active subscribers in the selected area'));
       return;
     }
     sendBroadcast.mutate(
       { templateId: selectedVoiceId, areaId: selectedArea },
       {
         onSuccess: (res) =>
-          toast.success(res.queued ? `${res.count} voice call(s) queued` : `Voice call placed (${res.count} sent, ${res.failed} failed)`),
+          toast.success(
+            res.queued
+              ? t('admin.voiceSms.page.queued', '{n} voice call(s) queued', { n: res.count })
+              : t('admin.voiceSms.page.placed', 'Voice call placed ({count} sent, {failed} failed)', {
+                  count: res.count,
+                  failed: res.failed,
+                }),
+          ),
       },
     );
   };
 
   const handleSaveClip = () => {
     if (!clip.name.trim() || !clip.messageId.trim()) {
-      toast.error('Please provide a name and the gateway voice ID');
+      toast.error(t('admin.voiceSms.page.errClip', 'Please provide a name and the gateway voice ID'));
       return;
     }
     saveTemplate.mutate(
       { id: editing?.id, name: clip.name.trim(), messageId: clip.messageId.trim() },
       {
         onSuccess: () => {
-          toast.success(editing ? 'Voice message updated' : `Voice message "${clip.name.trim()}" added`);
+          toast.success(
+            editing
+              ? t('admin.voiceSms.page.updated', 'Voice message updated')
+              : t('admin.voiceSms.page.added', 'Voice message "{name}" added', { name: clip.name.trim() }),
+          );
           setEditorOpen(false);
         },
       },
@@ -250,18 +279,21 @@ export function VoiceSmsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Voice SMS Broadcast"
-        subtitle="Broadcast pre-recorded voice announcements registered on your voice gateway to broadband subscribers"
+        title={t('admin.voiceSms.page.title', 'Voice SMS Broadcast')}
+        subtitle={t(
+          'admin.voiceSms.page.subtitle',
+          'Broadcast pre-recorded voice announcements registered on your voice gateway to broadband subscribers',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Communications' },
-          { label: 'Voice SMS' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('admin.voiceSms.page.crumbComms', 'Communications') },
+          { label: t('admin.voiceSms.page.crumb', 'Voice SMS') },
         ]}
         actions={
           <Can menu="voice_sms" action="create">
             <Button onClick={() => openEditor(null)} className="gap-1.5 bg-primary text-primary-foreground">
               <Plus className="h-4 w-4" />
-              Add Voice Message
+              {t('admin.voiceSms.page.add', 'Add Voice Message')}
             </Button>
           </Can>
         }
@@ -269,10 +301,16 @@ export function VoiceSmsPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Voice Gateway', value: gatewayName },
-          { label: 'Voice Message Library', value: `${templates.data?.meta.total ?? 0} Messages` },
-          { label: 'Broadcasts', value: broadcasts.data?.meta.total ?? 0 },
-          { label: 'Target Audience', value: `${audience} Subscribers` },
+          { label: t('admin.voiceSms.page.gateway', 'Voice Gateway'), value: gatewayName },
+          {
+            label: t('admin.voiceSms.page.library', 'Voice Message Library'),
+            value: t('admin.voiceSms.page.messagesCount', '{n} Messages', { n: templates.data?.meta.total ?? 0 }),
+          },
+          { label: t('admin.voiceSms.page.broadcasts', 'Broadcasts'), value: broadcasts.data?.meta.total ?? 0 },
+          {
+            label: t('admin.voiceSms.page.audience', 'Target Audience'),
+            value: t('admin.voiceSms.page.subscribersCount', '{n} Subscribers', { n: audience }),
+          },
         ]}
       />
 
@@ -281,9 +319,14 @@ export function VoiceSmsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Mic className="h-4 w-4 text-primary" />
-              Voice Message Library
+              {t('admin.voiceSms.page.library', 'Voice Message Library')}
             </CardTitle>
-            <CardDescription>Pre-recorded announcements registered on the voice gateway (by gateway voice ID)</CardDescription>
+            <CardDescription>
+              {t(
+                'admin.voiceSms.page.libraryDesc',
+                'Pre-recorded announcements registered on the voice gateway (by gateway voice ID)',
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <DataTable
@@ -291,9 +334,12 @@ export function VoiceSmsPage() {
               data={templates.data?.items ?? []}
               getRowId={(row) => row.id}
               searchKey="name"
-              searchPlaceholder="Search voice messages..."
-              emptyTitle="No voice messages"
-              emptyDescription="Add a voice message using its gateway voice ID to start broadcasting."
+              searchPlaceholder={t('admin.voiceSms.page.search', 'Search voice messages...')}
+              emptyTitle={t('admin.voiceSms.page.emptyTitle', 'No voice messages')}
+              emptyDescription={t(
+                'admin.voiceSms.page.emptyDesc',
+                'Add a voice message using its gateway voice ID to start broadcasting.',
+              )}
               enableColumnVisibility={false}
               server={{
                 page,
@@ -318,21 +364,23 @@ export function VoiceSmsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Radio className="h-4 w-4 text-primary" />
-              Launch Voice Broadcast
+              {t('admin.voiceSms.page.launch', 'Launch Voice Broadcast')}
             </CardTitle>
-            <CardDescription>Calls every active subscriber in the chosen area</CardDescription>
+            <CardDescription>{t('admin.voiceSms.page.launchDesc', 'Calls every active subscriber in the chosen area')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Voice Gateway</Label>
+              <Label className="text-xs font-semibold">{t('admin.voiceSms.page.gateway', 'Voice Gateway')}</Label>
               <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 font-mono text-xs">{gatewayName}</div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Voice Message</Label>
+              <Label htmlFor="voice-message" className="text-xs font-semibold">
+                {t('admin.voiceSms.page.colMessage', 'Voice Message')}
+              </Label>
               <Select value={selectedVoiceId} onValueChange={(v) => { if (v) setSelectedVoiceId(v); }}>
-                <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="Choose a voice message..." />
+                <SelectTrigger id="voice-message" className="text-xs">
+                  <SelectValue placeholder={t('admin.voiceSms.page.choose', 'Choose a voice message...')} />
                 </SelectTrigger>
                 <SelectContent>
                   {(allTemplates.data?.items ?? []).map((m) => (
@@ -345,13 +393,19 @@ export function VoiceSmsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Target Coverage Area</Label>
+              <Label htmlFor="target-coverage-area" className="text-xs font-semibold">
+                {t('admin.voiceSms.page.area', 'Target Coverage Area')}
+              </Label>
               <Select value={selectedArea} onValueChange={(v) => { if (v) setSelectedArea(v); }}>
-                <SelectTrigger className="text-xs">
+                <SelectTrigger id="target-coverage-area" className="text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Service Areas ({areas.reduce((s, a) => s + a.activeCustomers, 0)} active)</SelectItem>
+                  <SelectItem value="all">
+                    {t('admin.voiceSms.page.allAreas', 'All Service Areas ({n} active)', {
+                      n: areas.reduce((s, a) => s + a.activeCustomers, 0),
+                    })}
+                  </SelectItem>
                   {areas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.name} ({a.activeCustomers})
@@ -363,12 +417,16 @@ export function VoiceSmsPage() {
 
             <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-1.5">
               <div className="flex justify-between text-muted-foreground">
-                <span>Estimated Calls:</span>
-                <span className="font-semibold text-foreground font-mono">{audience} subscribers</span>
+                <span>{t('admin.voiceSms.page.estimated', 'Estimated Calls:')}</span>
+                <span className="font-semibold text-foreground font-mono">
+                  {t('admin.voiceSms.page.subscribersLower', '{n} subscribers', { n: audience })}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Delivery:</span>
-                <span className="font-medium text-foreground">Queued, placed in the background</span>
+                <span>{t('admin.voiceSms.page.delivery', 'Delivery:')}</span>
+                <span className="font-medium text-foreground">
+                  {t('admin.voiceSms.page.deliveryValue', 'Queued, placed in the background')}
+                </span>
               </div>
             </div>
 
@@ -379,11 +437,15 @@ export function VoiceSmsPage() {
                 disabled={sendBroadcast.isPending || !gatewayKey}
               >
                 <Phone className="h-4 w-4" />
-                {sendBroadcast.isPending ? 'Scheduling...' : 'Queue Voice Broadcast'}
+                {sendBroadcast.isPending
+                  ? t('admin.voiceSms.page.scheduling', 'Scheduling...')
+                  : t('admin.voiceSms.page.queue', 'Queue Voice Broadcast')}
               </Button>
             </Can>
             {!gatewayKey && settings.isSuccess && (
-              <p className="text-[11px] text-amber-500">Configure a voice gateway in settings before broadcasting.</p>
+              <p className="text-xs text-amber-500">
+                {t('admin.voiceSms.page.configure', 'Configure a voice gateway in settings before broadcasting.')}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -391,20 +453,25 @@ export function VoiceSmsPage() {
 
       <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Voice Broadcast History</CardTitle>
-          <CardDescription>Progress of queued voice broadcasts</CardDescription>
+          <CardTitle className="text-base">{t('admin.voiceSms.page.history', 'Voice Broadcast History')}</CardTitle>
+          <CardDescription>{t('admin.voiceSms.page.historyDesc', 'Progress of queued voice broadcasts')}</CardDescription>
         </CardHeader>
         <CardContent>
           {broadcasts.isError ? (
-            <EmptyState title="Could not load broadcasts" actionLabel="Retry" onAction={() => broadcasts.refetch()} />
+            <EmptyState
+              variant="error"
+              title={t('admin.voiceSms.page.broadcastsFailed', 'Could not load broadcasts')}
+              actionLabel={t('common.retry', 'Retry')}
+              onAction={() => broadcasts.refetch()}
+            />
           ) : (
             <DataTable
               columns={broadcastColumns}
               data={broadcasts.data?.items ?? []}
               isLoading={broadcasts.isLoading}
               getRowId={(row) => row.id}
-              emptyTitle="No broadcasts yet"
-              emptyDescription="Initiate your first voice broadcast above."
+              emptyTitle={t('admin.voiceSms.page.noBroadcasts', 'No broadcasts yet')}
+              emptyDescription={t('admin.voiceSms.page.noBroadcastsDesc', 'Initiate your first voice broadcast above.')}
               enableColumnVisibility={false}
               server={{
                 page: historyPage,
@@ -426,21 +493,29 @@ export function VoiceSmsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mic className="h-5 w-5 text-primary" />
-              {editing ? 'Edit Voice Message' : 'Add Voice Message'}
+              {editing ? t('admin.voiceSms.page.editTitle', 'Edit Voice Message') : t('admin.voiceSms.page.add', 'Add Voice Message')}
             </DialogTitle>
-            <DialogDescription>Register a voice recording that already exists on your voice gateway account.</DialogDescription>
+            <DialogDescription>
+              {t('admin.voiceSms.page.dialogDesc', 'Register a voice recording that already exists on your voice gateway account.')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Name</Label>
-              <Input value={clip.name} onChange={(e) => setClip({ ...clip, name: e.target.value })} placeholder="e.g. Bill due announcement" className="text-xs" />
+              <Label htmlFor="name" className="text-xs font-semibold">{t('admin.voiceSms.page.fieldName', 'Name')}</Label>
+              <Input
+                id="name"
+                value={clip.name}
+                onChange={(e) => setClip({ ...clip, name: e.target.value })}
+                placeholder={t('admin.voiceSms.page.namePlaceholder', 'e.g. Bill due announcement')}
+                className="text-xs"
+              />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Gateway Voice ID</Label>
+              <Label className="text-xs font-semibold">{t('admin.voiceSms.page.voiceId', 'Gateway Voice ID')}</Label>
               {(voices.data ?? []).length > 0 ? (
                 <Select value={clip.messageId} onValueChange={(v) => v && setClip({ ...clip, messageId: v })}>
                   <SelectTrigger className="text-xs">
-                    <SelectValue placeholder="Choose a voice from the gateway..." />
+                    <SelectValue placeholder={t('admin.voiceSms.page.chooseGateway', 'Choose a voice from the gateway...')} />
                   </SelectTrigger>
                   <SelectContent>
                     {(voices.data ?? []).map((v) => (
@@ -454,7 +529,7 @@ export function VoiceSmsPage() {
                 <Input
                   value={clip.messageId}
                   onChange={(e) => setClip({ ...clip, messageId: e.target.value })}
-                  placeholder="Voice / message ID from the gateway panel"
+                  placeholder={t('admin.voiceSms.page.idPlaceholder', 'Voice / message ID from the gateway panel')}
                   className="font-mono text-xs"
                 />
               )}
@@ -462,11 +537,11 @@ export function VoiceSmsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditorOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSaveClip} disabled={saveTemplate.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              {saveTemplate.isPending ? 'Saving…' : 'Save'}
+              {saveTemplate.isPending ? t('admin.voiceSms.page.saving', 'Saving…') : t('common.save', 'Save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -475,15 +550,15 @@ export function VoiceSmsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete voice message"
-        description="The recording stays on the gateway; it is only removed from this library."
-        confirmLabel="Delete"
+        title={t('admin.voiceSms.page.deleteTitle', 'Delete voice message')}
+        description={t('admin.voiceSms.page.deleteDesc', 'The recording stays on the gateway; it is only removed from this library.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleteId) return;
           deleteTemplate.mutate(deleteId, {
             onSuccess: () => {
-              toast.success('Voice message deleted');
+              toast.success(t('admin.voiceSms.page.deleted', 'Voice message deleted'));
               if (selectedVoiceId === deleteId) setSelectedVoiceId('');
               setDeleteId(null);
             },

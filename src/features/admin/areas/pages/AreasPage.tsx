@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 import {
   Plus,
@@ -21,14 +22,17 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useLocale } from '@/i18n/locale-context';
 import { useAreaMutations, useAreaSummary, useAreas, useSubAreas } from '../hooks/use-areas';
 import type { ServiceArea, SubArea } from '../types';
-import { useDebouncedValue } from '@/features/admin/customers/hooks/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
 import { TablePagination } from '@/components/shared/TablePagination';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable } from '@/features/shared/data-table';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { handleApiError, errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
@@ -43,14 +47,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -74,9 +70,10 @@ type AreaFormValues = z.infer<typeof areaSchema>;
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const AREA_PAGE_SIZE = 25;
-const STATUS_ITEMS = { active: 'Active', inactive: 'Inactive' };
 
 export function AreasPage() {
+  const { t } = useLocale();
+  const statusItems = { active: t('status.active', 'Active'), inactive: t('status.inactive', 'Inactive') };
   const [areaPage, setAreaPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const search = useDebouncedValue(searchQuery.trim());
@@ -120,7 +117,7 @@ export function AreasPage() {
   const [subPageSize, setSubPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const subCurrentPage = subPage.areaId === selectedAreaId ? subPage.page : 1;
   const subQuery = useSubAreas(selectedAreaId, subCurrentPage, subPageSize);
-  const subareas = subQuery.data?.items ?? [];
+  const subareas = useMemo(() => subQuery.data?.items ?? [], [subQuery.data?.items]);
   const subTotal = subQuery.data?.meta.total ?? selectedArea?.subareaCount ?? 0;
 
   const summary = summaryQuery.data;
@@ -160,11 +157,82 @@ export function AreasPage() {
     setSubAreaDialogOpen(true);
   };
 
-  const openEditSubArea = (sub: SubArea) => {
-    setEditingSubArea(sub);
-    subForm.reset({ area_name: sub.name, area_code: sub.code, status: sub.status });
-    setSubAreaDialogOpen(true);
-  };
+  const openEditSubArea = useCallback(
+    (sub: SubArea) => {
+      setEditingSubArea(sub);
+      subForm.reset({ area_name: sub.name, area_code: sub.code, status: sub.status });
+      setSubAreaDialogOpen(true);
+    },
+    [subForm],
+  );
+
+  const subColumns = useMemo<LegacyColumnDef<SubArea, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: t('admin.areas.page.colSubName', 'Sub-area Name'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2.5">
+            <div className="rounded-md bg-muted p-1.5 text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-foreground">{row.original.name}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'code',
+        header: t('admin.areas.page.colCode', 'Area Code'),
+        cell: ({ row }) => (
+          <span className="rounded border border-border/40 bg-muted/50 px-2 py-1 font-mono text-xs text-muted-foreground">
+            {row.original.code || '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('admin.customerPayments.list.colStatus', 'Status'),
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <Can menu="area" action="update">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 transition-colors hover:bg-primary/10 hover:text-primary"
+                onClick={() => openEditSubArea(row.original)}
+                title={t('admin.areas.page.editSub', 'Edit sub-area')}
+                aria-label={t('admin.areas.page.editSub', 'Edit sub-area')}
+              >
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </Can>
+            <Can menu="area" action="delete">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive transition-colors hover:bg-destructive/10"
+                onClick={() => setDeleteSubArea(row.original)}
+                title={t('admin.areas.page.deleteSub', 'Delete sub-area')}
+                aria-label={t('admin.areas.page.deleteSub', 'Delete sub-area')}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </Can>
+          </div>
+        ),
+      },
+    ],
+    [openEditSubArea, t],
+  );
 
   const onSubmitSubArea = async (values: AreaFormValues) => {
     try {
@@ -183,10 +251,10 @@ export function AreasPage() {
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError) {
     return (
-      <EmptyState
-        title="Failed to load areas"
-        description={errorMessage(error, 'Could not fetch service areas.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.areas.page.loadFailed', 'Failed to load areas')}
+        description={errorMessage(error, t('admin.areas.page.loadFailedHint', 'Could not fetch service areas.'))}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -201,10 +269,10 @@ export function AreasPage() {
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
               <Globe className="h-6 w-6" />
             </div>
-            Service Areas
+            {t('admin.areas.page.title', 'Service Areas')}
           </h1>
           <p className="text-muted-foreground text-sm mt-1.5">
-            Geographic coverage zones and their sub-areas used for customer assignment.
+            {t('admin.areas.page.subtitle', 'Geographic coverage zones and their sub-areas used for customer assignment.')}
           </p>
         </div>
         <Can menu="area" action="create">
@@ -213,7 +281,7 @@ export function AreasPage() {
             onClick={openCreateArea}
             className="shadow-md font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 transition duration-200"
           >
-            <Plus className="h-4 w-4" /> New Area
+            <Plus className="h-4 w-4" /> {t('admin.areas.page.newArea', 'New Area')}
           </Button>
         </Can>
       </PageHero>
@@ -223,10 +291,10 @@ export function AreasPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {(
             [
-              { label: 'Total Areas', value: kpi(summary?.totalAreas), unit: 'zones', icon: Globe, tone: 'bg-primary/10 text-primary', valueTone: '' },
-              { label: 'Active Areas', value: kpi(summary?.activeAreas), unit: 'operational', icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-500', valueTone: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Total Sub-areas', value: kpi(summary?.totalSubareas), unit: 'sectors', icon: Layers, tone: 'bg-blue-500/10 text-blue-500', valueTone: 'text-blue-600 dark:text-blue-400' },
-              { label: 'Without Sub-areas', value: kpi(summary?.areasWithoutSubareas), unit: 'pending breakdown', icon: AlertTriangle, tone: 'bg-amber-500/10 text-amber-500', valueTone: 'text-amber-600 dark:text-amber-400' },
+              { label: t('admin.areas.page.kpiTotal', 'Total Areas'), value: kpi(summary?.totalAreas), unit: t('admin.areas.page.unitZones', 'zones'), icon: Globe, tone: 'bg-primary/10 text-primary', valueTone: '' },
+              { label: t('admin.areas.page.kpiActive', 'Active Areas'), value: kpi(summary?.activeAreas), unit: t('admin.areas.page.unitOperational', 'operational'), icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-500', valueTone: 'text-emerald-600 dark:text-emerald-400' },
+              { label: t('admin.areas.page.kpiSubareas', 'Total Sub-areas'), value: kpi(summary?.totalSubareas), unit: t('admin.areas.page.unitSectors', 'sectors'), icon: Layers, tone: 'bg-blue-500/10 text-blue-500', valueTone: 'text-blue-600 dark:text-blue-400' },
+              { label: t('admin.areas.page.kpiWithout', 'Without Sub-areas'), value: kpi(summary?.areasWithoutSubareas), unit: t('admin.areas.page.unitPending', 'pending breakdown'), icon: AlertTriangle, tone: 'bg-amber-500/10 text-amber-500', valueTone: 'text-amber-600 dark:text-amber-400' },
             ] as const
           ).map((k) => (
             <Card key={k.label} className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm transition duration-200">
@@ -252,8 +320,8 @@ export function AreasPage() {
               <div className="p-3.5 border-b border-border/60 bg-muted/20 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">Coverage Zones</span>
-                    <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 bg-primary/10 text-primary border border-primary/20">
+                    <span className="text-xs font-bold uppercase tracking-wider text-foreground">{t('admin.areas.page.coverageZones', 'Coverage Zones')}</span>
+                    <Badge variant="secondary" className="text-xs font-mono px-2 py-0.5 bg-primary/10 text-primary border border-primary/20">
                       {data?.meta.total ?? 0}
                     </Badge>
                   </div>
@@ -264,7 +332,7 @@ export function AreasPage() {
                       onClick={openCreateArea}
                       className="h-7 px-2 text-xs font-semibold text-primary hover:bg-primary/10 gap-1"
                     >
-                      <Plus className="h-3.5 w-3.5" /> Add
+                      <Plus className="h-3.5 w-3.5" /> {t('admin.areas.page.add', 'Add')}
                     </Button>
                   </Can>
                 </div>
@@ -273,7 +341,8 @@ export function AreasPage() {
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Search name or code..."
+                      placeholder={t('admin.areas.page.searchPlaceholder', 'Search name or code...')}
+                      aria-label={t('admin.areas.page.searchLabel', 'Search areas')}
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
@@ -285,6 +354,7 @@ export function AreasPage() {
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
+                        aria-label={t('admin.customers.list.clearSearch', 'Clear search')}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         <X className="h-3 w-3" />
@@ -297,16 +367,16 @@ export function AreasPage() {
                       setStatusFilter((v as StatusFilter) || 'all');
                       setAreaPage(1);
                     }}
-                    items={{ all: 'All', ...STATUS_ITEMS }}
+                    items={{ all: t('admin.customers.list.pillAll', 'All'), ...statusItems }}
                   >
-                    <SelectTrigger className="w-[100px] h-8 bg-background border-border/60 text-xs">
+                    <SelectTrigger aria-label={t('admin.areas.page.filterStatus', 'Filter by status')} className="min-w-[100px] h-8 bg-background border-border/60 text-xs">
                       <Filter className="h-3 w-3 mr-1 text-muted-foreground" />
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="all">{t('admin.customers.list.pillAll', 'All')}</SelectItem>
+                      <SelectItem value="active">{statusItems.active}</SelectItem>
+                      <SelectItem value="inactive">{statusItems.inactive}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -317,7 +387,9 @@ export function AreasPage() {
                 {items.length === 0 ? (
                   <div className="py-12 px-4 text-center">
                     <p className="text-xs text-muted-foreground">
-                      {search || statusFilter !== 'all' ? 'No areas match the filter' : 'No service areas yet'}
+                      {search || statusFilter !== 'all'
+                        ? t('admin.areas.page.noMatch', 'No areas match the filter')
+                        : t('admin.areas.page.noAreas', 'No service areas yet')}
                     </p>
                   </div>
                 ) : (
@@ -360,8 +432,8 @@ export function AreasPage() {
                                 className={`h-1.5 w-1.5 rounded-full shrink-0 ${area.status === 'active' ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`}
                               />
                             </div>
-                            <div className="text-[11px] font-mono text-muted-foreground truncate">
-                              {area.code || '—'} · {area.totalCustomers} customers
+                            <div className="text-xs font-mono text-muted-foreground truncate">
+                              {t('admin.areas.page.customersLine', '{code} · {n} customers', { code: area.code || '—', n: area.totalCustomers })}
                             </div>
                           </div>
                         </div>
@@ -369,11 +441,9 @@ export function AreasPage() {
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
                           <Badge
                             variant={isSelected ? 'default' : 'secondary'}
-                            className={`text-[10px] font-mono px-2 py-0.5 ${
-                              isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted/70 text-muted-foreground'
-                            }`}
+                            tone={isSelected ? undefined : 'neutral'} className="text-xs font-mono px-2 py-0.5"
                           >
-                            {area.subareaCount} sub
+                            {t('admin.areas.page.subBadge', '{n} sub', { n: area.subareaCount })}
                           </Badge>
                           <ChevronRight
                             className={`h-4 w-4 transition-transform ${
@@ -417,25 +487,25 @@ export function AreasPage() {
                             {selectedArea.code || `#${selectedArea.id}`}
                           </Badge>
                           {selectedArea.status === 'active' ? (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs font-medium gap-1">
+                            <Badge variant="outline" tone="success" className="text-xs font-medium gap-1">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                              Active Zone
+                              {t('admin.areas.page.activeZone', 'Active Zone')}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-muted text-muted-foreground border-border/60 text-xs font-medium">
-                              Inactive
+                              {statusItems.inactive}
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                           <span>
-                            <strong className="text-foreground">{selectedArea.subareaCount}</strong> sub-areas
+                            <strong className="text-foreground">{selectedArea.subareaCount}</strong> {t('admin.areas.page.unitSubareas', 'sub-areas')}
                           </span>
                           <span>•</span>
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            <strong className="text-foreground">{selectedArea.totalCustomers}</strong> customers (
-                            {selectedArea.activeCustomers} active)
+                            <strong className="text-foreground">{selectedArea.totalCustomers}</strong> {t('admin.areas.page.unitCustomers', 'customers')} (
+                            {t('admin.areas.page.activeCount', '{n} active', { n: selectedArea.activeCustomers })})
                           </span>
                         </p>
                       </div>
@@ -449,7 +519,7 @@ export function AreasPage() {
                           onClick={() => openEditArea(selectedArea)}
                           className="h-8 gap-1.5 text-xs font-medium border-border/80 hover:bg-muted/50"
                         >
-                          <Edit className="h-3.5 w-3.5" /> Edit Area
+                          <Edit className="h-3.5 w-3.5" /> {t('admin.areas.page.editArea', 'Edit Area')}
                         </Button>
                       </Can>
                       <Can menu="area" action="delete">
@@ -459,7 +529,7 @@ export function AreasPage() {
                           onClick={() => setDeleteArea(selectedArea)}
                           className="h-8 gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                          <Trash2 className="h-3.5 w-3.5" /> {t('common.delete', 'Delete')}
                         </Button>
                       </Can>
                     </div>
@@ -475,13 +545,13 @@ export function AreasPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                          Sub-areas in {selectedArea.name}
+                          {t('admin.areas.page.subareasIn', 'Sub-areas in {name}', { name: selectedArea.name })}
                           <Badge variant="secondary" className="text-xs font-mono bg-primary/10 text-primary border border-primary/20">
                             {subTotal}
                           </Badge>
                         </h3>
-                        <p className="text-[11px] text-muted-foreground">
-                          Sectors, streets or distribution blocks under this coverage zone.
+                        <p className="text-xs text-muted-foreground">
+                          {t('admin.areas.page.subareasHint', 'Sectors, streets or distribution blocks under this coverage zone.')}
                         </p>
                       </div>
                     </div>
@@ -492,7 +562,7 @@ export function AreasPage() {
                         onClick={openCreateSubArea}
                         className="h-8 text-xs font-semibold gap-1.5 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Add Sub-area
+                        <Plus className="h-3.5 w-3.5" /> {t('admin.areas.page.addSub', 'Add Sub-area')}
                       </Button>
                     </Can>
                   </div>
@@ -503,10 +573,10 @@ export function AreasPage() {
                     </div>
                   ) : subQuery.isError ? (
                     <div className="p-6">
-                      <EmptyState
-                        title="Could not load sub-areas"
+                      <EmptyState variant="error"
+                        title={t('admin.areas.page.subLoadFailed', 'Could not load sub-areas')}
                         description={errorMessage(subQuery.error)}
-                        actionLabel="Retry"
+                        actionLabel={t('admin.customers.list.retry', 'Retry')}
                         onAction={() => subQuery.refetch()}
                       />
                     </div>
@@ -516,9 +586,9 @@ export function AreasPage() {
                         <div className="mx-auto w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground border border-border/60">
                           <Layers className="h-6 w-6 opacity-60" />
                         </div>
-                        <h4 className="text-sm font-semibold text-foreground">No sub-areas configured</h4>
+                        <h4 className="text-sm font-semibold text-foreground">{t('admin.areas.page.noSubs', 'No sub-areas configured')}</h4>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                          Break down <strong className="text-foreground">{selectedArea.name}</strong> into sectors, blocks, or wards.
+                          {t('admin.areas.page.noSubsHint', 'Break down {name} into sectors, blocks, or wards.', { name: selectedArea.name })}
                         </p>
                         <Can menu="area" action="create">
                           <Button
@@ -527,104 +597,33 @@ export function AreasPage() {
                             onClick={openCreateSubArea}
                             className="mt-2 text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
                           >
-                            <Plus className="h-3.5 w-3.5" /> Create First Sub-area
+                            <Plus className="h-3.5 w-3.5" /> {t('admin.areas.page.createFirstSub', 'Create First Sub-area')}
                           </Button>
                         </Can>
                       </div>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent border-border/60 bg-muted/30">
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[40%]">
-                              Sub-area Name
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[30%]">
-                              Area Code
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[15%]">
-                              Status
-                            </TableHead>
-                            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground w-[15%]">
-                              Actions
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {subareas.map((sub) => (
-                            <TableRow key={sub.id} className="group border-border/40 hover:bg-muted/30 transition-colors">
-                              <TableCell>
-                                <div className="flex items-center gap-2.5">
-                                  <div className="p-1.5 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                  </div>
-                                  <span className="font-semibold text-sm text-foreground">{sub.name}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded border border-border/40">
-                                  {sub.code || '—'}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                {sub.status === 'active' ? (
-                                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-medium gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                                    Active
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-muted text-muted-foreground border-border/60 text-[11px] font-medium gap-1">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground inline-block" />
-                                    Inactive
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Can menu="area" action="update">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
-                                      onClick={() => openEditSubArea(sub)}
-                                      title="Edit sub-area"
-                                    >
-                                      <Edit className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </Can>
-                                  <Can menu="area" action="delete">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7 text-destructive hover:bg-destructive/10 transition-colors"
-                                      onClick={() => setDeleteSubArea(sub)}
-                                      title="Delete sub-area"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </Can>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                    <div className="p-3">
+                      <DataTable
+                        key={selectedAreaId}
+                        className="space-y-0"
+                        columns={subColumns}
+                        data={subareas}
+                        getRowId={(sub) => sub.id}
+                        enableColumnVisibility={false}
+                        enableLayoutToggle={false}
+                        server={{
+                          page: subCurrentPage,
+                          pageSize: subPageSize,
+                          total: subTotal,
+                          onPageChange: (page) => setSubPage({ areaId: selectedAreaId ?? '', page }),
+                          onPageSizeChange: (size) => {
+                            setSubPageSize(size);
+                            setSubPage({ areaId: selectedAreaId ?? '', page: 1 });
+                          },
+                        }}
+                      />
                     </div>
-                  )}
-
-                  {subTotal > 0 && (
-                    <TablePagination
-                      currentPage={subCurrentPage}
-                      pageSize={subPageSize}
-                      totalItems={subTotal}
-                      onPageChange={(page) => setSubPage({ areaId: selectedAreaId ?? '', page })}
-                      onPageSizeChange={(size) => {
-                        setSubPageSize(size);
-                        setSubPage({ areaId: selectedAreaId ?? '', page: 1 });
-                      }}
-                      pageSizeOptions={[10, 20, 50, 100]}
-                    />
                   )}
                 </Card>
               </>
@@ -634,9 +633,9 @@ export function AreasPage() {
                   <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
                     <Globe className="h-7 w-7" />
                   </div>
-                  <h3 className="text-base font-bold text-foreground">No service areas yet</h3>
+                  <h3 className="text-base font-bold text-foreground">{t('admin.areas.page.noAreas', 'No service areas yet')}</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Create a coverage zone to start assigning customers and sub-areas.
+                    {t('admin.areas.page.noAreasHint', 'Create a coverage zone to start assigning customers and sub-areas.')}
                   </p>
                 </div>
               </Card>
@@ -653,13 +652,20 @@ export function AreasPage() {
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 {editArea ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editArea ? 'Edit Coverage Zone' : 'Add Service Area'}
+              {editArea ? t('admin.areas.page.editZone', 'Edit Coverage Zone') : t('admin.areas.page.addArea', 'Add Service Area')}
             </DialogTitle>
             <DialogDescription>
-              {editArea ? 'Update the coverage zone name, code or status.' : 'Define a new coverage zone.'}
+              {editArea
+                ? t('admin.areas.page.editZoneDesc', 'Update the coverage zone name, code or status.')
+                : t('admin.areas.page.addAreaDesc', 'Define a new coverage zone.')}
             </DialogDescription>
           </DialogHeader>
-          <AreaFormFields form={areaForm} onSubmit={onSubmitArea} codeHint="Up to 10 characters" submitLabel={editArea ? 'Save Changes' : 'Create Service Area'} />
+          <AreaFormFields
+            form={areaForm}
+            onSubmit={onSubmitArea}
+            codeHint={t('admin.areas.page.codeHint', 'Up to {n} characters', { n: 10 })}
+            submitLabel={editArea ? t('admin.areas.page.saveChanges', 'Save Changes') : t('admin.areas.page.createArea', 'Create Service Area')}
+          />
         </DialogContent>
       </Dialog>
 
@@ -667,13 +673,13 @@ export function AreasPage() {
       <ConfirmDialog
         open={deleteArea !== null}
         onOpenChange={(open) => !open && setDeleteArea(null)}
-        title="Delete Service Area"
+        title={t('admin.areas.page.deleteAreaTitle', 'Delete Service Area')}
         description={
           deleteArea && deleteArea.totalCustomers > 0
-            ? `${deleteArea.totalCustomers} customers are assigned to this area and will need reassignment. Delete it anyway?`
-            : 'Are you sure you want to delete this coverage zone?'
+            ? t('admin.areas.page.deleteAreaAssigned', '{n} customers are assigned to this area and will need reassignment. Delete it anyway?', { n: deleteArea.totalCustomers })
+            : t('admin.areas.page.deleteAreaConfirm', 'Are you sure you want to delete this coverage zone?')
         }
-        confirmLabel="Delete Area"
+        confirmLabel={t('admin.areas.page.deleteArea', 'Delete Area')}
         destructive
         onConfirm={async () => {
           if (deleteArea) {
@@ -692,15 +698,22 @@ export function AreasPage() {
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 {editingSubArea ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editingSubArea ? 'Edit Sub-area' : 'Add New Sub-area'}
+              {editingSubArea ? t('admin.areas.page.editSub', 'Edit sub-area') : t('admin.areas.page.addNewSub', 'Add New Sub-area')}
             </DialogTitle>
             <DialogDescription>
               {editingSubArea
-                ? 'Update sub-area label, code, or status.'
-                : `Create a sub-area inside ${selectedArea?.name ?? 'this zone'}.`}
+                ? t('admin.areas.page.editSubDesc', 'Update sub-area label, code, or status.')
+                : t('admin.areas.page.addSubDesc', 'Create a sub-area inside {name}.', {
+                    name: selectedArea?.name ?? t('admin.areas.page.thisZone', 'this zone'),
+                  })}
             </DialogDescription>
           </DialogHeader>
-          <AreaFormFields form={subForm} onSubmit={onSubmitSubArea} codeHint="Up to 50 characters" submitLabel={editingSubArea ? 'Save Changes' : 'Add Sub-area'} />
+          <AreaFormFields
+            form={subForm}
+            onSubmit={onSubmitSubArea}
+            codeHint={t('admin.areas.page.codeHint', 'Up to {n} characters', { n: 50 })}
+            submitLabel={editingSubArea ? t('admin.areas.page.saveChanges', 'Save Changes') : t('admin.areas.page.addSub', 'Add Sub-area')}
+          />
         </DialogContent>
       </Dialog>
 
@@ -708,9 +721,9 @@ export function AreasPage() {
       <ConfirmDialog
         open={deleteSubArea !== null}
         onOpenChange={(open) => !open && setDeleteSubArea(null)}
-        title="Delete Sub-area"
-        description="Are you sure you want to delete this sub-area? Customers assigned here may need re-routing."
-        confirmLabel="Delete Sub-area"
+        title={t('admin.areas.page.deleteSub', 'Delete sub-area')}
+        description={t('admin.areas.page.deleteSubConfirm', 'Are you sure you want to delete this sub-area? Customers assigned here may need re-routing.')}
+        confirmLabel={t('admin.areas.page.deleteSub', 'Delete sub-area')}
         destructive
         onConfirm={async () => {
           if (deleteSubArea) {
@@ -741,35 +754,37 @@ function AreaFormFields({
     watch,
     formState: { errors, isSubmitting },
   } = form;
+  const { t, te } = useLocale();
+  const statusItems = { active: t('status.active', 'Active'), inactive: t('status.inactive', 'Inactive') };
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2" noValidate>
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Name</Label>
-        <Input {...register('area_name')} className="h-10 shadow-sm" />
-        {errors.area_name && <p className="text-xs text-destructive">{errors.area_name.message}</p>}
+        <Label htmlFor="area_name" className="text-xs font-semibold">{t('admin.areas.page.fieldName', 'Name')}</Label>
+        <Input id="area_name" {...register('area_name')} className="h-10 shadow-sm" />
+        {errors.area_name && <p className="text-xs text-destructive">{te(errors.area_name.message ?? '')}</p>}
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Code</Label>
-        <Input {...register('area_code')} className="h-10 shadow-sm font-mono" />
+        <Label htmlFor="area_code" className="text-xs font-semibold">{t('admin.areas.page.fieldCode', 'Code')}</Label>
+        <Input id="area_code" {...register('area_code')} className="h-10 shadow-sm font-mono" />
         {errors.area_code ? (
-          <p className="text-xs text-destructive">{errors.area_code.message}</p>
+          <p className="text-xs text-destructive">{te(errors.area_code.message ?? '')}</p>
         ) : (
-          <p className="text-[11px] text-muted-foreground">{codeHint}</p>
+          <p className="text-xs text-muted-foreground">{codeHint}</p>
         )}
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Status</Label>
+        <Label htmlFor="status" className="text-xs font-semibold">{t('admin.customerPayments.list.colStatus', 'Status')}</Label>
         <Select
           value={watch('status')}
           onValueChange={(v) => setValue('status', v === 'inactive' ? 'inactive' : 'active')}
-          items={STATUS_ITEMS}
+          items={statusItems}
         >
-          <SelectTrigger className="h-10 shadow-sm w-full">
+          <SelectTrigger id="status" className="h-10 shadow-sm w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="active">{statusItems.active}</SelectItem>
+            <SelectItem value="inactive">{statusItems.inactive}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -778,7 +793,7 @@ function AreaFormFields({
         className="w-full font-semibold shadow-sm bg-primary text-primary-foreground hover:bg-primary/90"
         disabled={isSubmitting}
       >
-        {isSubmitting ? 'Saving…' : submitLabel}
+        {isSubmitting ? t('admin.areas.page.saving', 'Saving…') : submitLabel}
       </Button>
     </form>
   );

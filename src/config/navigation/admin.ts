@@ -1,5 +1,18 @@
 import type { NavItem } from './types';
 
+/** Order of the sidebar groups (by job, not by legacy menu position). */
+export const adminSectionOrder = [
+  'Overview',
+  'Customers',
+  'Billing & Collections',
+  'Resellers & Bandwidth',
+  'Network',
+  'Messaging & Engagement',
+  'Finance & Back Office',
+  'Settings & Security',
+  'Your Account',
+];
+
 /** Tenant admin + reseller sidebar — mirrors `sidebar.php` */
 export const adminNavigation: NavItem[] = [
   // ── Dashboard ──────────────────────────────────────────────
@@ -10,6 +23,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'LayoutDashboard',
     roles: ['admin', 'resellerAdmin'],
     hideWhenExpired: true,
+    section: 'Overview',
   },
   {
     id: 'hierarchy',
@@ -17,7 +31,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/hierarchy',
     icon: 'Network',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Operations',
+    section: 'Overview',
     hideWhenExpired: true,
   },
 
@@ -29,7 +43,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'MapPin',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'area', action: 'read' },
-    section: 'Operations',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -38,7 +52,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Users',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'customer', action: 'read' },
-    section: 'Operations',
+    section: 'Customers',
     hideWhenExpired: true,
     children: [
       { id: 'customers-all', label: 'All Customers', href: '/admin/customers' },
@@ -60,7 +74,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'BarChart3',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'reports', action: 'read' },
-    section: 'Operations',
+    section: 'Overview',
     hideWhenExpired: true,
     children: [
       { id: 'reports-btrc', label: 'BTRC Report', href: '/admin/reports/btrc' },
@@ -74,7 +88,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Network',
     icon: 'Share2',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Operations',
+    section: 'Network',
     hideWhenExpired: true,
     children: [
       { id: 'network-diagram', label: 'Network Diagram', href: '/admin/network/diagram' },
@@ -93,7 +107,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/jobs',
     icon: 'ClipboardList',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Operations',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -101,7 +115,7 @@ export const adminNavigation: NavItem[] = [
     label: 'ISP Engines',
     icon: 'Workflow',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Engines',
+    section: 'Settings & Security',
     hideWhenExpired: true,
     children: [
       { id: 'engines-index', label: 'All Engines', href: '/admin/engines' },
@@ -113,7 +127,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/leads',
     icon: 'Target',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Operations',
+    section: 'Customers',
     hideWhenExpired: true,
   },
 
@@ -123,7 +137,7 @@ export const adminNavigation: NavItem[] = [
     label: 'HR Management',
     icon: 'UserCog',
     roles: ['admin', 'resellerAdmin'],
-    section: 'HR',
+    section: 'Finance & Back Office',
     hideWhenExpired: true,
     children: [
       { id: 'hr-employees', label: 'Staff List', href: '/admin/hr/employees', permission: { menu: 'employee', action: 'read' } },
@@ -142,7 +156,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Package',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'packages', action: 'read' },
-    section: 'Billing',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
   },
   {
@@ -150,7 +164,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Billing',
     icon: 'Receipt',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
     children: [
       { id: 'billing-invoices', label: 'Invoices', href: '/admin/invoices' },
@@ -166,7 +180,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Collections',
     icon: 'HandCoins',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
     children: [
       { id: 'collections-reminders', label: 'Reminders', href: '/admin/collections/reminders', permission: { menu: 'sms_message', action: 'read' } },
@@ -181,7 +195,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/addons',
     icon: 'Layers',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
   },
   {
@@ -189,7 +203,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Services',
     icon: 'Boxes',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
     children: [
       { id: 'services-types', label: 'Service Types', href: '/admin/services' },
@@ -202,7 +216,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Calculator',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'accounting', action: 'read' },
-    section: 'Billing',
+    section: 'Finance & Back Office',
     hideWhenExpired: true,
     children: [
       { id: 'acc-incomes', label: 'Incomes', href: '/admin/accounting/incomes' },
@@ -219,7 +233,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Building2',
     roles: ['admin'],
     permission: { menu: 'Resellers', action: 'read' },
-    section: 'Billing',
+    section: 'Resellers & Bandwidth',
     hideWhenExpired: true,
     children: [
       { id: 'pop-list', label: 'POP Resellers', href: '/admin/pop/resellers' },
@@ -237,7 +251,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/dealers',
     icon: 'Store',
     roles: ['admin'],
-    section: 'Billing',
+    section: 'Resellers & Bandwidth',
     hideWhenExpired: true,
   },
   {
@@ -246,7 +260,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Bandwidth Buy',
     icon: 'ArrowDownToLine',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Resellers & Bandwidth',
     hideWhenExpired: true,
     children: [
       { id: 'bw-buy-list', label: 'Buy List', href: '/admin/bandwidth/buy' },
@@ -263,7 +277,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Bandwidth Sell',
     icon: 'ArrowUpFromLine',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Billing',
+    section: 'Resellers & Bandwidth',
     hideWhenExpired: true,
     children: [
       { id: 'bw-sell-list', label: 'Sell List', href: '/admin/bandwidth/sell' },
@@ -277,7 +291,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/subscription',
     icon: 'Zap',
     roles: ['admin'],
-    section: 'Billing',
+    section: 'Your Account',
     expiredOnly: true,
   },
   {
@@ -286,7 +300,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/payment',
     icon: 'Banknote',
     roles: ['admin'],
-    section: 'Billing',
+    section: 'Your Account',
     expiredOnly: true,
   },
 
@@ -297,7 +311,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Warehouse',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'inventory_purchess', action: 'read' },
-    section: 'Inventory',
+    section: 'Finance & Back Office',
     hideWhenExpired: true,
     children: [
       { id: 'inv-items', label: 'Items', href: '/admin/inventory/items' },
@@ -315,7 +329,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'ShoppingCart',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'inventory_purchess', action: 'read' },
-    section: 'Inventory',
+    section: 'Finance & Back Office',
     hideWhenExpired: true,
     children: [
       { id: 'purchase-bills', label: 'Bills', href: '/admin/purchase/bills' },
@@ -428,7 +442,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/bandwidth/sla',
     icon: 'Gauge',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Network',
+    section: 'Resellers & Bandwidth',
     hideWhenExpired: true,
   },
 
@@ -440,7 +454,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'MessageSquare',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'sms_message', action: 'read' },
-    section: 'Comms',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -450,7 +464,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'FileText',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'sms_message', action: 'read' },
-    section: 'Comms',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -460,7 +474,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Phone',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'sms_message', action: 'read' },
-    section: 'Comms',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -469,7 +483,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'MessageCircle',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'whatsapp_business', action: 'read' },
-    section: 'Comms',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
     children: [
       { id: 'wa-inbox', label: 'Inbox', href: '/admin/whatsapp/inbox' },
@@ -488,7 +502,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Gift',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'referral', action: 'read' },
-    section: 'Engagement',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
     children: [
       { id: 'rewards-home', label: 'Rewards', href: '/admin/rewards' },
@@ -501,7 +515,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/announcements',
     icon: 'Megaphone',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Engagement',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -511,7 +525,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'LifeBuoy',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'support_ticket', action: 'read' },
-    section: 'Engagement',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -521,7 +535,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'MessageSquare',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'customer', action: 'read' },
-    section: 'Engagement',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -531,7 +545,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/notifications/usage-alerts',
     icon: 'Bell',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Engagement',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -540,7 +554,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/fraud',
     icon: 'ShieldAlert',
     roles: ['admin'],
-    section: 'Engagement',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -549,7 +563,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/contracts',
     icon: 'FileText',
     roles: ['admin'],
-    section: 'Engagement',
+    section: 'Customers',
     hideWhenExpired: true,
   },
   {
@@ -558,7 +572,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/news',
     icon: 'Newspaper',
     roles: ['admin', 'resellerAdmin'],
-    section: 'Engagement',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -568,7 +582,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Bot',
     roles: ['admin'],
     permission: { menu: 'ai_chat', action: 'chat' },
-    section: 'Engagement',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
   {
@@ -577,7 +591,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/product-showcase',
     icon: 'Clapperboard',
     roles: ['admin'],
-    section: 'Engagement',
+    section: 'Messaging & Engagement',
     hideWhenExpired: true,
   },
 
@@ -587,7 +601,7 @@ export const adminNavigation: NavItem[] = [
     label: 'Compliance',
     icon: 'Scale',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
     children: [
       { id: 'compliance-ip-logs', label: 'IP / NAT Logs', href: '/admin/compliance/ip-logs' },
@@ -599,7 +613,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/developers',
     icon: 'Code2',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -608,7 +622,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/branding',
     icon: 'Paintbrush',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -617,7 +631,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/backup',
     icon: 'HardDrive',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -626,7 +640,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/wallet',
     icon: 'Wallet',
     roles: ['admin'],
-    section: 'System',
+    section: 'Your Account',
     hideWhenExpired: true,
   },
   {
@@ -636,7 +650,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'CalendarCheck',
     roles: ['admin'],
     permission: { menu: 'subscription', action: 'read' },
-    section: 'System',
+    section: 'Your Account',
     hideWhenExpired: true,
   },
   {
@@ -646,7 +660,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'CreditCard',
     roles: ['admin'],
     permission: { menu: 'payment', action: 'read' },
-    section: 'System',
+    section: 'Your Account',
     hideWhenExpired: true,
   },
   {
@@ -656,7 +670,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Landmark',
     roles: ['admin'],
     permission: { menu: 'payment', action: 'read' },
-    section: 'System',
+    section: 'Billing & Collections',
     hideWhenExpired: true,
   },
   {
@@ -665,7 +679,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/movie-servers',
     icon: 'Film',
     roles: ['admin'],
-    section: 'System',
+    section: 'Network',
     hideWhenExpired: true,
   },
   {
@@ -675,7 +689,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'ListOrdered',
     roles: ['admin'],
     permission: { menu: 'customer', action: 'read' },
-    section: 'System',
+    section: 'Network',
     hideWhenExpired: true,
   },
   {
@@ -684,7 +698,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/audit-logs',
     icon: 'ScrollText',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -694,7 +708,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Trash2',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'recycle_bin', action: 'read' },
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -704,7 +718,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Shield',
     roles: ['admin'],
     permission: { menu: 'user_access', action: 'read' },
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -713,7 +727,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/sidebar-pins',
     icon: 'Pin',
     roles: ['admin', 'resellerAdmin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -723,7 +737,7 @@ export const adminNavigation: NavItem[] = [
     icon: 'Settings',
     roles: ['admin', 'resellerAdmin'],
     permission: { menu: 'software_settings', action: 'read' },
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -732,7 +746,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/theme-studio',
     icon: 'Palette',
     roles: ['admin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
   {
@@ -741,7 +755,7 @@ export const adminNavigation: NavItem[] = [
     href: '/admin/profile',
     icon: 'User',
     roles: ['admin', 'resellerAdmin'],
-    section: 'System',
+    section: 'Settings & Security',
     hideWhenExpired: true,
   },
 ];

@@ -28,6 +28,7 @@ import { THEME_PRESETS as themePresetsData } from '@/features/admin/theme-studio
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface ThemeCustomizerModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface ThemeCustomizerModalProps {
 }
 
 export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModalProps) {
+  const t = useTranslations();
   const { theme, setTheme } = useTheme();
   const {
     presetId,
@@ -56,18 +58,18 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
   const handleSelectPreset = (id: string, name: string) => {
     setPreset(id);
-    toast.success(`Preset "${name}" applied`);
+    toast.success(t('common.theme.presetApplied', 'Preset "{name}" applied', { name }));
   };
 
   const handleSelectRadius = (r: number, label: string) => {
     setRadius(r);
-    toast.success(`Corner radius updated to ${label}`);
+    toast.success(t('common.theme.radiusUpdated', 'Corner radius updated to {label}', { label }));
   };
 
   const handleReset = () => {
     resetToDefault();
     setTheme('system');
-    toast.info('Theme reset to ISP Pay BD default');
+    toast.info(t('common.theme.resetDone', 'Theme reset to ISP Pay BD default'));
   };
 
   return (
@@ -81,10 +83,10 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
               </div>
               <div>
                 <DialogTitle className="flex items-center gap-1.5 text-base font-semibold">
-                  Theme & appearance
+                  {t('common.theme.title', 'Theme & appearance')}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Color scheme, mode, radius, and density
+                  {t('common.theme.description', 'Color scheme, mode, radius, and density')}
                 </DialogDescription>
               </div>
             </div>
@@ -94,9 +96,9 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
               variant="ghost"
               onClick={handleReset}
               className="h-8 text-xs text-muted-foreground hover:text-foreground"
-              title="Reset theme to defaults"
+              title={t('common.theme.resetTitle', 'Reset theme to defaults')}
             >
-              <RotateCcw className="mr-1 h-3 w-3" /> Reset
+              <RotateCcw className="mr-1 h-3 w-3" /> {t('common.theme.reset', 'Reset')}
             </Button>
           </div>
         </DialogHeader>
@@ -104,10 +106,10 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
         <div className="space-y-5 pt-2 text-xs">
           {/* Section 1: Color Scheme Mode */}
           <div className="space-y-2">
-            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
-              <span>Appearance</span>
+            <div className="font-medium text-foreground tracking-wide text-xs flex items-center justify-between">
+              <span>{t('common.theme.appearance', 'Appearance')}</span>
               <span className="text-muted-foreground text-xs font-normal capitalize">
-                {theme}
+                {theme ? t(`common.theme.${theme}`, theme) : ''}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -122,7 +124,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 <Sun className="h-4 w-4 text-amber-500" />
-                <span>Light</span>
+                <span>{t('common.theme.light', 'Light')}</span>
               </button>
               <button
                 type="button"
@@ -135,7 +137,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 <Moon className="h-4 w-4 text-blue-400" />
-                <span>Dark</span>
+                <span>{t('common.theme.dark', 'Dark')}</span>
               </button>
               <button
                 type="button"
@@ -148,15 +150,15 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 <Laptop className="h-4 w-4 text-emerald-500" />
-                <span>System</span>
+                <span>{t('common.theme.system', 'System')}</span>
               </button>
             </div>
           </div>
 
           {/* Section 2: Preset Brand Color Palette */}
           <div className="space-y-2">
-            <div className="font-medium text-foreground tracking-wide text-[11px]">
-              Brand Color Palette
+            <div className="font-medium text-foreground tracking-wide text-xs">
+              {t('common.theme.palette', 'Brand Color Palette')}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {themePresetsData.map((preset) => {
@@ -183,7 +185,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                       </div>
                       {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0" />}
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-1 truncate">
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
                       {preset.name}
                     </div>
                   </button>
@@ -194,21 +196,21 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
           {/* Section 3: Corner Radius Geometry */}
           <div className="space-y-2">
-            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
-              <span>Component Corner Radius</span>
+            <div className="font-medium text-foreground tracking-wide text-xs flex items-center justify-between">
+              <span>{t('common.theme.radius', 'Component Corner Radius')}</span>
               <span className="text-muted-foreground font-normal normal-case font-mono">{radius}px</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { r: 4, label: 'Sharp 4px' },
-                { r: 8, label: 'Soft 8px' },
-                { r: 12, label: 'Default 12px' },
-                { r: 20, label: 'Pill 20px' },
+                { r: 4, label: t('common.theme.radiusSharp', 'Sharp') },
+                { r: 8, label: t('common.theme.radiusSoft', 'Soft') },
+                { r: 12, label: t('common.theme.radiusDefault', 'Default') },
+                { r: 20, label: t('common.theme.radiusPill', 'Pill') },
               ].map((item) => (
                 <button
                   key={item.r}
                   type="button"
-                  onClick={() => handleSelectRadius(item.r, item.label)}
+                  onClick={() => handleSelectRadius(item.r, `${item.label} ${item.r}px`)}
                   className={cn(
                     'p-2 rounded-xl border text-center transition text-xs font-semibold',
                     radius === item.r
@@ -216,7 +218,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                       : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
                   )}
                 >
-                  {item.label.split(' ')[0]}
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -224,8 +226,8 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
 
           {/* Section 4: UI Density */}
           <div className="space-y-2">
-            <div className="font-medium text-foreground tracking-wide text-[11px]">
-              Interface Density
+            <div className="font-medium text-foreground tracking-wide text-xs">
+              {t('common.theme.density', 'Interface Density')}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -238,7 +240,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
                 )}
               >
-                Comfortable (Default)
+                {t('common.theme.densityComfortable', 'Comfortable (Default)')}
               </button>
               <button
                 type="button"
@@ -250,17 +252,19 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                     : 'border-border/70 hover:bg-muted/40 text-muted-foreground'
                 )}
               >
-                Compact (High Information)
+                {t('common.theme.densityCompact', 'Compact (High Information)')}
               </button>
             </div>
           </div>
 
           {/* Section 5: Table & Data Layout (Global Full vs Centered default) */}
           <div className="space-y-2">
-            <div className="font-medium text-foreground tracking-wide text-[11px] flex items-center justify-between">
-              <span>Table & Data Presentation Layout</span>
+            <div className="font-medium text-foreground tracking-wide text-xs flex items-center justify-between">
+              <span>{t('common.theme.tableLayout', 'Table & Data Presentation Layout')}</span>
               <span className="text-muted-foreground font-normal normal-case capitalize">
-                {tableLayout === 'centered' ? 'Centered Boxed' : 'Full Width (Default)'}
+                {tableLayout === 'centered'
+                  ? t('common.theme.tableCenteredBoxed', 'Centered Boxed')
+                  : t('common.theme.tableFullDefault', 'Full Width (Default)')}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -268,7 +272,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 type="button"
                 onClick={() => {
                   setTableLayout('full');
-                  toast.success('Default table presentation set to Full Width');
+                  toast.success(t('common.theme.tableFullSet', 'Default table presentation set to Full Width'));
                 }}
                 className={cn(
                   'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition text-xs font-semibold',
@@ -278,13 +282,13 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 <AlignJustify className="h-4 w-4 shrink-0" />
-                <span>Full Width (Default)</span>
+                <span>{t('common.theme.tableFullDefault', 'Full Width (Default)')}</span>
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setTableLayout('centered');
-                  toast.success('Default table presentation set to Centered');
+                  toast.success(t('common.theme.tableCenteredSet', 'Default table presentation set to Centered'));
                 }}
                 className={cn(
                   'flex items-center justify-center gap-2 p-2.5 rounded-xl border text-center transition text-xs font-semibold',
@@ -294,7 +298,7 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
                 )}
               >
                 <AlignCenter className="h-4 w-4 shrink-0" />
-                <span>Centered Container</span>
+                <span>{t('common.theme.tableCentered', 'Centered Container')}</span>
               </button>
             </div>
           </div>
@@ -302,13 +306,13 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
           {/* Live Preview Strip */}
           <div className="p-3 rounded-xl border border-border/60 bg-muted/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="text-[10px]">
-                Active Primary
+              <Badge variant="default" className="text-xs">
+                {t('common.theme.activePrimary', 'Active Primary')}
               </Badge>
-              <span className="text-muted-foreground text-[11px]">Preview components reflect selections live</span>
+              <span className="text-muted-foreground text-xs">{t('common.theme.previewHint', 'Preview components reflect selections live')}</span>
             </div>
             <Button size="sm" className="h-7 text-xs font-bold">
-              Button
+              {t('common.theme.previewButton', 'Button')}
             </Button>
           </div>
 
@@ -319,11 +323,11 @@ export function ThemeCustomizerModal({ open, onOpenChange }: ThemeCustomizerModa
               onClick={() => onOpenChange(false)}
               className="text-xs text-primary hover:underline font-semibold flex items-center gap-1.5"
             >
-              <ExternalLink className="h-3.5 w-3.5" /> Open Full Theme Studio & Ramps
+              <ExternalLink className="h-3.5 w-3.5" /> {t('common.theme.openStudio', 'Open Full Theme Studio & Ramps')}
             </Link>
 
             <Button size="sm" onClick={() => onOpenChange(false)} className="text-xs font-semibold px-4">
-              Done
+              {t('common.theme.done', 'Done')}
             </Button>
           </div>
         </div>

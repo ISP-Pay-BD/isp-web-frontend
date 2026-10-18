@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Check, Wallet, Calendar } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { formatBdtWithSymbol } from '@/lib/format';
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
 import { Reveal } from '@/components/motion/Reveal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
     name: tier.name,
     priceBdt: tier.priceBdt,
     period: tier.period === 'month' ? 'mo' : tier.period,
-    customers: tier.customers ? `Up to ${tier.customers.toLocaleString()}` : 'Unlimited',
+    customers: tier.customers ? `Up to ${formatCount(tier.customers)}` : 'Unlimited',
     features: tier.features,
     highlighted: false,
   }));
@@ -70,7 +70,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
               onClick={() => setModel('fixed')}
               className={cn(
                 'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
-                model === 'fixed' ? 'text-white' : 'text-white/45 hover:text-white/70',
+                model === 'fixed' ? 'text-white' : 'text-white/60 hover:text-white/70',
               )}
             >
               {model === 'fixed' && (
@@ -88,7 +88,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
               onClick={() => setModel('payg')}
               className={cn(
                 'relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors',
-                model === 'payg' ? 'text-white' : 'text-white/45 hover:text-white/70',
+                model === 'payg' ? 'text-white' : 'text-white/60 hover:text-white/70',
               )}
             >
               {model === 'payg' && (
@@ -132,22 +132,22 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                               {plan.name}
                             </h3>
                             {plan.highlighted && (
-                              <span className="border-landing-cta/30 bg-landing-cta/15 text-landing-cta rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+                              <span className="border-landing-cta/30 bg-landing-cta/15 text-landing-accent rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
                                 Popular
                               </span>
                             )}
                           </div>
-                          <p className="mt-1 font-mono text-xs text-white/45">{plan.customers}</p>
+                          <p className="mt-1 font-mono text-xs text-white/60">{plan.customers}</p>
                           <div className="mt-6 flex items-baseline">
                             <span className="font-landing-display text-4xl font-semibold text-white">
                               {formatBdtWithSymbol(plan.priceBdt)}
                             </span>
-                            <span className="ml-1.5 font-mono text-xs text-white/40">/ {plan.period}</span>
+                            <span className="ml-1.5 font-mono text-xs text-white/60">/ {plan.period}</span>
                           </div>
                           <ul className="mt-6 space-y-3 border-t border-white/[0.08] pt-5 text-sm text-white/65">
                             {plan.features.map((feat) => (
                               <li key={feat} className="flex items-start gap-2.5">
-                                <Check className="text-landing-cta mt-0.5 h-4 w-4 shrink-0" />
+                                <Check className="text-landing-accent mt-0.5 h-4 w-4 shrink-0" />
                                 <span>{feat}</span>
                               </li>
                             ))}
@@ -193,7 +193,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                   </div>
                   <Link
                     href="/plugins"
-                    className="text-landing-cta inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold hover:underline"
+                    className="text-landing-accent inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold hover:underline"
                   >
                     <span>Browse all add-ons</span>
                     <span>→</span>
@@ -223,7 +223,7 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-white/60">Subscribers</span>
                       <span className="font-mono text-xl font-semibold text-white">
-                        {paygSubscribers.toLocaleString()}
+                        {formatCount(paygSubscribers)}
                       </span>
                     </div>
                     <input
@@ -237,12 +237,12 @@ export function PricingSection({ title, subtitle }: PricingSectionProps) {
                     />
                   </div>
                   <div className="mt-8 border-t border-white/[0.08] pt-6">
-                    <p className="font-mono text-[11px] tracking-wider text-white/40 uppercase">
+                    <p className="font-mono text-[11px] tracking-wider text-white/60 uppercase">
                       Estimated monthly
                     </p>
                     <p className="font-landing-display mt-1 text-3xl font-semibold text-white">
                       {formatBdtWithSymbol(paygTotal)}
-                      <span className="font-mono text-sm font-normal text-white/40"> / mo</span>
+                      <span className="font-mono text-sm font-normal text-white/60"> / mo</span>
                     </p>
                   </div>
                   <div className="mt-7">

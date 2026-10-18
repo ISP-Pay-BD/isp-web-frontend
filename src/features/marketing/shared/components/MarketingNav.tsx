@@ -9,8 +9,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { marketingNavLinks } from '@/config/navigation/index';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
-import { useTranslations } from '../context/LocaleContext';
-import { LocaleToggle } from './LocaleToggle';
+import { useTranslations } from '@/i18n/locale-context';
+import { LocaleToggle } from '@/components/shared/LocaleToggle';
 
 const navI18nKeys: Record<string, string> = {
   '/#product-preview': 'marketing.nav.features',

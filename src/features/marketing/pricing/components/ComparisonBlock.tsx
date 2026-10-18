@@ -11,6 +11,7 @@ import {
   type FeatureValue,
 } from '../hooks/use-marketing-pricing';
 
+import { formatBdtWithSymbol } from '@/lib/format';
 /* ── Cell renderer ────────────────────────────────────────────────────── */
 
 function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?: boolean }) {
@@ -69,9 +70,9 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
           {plan.priceBdt !== null ? (
             <>
               <span className="text-3xl font-extrabold text-white">
-                ৳{plan.priceBdt.toLocaleString()}
+                {formatBdtWithSymbol(plan.priceBdt)}
               </span>
-              <span className="text-xs text-white/40">{plan.period}</span>
+              <span className="text-xs text-white/60">{plan.period}</span>
             </>
           ) : (
             <span className="text-2xl font-bold text-white">Custom</span>
@@ -83,7 +84,7 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
       <div className="mt-6 space-y-5">
         {groups.map((group) => (
           <div key={group.title}>
-            <div className="mb-2 text-[10px] font-medium tracking-wide text-landing-cta">
+            <div className="mb-2 text-[10px] font-medium tracking-wide text-landing-accent">
               {group.title}
             </div>
             <div className="space-y-2.5">
@@ -127,7 +128,7 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
           <thead>
             <tr>
               <th className="sticky left-0 z-20 w-[260px] bg-landing-bg pb-4 pt-2 text-left">
-                <span className="text-xs font-semibold tracking-wide text-white/40">
+                <span className="text-xs font-semibold tracking-wide text-white/60">
                   Features
                 </span>
               </th>
@@ -161,9 +162,9 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
                       {plan.priceBdt !== null ? (
                         <>
                           <span className="text-2xl font-extrabold text-white">
-                            ৳{plan.priceBdt.toLocaleString()}
+                            {formatBdtWithSymbol(plan.priceBdt)}
                           </span>
-                          <span className="text-xs text-white/40">{plan.period}</span>
+                          <span className="text-xs text-white/60">{plan.period}</span>
                         </>
                       ) : (
                         <span className="text-xl font-bold text-white">Custom</span>
@@ -230,7 +231,7 @@ export default function ComparisonBlock() {
     <section className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="text-xs font-medium tracking-wide text-landing-cta">
+          <span className="text-xs font-medium tracking-wide text-landing-accent">
             Feature Comparison
           </span>
           <h2 className="font-landing-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
@@ -263,7 +264,7 @@ function ComparisonGroup({ group, plans }: { group: ComparisonGroup; plans: Comp
       <tr>
         <td
           colSpan={plans.length + 1}
-          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-cta"
+          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-accent"
         >
           {group.title}
         </td>

@@ -6,6 +6,7 @@ import { ApiError, http } from '@/lib/api/client';
 import { getResellerId } from '@/lib/api/auth-utils';
 import { num, str } from '@/lib/api/case';
 import { invalidatePlatformBilling } from '@/features/admin/payment/hooks/use-platform-checkout';
+import { useTranslations } from '@/i18n/locale-context';
 
 export interface SubscriptionPlan {
   id: string;
@@ -28,6 +29,7 @@ export interface SubscriptionRecentPayment {
   status: string;
   paidVia: string;
   description: string;
+  purpose: string;
   gateway: string | null;
   gatewayRef: string | null;
   createdAt: string | null;
@@ -94,7 +96,8 @@ function mapSubscription(raw: Raw): AdminSubscriptionData {
       amountBdt: num(r.amount),
       status: str(r.status),
       paidVia: str(r.paid_via),
-      description: str(r.comment) || (str(r.purpose) === 'wallet_topup' ? 'Wallet top-up' : 'Platform payment'),
+      description: str(r.comment),
+      purpose: str(r.purpose),
       gateway: r.gateway ? str(r.gateway) : null,
       gatewayRef: r.gateway_ref ? str(r.gateway_ref) : null,
       createdAt: r.created_at ? str(r.created_at) : null,
@@ -120,6 +123,7 @@ export function useAdminSubscription(options?: { enabled?: boolean }) {
  * there. Nothing renews until the gateway confirms the payment.
  */
 export function useSelfRecharge() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { planId: string; method: string }) =>
@@ -128,16 +132,16 @@ export function useSelfRecharge() {
       invalidatePlatformBilling(qc);
       const url = str(data?.redirect_url);
       if (url) {
-        toast.message('Invoice created — redirecting to the payment gateway…');
+        toast.message(t('admin.subscription.selfRecharge.invoiceRedirect', 'Invoice created — redirecting to the payment gateway…'));
         window.location.assign(url);
       } else {
-        toast.error('The gateway did not return a checkout page. Your invoice is saved as pending.');
+        toast.error(t('admin.subscription.selfRecharge.noCheckout', 'The gateway did not return a checkout page. Your invoice is saved as pending.'));
       }
     },
     onError: (err) => {
       // The backend keeps a pending invoice even when the gateway refuses to start.
       invalidatePlatformBilling(qc);
-      toast.error(err instanceof ApiError ? err.message : 'Recharge could not be started');
+      toast.error(err instanceof ApiError ? err.message : t('admin.subscription.selfRecharge.startFailed', 'Recharge could not be started'));
     },
   });
 }

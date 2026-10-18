@@ -20,6 +20,7 @@ import { formatBdt } from '@/lib/format';
 import { toast } from 'sonner';
 import { Save, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useLocale } from '@/i18n/locale-context';
 
 interface TenantFormPageProps {
   tenantId?: string;
@@ -28,10 +29,12 @@ interface TenantFormPageProps {
 const selectClass = 'h-9 w-full rounded-md border border-input bg-background px-3 text-sm';
 
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="text-xs text-destructive">{message}</p> : null;
+  const { te } = useLocale();
+  return message ? <p className="text-xs text-destructive">{te(message)}</p> : null;
 }
 
 export function TenantFormPage({ tenantId }: TenantFormPageProps) {
+  const { t } = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const isEdit = Boolean(tenantId);
@@ -129,7 +132,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
       );
     },
     onSuccess: (result) => {
-      toast.success(isEdit ? 'Tenant portal updated' : 'Tenant portal created');
+      toast.success(isEdit ? t('platform.tenants.form.toast.updated', 'Tenant portal updated') : t('platform.tenants.form.toast.created', 'Tenant portal created'));
       void queryClient.invalidateQueries({ queryKey: ['platform', 'tenants'] });
       void queryClient.invalidateQueries({ queryKey: ['platform', 'tenant-options'] });
       void queryClient.invalidateQueries({ queryKey: ['platform', 'dashboard'] });
@@ -158,9 +161,9 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
   if (isEdit && (tenantQuery.error || !tenant)) {
     return (
       <EmptyState
-        title="Tenant not found"
-        description={tenantQuery.error instanceof Error ? tenantQuery.error.message : 'The requested tenant portal does not exist.'}
-        actionLabel="Back to Tenants"
+        title={t('platform.tenants.detail.notFound', 'Tenant not found')}
+        description={tenantQuery.error instanceof Error ? tenantQuery.error.message : t('platform.tenants.form.notFoundHint', 'The requested tenant portal does not exist.')}
+        actionLabel={t('platform.tenants.form.backToTenants', 'Back to Tenants')}
         onAction={() => router.push('/platform/tenants')}
       />
     );
@@ -174,19 +177,17 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title={isEdit ? 'Edit Tenant Portal' : 'Create Tenant Portal'}
-        subtitle="Provision a subdomain portal with branding and owner credentials"
+        title={isEdit ? t('platform.tenants.form.editTitle', 'Edit Tenant Portal') : t('platform.tenants.form.createTitle', 'Create Tenant Portal')}
+        subtitle={t('platform.tenants.form.subtitle', 'Provision a subdomain portal with branding and owner credentials')}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Tenants', href: '/platform/tenants' },
-          { label: isEdit ? 'Edit' : 'Create' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('common.crumb.tenants', 'Tenants'), href: '/platform/tenants' },
+          { label: isEdit ? t('platform.tenants.detail.edit', 'Edit') : t('platform.tenants.form.crumbCreate', 'Create') },
         ]}
         actions={
-          <Link href={isEdit ? `/platform/tenants/${tenantId}` : '/platform/tenants'}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="mr-1.5 h-4 w-4" /> Back
+          <Button variant="outline" size="sm" render={<Link href={isEdit ? `/platform/tenants/${tenantId}` : '/platform/tenants'} />}>
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> {t('platform.tenants.form.back', 'Back')}
             </Button>
-          </Link>
         }
       />
 
@@ -194,16 +195,16 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border-border/60" interactive={false}>
             <CardHeader>
-              <CardTitle className="text-base">Portal & Branding</CardTitle>
+              <CardTitle className="text-base">{t('platform.tenants.form.portalBranding', 'Portal & Branding')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">ISP Company Name</Label>
+                <Label htmlFor="name">{t('platform.tenants.form.companyName', 'ISP Company Name')}</Label>
                 <Input id="name" {...form.register('name')} />
                 <FieldError message={errors.name?.message} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="slug">Subdomain</Label>
+                <Label htmlFor="slug">{t('platform.tenants.form.subdomain', 'Subdomain')}</Label>
                 <div className="flex items-center gap-2">
                   <Input id="slug" {...form.register('slug')} className="font-mono" />
                   {baseDomain ? (
@@ -211,7 +212,7 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
                   ) : null}
                 </div>
                 {slug && baseDomain ? (
-                  <p className="text-[11px] text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground font-mono">
                     {slug}.{baseDomain}
                   </p>
                 ) : null}
@@ -219,9 +220,9 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="plan">Plan label</Label>
+                  <Label htmlFor="plan">{t('platform.tenants.form.planLabel', 'Plan label')}</Label>
                   <select id="plan" {...form.register('plan')} className={selectClass}>
-                    <option value="">No plan label</option>
+                    <option value="">{t('platform.tenants.form.noPlanLabel', 'No plan label')}</option>
                     {planOptions.map((p) => (
                       <option key={p} value={p}>
                         {p}
@@ -231,31 +232,31 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
                   <FieldError message={errors.plan?.message} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <Label htmlFor="status">{t('admin.customers.list.statusLabel', 'Status')}</Label>
                   <select id="status" {...form.register('status')} className={selectClass}>
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
+                    <option value="active">{t('status.active', 'Active')}</option>
+                    <option value="suspended">{t('status.suspended', 'Suspended')}</option>
                   </select>
                   <FieldError message={errors.status?.message} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="primaryColor">Primary Brand Color</Label>
+                  <Label htmlFor="primaryColor">{t('platform.tenants.form.primaryColor', 'Primary Brand Color')}</Label>
                   <div className="flex gap-2">
                     <Input id="primaryColor" type="color" {...form.register('primaryColor')} className="h-9 w-14 p-1" />
-                    <Input {...form.register('primaryColor')} className="font-mono text-xs" />
+                    <Input {...form.register('primaryColor')} aria-label={t('platform.tenants.form.primaryColor', 'Primary Brand Color')} className="font-mono text-xs" />
                   </div>
                   <FieldError message={errors.primaryColor?.message} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="secondaryColor">Secondary Color (optional)</Label>
+                  <Label htmlFor="secondaryColor">{t('platform.tenants.form.secondaryColor', 'Secondary Color (optional)')}</Label>
                   <Input id="secondaryColor" {...form.register('secondaryColor')} placeholder="#10141a" className="font-mono text-xs" />
                   <FieldError message={errors.secondaryColor?.message} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">Internal Notes</Label>
+                <Label htmlFor="notes">{t('platform.tenants.form.notes', 'Internal Notes')}</Label>
                 <Textarea id="notes" rows={3} {...form.register('notes')} />
                 <FieldError message={errors.notes?.message} />
               </div>
@@ -264,30 +265,30 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
 
           <Card className="border-border/60" interactive={false}>
             <CardHeader>
-              <CardTitle className="text-base">Owner (Second Admin)</CardTitle>
+              <CardTitle className="text-base">{t('platform.tenants.form.ownerTitle', 'Owner (Second Admin)')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!isEdit ? (
                 <div className="flex gap-4 text-sm">
                   <label className="flex items-center gap-2">
-                    <input type="radio" value="new" {...form.register('ownerMode')} /> Create a new admin
+                    <input type="radio" value="new" {...form.register('ownerMode')} /> {t('platform.tenants.form.ownerNew', 'Create a new admin')}
                   </label>
                   <label className="flex items-center gap-2">
-                    <input type="radio" value="existing" {...form.register('ownerMode')} /> Link an existing admin
+                    <input type="radio" value="existing" {...form.register('ownerMode')} /> {t('platform.tenants.form.ownerExisting', 'Link an existing admin')}
                   </label>
                 </div>
               ) : null}
 
               {!isEdit && ownerMode === 'existing' ? (
                 <div className="space-y-2">
-                  <Label htmlFor="ownerUserId">Existing Second Admin</Label>
+                  <Label htmlFor="ownerUserId">{t('platform.tenants.form.existingAdmin', 'Existing Second Admin')}</Label>
                   {optionsQuery.isLoading ? (
-                    <p className="text-xs text-muted-foreground">Loading admins…</p>
+                    <p className="text-xs text-muted-foreground">{t('platform.tenants.form.loadingAdmins', 'Loading admins…')}</p>
                   ) : owners.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Every admin already has a portal.</p>
+                    <p className="text-xs text-muted-foreground">{t('platform.tenants.form.allAdminsLinked', 'Every admin already has a portal.')}</p>
                   ) : (
                     <select id="ownerUserId" {...form.register('ownerUserId')} className={selectClass}>
-                      <option value="">Select an admin</option>
+                      <option value="">{t('platform.tenants.form.selectAdmin', 'Select an admin')}</option>
                       {owners.map((o) => (
                         <option key={o.id} value={String(o.id)}>
                           {o.name} — {o.email || o.mobile}
@@ -300,31 +301,31 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
               ) : !isEdit || tenant?.ownerUserId ? (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="ownerName">Owner Full Name</Label>
+                    <Label htmlFor="ownerName">{t('platform.tenants.form.ownerName', 'Owner Full Name')}</Label>
                     <Input id="ownerName" {...form.register('ownerName')} />
                     <FieldError message={errors.ownerName?.message} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="ownerEmail">Owner Email</Label>
+                    <Label htmlFor="ownerEmail">{t('platform.tenants.form.ownerEmail', 'Owner Email')}</Label>
                     <Input id="ownerEmail" type="email" {...form.register('ownerEmail')} />
                     <FieldError message={errors.ownerEmail?.message} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="ownerPhone">Owner Mobile</Label>
+                    <Label htmlFor="ownerPhone">{t('platform.tenants.form.ownerMobile', 'Owner Mobile')}</Label>
                     <Input id="ownerPhone" {...form.register('ownerPhone')} placeholder="01XXXXXXXXX" />
                     <FieldError message={errors.ownerPhone?.message} />
                   </div>
                   {!isEdit ? (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="ownerPassword">Login Password</Label>
+                        <Label htmlFor="ownerPassword">{t('platform.tenants.form.loginPassword', 'Login Password')}</Label>
                         <Input id="ownerPassword" type="password" autoComplete="new-password" {...form.register('ownerPassword')} />
                         <FieldError message={errors.ownerPassword?.message} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="packageId">Admin Package (optional)</Label>
+                        <Label htmlFor="packageId">{t('platform.tenants.form.adminPackage', 'Admin Package (optional)')}</Label>
                         <select id="packageId" {...form.register('packageId')} className={selectClass}>
-                          <option value="">No package yet</option>
+                          <option value="">{t('platform.tenants.form.noPackage', 'No package yet')}</option>
                           {packages.map((p) => (
                             <option key={p.id} value={String(p.id)}>
                               {p.name} — ৳{formatBdt(p.priceBdt)} ({p.planType})
@@ -334,28 +335,30 @@ export function TenantFormPage({ tenantId }: TenantFormPageProps) {
                         <FieldError message={errors.packageId?.message} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="address">Address (optional)</Label>
+                        <Label htmlFor="address">{t('platform.tenants.form.address', 'Address (optional)')}</Label>
                         <Input id="address" {...form.register('address')} />
                       </div>
                     </>
                   ) : null}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">This portal has no linked owner account.</p>
+                <p className="text-sm text-muted-foreground">{t('platform.tenants.form.noOwnerLinked', 'This portal has no linked owner account.')}</p>
               )}
             </CardContent>
           </Card>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Link href={isEdit ? `/platform/tenants/${tenantId}` : '/platform/tenants'}>
-            <Button type="button" variant="outline">
-              Cancel
+          <Button type="button" variant="outline" render={<Link href={isEdit ? `/platform/tenants/${tenantId}` : '/platform/tenants'} />}>
+              {t('common.cancel', 'Cancel')}
             </Button>
-          </Link>
           <Button type="submit" disabled={saveMutation.isPending} className="bg-primary hover:bg-primary/90">
             <Save className="mr-1.5 h-4 w-4" />
-            {saveMutation.isPending ? 'Saving...' : isEdit ? 'Update Portal' : 'Create Portal'}
+            {saveMutation.isPending
+              ? t('platform.tenants.form.saving', 'Saving...')
+              : isEdit
+                ? t('platform.tenants.form.update', 'Update Portal')
+                : t('platform.tenants.list.create', 'Create Portal')}
           </Button>
         </div>
       </form>

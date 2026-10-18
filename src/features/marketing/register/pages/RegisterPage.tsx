@@ -58,7 +58,7 @@ function IspRegisterPage() {
           {/* Left Column: Form */}
           <Reveal className="rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10 lg:col-span-8">
             <div className="mb-6 border-b border-white/10 pb-6">
-              <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">
+              <p className="text-xs font-medium tracking-[0.08em] text-landing-accent">
                 {t('marketing.pages.register.badge')}
               </p>
               <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
@@ -121,7 +121,7 @@ function IspRegisterPage() {
 function ClosedNotice() {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-5 text-sm text-white/80">
-      <Lock className="mt-0.5 h-5 w-5 shrink-0 text-landing-cta" />
+      <Lock className="mt-0.5 h-5 w-5 shrink-0 text-landing-accent" />
       <div>
         <p className="font-semibold text-white">Self-registration is currently closed</p>
         <p className="mt-1 text-white/60">

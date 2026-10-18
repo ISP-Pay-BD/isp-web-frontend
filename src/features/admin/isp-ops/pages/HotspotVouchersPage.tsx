@@ -56,28 +56,37 @@ import {
   Trash2,
   Loader2,
 } from 'lucide-react';
+import { useTranslations } from '@/i18n/locale-context';
 
 const DURATION_RE = /^(\d{1,4}[wdhm]){1,4}$/;
 const ALL = '__all__';
-const STATUS_OPTIONS: { value: VoucherStatus; label: string }[] = [
-  { value: 'unused', label: 'Unused' },
-  { value: 'used', label: 'Used' },
-  { value: 'disabled', label: 'Disabled' },
-];
+
+function useVoucherStatusLabels(): Record<VoucherStatus, string> {
+  const t = useTranslations();
+  return useMemo(
+    () => ({
+      unused: t('admin.ops.vouchers.status.unused', 'Unused'),
+      used: t('admin.ops.vouchers.status.used', 'Used'),
+      disabled: t('admin.ops.vouchers.status.disabled', 'Disabled'),
+    }),
+    [t],
+  );
+}
 
 export function HotspotVouchersPage() {
+  const t = useTranslations();
   const hs = useHotspotRouter();
   const [generateOpen, setGenerateOpen] = useState(false);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot Prepaid Vouchers"
-        subtitle="Generate voucher codes on the selected router and track which are unused, used or disabled."
+        title={t('admin.ops.vouchers.title', 'Hotspot Prepaid Vouchers')}
+        subtitle={t('admin.ops.vouchers.subtitle', 'Generate voucher codes on the selected router and track which are unused, used or disabled.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Vouchers' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.hotspot', 'Hotspot'), href: '/admin/hotspot' },
+          { label: t('admin.ops.vouchers.crumb', 'Vouchers') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
@@ -85,7 +94,7 @@ export function HotspotVouchersPage() {
             {hs.router ? (
               <Button size="sm" onClick={() => setGenerateOpen(true)} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                Generate Batch
+                {t('admin.ops.vouchers.generateBatch', 'Generate Batch')}
               </Button>
             ) : null}
           </div>
@@ -117,6 +126,8 @@ function VouchersBody({
   generateOpen: boolean;
   onGenerateOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations();
+  const statusLabel = useVoucherStatusLabels();
   const table = useServerTable();
   const { page, pageSize, search } = table;
   const [status, setStatus] = useState<VoucherStatus | ''>('');
@@ -127,12 +138,13 @@ function VouchersBody({
   const mutateVoucher = update.mutate;
   const remove = useDeleteHotspotUser(routerId);
   const summary = vouchers.data?.summary;
+  const statusOptions = (['unused', 'used', 'disabled'] as const).map((value) => ({ value, label: statusLabel[value] }));
 
   const columns = useMemo<LegacyColumnDef<HotspotVoucher, unknown>[]>(
     () => [
       {
         accessorKey: 'code',
-        header: 'Voucher Code',
+        header: t('admin.ops.vouchers.colCode', 'Voucher Code'),
         enableHiding: false,
         size: 190,
         cell: ({ row }) => (
@@ -148,7 +160,7 @@ function VouchersBody({
       },
       {
         accessorKey: 'profile',
-        header: 'Profile',
+        header: t('admin.ops.vouchers.colProfile', 'Profile'),
         size: 170,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background text-sm font-normal">
@@ -158,7 +170,7 @@ function VouchersBody({
       },
       {
         accessorKey: 'batch',
-        header: 'Batch',
+        header: t('admin.ops.vouchers.colBatch', 'Batch'),
         size: 160,
         cell: ({ row }) => (
           <div className="text-xs">
@@ -169,35 +181,29 @@ function VouchersBody({
       },
       {
         id: 'time',
-        header: 'Uptime / Limit',
+        header: t('admin.ops.vouchers.colUptime', 'Uptime / Limit'),
         size: 150,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
             <Clock className="h-3.5 w-3.5 text-primary" />
             <span>
-              {row.original.uptime || '0s'} / {row.original.limitUptime || 'no limit'}
+              {row.original.uptime || '0s'} / {row.original.limitUptime || t('admin.ops.vouchers.noLimit', 'no limit')}
             </span>
           </div>
         ),
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 120,
         cell: ({ row }) => {
           const s = row.original.status;
           return (
             <Badge
               variant="outline"
-              className={
-                s === 'unused'
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold'
-                  : s === 'used'
-                    ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                    : 'bg-muted text-muted-foreground'
-              }
+              tone={s === 'unused' ? 'success' : s === 'used' ? 'warning' : 'neutral'}
             >
-              {s === 'unused' ? 'Unused' : s === 'used' ? 'Used' : 'Disabled'}
+              {statusLabel[s]}
             </Badge>
           );
         },
@@ -212,30 +218,37 @@ function VouchersBody({
           return (
             <DropdownMenu>
               <DropdownMenuTrigger
-                aria-label={`Actions for voucher ${v.code}`}
+                aria-label={t('admin.ops.vouchers.actionsFor', 'Actions for voucher {code}', { code: v.code })}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Voucher Actions</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('admin.ops.vouchers.actionsLabel', 'Voucher Actions')}</DropdownMenuLabel>
                   <DropdownMenuItem
                     onClick={() =>
                       mutateVoucher(
                         { id: v.id, disabled: !disabled },
-                        { onSuccess: () => toast.success(`Voucher ${v.code} ${disabled ? 'enabled' : 'disabled'}`) },
+                        {
+                          onSuccess: () =>
+                            toast.success(
+                              disabled
+                                ? t('admin.ops.vouchers.toast.enabled', 'Voucher {code} enabled', { code: v.code })
+                                : t('admin.ops.vouchers.toast.disabled', 'Voucher {code} disabled', { code: v.code }),
+                            ),
+                        },
                       )
                     }
                   >
                     {disabled ? <Power className="h-3.5 w-3.5 mr-2" /> : <Ban className="h-3.5 w-3.5 mr-2" />}
-                    {disabled ? 'Enable Voucher' : 'Disable Voucher'}
+                    {disabled ? t('admin.ops.vouchers.enable', 'Enable Voucher') : t('admin.ops.vouchers.disable', 'Disable Voucher')}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleteTarget(v)}>
                   <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Delete Voucher
+                  {t('admin.ops.vouchers.delete', 'Delete Voucher')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -243,7 +256,7 @@ function VouchersBody({
         },
       },
     ],
-    [mutateVoucher],
+    [mutateVoucher, t, statusLabel],
   );
 
   if (vouchers.isError) {
@@ -251,7 +264,7 @@ function VouchersBody({
       <HotspotQueryError
         error={vouchers.error}
         routerName={routerName}
-        title="Failed to load vouchers"
+        title={t('admin.ops.vouchers.loadFailed', 'Failed to load vouchers')}
         onRetry={() => void vouchers.refetch()}
       />
     );
@@ -261,39 +274,39 @@ function VouchersBody({
     <>
       <HotspotKpiRow>
         <HotspotKpi
-          label="Total Vouchers"
+          label={t('admin.ops.vouchers.kpiTotal', 'Total Vouchers')}
           value={summary ? summary.total : '—'}
-          hint="Generated codes on the router"
+          hint={t('admin.ops.vouchers.kpiTotalHint', 'Generated codes on the router')}
           icon={<Ticket className="h-4 w-4 text-primary" />}
         />
         <HotspotKpi
-          label="Unused"
+          label={statusLabel.unused}
           value={summary ? summary.unused : '—'}
-          hint="Ready to sell"
+          hint={t('admin.ops.vouchers.kpiUnusedHint', 'Ready to sell')}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           positive
         />
         <HotspotKpi
-          label="Used"
+          label={statusLabel.used}
           value={summary ? summary.used : '—'}
-          hint="Logged in at least once"
+          hint={t('admin.ops.vouchers.kpiUsedHint', 'Logged in at least once')}
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
         />
         <HotspotKpi
-          label="Disabled"
+          label={statusLabel.disabled}
           value={summary ? summary.disabled : '—'}
-          hint="Blocked from logging in"
+          hint={t('admin.ops.vouchers.kpiDisabledHint', 'Blocked from logging in')}
           icon={<Ban className="h-4 w-4 text-muted-foreground" />}
         />
       </HotspotKpiRow>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={vouchers.data?.items ?? []}
         isLoading={vouchers.isLoading}
-        emptyTitle={search || status ? 'No vouchers match' : 'No vouchers yet'}
-        emptyDescription="Generate a batch to create voucher codes on this router."
-        searchPlaceholder="Search by code, profile or batch..."
+        emptyTitle={search || status ? t('admin.ops.vouchers.emptyFiltered', 'No vouchers match') : t('admin.ops.vouchers.emptyNone', 'No vouchers yet')}
+        emptyDescription={t('admin.ops.vouchers.emptyHint', 'Generate a batch to create voucher codes on this router.')}
+        searchPlaceholder={t('admin.ops.vouchers.searchPlaceholder', 'Search by code, profile or batch...')}
         getRowId={(r) => r.id}
         toolbarActions={
           <Select
@@ -302,14 +315,14 @@ function VouchersBody({
               setStatus(!v || v === ALL ? '' : (v as VoucherStatus));
               table.resetPage();
             }}
-            items={[{ value: ALL, label: 'All statuses' }, ...STATUS_OPTIONS]}
+            items={[{ value: ALL, label: t('admin.support.filter.allStatuses', 'All statuses') }, ...statusOptions]}
           >
-            <SelectTrigger className="h-9 min-w-36" aria-label="Filter by status">
+            <SelectTrigger className="h-9 min-w-36" aria-label={t('admin.ops.vouchers.filterStatus', 'Filter by status')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
-              {STATUS_OPTIONS.map((o) => (
+              <SelectItem value={ALL}>{t('admin.support.filter.allStatuses', 'All statuses')}</SelectItem>
+              {statusOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
                   {o.label}
                 </SelectItem>
@@ -327,15 +340,21 @@ function VouchersBody({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete this voucher?"
-        description={deleteTarget ? `Voucher ${deleteTarget.code} is removed from the router and can no longer log in.` : undefined}
-        confirmLabel="Delete"
+        title={t('admin.ops.vouchers.deleteTitle', 'Delete this voucher?')}
+        description={
+          deleteTarget
+            ? t('admin.ops.vouchers.deleteDesc', 'Voucher {code} is removed from the router and can no longer log in.', { code: deleteTarget.code })
+            : undefined
+        }
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           const target = deleteTarget;
           setDeleteTarget(null);
           if (!target) return;
-          remove.mutate(target.id, { onSuccess: () => toast.success(`Voucher ${target.code} deleted`) });
+          remove.mutate(target.id, {
+            onSuccess: () => toast.success(t('admin.ops.vouchers.toast.deleted', 'Voucher {code} deleted', { code: target.code })),
+          });
         }}
       />
     </>
@@ -355,6 +374,7 @@ interface GenerateForm {
 const EMPTY_FORM: GenerateForm = { profile: '', qty: '', codeLength: '6', prefix: '', timeLimit: '', dataLimitMb: '', batch: '' };
 
 function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; routerName: string; onClose: () => void }) {
+  const t = useTranslations();
   const profilesQuery = useHotspotProfiles(routerId);
   const generate = useGenerateVouchers(routerId);
   const [form, setForm] = useState<GenerateForm>(EMPTY_FORM);
@@ -366,11 +386,11 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
   const qty = Number(form.qty);
   const len = Number(form.codeLength);
   const errors = {
-    qty: !Number.isInteger(qty) || qty < 1 || qty > 500 ? 'Between 1 and 500' : '',
-    codeLength: !Number.isInteger(len) || len < 3 || len > 12 ? 'Between 3 and 12' : '',
-    prefix: form.prefix && !/^[A-Za-z0-9]{1,16}$/.test(form.prefix) ? 'Letters and digits only' : '',
-    timeLimit: form.timeLimit && !DURATION_RE.test(form.timeLimit) ? 'Use a duration like 12h or 1d' : '',
-    batch: form.batch.length > 40 ? 'At most 40 characters' : '',
+    qty: !Number.isInteger(qty) || qty < 1 || qty > 500 ? t('admin.ops.vouchers.err.qty', 'Between 1 and 500') : '',
+    codeLength: !Number.isInteger(len) || len < 3 || len > 12 ? t('admin.ops.vouchers.err.codeLength', 'Between 3 and 12') : '',
+    prefix: form.prefix && !/^[A-Za-z0-9]{1,16}$/.test(form.prefix) ? t('admin.ops.vouchers.err.prefix', 'Letters and digits only') : '',
+    timeLimit: form.timeLimit && !DURATION_RE.test(form.timeLimit) ? t('admin.ops.vouchers.err.timeLimit', 'Use a duration like 12h or 1d') : '',
+    batch: form.batch.length > 40 ? t('admin.ops.vouchers.err.batch', 'At most 40 characters') : '',
   };
   const invalid = Object.values(errors).some(Boolean) || !profile;
 
@@ -387,7 +407,11 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
     generate.mutate(input, {
       onSuccess: (res) => {
         setResult(res);
-        toast.success(`${res.count} voucher${res.count === 1 ? '' : 's'} generated`);
+        toast.success(
+          res.count === 1
+            ? t('admin.ops.vouchers.toast.generatedOne', '1 voucher generated')
+            : t('admin.ops.vouchers.toast.generatedMany', '{n} vouchers generated', { n: res.count }),
+        );
       },
     });
   };
@@ -408,10 +432,11 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-primary" />
-                {result.count} of {result.requested} vouchers generated
+                {t('admin.ops.vouchers.resultTitle', '{count} of {requested} vouchers generated', { count: result.count, requested: result.requested })}
               </DialogTitle>
               <DialogDescription>
-                Each code is both the login and the password. {failed.length > 0 ? `${failed.length} were rejected by the router.` : ''}
+                {t('admin.ops.vouchers.resultDesc', 'Each code is both the login and the password.')}{' '}
+                {failed.length > 0 ? t('admin.ops.vouchers.resultRejected', '{n} were rejected by the router.', { n: failed.length }) : ''}
               </DialogDescription>
             </DialogHeader>
             <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto py-4">
@@ -439,10 +464,10 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
                 }
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download CSV
+                {t('admin.ops.vouchers.downloadCsv', 'Download CSV')}
               </Button>
               <Button type="button" onClick={onClose}>
-                Done
+                {t('admin.ops.vouchers.done', 'Done')}
               </Button>
             </DialogFooter>
           </>
@@ -456,19 +481,23 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-primary" />
-                Generate Voucher Batch
+                {t('admin.ops.vouchers.formTitle', 'Generate Voucher Batch')}
               </DialogTitle>
-              <DialogDescription>Creates voucher codes on the router for the selected profile.</DialogDescription>
+              <DialogDescription>{t('admin.ops.vouchers.formDesc', 'Creates voucher codes on the router for the selected profile.')}</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
               <div className="space-y-1.5">
-                <Label htmlFor="vch-profile">Profile *</Label>
+                <Label htmlFor="vch-profile">{t('admin.ops.vouchers.fieldProfile', 'Profile *')}</Label>
                 <Select value={profile || null} onValueChange={(v) => v && set({ profile: String(v) })}>
                   <SelectTrigger id="vch-profile" className="w-full" disabled={profilesQuery.isLoading}>
                     <SelectValue
                       placeholder={
-                        profilesQuery.isLoading ? 'Loading profiles…' : profilesQuery.isError ? 'Could not load profiles' : 'No profiles on router'
+                        profilesQuery.isLoading
+                          ? t('admin.ops.vouchers.profilesLoading', 'Loading profiles…')
+                          : profilesQuery.isError
+                            ? t('admin.ops.vouchers.profilesFailed', 'Could not load profiles')
+                            : t('admin.ops.vouchers.profilesNone', 'No profiles on router')
                       }
                     />
                   </SelectTrigger>
@@ -483,14 +512,14 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
                 </Select>
                 {profilesQuery.isError ? (
                   <button type="button" className="text-xs text-primary underline" onClick={() => void profilesQuery.refetch()}>
-                    Retry loading profiles
+                    {t('admin.ops.vouchers.profilesRetry', 'Retry loading profiles')}
                   </button>
                 ) : null}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-qty">Quantity *</Label>
+                  <Label htmlFor="vch-qty">{t('admin.ops.vouchers.fieldQty', 'Quantity *')}</Label>
                   <Input
                     id="vch-qty"
                     type="number"
@@ -504,7 +533,7 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
                   {form.qty && errors.qty ? <p className="text-destructive text-xs">{errors.qty}</p> : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-len">Code Length</Label>
+                  <Label htmlFor="vch-len">{t('admin.ops.vouchers.fieldLength', 'Code Length')}</Label>
                   <Input
                     id="vch-len"
                     type="number"
@@ -520,24 +549,24 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-prefix">Code Prefix</Label>
+                  <Label htmlFor="vch-prefix">{t('admin.ops.vouchers.fieldPrefix', 'Code Prefix')}</Label>
                   <Input
                     id="vch-prefix"
                     value={form.prefix}
                     onChange={(e) => set({ prefix: e.target.value.trim() })}
-                    placeholder="Optional"
+                    placeholder={t('admin.ops.vouchers.optional', 'Optional')}
                     className="font-mono"
                     aria-invalid={Boolean(errors.prefix)}
                   />
                   {errors.prefix ? <p className="text-destructive text-xs">{errors.prefix}</p> : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-batch">Batch Name</Label>
+                  <Label htmlFor="vch-batch">{t('admin.ops.vouchers.fieldBatch', 'Batch Name')}</Label>
                   <Input
                     id="vch-batch"
                     value={form.batch}
                     onChange={(e) => set({ batch: e.target.value })}
-                    placeholder="Optional"
+                    placeholder={t('admin.ops.vouchers.optional', 'Optional')}
                     aria-invalid={Boolean(errors.batch)}
                   />
                   {errors.batch ? <p className="text-destructive text-xs">{errors.batch}</p> : null}
@@ -546,26 +575,26 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-time">Time Limit</Label>
+                  <Label htmlFor="vch-time">{t('admin.ops.vouchers.fieldTime', 'Time Limit')}</Label>
                   <Input
                     id="vch-time"
                     value={form.timeLimit}
                     onChange={(e) => set({ timeLimit: e.target.value.trim() })}
-                    placeholder="Optional, e.g. 1d"
+                    placeholder={t('admin.ops.vouchers.timePlaceholder', 'Optional, e.g. 1d')}
                     className="font-mono"
                     aria-invalid={Boolean(errors.timeLimit)}
                   />
                   {errors.timeLimit ? <p className="text-destructive text-xs">{errors.timeLimit}</p> : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="vch-data">Data Limit (MB)</Label>
+                  <Label htmlFor="vch-data">{t('admin.ops.vouchers.fieldData', 'Data Limit (MB)')}</Label>
                   <Input
                     id="vch-data"
                     type="number"
                     min={0}
                     value={form.dataLimitMb}
                     onChange={(e) => set({ dataLimitMb: e.target.value })}
-                    placeholder="Unlimited if empty"
+                    placeholder={t('admin.ops.vouchers.dataPlaceholder', 'Unlimited if empty')}
                   />
                 </div>
               </div>
@@ -573,11 +602,11 @@ function GenerateDialog({ routerId, routerName, onClose }: { routerId: string; r
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button type="submit" disabled={invalid || generate.isPending}>
                 {generate.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Generate Vouchers
+                {t('admin.ops.vouchers.submit', 'Generate Vouchers')}
               </Button>
             </DialogFooter>
           </form>

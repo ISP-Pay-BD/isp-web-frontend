@@ -1,47 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { useDebouncedValue } from '@/features/admin/customers/hooks/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useTranslations } from '@/i18n/locale-context';
 import { useCustomerOptions, type CustomerOption, type PickOption } from '../hooks/use-network-ops';
 
 const NONE = '__none__';
-
-/** Prev / next footer for the custom (non-DataTable) server-paginated tables. */
-export function NetOpsPager({
-  page,
-  totalPages,
-  total,
-  onPageChange,
-  label = 'records',
-}: {
-  page: number;
-  totalPages: number;
-  total: number;
-  onPageChange: (page: number) => void;
-  label?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 border-t border-border/80 bg-muted/20 p-3 text-xs text-muted-foreground">
-      <span>
-        <strong className="text-foreground">{total.toLocaleString()}</strong> {label} · page{' '}
-        <strong className="text-foreground">{page}</strong> of {Math.max(1, totalPages)}
-      </span>
-      <div className="flex items-center gap-1">
-        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          <ChevronLeft className="h-3.5 w-3.5" /> Prev
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
-          Next <ChevronRight className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /** Select over API-provided options; shows the label (not the id) when closed. */
 export function OptionSelect({
@@ -66,7 +35,7 @@ export function OptionSelect({
 }) {
   return (
     <Select value={value || (noneLabel ? NONE : null)} onValueChange={(v) => onChange(!v || v === NONE ? '' : String(v))} disabled={disabled}>
-      <SelectTrigger id={id} className={className ?? 'h-9 text-xs'}>
+      <SelectTrigger id={id} aria-label={id ? undefined : (noneLabel ?? placeholder)} className={className ?? 'h-9 text-xs'}>
         <SelectValue>
           {(v: string | null) => (v && v !== NONE ? (options.find((o) => o.value === v)?.label ?? v) : (noneLabel ?? placeholder))}
         </SelectValue>
@@ -93,6 +62,7 @@ export function CustomerPicker({
   value: CustomerOption | null;
   onChange: (c: CustomerOption | null) => void;
 }) {
+  const t = useTranslations();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
   const options = useCustomerOptions(debounced, value === null);
@@ -104,7 +74,7 @@ export function CustomerPicker({
           <span className="font-semibold text-foreground">{value.name}</span>
           <span className="text-muted-foreground">{[value.mobile, value.pppoeId].filter(Boolean).map((v) => ` · ${v}`).join('')}</span>
         </div>
-        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Clear customer" onClick={() => onChange(null)}>
+        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={t('admin.ops.picker.clear', 'Clear customer')} onClick={() => onChange(null)}>
           <X className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -120,18 +90,18 @@ export function CustomerPicker({
           id={id}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, mobile or PPPoE ID…"
+          placeholder={t('admin.ops.picker.placeholder', 'Search name, mobile or PPPoE ID…')}
           className="h-9 pl-8 text-xs"
           autoComplete="off"
         />
       </div>
       <div className="max-h-44 overflow-y-auto rounded-lg border border-border/60">
         {options.isLoading ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.ops.picker.searching', 'Searching…')}</p>
         ) : options.isError ? (
           <p className="px-3 py-2 text-xs text-destructive">{errorMessage(options.error)}</p>
         ) : results.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">No customers found.</p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.ops.picker.none', 'No customers found.')}</p>
         ) : (
           results.map((c) => (
             <button
@@ -141,7 +111,7 @@ export function CustomerPicker({
               className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent/60"
             >
               <span className="font-medium text-foreground">{c.name}</span>
-              <span className="font-mono text-[11px] text-muted-foreground">{[c.mobile, c.pppoeId].filter(Boolean).join(' · ')}</span>
+              <span className="font-mono text-xs text-muted-foreground">{[c.mobile, c.pppoeId].filter(Boolean).join(' · ')}</span>
             </button>
           ))
         )}

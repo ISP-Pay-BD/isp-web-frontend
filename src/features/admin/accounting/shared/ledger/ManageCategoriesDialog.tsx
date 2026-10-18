@@ -15,16 +15,17 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Can, ConfirmDialog, EmptyState } from '@/components/shared';
 import type { ApiError } from '@/lib/api/client';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useCategoryMutation,
   useLedgerCategories,
   type LedgerCategory,
   type LedgerKind,
 } from './api';
+import { ledgerCopy } from './copy';
 
 interface ManageCategoriesDialogProps {
   kind: LedgerKind;
-  noun: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -37,10 +38,11 @@ function categoryError(e: ApiError): string {
 
 export function ManageCategoriesDialog({
   kind,
-  noun,
   open,
   onOpenChange,
 }: ManageCategoriesDialogProps) {
+  const t = useTranslations();
+  const copy = ledgerCopy(t, kind);
   const categories = useLedgerCategories(kind);
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -58,7 +60,7 @@ export function ManageCategoriesDialog({
       {
         onSuccess: () => {
           setNewName('');
-          toast.success(`Category "${name}" added`);
+          toast.success(t('admin.accounting.ledger.categories.added', 'Category "{name}" added', { name }));
         },
       },
     );
@@ -74,7 +76,7 @@ export function ManageCategoriesDialog({
       {
         onSuccess: () => {
           setEditing(null);
-          toast.success('Category renamed');
+          toast.success(t('admin.accounting.ledger.categories.renamed', 'Category renamed'));
         },
       },
     );
@@ -87,7 +89,10 @@ export function ManageCategoriesDialog({
     setError('');
     mutation.mutate(
       { type: 'delete', id: target.id },
-      { onSuccess: () => toast.success(`Category "${target.name}" deleted`) },
+      {
+        onSuccess: () =>
+          toast.success(t('admin.accounting.ledger.categories.deleted', 'Category "{name}" deleted', { name: target.name })),
+      },
     );
   };
 
@@ -97,15 +102,15 @@ export function ManageCategoriesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="capitalize">{noun} categories</DialogTitle>
-          <DialogDescription>Categories offered when recording {noun} entries.</DialogDescription>
+          <DialogTitle>{copy.categoriesTitle}</DialogTitle>
+          <DialogDescription>{copy.categoriesDesc}</DialogDescription>
         </DialogHeader>
 
         <Can menu="accounting" action="create">
           <form onSubmit={add} className="flex items-center gap-2">
             <Input
-              placeholder="New category name"
-              aria-label="New category name"
+              placeholder={t('admin.accounting.ledger.categories.newName', 'New category name')}
+              aria-label={t('admin.accounting.ledger.categories.newName', 'New category name')}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="h-9 text-xs"
@@ -117,7 +122,7 @@ export function ManageCategoriesDialog({
               disabled={!newName.trim() || mutation.isPending}
             >
               <Plus className="h-3.5 w-3.5" />
-              Add
+              {t('admin.accounting.ledger.categories.add', 'Add')}
             </Button>
           </form>
         </Can>
@@ -132,16 +137,16 @@ export function ManageCategoriesDialog({
               ))}
             </div>
           ) : categories.isError ? (
-            <EmptyState
+            <EmptyState variant="error"
               className="border-0 py-8"
-              title="Could not load categories"
+              title={t('admin.accounting.ledger.categories.loadFailed', 'Could not load categories')}
               description={categories.error.message}
-              actionLabel="Retry"
+              actionLabel={t('common.retry', 'Retry')}
               onAction={() => categories.refetch()}
             />
           ) : list.length === 0 ? (
             <p className="text-muted-foreground p-4 text-center text-xs">
-              No categories yet. Add the first one above.
+              {t('admin.accounting.ledger.categories.empty', 'No categories yet. Add the first one above.')}
             </p>
           ) : (
             list.map((c) => (
@@ -150,7 +155,7 @@ export function ManageCategoriesDialog({
                   <>
                     <Input
                       autoFocus
-                      aria-label="Category name"
+                      aria-label={t('admin.accounting.ledger.categories.name', 'Category name')}
                       value={editing.name}
                       onChange={(e) => setEditing({ id: c.id, name: e.target.value })}
                       onKeyDown={(e) => {
@@ -167,7 +172,7 @@ export function ManageCategoriesDialog({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-emerald-400"
-                        aria-label="Save name"
+                        aria-label={t('admin.accounting.ledger.categories.saveName', 'Save name')}
                         disabled={!editing.name.trim() || mutation.isPending}
                         onClick={rename}
                       >
@@ -177,7 +182,7 @@ export function ManageCategoriesDialog({
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        aria-label="Cancel"
+                        aria-label={t('common.cancel', 'Cancel')}
                         onClick={() => setEditing(null)}
                       >
                         <X className="h-3.5 w-3.5" />
@@ -193,7 +198,7 @@ export function ManageCategoriesDialog({
                           variant="ghost"
                           size="icon"
                           className="text-muted-foreground hover:text-foreground h-7 w-7"
-                          aria-label={`Rename ${c.name}`}
+                          aria-label={t('admin.accounting.ledger.categories.rename', 'Rename {name}', { name: c.name })}
                           onClick={() => {
                             setError('');
                             setEditing({ id: c.id, name: c.name });
@@ -207,7 +212,7 @@ export function ManageCategoriesDialog({
                           variant="ghost"
                           size="icon"
                           className="text-destructive hover:bg-destructive/10 h-7 w-7"
-                          aria-label={`Delete ${c.name}`}
+                          aria-label={t('admin.accounting.ledger.categories.delete', 'Delete {name}', { name: c.name })}
                           disabled={mutation.isPending}
                           onClick={() => setToDelete(c)}
                         >
@@ -226,9 +231,13 @@ export function ManageCategoriesDialog({
         <ConfirmDialog
           open={!!toDelete}
           onOpenChange={(o) => !o && setToDelete(null)}
-          title="Delete category"
-          description={`Delete "${toDelete?.name ?? ''}"? Categories that are used by entries cannot be deleted.`}
-          confirmLabel="Delete"
+          title={t('admin.accounting.ledger.categories.deleteTitle', 'Delete category')}
+          description={t(
+            'admin.accounting.ledger.categories.deleteDesc',
+            'Delete "{name}"? Categories that are used by entries cannot be deleted.',
+            { name: toDelete?.name ?? '' },
+          )}
+          confirmLabel={t('admin.accounting.ledger.delete', 'Delete')}
           destructive
           onConfirm={remove}
         />

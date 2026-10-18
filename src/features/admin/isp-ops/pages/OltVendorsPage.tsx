@@ -13,6 +13,7 @@ import { parseBackendDate, type OltBrandOption, type OltBrandUsage } from '@/fea
 import { formatDateTime } from '@/lib/format/date';
 import { Download, Server, Layers, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocale } from '@/i18n/locale-context';
 
 /** One vendor: the form's brand catalogue joined with this tenant's usage. */
 interface VendorRow {
@@ -75,6 +76,7 @@ function syncedLabel(value: string | null): string {
 }
 
 export function OltVendorsPage() {
+  const { t } = useLocale();
   const { data, isLoading, isError, refetch } = useOltCatalog();
   const rows = useMemo(() => (data ? buildRows(data.brands, data.usage) : []), [data]);
 
@@ -98,14 +100,14 @@ export function OltVendorsPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-    toast.success('OLT vendors exported to CSV');
+    toast.success(t('admin.ops.oltVendors.exported', 'OLT vendors exported to CSV'));
   };
 
   const columns = useMemo<LegacyColumnDef<VendorRow, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Vendor / Brand',
+        header: t('admin.ops.oltVendors.colVendor', 'Vendor / Brand'),
         enableHiding: false,
         size: 240,
         cell: ({ row }) => (
@@ -117,7 +119,7 @@ export function OltVendorsPage() {
               <span className="font-semibold text-foreground text-sm">{row.original.name}</span>
               <span className="text-xs text-muted-foreground block font-mono">
                 {row.original.code}
-                {!row.original.inCatalog && ' · not in the OLT form'}
+                {!row.original.inCatalog && ` · ${t('admin.ops.oltVendors.notInForm', 'not in the OLT form')}`}
               </span>
             </div>
           </div>
@@ -125,24 +127,24 @@ export function OltVendorsPage() {
       },
       {
         accessorKey: 'syncSupported',
-        header: 'Sync / Diagnostics Driver',
+        header: t('admin.ops.oltVendors.colDriver', 'Sync / Diagnostics Driver'),
         size: 200,
         cell: ({ row }) =>
           row.original.syncSupported ? (
-            <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+            <Badge variant="outline" tone="success" className="gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              Installed
+              {t('admin.ops.oltVendors.installed', 'Installed')}
             </Badge>
           ) : (
             <Badge variant="outline" className="gap-1 bg-muted text-muted-foreground">
               <XCircle className="h-3 w-3" />
-              Not available
+              {t('admin.ops.oltVendors.notAvailable', 'Not available')}
             </Badge>
           ),
       },
       {
         accessorKey: 'olts',
-        header: 'OLTs',
+        header: t('admin.ops.oltVendors.colOlts', 'OLTs'),
         size: 100,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background font-mono tabular-nums font-semibold">
@@ -152,7 +154,7 @@ export function OltVendorsPage() {
       },
       {
         accessorKey: 'onusTotal',
-        header: 'ONUs (online / total)',
+        header: t('admin.ops.oltVendors.colOnus', 'ONUs (online / total)'),
         size: 170,
         cell: ({ row }) => (
           <span className="font-mono text-xs tabular-nums">
@@ -163,36 +165,43 @@ export function OltVendorsPage() {
       },
       {
         accessorKey: 'lastSyncedAt',
-        header: 'Last Sync',
+        header: t('admin.ops.oltVendors.colLastSync', 'Last Sync'),
         size: 180,
         cell: ({ row }) => (
           <span className="font-mono text-xs text-muted-foreground">{syncedLabel(row.original.lastSyncedAt)}</span>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
-    return <EmptyState title="Failed to load vendors" actionLabel="Retry" onAction={() => refetch()} />;
+    return (
+      <EmptyState
+        variant="error"
+        title={t('admin.ops.oltVendors.loadFailed', 'Failed to load vendors')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
+        onAction={() => refetch()}
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="OLT Multi-Vendor Drivers"
-        subtitle="Brands the OLT form supports, which have a sync / diagnostics driver on this server, and how many of your OLTs use each."
+        title={t('admin.ops.oltVendors.title', 'OLT Multi-Vendor Drivers')}
+        subtitle={t('admin.ops.oltVendors.subtitle', 'Brands the OLT form supports, which have a sync / diagnostics driver on this server, and how many of your OLTs use each.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'OLT', href: '/admin/olt' },
-          { label: 'Vendors' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('nav.olt', 'OLT'), href: '/admin/olt' },
+          { label: t('nav.olt-vendors', 'Vendors') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={!rows.length} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              Export Directory
+              {t('admin.ops.oltVendors.exportDirectory', 'Export Directory')}
             </Button>
           </div>
         }
@@ -202,51 +211,51 @@ export function OltVendorsPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Supported Vendors</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltVendors.kpiSupported', 'Supported Vendors')}</span>
             <Server className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {catalogCount}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Brands the OLT form accepts</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('admin.ops.oltVendors.hintSupported', 'Brands the OLT form accepts')}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Vendors In Use</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltVendors.kpiInUse', 'Vendors In Use')}</span>
             <Layers className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {vendorsInUse}
           </div>
           <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-            Across {data.summary.olts} OLTs
+            {t('admin.ops.oltVendors.acrossOlts', 'Across {n} OLTs', { n: data.summary.olts })}
           </p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Sync Drivers</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltVendors.kpiDrivers', 'Sync Drivers')}</span>
             <CheckCircle2 className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {driverCount}
             <span className="text-sm font-medium text-muted-foreground"> / {catalogCount}</span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Installed on this server</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('admin.ops.oltVendors.hintDrivers', 'Installed on this server')}</p>
         </div>
       </div>
 
       {/* Main Data Table — the catalogue is a fixed, small list */}
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={rows}
         getRowId={(row) => row.id}
         searchKey="name"
         searchFilterFn={searchFilter}
-        searchPlaceholder="Search vendor by name or code..."
-        emptyTitle="No OLT vendors"
-        emptyDescription="The server returned no OLT brand catalogue."
+        searchPlaceholder={t('admin.ops.oltVendors.searchPlaceholder', 'Search vendor by name or code...')}
+        emptyTitle={t('admin.ops.oltVendors.emptyTitle', 'No OLT vendors')}
+        emptyDescription={t('admin.ops.oltVendors.emptyHint', 'The server returned no OLT brand catalogue.')}
       />
     </div>
   );

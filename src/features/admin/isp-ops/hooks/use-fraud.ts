@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 
@@ -91,12 +92,17 @@ export function useFraudFlags({ page, pageSize, search, status }: { page: number
 
 export function useRunFraudScan() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: async () => obj(await http.post<unknown>('/v1/network-ops/fraud/scan')),
     onSuccess: (r) => {
       const fresh = num(r.new_flags);
       const reopened = num(r.reopened);
-      toast.success(fresh || reopened ? `Scan complete: ${fresh} new, ${reopened} re-opened` : 'Scan complete: no new matches');
+      toast.success(
+        fresh || reopened
+          ? t('admin.ops.fraud.scanDone', 'Scan complete: {fresh} new, {reopened} re-opened', { fresh, reopened })
+          : t('admin.ops.fraud.scanNone', 'Scan complete: no new matches'),
+      );
       qc.invalidateQueries({ queryKey: fraudKeys.all });
     },
   });
@@ -104,11 +110,16 @@ export function useRunFraudScan() {
 
 export function useSetFraudStatus() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: ({ id, status, note }: { id: string; status: FraudStatus; note?: string }) =>
       http.post<unknown>(`/v1/network-ops/fraud/flags/${id}/status`, { status, note }),
     onSuccess: (_d, { status }) => {
-      toast.success(`Flag marked ${status}`);
+      toast.success(
+        t('admin.ops.fraud.flagMarked', 'Flag marked {status}', {
+          status: status === 'open' ? t('status.open', 'open') : status === 'resolved' ? t('status.resolved', 'resolved') : t('admin.ops.fraud.statusIgnored', 'ignored'),
+        }),
+      );
       qc.invalidateQueries({ queryKey: fraudKeys.all });
     },
   });

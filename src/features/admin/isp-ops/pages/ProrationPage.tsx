@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { formatBdt, formatBdtWithSymbol } from '@/lib/format';
+import { formatBdt, formatBdtWithSymbol, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { BillingCustomerPicker } from '../components/BillingCustomerPicker';
 import {
@@ -28,6 +29,7 @@ import {
 } from '../hooks/use-billing-config';
 
 export function ProrationPage() {
+  const t = useTranslations();
   const packages = useBillingPackageOptions();
   const [customer, setCustomer] = useState<BillingCustomerOption | null>(null);
   const [packageId, setPackageId] = useState<number | null>(null);
@@ -51,10 +53,10 @@ export function ProrationPage() {
 
   if (packages.isError) {
     return (
-      <EmptyState
-        title="Failed to load packages"
-        description={errorMessage(packages.error, 'Could not load your package catalogue.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.ops.proration.loadFailed', 'Failed to load packages')}
+        description={errorMessage(packages.error, t('admin.ops.proration.loadFailedHint', 'Could not load your package catalogue.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => packages.refetch()}
       />
     );
@@ -65,12 +67,15 @@ export function ProrationPage() {
   return (
     <div className="space-y-6 w-full pb-20">
       <PageHeader
-        title="Proration Calculator"
-        subtitle="Work out the credit, charge and net amount when a customer moves to another package before their expiry date. Nothing is billed or changed here."
+        title={t('admin.ops.proration.title', 'Proration Calculator')}
+        subtitle={t(
+          'admin.ops.proration.subtitle',
+          'Work out the credit, charge and net amount when a customer moves to another package before their expiry date. Nothing is billed or changed here.',
+        )}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Billing' },
-          { label: 'Proration' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.billing', 'Billing') },
+          { label: t('admin.ops.proration.crumb', 'Proration') },
         ]}
       />
 
@@ -79,17 +84,17 @@ export function ProrationPage() {
           <div className="flex items-center justify-between border-b border-border/80 pb-3">
             <div className="flex items-center gap-2">
               <Calculator className="h-4 w-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Mid-Cycle Package Change</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{t('admin.ops.proration.cardTitle', 'Mid-Cycle Package Change')}</h3>
             </div>
-            <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-primary/30 text-primary font-mono">
-              Read-only quote
+            <Badge variant="outline" className="text-xs px-2 py-0.5 border-primary/30 text-primary font-mono">
+              {t('admin.ops.proration.readOnly', 'Read-only quote')}
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Customer */}
             <div className="space-y-1.5">
-              <label htmlFor="pr-customer" className="text-[11px] font-semibold text-muted-foreground">Customer</label>
+              <label htmlFor="pr-customer" className="text-xs font-semibold text-muted-foreground">{t('admin.ops.proration.customer', 'Customer')}</label>
               <BillingCustomerPicker
                 id="pr-customer"
                 value={customer}
@@ -99,16 +104,22 @@ export function ProrationPage() {
                 }}
               />
               {customer && (
-                <p className="text-[10px] text-muted-foreground">
-                  Current: {currentPackage ? `${currentPackage.name} (${formatBdtWithSymbol(currentPackage.price)})` : 'no priced package'}
-                  {customer.willExpire ? ` · expires ${fmtDay(customer.willExpire)}` : ''}
+                <p className="text-xs text-muted-foreground">
+                  {[
+                    currentPackage
+                      ? t('admin.ops.proration.current', 'Current: {name} ({price})', { name: currentPackage.name, price: formatBdtWithSymbol(currentPackage.price) })
+                      : t('admin.ops.proration.currentNone', 'Current: no priced package'),
+                    customer.willExpire ? t('admin.ops.proration.expires', 'expires {date}', { date: fmtDay(customer.willExpire) }) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </p>
               )}
             </div>
 
             {/* Target package */}
             <div className="space-y-1.5">
-              <label htmlFor="pr-package" className="text-[11px] font-semibold text-muted-foreground">New Package</label>
+              <label htmlFor="pr-package" className="text-xs font-semibold text-muted-foreground">{t('admin.ops.proration.newPackage', 'New Package')}</label>
               {packages.isLoading ? (
                 <Skeleton className="h-9 w-full" />
               ) : (
@@ -119,7 +130,7 @@ export function ProrationPage() {
                   disabled={!customer || targetOptions.length === 0}
                 >
                   <SelectTrigger id="pr-package" className="h-9 w-full text-xs">
-                    <SelectValue placeholder={targetOptions.length === 0 ? 'No other packages' : 'Choose package'} />
+                    <SelectValue placeholder={targetOptions.length === 0 ? t('admin.ops.proration.noOtherPackages', 'No other packages') : t('admin.ops.proration.choosePackage', 'Choose package')} />
                   </SelectTrigger>
                   <SelectContent>
                     {targetOptions.map((p) => (
@@ -134,7 +145,7 @@ export function ProrationPage() {
 
             {/* Change date */}
             <div className="space-y-1.5">
-              <label htmlFor="pr-date" className="text-[11px] font-semibold text-muted-foreground">Change Date</label>
+              <label htmlFor="pr-date" className="text-xs font-semibold text-muted-foreground">{t('admin.ops.proration.changeDate', 'Change Date')}</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -146,8 +157,8 @@ export function ProrationPage() {
                 />
               </div>
               {q && (
-                <p className="text-[10px] text-muted-foreground">
-                  {q.daysRemaining} of {q.cycleDays} days remaining
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.ops.proration.daysRemaining', '{days} of {cycle} days remaining', { days: formatCount(q.daysRemaining), cycle: formatCount(q.cycleDays) })}
                 </p>
               )}
             </div>
@@ -159,8 +170,12 @@ export function ProrationPage() {
                 isUpgrade ? 'bg-primary/10 border-primary/30' : 'bg-emerald-500/10 border-emerald-500/30',
               )}
             >
-              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                {q ? (isUpgrade ? 'Net Payable by Customer' : 'Net Credit to Customer') : 'Net Adjustment'}
+              <span className="text-xs uppercase font-bold text-muted-foreground tracking-wider">
+                {q
+                  ? isUpgrade
+                    ? t('admin.ops.proration.netPayable', 'Net Payable by Customer')
+                    : t('admin.ops.proration.netCredit', 'Net Credit to Customer')
+                  : t('admin.ops.proration.netAdjustment', 'Net Adjustment')}
               </span>
               {quote.isFetching && !q ? (
                 <Skeleton className="mt-2 h-7 w-28" />
@@ -169,7 +184,7 @@ export function ProrationPage() {
                   {formatBdtWithSymbol(Math.abs(q.net))}
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground mt-1">Pick a customer and a package</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('admin.ops.proration.pickHint', 'Pick a customer and a package')}</p>
               )}
             </div>
           </div>
@@ -177,7 +192,7 @@ export function ProrationPage() {
           {quote.isError && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
               <Info className="h-3.5 w-3.5 shrink-0" />
-              {errorMessage(quote.error, 'Could not calculate the proration.')}
+              {errorMessage(quote.error, t('admin.ops.proration.calcFailed', 'Could not calculate the proration.'))}
             </div>
           )}
 
@@ -186,67 +201,67 @@ export function ProrationPage() {
               {q.expired && (
                 <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                   <Info className="h-3.5 w-3.5 shrink-0" />
-                  The customer&apos;s package has already expired on the change date — there is nothing left to prorate.
+                  {t('admin.ops.proration.expiredNote', "The customer's package has already expired on the change date — there is nothing left to prorate.")}
                 </div>
               )}
 
               <div className="bg-muted/30 p-4 rounded-lg border border-border/60 text-xs flex flex-col lg:flex-row items-center justify-between gap-4 font-mono">
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Unused credit:</span>
+                  <span className="text-muted-foreground">{t('admin.ops.proration.unusedCredit', 'Unused credit:')}</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    ({q.daysRemaining}/{q.cycleDays}) × {formatBdt(q.currentPackage.price)} = {formatBdt(q.credit)}
+                    ({formatCount(q.daysRemaining)}/{formatCount(q.cycleDays)}) × {formatBdt(q.currentPackage.price)} = {formatBdt(q.credit)}
                   </span>
                 </div>
                 <span>·</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">New package charge:</span>
+                  <span className="text-muted-foreground">{t('admin.ops.proration.newCharge', 'New package charge:')}</span>
                   <span className="font-bold text-sky-600 dark:text-sky-400">
-                    ({q.daysRemaining}/{q.cycleDays}) × {formatBdt(q.targetPackage.price)} = {formatBdt(q.charge)}
+                    ({formatCount(q.daysRemaining)}/{formatCount(q.cycleDays)}) × {formatBdt(q.targetPackage.price)} = {formatBdt(q.charge)}
                   </span>
                 </div>
                 <span>=</span>
                 <div className="flex items-center gap-2 font-bold text-primary">
-                  <span>Net:</span>
+                  <span>{t('admin.ops.proration.net', 'Net:')}</span>
                   <span>{formatBdtWithSymbol(q.net)}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div className="rounded-lg border border-border/60 p-3">
-                  <p className="text-[10px] uppercase font-semibold text-muted-foreground">Customer</p>
+                  <p className="text-xs uppercase font-semibold text-muted-foreground">{t('admin.ops.proration.customer', 'Customer')}</p>
                   <p className="font-bold text-foreground mt-0.5">{q.customer.name}</p>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {q.customer.mobile}
-                    {q.customer.willExpire ? ` · expires ${fmtDay(q.customer.willExpire)}` : ''}
+                  <p className="font-mono text-xs text-muted-foreground">
+                    {[q.customer.mobile, q.customer.willExpire ? t('admin.ops.proration.expires', 'expires {date}', { date: fmtDay(q.customer.willExpire) }) : null]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border/60 p-3 flex items-center gap-2">
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase font-semibold text-muted-foreground">From</p>
+                    <p className="text-xs uppercase font-semibold text-muted-foreground">{t('admin.ops.proration.from', 'From')}</p>
                     <p className="font-medium text-foreground truncate">{q.currentPackage.name}</p>
-                    <p className="font-mono text-[10px] text-muted-foreground">{formatBdtWithSymbol(q.currentPackage.price)} / mo</p>
+                    <p className="font-mono text-xs text-muted-foreground">{t('admin.ops.proration.perMonth', '{price} / mo', { price: formatBdtWithSymbol(q.currentPackage.price) })}</p>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="text-[10px] uppercase font-semibold text-muted-foreground">To</p>
+                    <p className="text-xs uppercase font-semibold text-muted-foreground">{t('admin.ops.proration.to', 'To')}</p>
                     <p className="font-bold text-primary truncate">{q.targetPackage.name}</p>
-                    <p className="font-mono text-[10px] text-muted-foreground">{formatBdtWithSymbol(q.targetPackage.price)} / mo</p>
+                    <p className="font-mono text-xs text-muted-foreground">{t('admin.ops.proration.perMonth', '{price} / mo', { price: formatBdtWithSymbol(q.targetPackage.price) })}</p>
                   </div>
                 </div>
                 <div className="rounded-lg border border-border/60 p-3">
-                  <p className="text-[10px] uppercase font-semibold text-muted-foreground">Type</p>
+                  <p className="text-xs uppercase font-semibold text-muted-foreground">{t('admin.ops.proration.type', 'Type')}</p>
                   <Badge
                     variant="outline"
-                    className={cn(
-                      'mt-1 text-[10px] font-semibold uppercase px-2 py-0.5',
-                      q.direction === 'upgrade'
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-                    )}
+                    tone={q.direction === 'upgrade' ? 'info' : 'success'} className="mt-1 text-xs font-semibold uppercase px-2 py-0.5"
                   >
-                    {q.direction === 'upgrade' ? 'Upgrade' : q.direction === 'downgrade' ? 'Downgrade' : 'Same price'}
+                    {q.direction === 'upgrade'
+                      ? t('admin.ops.proration.upgrade', 'Upgrade')
+                      : q.direction === 'downgrade'
+                        ? t('admin.ops.proration.downgrade', 'Downgrade')
+                        : t('admin.ops.proration.samePrice', 'Same price')}
                   </Badge>
-                  <p className="text-[11px] text-muted-foreground mt-1">Effective {fmtDay(q.changeDate)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('admin.ops.proration.effective', 'Effective {date}', { date: fmtDay(q.changeDate) })}</p>
                 </div>
               </div>
             </>

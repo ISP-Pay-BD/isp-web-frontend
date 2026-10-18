@@ -1,6 +1,8 @@
-# 01 — Shared fixes (S1–S8)
+# 01 — Shared fixes (S1–S8) — ✅ implemented
 
 Each fix here is made once, in a shared component or as a mechanical pattern change. Each one lands on dozens of screens at once.
+
+**Status (2026-10-18): all eight are implemented.** The "Size of problem" column is the audit before the work. Each rule is now locked by a test in [`tests/architecture/ui-ratchets.test.ts`](../../tests/architecture/ui-ratchets.test.ts), so it cannot creep back. Corrections made while implementing are marked **Correction**.
 
 **Scope for the counts below:** `src/features/{admin,customer,platform,employee,shared}` + `src/components/{shared,layout}`, which is 289 `.tsx` files. Marketing is out of scope here; see [07-MOTION.md](07-MOTION.md) and the landing brief.
 
@@ -10,7 +12,7 @@ Each fix here is made once, in a shared component or as a mechanical pattern cha
 | S2 | One status colour map | 97 files hand-roll colours; 42 use `StatusBadge` | M |
 | S3 | BD money format + one date path | `formatBdt` groups the western way; 169 bare `.toLocaleString()` | S–M |
 | S4 | No `<Link><Button>` nesting | 82 places | S |
-| S5 | Labels on icon-only buttons | 65 of 105 unlabelled | S |
+| S5 | Labels on icon-only buttons | 16 of 110 unlabelled (**Correction:** the first audit's "65" came from a flawed regex) | S |
 | S6 | Navigation as real links | 12 `onClick={() => router.push(...)}` | S |
 | S7 | Error boundary per portal | 0 portal-level `error.tsx` | S |
 | S8 | Deep links whose params are ignored | 7 links, 2 target screens | S |
@@ -109,7 +111,7 @@ Codemod it, then **ratchet** with an architecture test (`/<Link\b[^>]*>\s*<Butto
 
 ## S5 — Labels on icon-only buttons
 
-**Problem.** Of 105 `<Button size="icon">`, **65 have no `aria-label` or `title`**. A screen reader announces them as just "button". [`SidebarPinsPage`](../../src/features/admin/sidebar-pins/pages/SidebarPinsPage.tsx) ("Move up" / "Move down") shows the right way.
+**Problem.** Of 110 `<Button size="icon">`, **16 had no `aria-label` or `title`** (13 real ones fixed; the dialog/sheet close and sidebar trigger buttons carry an `sr-only` label and are exempt in the test). *(Correction: the original audit said 65 of 105 — a regex that crossed tag boundaries.)* A screen reader announces them as just "button". [`SidebarPinsPage`](../../src/features/admin/sidebar-pins/pages/SidebarPinsPage.tsx) ("Move up" / "Move down") shows the right way.
 
 **Fix.** Give each one an `aria-label` that names the action and the thing it acts on, for example `aria-label="Edit customer"` or `aria-label="Delete package"`. Where sighted users also need the hint, add the existing Tooltip. **Ratchet** with a test that fails on an icon Button without `aria-label`.
 
@@ -163,3 +165,40 @@ Links that already work: inventory and purchase (`?category_id=`, `?location_id=
 4. The full table-state version of this (search, page, sort) is [T2](02-DATA-TABLES.md#t2--table-state-in-the-url).
 
 **Done when:** each link in the table opens its target already filtered or pre-filled.
+
+
+---
+
+## What was built
+
+| Fix | Implementation |
+|---|---|
+| S1 | 885 → 0 uses of `text-[9|10|11px]` in portals. `html:lang(bn)` in `globals.css` raises `--text-xs`/`--text-sm` to 13/15px. Marketing mock-ups (`OperatorConsole`, `SubscriberPhone`…) keep their small text on purpose. |
+| S2 | New `src/components/shared/status-tones.ts` (tone classes, status word → tone map with ~45 words). `Badge` got a `tone` prop, `StatusBadge` takes `tone` too. All 85 hand-coloured badges (static, ternary and chained conditions) were converted with TypeScript-AST codemods. Icon tiles and amount colours are intentional semantic colours and were left. |
+| S3 | `formatBdt` / `formatBdtWithSymbol` use lakh/crore grouping (`en-IN`); new `formatBdtCompact` (`৳48L`), `formatCount`, `COMPACT_FORMAT`; locale lives in `src/lib/format/locale.ts` (Latin digits in both languages, Bangla month names). 169 bare `.toLocaleString()` calls replaced; `NumberFlow` gets `locales={numberLocale()}`; the five raw date calls use `formatDate*`. |
+| S4 | 82 `<Link><Button>` converted to `<Button render={<Link />}>` with an AST-aware codemod (merging `className`s). |
+| S5 | 13 buttons labelled. |
+| S6 | 12 `router.push` clicks became real links (`DropdownMenuItem render={<Link />}`, `<Link>` for the customer name). |
+| S7 | `PortalError` component + `error.tsx` in the four portals (renders inside the shell); `EmptyState` has `variant="error"` (`role="alert"`); 178 failed-load states switched to it. |
+| S8 | `src/hooks/use-url-state.ts` (`useUrlParam`, `replaceQuery`) and `src/hooks/use-debounced-value.ts` replace five duplicated debounce hooks; customer list reads `status`, `area`, `package`, `router`, `conn`, `expiry`, `resellerId`, `q`, `page`, `size`; the payment form reads `customerId`; the platform ticket screen uses `useUrlParam('ticket')`. `PortalPageMotion` wraps pages in `<Suspense>` so `useSearchParams` is safe everywhere. |
+
+---
+
+## S9 — What the browser audit found (axe-core, 390px) — ✅ fixed
+
+After the fixes above, a production build was crawled in headless Chrome against a stub API: 175 portal routes, English and Bangla, phone width, axe-core with the WCAG 2.0/2.1/2.2 A and AA rule sets. The first run listed contrast, label and name failures that no unit test could see. They were fixed at the source:
+
+| Finding | Fix |
+|---|---|
+| Dark theme: primary button text too faint on the orange | `--primary-foreground` and `--sidebar-primary-foreground` now `oklch(0.2 0.03 300)` (dark ink on orange) |
+| Muted text too faint on dark surfaces | `--muted-foreground` (dark) `oklch(0.72 …)` → `oklch(0.77 …)` |
+| Landing page CTA: white on `#e85a1a` was 3.5:1 | `--landing-cta` `#c4440c` (5.0:1); `--landing-accent` stays the brighter orange for text on the dark canvas |
+| Sidebar group labels and a few faint helper texts | raised one step in the same token ramp (no new colours) |
+| Form fields without an accessible name | `<Label htmlFor>` ↔ `id` association by codemod, a shared `Field` helper (`useId`), `aria-label` on search, date, colour and icon-only controls |
+| Base UI `Select` triggers with no name | `SelectTrigger` falls back to its `SelectValue` placeholder; the two `OptionSelect` helpers (admin + bandwidth) fall back to their placeholder/“all” label when no `id` is given |
+| 34 `Switch` controls with no name | `aria-label` from the row/section label |
+| Scrollable table regions not keyboard-reachable | `Table` container gets `tabIndex={0}` |
+| Branding preview: white text on a tenant-chosen colour | text colour is computed from the accent’s luminance |
+| Links inside paragraphs distinguished by colour only | underlined |
+
+Result of the final crawl: see the Honest limits section in [09](09-DELIGHT-AND-FOLLOW-UPS.md). The only remaining console errors come from the stub returning an empty list where a page expects an object, not from the app.

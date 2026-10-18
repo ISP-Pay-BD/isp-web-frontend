@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /**
  * Customer VPN accounts (/v1/network-ops/vpn/accounts). Saved accounts are
@@ -82,23 +83,29 @@ export function useVpnAccounts({ page, pageSize, search }: { page: number; pageS
 }
 
 export function useSaveVpnAccount() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, body }: { id?: string; body: Record<string, unknown> }) =>
       mapAccount(id ? await http.put<unknown>(`/v1/network-ops/vpn/accounts/${id}`, body) : await http.post<unknown>('/v1/network-ops/vpn/accounts', body)),
     onSuccess: (_a, { id }) => {
-      toast.success(id ? 'VPN account updated' : 'VPN account saved — pending provisioning');
+      toast.success(
+        id
+          ? t('admin.ops.vpn.toastUpdated', 'VPN account updated')
+          : t('admin.ops.vpn.toastSaved', 'VPN account saved — pending provisioning'),
+      );
       qc.invalidateQueries({ queryKey: vpnKeys.all });
     },
   });
 }
 
 export function useDeleteVpnAccount() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => http.delete<unknown>(`/v1/network-ops/vpn/accounts/${id}`),
     onSuccess: () => {
-      toast.success('VPN account deleted');
+      toast.success(t('admin.ops.vpn.toastDeleted', 'VPN account deleted'));
       qc.invalidateQueries({ queryKey: vpnKeys.all });
     },
   });
@@ -106,10 +113,17 @@ export function useDeleteVpnAccount() {
 
 /** Creates the PPP secret on the account's router. */
 export function useProvisionVpnAccount() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => mapAccount(await http.post<unknown>(`/v1/network-ops/vpn/accounts/${id}/provision`)),
-    onSuccess: (a) => toast.success(`${a.username} provisioned on ${a.routerName ?? 'the router'}`),
+    onSuccess: (a) =>
+      toast.success(
+        t('admin.ops.vpn.toastProvisioned', '{name} provisioned on {router}', {
+          name: a.username,
+          router: a.routerName ?? t('admin.ops.vpn.theRouter', 'the router'),
+        }),
+      ),
     // Failed attempts record last_error on the account, so refresh either way.
     onSettled: () => qc.invalidateQueries({ queryKey: vpnKeys.all }),
   });

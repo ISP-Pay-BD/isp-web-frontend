@@ -6,6 +6,7 @@ import { errorMessage } from '@/lib/api/utils/error-handler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useLocale } from '@/i18n/locale-context';
 
 interface IpPoolAvailabilityDialogProps {
   pool: IpPool | null;
@@ -14,13 +15,14 @@ interface IpPoolAvailabilityDialogProps {
 
 /** Free addresses of one pool (GET /v1/ip-pools/{id}/available), loaded when opened. */
 export function IpPoolAvailabilityDialog({ pool, onOpenChange }: IpPoolAvailabilityDialogProps) {
+  const { t } = useLocale();
   const { data, isLoading, isError, error, refetch } = useIpPoolAvailability(pool?.id ?? null);
 
   return (
     <Dialog open={Boolean(pool)} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Free addresses — {pool?.name}</DialogTitle>
+          <DialogTitle>{t('admin.ipPools.free.title', 'Free addresses — {name}', { name: pool?.name ?? '' })}</DialogTitle>
           <DialogDescription className="font-mono text-xs">
             {pool?.cidr || `${pool?.startIp ?? ''} → ${pool?.endIp ?? ''}`}
           </DialogDescription>
@@ -33,21 +35,21 @@ export function IpPoolAvailabilityDialog({ pool, onOpenChange }: IpPoolAvailabil
             ))}
           </div>
         ) : isError ? (
-          <EmptyState
-            title="Could not load free addresses"
+          <EmptyState variant="error"
+            title={t('admin.ipPools.free.loadFailed', 'Could not load free addresses')}
             description={errorMessage(error)}
-            actionLabel="Retry"
+            actionLabel={t('admin.customers.list.retry', 'Retry')}
             onAction={() => refetch()}
           />
         ) : data && data.available.length > 0 ? (
           <div className="space-y-3">
             {data.nextIp ? (
               <p className="text-sm">
-                Next to assign: <code className="font-mono font-semibold text-primary">{data.nextIp}</code>
+                {t('admin.ipPools.free.next', 'Next to assign:')} <code className="font-mono font-semibold text-primary">{data.nextIp}</code>
               </p>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              First {data.available.length} free addresses in this pool
+              {t('admin.ipPools.free.first', 'First {n} free addresses in this pool', { n: data.available.length })}
             </p>
             <div className="grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
               {data.available.map((ip) => (
@@ -58,7 +60,7 @@ export function IpPoolAvailabilityDialog({ pool, onOpenChange }: IpPoolAvailabil
             </div>
           </div>
         ) : (
-          <EmptyState title="No free addresses" description="Every address in this pool is assigned or reserved." />
+          <EmptyState title={t('admin.ipPools.free.none', 'No free addresses')} description={t('admin.ipPools.free.noneHint', 'Every address in this pool is assigned or reserved.')} />
         )}
       </DialogContent>
     </Dialog>

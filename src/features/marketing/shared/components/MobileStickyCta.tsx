@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { MorphArrowButton } from '@/components/motion/MorphArrowButton';
 import { useMotionSafe } from '@/lib/animations';
-import { useTranslations } from '../context/LocaleContext';
+import { useTranslations } from '@/i18n/locale-context';
 
 export function MobileStickyCta() {
   const t = useTranslations();

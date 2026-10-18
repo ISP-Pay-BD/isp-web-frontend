@@ -14,9 +14,10 @@ import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatBdtWithSymbol, formatCount } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
 function daysLeft(iso: string | null): number | null {
   if (!iso) return null;
@@ -26,6 +27,7 @@ function daysLeft(iso: string | null): number | null {
 }
 
 export function SelfRechargePage() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, refetch } = useAdminSubscription();
   const recharge = useSelfRecharge();
   const statusCheck = useCheckoutStatus();
@@ -35,10 +37,10 @@ export function SelfRechargePage() {
   if (isLoading) return <PageSkeleton variant="dashboard" />;
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load subscription"
-        description={errorMessage(error, 'Could not load your platform subscription.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.subscription.selfRecharge.loadFailed', 'Failed to load subscription')}
+        description={errorMessage(error, t('admin.subscription.selfRecharge.loadFailedHint', 'Could not load your platform subscription.'))}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -54,15 +56,16 @@ export function SelfRechargePage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Self Recharge & Plan"
-        subtitle="Renew or change your platform plan and review its payments"
-        breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'Self Recharge' }]}
+        title={t('admin.subscription.selfRecharge.title', 'Self Recharge & Plan')}
+        subtitle={t('admin.subscription.selfRecharge.subtitle', 'Renew or change your platform plan and review its payments')}
+        breadcrumb={[
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.self_recharge', 'Self Recharge') },
+        ]}
         actions={
-          <Link href="/admin/payment">
-            <Button size="sm" variant="outline" className="text-xs">
-              <Receipt className="mr-1.5 h-3.5 w-3.5 text-primary" /> Payment History
+          <Button size="sm" variant="outline" className="text-xs" render={<Link href="/admin/payment" />}>
+              <Receipt className="mr-1.5 h-3.5 w-3.5 text-primary" /> {t('admin.subscription.selfRecharge.paymentHistory', 'Payment History')}
             </Button>
-          </Link>
         }
       />
 
@@ -74,17 +77,17 @@ export function SelfRechargePage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold tracking-wide text-primary flex items-center gap-1.5">
-                      <Shield className="h-3.5 w-3.5" /> Current plan
+                      <Shield className="h-3.5 w-3.5" /> {t('admin.subscription.selfRecharge.currentPlan', 'Current plan')}
                     </span>
                     {data.tenantName ? (
-                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px] font-semibold">{data.tenantName}</Badge>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold">{data.tenantName}</Badge>
                     ) : null}
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2">{data.planName ?? 'No plan assigned'}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mt-2">{data.planName ?? t('admin.subscription.selfRecharge.noPlan', 'No plan assigned')}</h2>
                   {data.planPriceBdt !== null ? (
                     <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-xl font-bold font-mono">৳{data.planPriceBdt.toLocaleString()}</span>
-                      <span className="text-xs font-normal text-muted-foreground">per renewal</span>
+                      <span className="text-xl font-bold font-mono">{formatBdtWithSymbol(data.planPriceBdt)}</span>
+                      <span className="text-xs font-normal text-muted-foreground">{t('admin.subscription.selfRecharge.perRenewal', 'per renewal')}</span>
                     </div>
                   ) : null}
                 </div>
@@ -93,16 +96,20 @@ export function SelfRechargePage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-border/60 text-xs">
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted-foreground">Valid until</span>
+                  <span className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.validUntil', 'Valid until')}</span>
                   <div className="font-medium">{data.willExpire ? formatDate(data.willExpire) : '—'}</div>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[11px] text-muted-foreground">Last renewed</span>
+                  <span className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.lastRenewed', 'Last renewed')}</span>
                   <div className="font-medium">{data.lastRenewed ? formatDate(data.lastRenewed) : '—'}</div>
                 </div>
                 <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[11px] text-muted-foreground">Billing</span>
-                  <div className="font-medium capitalize">{data.planType === 'payg' ? 'Pay-As-You-Go (wallet)' : data.billingType || '—'}</div>
+                  <span className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.billing', 'Billing')}</span>
+                  <div className="font-medium capitalize">{data.planType === 'payg'
+                      ? t('admin.subscription.selfRecharge.payg', 'Pay-As-You-Go (wallet)')
+                      : data.billingType
+                        ? t(`admin.subscription.selfRecharge.billingType.${data.billingType.toLowerCase().replace(/[^a-z]+/g, '_')}`, data.billingType)
+                        : '—'}</div>
                 </div>
               </div>
             </CardContent>
@@ -113,25 +120,27 @@ export function SelfRechargePage() {
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span>Customer capacity</span>
+                <span>{t('admin.subscription.selfRecharge.capacity', 'Customer capacity')}</span>
                 {left !== null ? (
-                  <Badge variant="secondary" className={cn('text-xs font-semibold', left < 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-primary/10 text-primary')}>
-                    {left < 0 ? `Expired ${Math.abs(left)} days ago` : `${left} days left`}
+                  <Badge variant="secondary" tone={left < 0 ? 'danger' : undefined} className={cn('text-xs font-semibold', left >= 0 && 'bg-primary/10 text-primary')}>
+                    {left < 0
+                      ? t('admin.subscription.selfRecharge.expiredAgo', 'Expired {n} days ago', { n: formatCount(Math.abs(left)) })
+                      : t('admin.subscription.selfRecharge.daysLeft', '{n} days left', { n: formatCount(left) })}
                   </Badge>
                 ) : null}
               </CardTitle>
-              <CardDescription className="text-xs">Customers counted against your plan</CardDescription>
+              <CardDescription className="text-xs">{t('admin.subscription.selfRecharge.capacityHint', 'Customers counted against your plan')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-1">
               {quota ? (
                 <>
                   <div className="flex justify-between text-xs">
                     <span className="font-semibold text-foreground flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-primary" /> Customers
+                      <Users className="h-3.5 w-3.5 text-primary" /> {t('admin.subscription.selfRecharge.customers', 'Customers')}
                     </span>
                     <span className="font-mono font-bold text-foreground">
-                      {quota.used} / {quota.isUnlimited ? '∞' : quota.limit}
-                      {quota.isUnlimited ? '' : ` (${quota.percent}%)`}
+                      {formatCount(quota.used)} / {quota.isUnlimited ? '∞' : formatCount(quota.limit)}
+                      {quota.isUnlimited ? '' : ` (${formatCount(quota.percent)}%)`}
                     </span>
                   </div>
                   <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted/60">
@@ -139,7 +148,7 @@ export function SelfRechargePage() {
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Capacity is not tracked for this account.</p>
+                <p className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.noQuota', 'Capacity is not tracked for this account.')}</p>
               )}
             </CardContent>
           </Card>
@@ -148,7 +157,7 @@ export function SelfRechargePage() {
 
       {!data.canRecharge ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <Info className="h-3.5 w-3.5" /> Only the ISP admin account can pay for the platform plan.
+          <Info className="h-3.5 w-3.5" /> {t('admin.subscription.selfRecharge.adminOnly', 'Only the ISP admin account can pay for the platform plan.')}
         </div>
       ) : null}
 
@@ -156,13 +165,13 @@ export function SelfRechargePage() {
         <div>
           <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10"><Zap className="h-4 w-4 text-primary" /></span>
-            Choose a plan
+            {t('admin.subscription.selfRecharge.choosePlan', 'Choose a plan')}
           </h2>
-          <p className="text-xs text-muted-foreground mt-1">Renew your current plan or move to another one</p>
+          <p className="text-xs text-muted-foreground mt-1">{t('admin.subscription.selfRecharge.choosePlanHint', 'Renew your current plan or move to another one')}</p>
         </div>
 
         {data.plans.length === 0 ? (
-          <EmptyState title="No plans available" description="The platform has not published any plans yet." />
+          <EmptyState title={t('admin.subscription.selfRecharge.noPlans', 'No plans available')} description={t('admin.subscription.selfRecharge.noPlansHint', 'The platform has not published any plans yet.')} />
         ) : (
           <div className="grid gap-4 md:grid-cols-3">
             {data.plans.map((p) => {
@@ -183,19 +192,21 @@ export function SelfRechargePage() {
                   <div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-base text-foreground">{p.name}</span>
-                      {p.isCurrent ? <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold">Current</Badge> : null}
+                      {p.isCurrent ? <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 font-semibold">{t('admin.subscription.selfRecharge.current', 'Current')}</Badge> : null}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {p.isUnlimited ? 'Unlimited customers' : `Up to ${p.maxCustomers?.toLocaleString()} customers`}
+                      {p.isUnlimited
+                        ? t('admin.subscription.selfRecharge.unlimitedCustomers', 'Unlimited customers')
+                        : t('admin.subscription.selfRecharge.upToCustomers', 'Up to {n} customers', { n: formatCount(p.maxCustomers ?? 0) })}
                     </div>
                     <div className="mt-4 pb-4 border-b border-border/50">
                       {p.planType === 'payg' ? (
                         <div className="text-sm font-semibold text-foreground">
-                          ৳{(p.baseFeeBdt ?? 0).toLocaleString()} + ৳{p.perUserRateBdt ?? 0}/customer
-                          <div className="text-[11px] font-normal text-muted-foreground">Activated from the wallet</div>
+                          {t('admin.subscription.selfRecharge.paygPrice', '{base} + ৳{rate}/customer', { base: formatBdtWithSymbol(p.baseFeeBdt ?? 0), rate: formatCount(p.perUserRateBdt ?? 0) })}
+                          <div className="text-xs font-normal text-muted-foreground">{t('admin.subscription.selfRecharge.paygHint', 'Activated from the wallet')}</div>
                         </div>
                       ) : (
-                        <span className="text-2xl sm:text-3xl font-bold font-mono text-foreground">৳{p.priceBdt.toLocaleString()}</span>
+                        <span className="text-2xl sm:text-3xl font-bold font-mono text-foreground">{formatBdtWithSymbol(p.priceBdt)}</span>
                       )}
                     </div>
                     {p.features.length ? (
@@ -210,7 +221,7 @@ export function SelfRechargePage() {
                     ) : null}
                   </div>
                   {p.planType === 'payg' ? (
-                    <Link href="/admin/wallet" className="mt-4 text-xs text-primary hover:underline">Open wallet →</Link>
+                    <Link href="/admin/wallet" className="mt-4 text-xs text-primary hover:underline">{t('admin.subscription.selfRecharge.openWallet', 'Open wallet →')}</Link>
                   ) : null}
                 </button>
               );
@@ -224,28 +235,28 @@ export function SelfRechargePage() {
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10"><CreditCard className="h-4 w-4 text-primary" /></span>
-              Payment gateway
+              {t('admin.subscription.selfRecharge.gateway', 'Payment gateway')}
             </h2>
-            <p className="text-xs text-muted-foreground mt-1">You pay on the gateway&apos;s page; gateway charges may apply.</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('admin.subscription.selfRecharge.gatewayHint', "You pay on the gateway's page; gateway charges may apply.")}</p>
           </div>
           <GatewayPicker providers={data.providers} value={method} onChange={setGateway} />
 
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60">
             <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
               <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-muted-foreground tracking-wide">Order summary</div>
+                <div className="text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.subscription.selfRecharge.orderSummary', 'Order summary')}</div>
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="font-bold text-lg text-foreground">{plan?.name ?? 'Select a plan'}</span>
-                  {method ? <span className="text-xs text-muted-foreground">via {gatewayLabel(method)}</span> : null}
+                  <span className="font-bold text-lg text-foreground">{plan?.name ?? t('admin.subscription.selfRecharge.selectPlan', 'Select a plan')}</span>
+                  {method ? <span className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.via', 'via {gateway}', { gateway: gatewayLabel(method) })}</span> : null}
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Info className="h-3.5 w-3.5" />
-                  Your plan renews after the gateway confirms the payment.
+                  {t('admin.subscription.selfRecharge.renewsAfter', 'Your plan renews after the gateway confirms the payment.')}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="text-left sm:text-right">
-                  <div className="text-[11px] text-muted-foreground">Plan price</div>
+                  <div className="text-xs text-muted-foreground">{t('admin.subscription.selfRecharge.planPrice', 'Plan price')}</div>
                   <div className="text-2xl font-bold font-mono text-foreground">
                     <CurrencyDisplay amount={plan?.selfRechargeable ? plan.priceBdt : 0} />
                   </div>
@@ -257,7 +268,7 @@ export function SelfRechargePage() {
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm px-6 h-10"
                 >
                   {recharge.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                  {recharge.isPending ? 'Starting checkout…' : 'Pay & renew'}
+                  {recharge.isPending ? t('admin.subscription.selfRecharge.starting', 'Starting checkout…') : t('admin.subscription.selfRecharge.payRenew', 'Pay & renew')}
                 </Button>
               </div>
             </CardContent>
@@ -267,17 +278,19 @@ export function SelfRechargePage() {
 
       <Card className="border-border/60">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Recent platform payments</CardTitle>
-          <CardDescription className="text-xs">A checkout shows as pending until the gateway confirms it.</CardDescription>
+          <CardTitle className="text-base">{t('admin.subscription.selfRecharge.recentTitle', 'Recent platform payments')}</CardTitle>
+          <CardDescription className="text-xs">{t('admin.subscription.selfRecharge.recentHint', 'A checkout shows as pending until the gateway confirms it.')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {data.recentPayments.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No platform payments yet.</p>
+            <p className="text-xs text-muted-foreground py-4 text-center">{t('admin.subscription.selfRecharge.noPayments', 'No platform payments yet.')}</p>
           ) : (
             data.recentPayments.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 p-3 text-xs">
                 <div className="min-w-0">
-                  <div className="font-semibold text-foreground">{p.description}</div>
+                  <div className="font-semibold text-foreground">
+                    {p.description || (p.purpose === 'wallet_topup' ? t('admin.subscription.selfRecharge.walletTopup', 'Wallet top-up') : t('admin.subscription.selfRecharge.platformPayment', 'Platform payment'))}
+                  </div>
                   <div className="text-muted-foreground font-mono">
                     {p.invoiceNo} · {formatDateTime(p.paidAt ?? p.createdAt ?? '')}
                     {p.gateway ? ` · ${gatewayLabel(p.gateway)}` : ''}
@@ -294,7 +307,7 @@ export function SelfRechargePage() {
                       disabled={statusCheck.isPending}
                       onClick={() => statusCheck.mutate({ gateway: p.gateway!, reference: p.gatewayRef! })}
                     >
-                      <RefreshCw className={cn('mr-1 h-3 w-3', statusCheck.isPending && 'animate-spin')} /> Check status
+                      <RefreshCw className={cn('mr-1 h-3 w-3', statusCheck.isPending && 'animate-spin')} /> {t('admin.subscription.selfRecharge.checkStatus', 'Check status')}
                     </Button>
                   ) : null}
                 </div>

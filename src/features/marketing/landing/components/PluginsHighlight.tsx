@@ -45,7 +45,7 @@ export function PluginsHighlight({ plugins }: PluginsHighlightProps) {
                 <h3 className="font-landing-display text-base font-semibold text-white">
                   {plugin.name}
                 </h3>
-                <span className="text-[11px] text-white/40">{plugin.category}</span>
+                <span className="text-[11px] text-white/60">{plugin.category}</span>
               </div>
               <p className="mt-1 max-w-xl text-sm text-white/55">
                 {plugin.desc ?? 'Modular add-on extending your core ISP platform.'}
@@ -57,7 +57,7 @@ export function PluginsHighlight({ plugins }: PluginsHighlightProps) {
                   ? t('common.free')
                   : `${formatBdtWithSymbol(plugin.priceBdt)}/mo`}
               </span>
-              <Link href="/plugins" className="text-landing-cta text-xs hover:underline">
+              <Link href="/plugins" className="text-landing-accent text-xs hover:underline">
                 {t('marketing.sections.plugins.details')}
               </Link>
             </div>

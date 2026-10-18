@@ -24,19 +24,26 @@ import { useFilteredNav } from '@/hooks/use-filtered-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuthHydrated } from '@/hooks/use-auth-hydrated';
 import type { NavItem } from '@/config/navigation/index';
+import { adminSectionOrder } from '@/config/navigation/admin';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
-import { createElement, useMemo, useState, useCallback } from 'react';
+import { createElement, useEffect, useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getNavIcon } from '@/features/shared/command-palette/nav-icons';
 import { useSidebarPins } from '@/features/admin/sidebar-pins/hooks/use-sidebar-pins';
 import { TenantThemeSync } from '@/features/admin/theme-studio/hooks/use-theme-studio';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface PortalSidebarProps {
   portal: 'admin' | 'customer' | 'platform' | 'employee';
+}
+
+/** `Billing & Collections` -> `billing_collections`: the key of a sidebar group name under `nav.section`. */
+function sectionSlug(section: string): string {
+  return section.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
 function NavIcon({ name, className }: { name?: string; className?: string }) {
@@ -44,7 +51,33 @@ function NavIcon({ name, className }: { name?: string; className?: string }) {
   return icon ? createElement(icon, { className: className ?? 'h-4 w-4 shrink-0' }) : null;
 }
 
+/** The deepest nav href that contains `path` (`/admin/customers/12` -> `/admin/customers`, not a shorter sibling). */
+function pickActiveHref(items: NavItem[], path: string): string | null {
+  let best: string | null = null;
+  const visit = (item: NavItem) => {
+    const href = item.href;
+    if (href && (path === href || path.startsWith(`${href}/`)) && (!best || href.length > best.length)) best = href;
+    item.children?.forEach(visit);
+  };
+  items.forEach(visit);
+  return best;
+}
+
+const OPEN_SECTIONS_KEY = 'ipb_nav_open_sections';
+
+function readOpenSections(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(OPEN_SECTIONS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string }) {
+  const t = useTranslations();
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === 'collapsed';
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
@@ -73,13 +106,14 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
           item.href === currentPath || (item.children?.some((c) => c.href === currentPath) ?? false);
         const isExpanded = expandedIds.has(item.id);
         const isLeafActive = item.href === currentPath;
+        const itemLabel = t(`nav.${item.id}`, item.label);
 
         return item.children?.length ? (
           <SidebarMenuItem key={item.id}>
             <SidebarMenuButton
               isActive={isParentActive}
               onClick={() => toggle(item.id)}
-              tooltip={item.label}
+              tooltip={itemLabel}
               className={
                 isParentActive
                   ? 'ipb-sidebar-button active-parent group relative rounded-lg py-5 font-semibold text-primary'
@@ -93,7 +127,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                 </>
               )}
               <NavIcon name={item.icon} />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{itemLabel}</span>
               {!isCollapsed && (
                 <ChevronDown
                   className={`ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-250 ease-out group-hover:text-muted-foreground/80 ${
@@ -123,7 +157,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                             <span className="absolute inset-y-1.5 left-0 w-[2.5px] rounded-full bg-primary" aria-hidden />
                           </>
                         )}
-                        <span className="truncate">{child.label}</span>
+                        <span className="truncate">{t(`nav.${child.id}`, child.label)}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   );
@@ -135,7 +169,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
           <SidebarMenuItem key={item.id}>
             <SidebarMenuButton
               isActive={isLeafActive}
-              tooltip={item.label}
+              tooltip={itemLabel}
               className={
                 isLeafActive
                   ? 'ipb-sidebar-button active-leaf group relative rounded-lg py-5 font-semibold text-primary'
@@ -150,9 +184,9 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
                 </>
               )}
               <NavIcon name={item.icon} />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{itemLabel}</span>
               {item.badge ? (
-                <span className="bg-primary/15 text-primary ml-auto rounded-md px-1.5 py-0.5 text-[10px] font-semibold dark:bg-primary/20">
+                <span className="bg-primary/15 text-primary ml-auto rounded-md px-1.5 py-0.5 text-xs font-semibold dark:bg-primary/20">
                   {item.badge}
                 </span>
               ) : null}
@@ -165,6 +199,7 @@ function NavTree({ items, currentPath }: { items: NavItem[]; currentPath: string
 }
 
 export function PortalSidebar({ portal }: PortalSidebarProps) {
+  const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const hydrated = useAuthHydrated();
@@ -177,7 +212,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
 
   const handleLogout = () => {
     logout();
-    toast.success('You are signed out');
+    toast.success(t('common.header.signedOut', 'You are signed out'));
     router.push('/login');
   };
 
@@ -194,9 +229,11 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
     if (!query.trim()) return items;
     const q = query.toLowerCase();
     const match = (n: NavItem): boolean =>
-      n.label.toLowerCase().includes(q) || (n.children?.some(match) ?? false);
+      n.label.toLowerCase().includes(q) ||
+      t(`nav.${n.id}`, n.label).toLowerCase().includes(q) ||
+      (n.children?.some(match) ?? false);
     return items.filter(match);
-  }, [items, query]);
+  }, [items, query, t]);
 
   const sections = useMemo(() => {
     const map = new Map<string, NavItem[]>();
@@ -205,17 +242,63 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(item);
     }
-    return [...map.entries()];
-  }, [filtered]);
+    const order = portal === 'admin' ? adminSectionOrder : [];
+    const rank = (name: string) => (order.includes(name) ? order.indexOf(name) : order.length);
+    return [...map.entries()].sort((a, b) => rank(a[0]) - rank(b[0]));
+  }, [filtered, portal]);
+
+  const activeHref = useMemo(() => pickActiveHref(items, pathname), [items, pathname]);
+  const activeSection = useMemo(
+    () => sections.find(([, list]) => list.some((it) => pickActiveHref([it], pathname) === activeHref))?.[0] ?? null,
+    [sections, pathname, activeHref],
+  );
+
+  // Groups can be folded; the one holding the current page is always open and the choice is remembered.
+  const [openSections, setOpenSections] = useState<Set<string>>(() => new Set(['Overview', ...readOpenSections()]));
+  useEffect(() => {
+    if (activeSection) setOpenSections((prev) => (prev.has(activeSection) ? prev : new Set(prev).add(activeSection)));
+  }, [activeSection]);
+  const toggleSection = useCallback((name: string) => {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      try {
+        localStorage.setItem(OPEN_SECTIONS_KEY, JSON.stringify([...next]));
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  }, []);
+  const foldable = sections.length > 3;
 
   const showNavSkeleton = !hydrated;
 
   // Admin portal: the user's pinned shortcuts on top + the tenant's saved theme.
   const isAdminPortal = portal === 'admin' && (user?.role === 'admin' || user?.role === 'resellerAdmin');
   const pins = useSidebarPins(hydrated && portal === 'admin' && Boolean(user));
+  const navIdByHref = useMemo(() => {
+    const map = new Map<string, string>();
+    const visit = (item: NavItem) => {
+      if (item.href) map.set(item.href, item.id);
+      item.children?.forEach(visit);
+    };
+    items.forEach(visit);
+    return map;
+  }, [items]);
   const pinnedItems = useMemo<NavItem[]>(
-    () => (pins.data ?? []).map((p) => ({ id: `pin-${p.id}`, label: p.label, href: p.href, icon: p.icon || 'Pin' })),
-    [pins.data],
+    () =>
+      (pins.data ?? []).map((p) => {
+        const navId = navIdByHref.get(p.href);
+        return {
+          id: `pin-${p.id}`,
+          label: navId ? t(`nav.${navId}`, p.label) : p.label,
+          href: p.href,
+          icon: p.icon || 'Pin',
+        };
+      }),
+    [pins.data, navIdByHref, t],
   );
 
   return (
@@ -223,14 +306,14 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
       {/* Header — Logo + Brand */}
       <div className={`border-sidebar-border flex items-center gap-3 border-b ${isCollapsed ? 'justify-center p-3' : 'px-4 py-3.5'}`}>
         <div className="bg-card border-border/80 relative flex shrink-0 items-center justify-center rounded-lg border p-1 shadow-[var(--shadow-xs)] dark:border-sidebar-border dark:bg-sidebar-accent/50">
-          <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={28} height={28} className="shrink-0" />
+          <Image src={brandAssets.logo} alt={t('common.sidebar.logoAlt', '{name} logo', { name: siteConfig.name })} width={28} height={28} className="shrink-0" />
         </div>
         {!isCollapsed && (
           <div className="min-w-0 flex-1">
             <div className="text-sidebar-foreground truncate text-xs font-bold tracking-tight">{siteConfig.name}</div>
-            <div className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px] font-medium capitalize">
+            <div className="text-muted-foreground flex items-center gap-1.5 truncate text-xs font-medium capitalize">
               <span className="bg-emerald-500 inline-block h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgba(16,185,129,0.5)]" />
-              {portal} portal
+              {t(`common.portal.${portal}`, `${portal} portal`)}
             </div>
           </div>
         )}
@@ -242,10 +325,10 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
           <div className="relative">
             <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
             <Input
-              placeholder="Search menu…"
+              placeholder={t('common.sidebar.searchPlaceholder', 'Search menu…')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search menu"
+              aria-label={t('common.sidebar.searchLabel', 'Search menu')}
               className="border-border/70 bg-background/40 placeholder:text-muted-foreground/50 focus:bg-background focus:ring-primary/20 dark:border-sidebar-border dark:bg-sidebar-accent/30 dark:focus:bg-sidebar-accent/60 h-8 rounded-lg border pl-8 text-xs shadow-none focus:ring-1"
             />
           </div>
@@ -264,8 +347,8 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <TenantThemeSync enabled={hydrated && isAdminPortal} />
             {pinnedItems.length > 0 && !query.trim() && (
               <SidebarGroup>
-                <SidebarGroupLabel className="text-muted-foreground/50 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  Pinned
+                <SidebarGroupLabel className="text-muted-foreground/80 px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-[0.08em]">
+                  {t('common.sidebar.pinned', 'Pinned')}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -274,23 +357,39 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
                 </SidebarGroupContent>
               </SidebarGroup>
             )}
-            {sections.map(([section, sectionItems], idx) => (
-              <SidebarGroup key={section}>
-                {idx > 0 && (
-                  <div className="border-sidebar-border/30 mx-3 my-1 border-t" />
-                )}
-                <SidebarGroupLabel className="text-muted-foreground/50 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.08em]">
-                  {section}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <NavTree items={sectionItems} currentPath={pathname} />
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            ))}
+            {sections.map(([section, sectionItems], idx) => {
+              const open = !foldable || isCollapsed || Boolean(query.trim()) || openSections.has(section);
+              const sectionLabel = t(`nav.section.${sectionSlug(section)}`, section);
+              return (
+                <SidebarGroup key={section}>
+                  {idx > 0 && <div className="border-sidebar-border/30 mx-3 my-1 border-t" />}
+                  {foldable && !isCollapsed ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section)}
+                      aria-expanded={open}
+                      className="text-muted-foreground/70 hover:text-foreground flex w-full items-center justify-between px-3 pt-3 pb-1 text-xs font-semibold tracking-[0.08em] uppercase transition-colors"
+                    >
+                      <span>{sectionLabel}</span>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? '' : '-rotate-90'}`} aria-hidden />
+                    </button>
+                  ) : (
+                    <SidebarGroupLabel className="text-muted-foreground/80 px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-[0.08em]">
+                      {sectionLabel}
+                    </SidebarGroupLabel>
+                  )}
+                  {open ? (
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        <NavTree items={sectionItems} currentPath={activeHref ?? pathname} />
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  ) : null}
+                </SidebarGroup>
+              );
+            })}
             {filtered.length === 0 ? (
-              <p className="text-muted-foreground px-4 py-2 text-sm">No menu matches</p>
+              <p className="text-muted-foreground px-4 py-2 text-sm">{t('common.sidebar.noMatch', 'No menu matches')}</p>
             ) : null}
           </>
         )}
@@ -313,7 +412,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             <Link
               href={portal === 'customer' ? '/customer/profile' : '/admin/profile'}
               className={`hover:bg-sidebar-accent/70 group flex items-center gap-2.5 rounded-lg p-2 transition-colors dark:hover:bg-sidebar-accent ${isCollapsed ? 'justify-center' : ''}`}
-              title={isCollapsed ? `${user.name} — Profile` : undefined}
+              title={isCollapsed ? `${user.name} — ${t('common.header.profile', 'My profile')}` : undefined}
             >
               <Avatar className="border-primary/20 h-8 w-8 shrink-0 rounded-md border shadow-[var(--shadow-xs)]">
                 <AvatarFallback className="bg-primary/10 text-primary rounded-md text-xs font-semibold dark:bg-primary/15">
@@ -325,7 +424,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
                   <div className="text-sidebar-foreground group-hover:text-primary truncate text-xs font-semibold transition-colors">
                     {user.name}
                   </div>
-                  <div className="text-muted-foreground truncate text-[10px]">{user.email}</div>
+                  <div className="text-muted-foreground truncate text-xs">{user.email}</div>
                 </div>
               )}
             </Link>
@@ -334,10 +433,10 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
               type="button"
               onClick={handleLogout}
               className={`border-destructive/15 bg-destructive/5 hover:bg-destructive/10 text-destructive hover:border-destructive/30 dark:border-destructive/25 dark:bg-destructive/[0.08] dark:hover:bg-destructive/15 flex items-center gap-2 rounded-lg border py-2 text-xs font-medium transition active:scale-[0.98] ${isCollapsed ? 'justify-center' : 'w-full'}`}
-              title={isCollapsed ? 'Log out' : undefined}
+              title={isCollapsed ? t('common.header.logout', 'Log out') : undefined}
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
-              {!isCollapsed && <span>Log out</span>}
+              {!isCollapsed && <span>{t('common.header.logout', 'Log out')}</span>}
             </button>
           </div>
         ) : (
@@ -345,7 +444,7 @@ export function PortalSidebar({ portal }: PortalSidebarProps) {
             href="/login"
             className={`bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold shadow-[var(--shadow-primary)] transition ${isCollapsed ? 'px-0' : 'w-full'}`}
           >
-            {!isCollapsed && <span>Log in</span>}
+            {!isCollapsed && <span>{t('common.header.login', 'Log in')}</span>}
           </Link>
         )}
       </SidebarFooter>

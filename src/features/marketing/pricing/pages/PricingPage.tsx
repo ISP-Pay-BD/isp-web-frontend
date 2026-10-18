@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, ArrowRight, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatBdtWithSymbol } from '@/lib/format';
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
 import { useTranslations } from '@/features/marketing/shared';
 import { Reveal } from '@/components/motion/Reveal';
 import { useMarketingPricing } from '../hooks/use-marketing-pricing';
@@ -36,7 +36,7 @@ export function PricingPage() {
       name: tier.name,
       priceBdt: tier.priceBdt,
       period: tier.period,
-      customers: tier.customers ? `Up to ${tier.customers.toLocaleString()} subscribers` : 'Unlimited subscribers',
+      customers: tier.customers ? `Up to ${formatCount(tier.customers)} subscribers` : 'Unlimited subscribers',
       features: [...tier.features],
     }));
   }, [tiers]);
@@ -91,7 +91,7 @@ export function PricingPage() {
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-landing-cta text-xs font-medium tracking-[0.08em]">
+          <p className="text-landing-accent text-xs font-medium tracking-[0.08em]">
             {t('marketing.pages.pricing.badge')}
           </p>
           <h1 className="font-landing-display mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
@@ -155,13 +155,13 @@ export function PricingPage() {
                           <span className="font-landing-display text-3xl font-semibold text-white tabular-nums">
                             {formatBdtWithSymbol(plan.priceBdt)}
                           </span>
-                          <span className="ml-1 text-sm text-white/45">/ {plan.period}</span>
+                          <span className="ml-1 text-sm text-white/60">/ {plan.period}</span>
                         </div>
 
                         <ul className="mt-8 space-y-3.5 border-t border-white/10 pt-6 text-sm text-white/80">
                           {plan.features.map((feat, idx) => (
                             <li key={idx} className="flex items-start gap-3">
-                              <Check className="text-landing-cta mt-0.5 h-4 w-4 shrink-0" />
+                              <Check className="text-landing-accent mt-0.5 h-4 w-4 shrink-0" />
                               <span>{feat}</span>
                             </li>
                           ))}
@@ -187,7 +187,7 @@ export function PricingPage() {
           {model === 'payg' && payg && (
             <div className="bg-landing-panel/60 mx-auto max-w-2xl rounded-xl border border-white/10 p-6 md:p-8">
               <div>
-                <p className="text-landing-cta text-xs font-medium">Pay as you grow</p>
+                <p className="text-landing-accent text-xs font-medium">Pay as you grow</p>
                 <h3 className="font-landing-display mt-2 text-xl font-semibold text-white">
                   Calculate your exact monthly cost
                 </h3>
@@ -201,7 +201,7 @@ export function PricingPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white/80">Active Subscriber Count:</span>
                   <span className="text-landing-accent font-mono text-xl font-bold">
-                    {subscriberCount.toLocaleString()} subscribers
+                    {formatCount(subscriberCount)} subscribers
                   </span>
                 </div>
 
@@ -215,10 +215,10 @@ export function PricingPage() {
                   className="accent-landing-cta w-full cursor-pointer"
                 />
 
-                <div className="flex justify-between font-mono text-[11px] text-white/40">
+                <div className="flex justify-between font-mono text-[11px] text-white/60">
                   <span>{PAYG_SLIDER.min}</span>
-                  <span>{((PAYG_SLIDER.min + PAYG_SLIDER.max) / 2).toLocaleString()}</span>
-                  <span>{PAYG_SLIDER.max.toLocaleString()}</span>
+                  <span>{formatCount((PAYG_SLIDER.min + PAYG_SLIDER.max) / 2)}</span>
+                  <span>{formatCount(PAYG_SLIDER.max)}</span>
                 </div>
               </div>
 
@@ -250,7 +250,7 @@ export function PricingPage() {
 
         <Reveal className="mt-24 border-t border-white/10 pt-16" delay={0.04}>
           <div className="mx-auto mb-12 max-w-2xl text-center">
-            <span className="text-landing-cta text-xs font-medium tracking-wide">
+            <span className="text-landing-accent text-xs font-medium tracking-wide">
               Frequently Asked Questions
             </span>
             <h2 className="font-landing-display mt-2 text-3xl font-bold text-white">
@@ -262,7 +262,7 @@ export function PricingPage() {
             {faqs.map((faq, i) => (
               <div key={i} className="rounded-xl border border-white/10 bg-white/[0.02] p-6">
                 <h4 className="font-landing-display flex items-start gap-2.5 text-base font-bold text-white">
-                  <HelpCircle className="text-landing-cta mt-0.5 h-5 w-5 shrink-0" />
+                  <HelpCircle className="text-landing-accent mt-0.5 h-5 w-5 shrink-0" />
                   {faq.q}
                 </h4>
                 <p className="mt-2 pl-7 text-sm leading-relaxed text-white/70">{faq.a}</p>

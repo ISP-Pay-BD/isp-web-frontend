@@ -1,4 +1,4 @@
-# 06 — Bangla in the portals (I1–I4)
+# 06 — Bangla in the portals (I1–I4) — ✅ implemented (customer, employee, admin and platform)
 
 **Today:** Bangla works on the marketing site only. `src/i18n/messages/bn.json` exists (325 lines), but **no portal screen imports `@/i18n` or the locale context**. The customer portal is fully English, though [`11-I18N.md`](../11-I18N.md) plans "Phase 3 Customer: Full EN + BN". [`PRODUCT.md`](../../PRODUCT.md) calls Bengali "a first-class inclusion requirement".
 
@@ -81,3 +81,45 @@ Same process for the 6 employee screens (`employee.*` namespace). Field staff ar
 3. The dashboard triage row
 
 Get a yes from the owner before starting, because it is the largest piece in this plan (145 screens, even if only some are translated).
+
+
+---
+
+## What was built
+
+- **I1** `src/i18n/locale-context.tsx` (provider mounted once in `AppProviders`), `src/components/shared/LocaleToggle.tsx` (`variant="marketing" | "portal"`), `t(key, englishFallback, vars?)` and `te(zodMessage)`. The language sets `<html lang>` and the `font-bengali` class on `<html>`, and `setFormatLocale()` so money/dates follow it. Messages: `src/i18n/messages/{en.json, bn.json}` plus one Bangla file per area in `messages/bn/` (merged in `src/i18n/index.ts`). English lives at the call site, so a missing Bangla key simply shows English.
+- **I2** 19 customer screens, the bottom nav, header and shared states are bilingual; **I3** 6 employee screens.
+- **I4** Every admin and platform screen is bilingual (144 of 145 admin page components call `t()` directly; the 145th, user access, wraps a translated page) — the first pass covered the daily-use screens (customers, customer payments, dashboard, staff support, shared table/dialog chrome, sidebar, command palette) and a second pass covered the rest (`admin-more-1…17.json`: billing, HR, accounting, inventory, purchase, hotspot, bandwidth, OLT/IPAM/RADIUS/VPN, WhatsApp, settings, tenants, SLA…). The earlier plan to leave network/engineering screens in English was dropped; protocol and product names (PPPoE, MikroTik, RouterOS, OLT/ONU/PON, RADIUS, dBm) stay in Latin script inside Bangla sentences.
+- **Guard rails:** `tests/unit/i18n/coverage.test.ts` fails when a literal `t('key', …)` has no Bangla message or when the `{placeholders}` differ between the Bangla and the English fallback.
+- **Select triggers:** Selects that used to show the raw value (`all`, `published`, `range`) now pass an `items` map so the closed trigger shows the translated label. Fixed-width triggers that clipped longer Bangla became `min-w-*`.
+- **Numbers and dates:** counts go through `formatCount`, dates through `formatDate`/`dateLocale()`, so they follow the active language.
+
+### Deliberately left in English
+
+- API error messages, provider-entered text (names, memos, plan names, router log lines) and server-supplied labels (settings group/field labels, plugin/webhook event labels).
+- CSV / Excel export column headers: `downloadCsv` writes no BOM in some exports, and column headers are data-interchange, not UI.
+- The SMS body sent *to a customer* from the invoice "send receipt/reminder" action (outgoing customer content; the receipt SMS in customer-payments *is* locale-aware).
+- Route `metadata` titles (server-side) and the marketing `HelpPage` body shown inside the customer help screen.
+- AI chat: the backend classifier matches English keywords only, so the quick prompts are shown in Bangla but the English text is what gets sent.
+
+### Needs a native-speaker pass (before calling the Bangla final)
+
+The wording was written by the implementers and has **not** been reviewed by a native speaker. Terms the writers flagged as least sure:
+
+| Area | Terms |
+|---|---|
+| Billing / HR / accounting | "বরাদ্দকৃত" (assigned), "কর্তিত" / "কর্তন" (deducted), "পেরোল" (payroll), "মূলধন" (equity), "দায়" (liabilities), "রাজস্ব" (revenue), "মওকুফ" (waive), "তাগাদা" (dunning), "সেটেলমেন্ট", "পেমেন্ট নিন" |
+| Network | "ডিসকানেক্ট", "পোল", "ড্রপ", "ওয়ালড গার্ডেন" (walled garden), "ভেন্ডর", "ওয়্যার ডাউন", "প্রোভিশন", "কভারেজ জোন", "নাগালের বাইরে" |
+| Support / NOC | "জরুরি / গুরুতর / সামান্য" (critical / major / minor), "ইনসিডেন্ট", "এসকেলেশন", "কিউ" vs "সারিতে" |
+| CRM / loyalty | "রেফারকারী" (referrer), "লয়্যালটি পয়েন্ট", lead stages "নেগোশিয়েশন / সফল / হারানো", "প্রত্যাখ্যান" (rejected) |
+| Settings / theme | "লঞ্চ করুন", "নিশ্চিত গতি" (CIR), transliterated theme names, "ঠিক আছে / নজরে রাখুন / জরুরি" (posture) |
+| Security | 2FA / TOTP phrasing, "সম্পাদনকারী" (actor), "এন্টিটি" (entity) |
+
+A ready-to-use checklist (term → every message that uses it, with a column for the preferred wording) is in [10-BANGLA-REVIEW-SHEET.md](10-BANGLA-REVIEW-SHEET.md).
+
+### Known gaps
+
+- Privacy and Terms (`/privacy`, `/terms`) are legal text and stay English until the owner supplies approved Bangla wording.
+- The captive page shows `expiresAt` as the server sends it (a timezone-less `Y-m-d H:i:s`); formatting it client-side could shift the date for visitors outside Bangladesh.
+- DataTable facet-filter *option* text shows the raw column value; only the filter titles are translated. Facet filters on translated text (`f_status=…`) are stored in the URL as the translated string, so a saved link does not carry over if the language is switched.
+- Route `metadata` titles (e.g. `/403`) are static English server-side strings.

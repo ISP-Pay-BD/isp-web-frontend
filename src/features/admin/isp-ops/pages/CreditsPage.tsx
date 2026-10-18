@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import {
   FileBadge,
-  Search,
   Plus,
   Clock,
   X,
@@ -17,7 +17,7 @@ import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { TablePagination } from '@/components/shared/TablePagination';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,7 +39,8 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { formatBdtWithSymbol } from '@/lib/format';
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { BillingCustomerPicker } from '../components/BillingCustomerPicker';
 import {
@@ -49,24 +50,24 @@ import {
   useCreditMutations,
   useCreditNotes,
   useCreditSummary,
-  useDebouncedValue,
   type BillingCustomerOption,
+  type CreditBalance,
   type CreditNote,
 } from '../hooks/use-billing-config';
 
 type View = 'notes' | 'balances';
 
 export function CreditsPage() {
+  const t = useTranslations();
   const [view, setView] = useState<View>('notes');
   const [search, setSearch] = useState('');
-  const debounced = useDebouncedValue(search.trim(), 350);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
   const [customerFilter, setCustomerFilter] = useState<{ id: number; name: string } | null>(null);
 
   const summary = useCreditSummary();
-  const notes = useCreditNotes({ page, perPage, search: debounced, customerId: customerFilter?.id ?? null }, view === 'notes');
-  const balances = useCreditBalances({ page, perPage, search: debounced }, view === 'balances');
+  const notes = useCreditNotes({ page, perPage, search, customerId: customerFilter?.id ?? null }, view === 'notes');
+  const balances = useCreditBalances({ page, perPage, search }, view === 'balances');
   const active = view === 'notes' ? notes : balances;
 
   const [selected, setSelected] = useState<CreditNote | null>(null);
@@ -75,10 +76,10 @@ export function CreditsPage() {
   if (summary.isLoading) return <PageSkeleton variant="cards" rows={6} />;
   if (summary.isError) {
     return (
-      <EmptyState
-        title="Failed to load credit notes"
-        description={errorMessage(summary.error, 'Could not load the credit note ledger.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.ops.credits.loadFailed', 'Failed to load credit notes')}
+        description={errorMessage(summary.error, t('admin.ops.credits.loadFailedHint', 'Could not load the credit note ledger.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => summary.refetch()}
       />
     );
@@ -91,15 +92,159 @@ export function CreditsPage() {
     setPage(1);
   };
 
+  const noteColumns: LegacyColumnDef<CreditNote, unknown>[] = [
+    {
+      id: 'note',
+      header: t('admin.ops.credits.colNote', 'Note # & Date'),
+      enableSorting: false,
+      cell: ({ row: { original: credit } }) => (
+        <div>
+          <button
+            type="button"
+            onClick={() => setSelected(credit)}
+            className="font-mono text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline"
+          >
+            #{credit.id}
+          </button>
+          <div className="text-xs text-muted-foreground font-mono mt-0.5">{fmtDay(credit.createdAt)}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'customer',
+      header: t('admin.ops.credits.colCustomer', 'Customer'),
+      enableSorting: false,
+      meta: { mobile: 'title' },
+      cell: ({ row: { original: credit } }) => (
+        <div>
+          <div className="font-medium text-foreground text-xs">{credit.customerName ?? t('admin.ops.credits.customerN', 'Customer #{id}', { id: credit.customerId })}</div>
+          {credit.customerMobile && <div className="text-xs text-muted-foreground font-mono">{credit.customerMobile}</div>}
+        </div>
+      ),
+    },
+    {
+      id: 'amount',
+      header: t('admin.ops.credits.colAmount', 'Amount'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono font-bold text-emerald-500 text-sm">{formatBdtWithSymbol(row.original.amount)}</span>,
+    },
+    {
+      id: 'reason',
+      header: t('admin.ops.credits.colReason', 'Reason'),
+      enableSorting: false,
+      cell: ({ row: { original: credit } }) => (
+        <div className="text-xs text-foreground font-medium line-clamp-2 md:truncate md:max-w-[260px]" title={credit.reason}>
+          {credit.reason}
+        </div>
+      ),
+    },
+    {
+      id: 'issuedBy',
+      header: t('admin.ops.credits.colIssuedBy', 'Issued By'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.createdByName ?? '—'}</span>,
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-right">{t('common.actions', 'Actions')}</div>,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row: { original: credit } }) => (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={t('admin.ops.credits.viewNote', 'View credit note')}
+            onClick={() => setSelected(credit)}
+            className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const balanceColumns: LegacyColumnDef<CreditBalance, unknown>[] = [
+    {
+      id: 'customer',
+      header: t('admin.ops.credits.colCustomer', 'Customer'),
+      enableSorting: false,
+      meta: { mobile: 'title' },
+      cell: ({ row: { original: b } }) => (
+        <div>
+          <div className="font-medium text-foreground text-xs">{b.customerName ?? t('admin.ops.credits.customerN', 'Customer #{id}', { id: b.customerId })}</div>
+          {b.customerMobile && <div className="text-xs text-muted-foreground font-mono">{b.customerMobile}</div>}
+        </div>
+      ),
+    },
+    {
+      id: 'balance',
+      header: t('admin.ops.credits.colBalance', 'Credit Balance'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono font-bold text-emerald-500 text-sm">{formatBdtWithSymbol(row.original.balance)}</span>,
+    },
+    {
+      id: 'notes',
+      header: t('admin.ops.credits.colNotes', 'Notes'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono">{formatCount(row.original.notesCount)}</span>,
+    },
+    {
+      id: 'lastCredit',
+      header: t('admin.ops.credits.colLastCredit', 'Last Credit'),
+      enableSorting: false,
+      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{fmtDay(row.original.lastCreditAt)}</span>,
+    },
+    {
+      id: 'actions',
+      header: () => <div className="text-right">{t('common.actions', 'Actions')}</div>,
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row: { original: b } }) => (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs text-primary hover:bg-primary/10"
+            onClick={() => {
+              setCustomerFilter({ id: b.customerId, name: b.customerName ?? `#${b.customerId}` });
+              setSearch('');
+              switchView('notes');
+            }}
+          >
+            {t('admin.ops.credits.viewNotes', 'View notes')}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const server = {
+    page,
+    pageSize: perPage,
+    total,
+    onPageChange: setPage,
+    onPageSizeChange: (n: number) => {
+      setPerPage(n);
+      setPage(1);
+    },
+    search,
+    onSearchChange: (value: string) => {
+      setSearch(value);
+      setPage(1);
+    },
+  };
+
   return (
     <div className="w-full space-y-6 pb-12">
       <PageHeader
-        title="Credit Notes"
-        subtitle="Goodwill, outage and billing-correction credits owed to customers, and each customer's credit balance."
+        title={t('admin.ops.credits.title', 'Credit Notes')}
+        subtitle={t('admin.ops.credits.subtitle', "Goodwill, outage and billing-correction credits owed to customers, and each customer's credit balance.")}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Collections' },
-          { label: 'Credit Notes' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.collections', 'Collections') },
+          { label: t('admin.ops.credits.crumb', 'Credit Notes') },
         ]}
         actions={
           <Button
@@ -107,7 +252,7 @@ export function CreditsPage() {
             onClick={() => setIsIssueOpen(true)}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-sm gap-1.5"
           >
-            <Plus className="h-3.5 w-3.5" /> Issue Credit Note
+            <Plus className="h-3.5 w-3.5" /> {t('admin.ops.credits.issue', 'Issue Credit Note')}
           </Button>
         }
       />
@@ -115,217 +260,112 @@ export function CreditsPage() {
       {/* KPI ribbon (SQL totals) */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <Kpi
-          label="Total Credits Issued"
+          label={t('admin.ops.credits.kpiTotal', 'Total Credits Issued')}
           value={formatBdtWithSymbol(s?.totalAmount ?? 0)}
-          hint="All credit notes on record"
+          hint={t('admin.ops.credits.kpiTotalHint', 'All credit notes on record')}
           icon={<FileBadge className="h-4 w-4" />}
           tone="bg-primary/10 text-primary"
         />
         <Kpi
-          label="This Month"
+          label={t('admin.ops.credits.kpiMonth', 'This Month')}
           value={formatBdtWithSymbol(s?.monthAmount ?? 0)}
-          hint={`${s?.monthCount ?? 0} notes since ${fmtDay(s?.monthStart)}`}
+          hint={t('admin.ops.credits.kpiMonthHint', '{count} notes since {date}', { count: formatCount(s?.monthCount ?? 0), date: fmtDay(s?.monthStart) })}
           icon={<Clock className="h-4 w-4" />}
           tone="bg-amber-500/10 text-amber-500"
         />
         <Kpi
-          label="Customers With Credit"
-          value={String(s?.customersCount ?? 0)}
-          hint="Distinct customers"
+          label={t('admin.ops.credits.kpiCustomers', 'Customers With Credit')}
+          value={formatCount(s?.customersCount ?? 0)}
+          hint={t('admin.ops.credits.kpiCustomersHint', 'Distinct customers')}
           icon={<Users className="h-4 w-4" />}
           tone="bg-emerald-500/10 text-emerald-500"
         />
         <Kpi
-          label="Credit Notes"
-          value={String(s?.notesCount ?? 0)}
-          hint="Notes issued"
+          label={t('admin.ops.credits.kpiNotes', 'Credit Notes')}
+          value={formatCount(s?.notesCount ?? 0)}
+          hint={t('admin.ops.credits.kpiNotesHint', 'Notes issued')}
           icon={<Wallet className="h-4 w-4" />}
           tone="bg-purple-500/10 text-purple-500"
         />
       </div>
 
-      {/* Control bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={view === 'notes' ? 'Search by customer, mobile, reason or note #…' : 'Search customer name or mobile…'}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9 h-9 text-xs bg-background/80"
-          />
-          {search && (
-            <button
+      {/* View switch */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
+          {(
+            [
+              { key: 'notes', label: t('admin.ops.credits.tabNotes', 'Credit Notes') },
+              { key: 'balances', label: t('admin.ops.credits.tabBalances', 'Customer Balances') },
+            ] as const
+          ).map((pill) => (
+            <Button
+              key={pill.key}
               type="button"
-              aria-label="Clear search"
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              size="sm"
+              variant={view === pill.key ? 'default' : 'ghost'}
+              onClick={() => switchView(pill.key)}
+              className={cn(
+                'text-xs h-7 px-2.5 font-medium transition',
+                view === pill.key ? 'bg-primary text-primary-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground',
+              )}
             >
-              <X className="h-3.5 w-3.5" />
+              {pill.label}
+            </Button>
+          ))}
+        </div>
+        {customerFilter && view === 'notes' && (
+          <Badge variant="outline" className="gap-1 text-xs">
+            {customerFilter.name}
+            <button type="button" aria-label={t('admin.ops.credits.clearFilter', 'Clear customer filter')} onClick={() => setCustomerFilter(null)}>
+              <X className="h-3 w-3" />
             </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {customerFilter && view === 'notes' && (
-            <Badge variant="outline" className="gap-1 text-[11px]">
-              {customerFilter.name}
-              <button type="button" aria-label="Clear customer filter" onClick={() => setCustomerFilter(null)}>
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          )}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
-            {(
-              [
-                { key: 'notes', label: 'Credit Notes' },
-                { key: 'balances', label: 'Customer Balances' },
-              ] as const
-            ).map((pill) => (
-              <Button
-                key={pill.key}
-                type="button"
-                size="sm"
-                variant={view === pill.key ? 'default' : 'ghost'}
-                onClick={() => switchView(pill.key)}
-                className={cn(
-                  'text-xs h-7 px-2.5 font-medium transition',
-                  view === pill.key ? 'bg-primary text-primary-foreground font-semibold shadow-xs' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {pill.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+          </Badge>
+        )}
       </div>
 
       {/* Main table */}
-      {active.isLoading && !active.data ? (
-        <PageSkeleton variant="table" rows={5} />
-      ) : active.isError ? (
-        <EmptyState
-          title="Failed to load"
+      {active.isError ? (
+        <EmptyState variant="error"
+          title={t('admin.ops.credits.listFailed', 'Failed to load')}
           description={errorMessage(active.error)}
-          actionLabel="Retry"
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => active.refetch()}
         />
-      ) : total === 0 ? (
+      ) : !active.isLoading && total === 0 && !search && !customerFilter ? (
         <EmptyState
-          title={view === 'notes' ? 'No credit notes found' : 'No customer has a credit balance'}
-          description={debounced || customerFilter ? 'No records match your search.' : 'Issue a credit note to get started.'}
-          actionLabel="Issue Credit Note"
+          title={view === 'notes' ? t('admin.ops.credits.emptyNotes', 'No credit notes found') : t('admin.ops.credits.emptyBalances', 'No customer has a credit balance')}
+          description={t('admin.ops.credits.emptyHint', 'Issue a credit note to get started.')}
+          actionLabel={t('admin.ops.credits.issue', 'Issue Credit Note')}
           onAction={() => setIsIssueOpen(true)}
         />
+      ) : view === 'notes' ? (
+        <DataTable
+          key="notes"
+          className={cn(notes.isFetching && 'opacity-80')}
+          columns={noteColumns}
+          data={notes.data?.items ?? []}
+          isLoading={notes.isLoading && !notes.data}
+          getRowId={(credit) => String(credit.id)}
+          enableColumnVisibility={false}
+          searchPlaceholder={t('admin.ops.credits.searchNotes', 'Search by customer, mobile, reason or note #…')}
+          emptyTitle={t('admin.ops.credits.emptyNotes', 'No credit notes found')}
+          emptyDescription={t('admin.ops.credits.noMatch', 'No records match your search.')}
+          server={server}
+        />
       ) : (
-        <div className={cn('rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs', active.isFetching && 'opacity-80')}>
-          <div className="overflow-x-auto">
-            {view === 'notes' ? (
-              <table className="w-full text-xs text-left">
-                <thead className="bg-muted/40 text-muted-foreground font-medium border-b border-border/60">
-                  <tr>
-                    <th className="py-3 px-4">Note # & Date</th>
-                    <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">Reason</th>
-                    <th className="py-3 px-4">Issued By</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {(notes.data?.items ?? []).map((credit) => (
-                    <tr
-                      key={credit.id}
-                      onClick={() => setSelected(credit)}
-                      className="hover:bg-muted/30 cursor-pointer transition-colors duration-150 group"
-                    >
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors font-mono">#{credit.id}</div>
-                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{fmtDay(credit.createdAt)}</div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-foreground text-xs">{credit.customerName ?? `Customer #${credit.customerId}`}</div>
-                        {credit.customerMobile && <div className="text-[11px] text-muted-foreground font-mono">{credit.customerMobile}</div>}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-500 text-sm">{formatBdtWithSymbol(credit.amount)}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="text-xs text-foreground font-medium truncate max-w-[260px]" title={credit.reason}>
-                          {credit.reason}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-muted-foreground">{credit.createdByName ?? '—'}</td>
-                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          aria-label="View credit note"
-                          onClick={() => setSelected(credit)}
-                          className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full text-xs text-left">
-                <thead className="bg-muted/40 text-muted-foreground font-medium border-b border-border/60">
-                  <tr>
-                    <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Credit Balance</th>
-                    <th className="py-3 px-4">Notes</th>
-                    <th className="py-3 px-4">Last Credit</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {(balances.data?.items ?? []).map((b) => (
-                    <tr key={b.customerId} className="hover:bg-muted/30 transition-colors duration-150">
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-foreground text-xs">{b.customerName ?? `Customer #${b.customerId}`}</div>
-                        {b.customerMobile && <div className="text-[11px] text-muted-foreground font-mono">{b.customerMobile}</div>}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-500 text-sm">{formatBdtWithSymbol(b.balance)}</td>
-                      <td className="py-3.5 px-4 font-mono">{b.notesCount}</td>
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">{fmtDay(b.lastCreditAt)}</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-xs text-primary hover:bg-primary/10"
-                          onClick={() => {
-                            setCustomerFilter({ id: b.customerId, name: b.customerName ?? `#${b.customerId}` });
-                            setSearch('');
-                            switchView('notes');
-                          }}
-                        >
-                          View notes
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          <div className="border-t border-border/60 px-4 py-2">
-            <TablePagination
-              currentPage={page}
-              pageSize={perPage}
-              totalItems={total}
-              onPageChange={setPage}
-              onPageSizeChange={(n) => {
-                setPerPage(n);
-                setPage(1);
-              }}
-            />
-          </div>
-        </div>
+        <DataTable
+          key="balances"
+          className={cn(balances.isFetching && 'opacity-80')}
+          columns={balanceColumns}
+          data={balances.data?.items ?? []}
+          isLoading={balances.isLoading && !balances.data}
+          getRowId={(b) => String(b.customerId)}
+          enableColumnVisibility={false}
+          searchPlaceholder={t('admin.ops.credits.searchBalances', 'Search customer name or mobile…')}
+          emptyTitle={t('admin.ops.credits.emptyBalances', 'No customer has a credit balance')}
+          emptyDescription={t('admin.ops.credits.noMatch', 'No records match your search.')}
+          server={server}
+        />
       )}
 
       <CreditSheet credit={selected} onClose={() => setSelected(null)} />
@@ -350,13 +390,14 @@ function Kpi({ label, value, hint, icon, tone }: { label: string; value: string;
         <div className="mt-2 flex items-baseline gap-2">
           <span className="text-2xl font-black tracking-tight text-foreground font-mono">{value}</span>
         </div>
-        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
+        <div className="mt-2 text-xs text-muted-foreground">{hint}</div>
       </CardContent>
     </Card>
   );
 }
 
 function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: () => void }) {
+  const t = useTranslations();
   const { update, remove } = useCreditMutations();
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState('');
@@ -376,7 +417,7 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
       { id: credit.id, amount: Number(amount), reason },
       {
         onSuccess: () => {
-          toast.success(`Credit note #${credit.id} updated`);
+          toast.success(t('admin.ops.credits.updated', 'Credit note #{id} updated', { id: credit.id }));
           close();
         },
       },
@@ -389,29 +430,30 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
         {credit && (
           <>
             <SheetHeader className="space-y-1">
-              <Badge variant="outline" className="w-fit text-[10px] font-semibold tracking-wider bg-primary/10 text-primary border-primary/20">
-                Credit Note
+              <Badge variant="outline" className="w-fit text-xs font-semibold tracking-wider bg-primary/10 text-primary border-primary/20">
+                {t('admin.ops.credits.sheetBadge', 'Credit Note')}
               </Badge>
               <SheetTitle className="text-xl font-bold text-foreground font-mono">#{credit.id}</SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground">
-                Issued {fmtStamp(credit.createdAt)}
-                {credit.createdByName ? ` by ${credit.createdByName}` : ''}
+                {credit.createdByName
+                  ? t('admin.ops.credits.issuedAtBy', 'Issued {when} by {name}', { when: fmtStamp(credit.createdAt), name: credit.createdByName })
+                  : t('admin.ops.credits.issuedAt', 'Issued {when}', { when: fmtStamp(credit.createdAt) })}
               </SheetDescription>
             </SheetHeader>
 
             <div className="p-4 rounded-xl bg-muted/30 border border-border/60">
-              <div className="text-[11px] text-muted-foreground font-semibold">Credit Amount</div>
+              <div className="text-xs text-muted-foreground font-semibold">{t('admin.ops.credits.creditAmount', 'Credit Amount')}</div>
               <div className="text-2xl font-black font-mono text-emerald-500 mt-0.5">{formatBdtWithSymbol(credit.amount)}</div>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50">
-                <span className="text-muted-foreground">Customer</span>
+                <span className="text-muted-foreground">{t('admin.ops.credits.colCustomer', 'Customer')}</span>
                 <span className="font-semibold text-foreground">{credit.customerName ?? `#${credit.customerId}`}</span>
               </div>
               {credit.customerMobile && (
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50">
-                  <span className="text-muted-foreground">Mobile</span>
+                  <span className="text-muted-foreground">{t('admin.ops.credits.mobile', 'Mobile')}</span>
                   <span className="font-mono text-foreground">{credit.customerMobile}</span>
                 </div>
               )}
@@ -420,7 +462,7 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
             {editing ? (
               <form onSubmit={save} className="space-y-3 text-xs">
                 <div className="space-y-1.5">
-                  <label htmlFor="cn-edit-amount" className="font-semibold">Amount (৳)</label>
+                  <label htmlFor="cn-edit-amount" className="font-semibold">{t('admin.ops.credits.amountTaka', 'Amount (৳)')}</label>
                   <Input
                     id="cn-edit-amount"
                     type="number"
@@ -433,7 +475,7 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="cn-edit-reason" className="font-semibold">Reason</label>
+                  <label htmlFor="cn-edit-reason" className="font-semibold">{t('admin.ops.credits.colReason', 'Reason')}</label>
                   <Textarea
                     id="cn-edit-reason"
                     required
@@ -445,17 +487,17 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Button type="button" variant="outline" className="text-xs h-9" onClick={() => setEditing(false)}>
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </Button>
                   <Button type="submit" disabled={update.isPending} className="text-xs h-9 bg-primary text-primary-foreground">
-                    {update.isPending ? 'Saving…' : 'Save'}
+                    {update.isPending ? t('admin.ops.credits.saving', 'Saving…') : t('common.save', 'Save')}
                   </Button>
                 </div>
               </form>
             ) : (
               <>
                 <div className="p-3 rounded-xl bg-card border border-border/50 space-y-1 text-xs">
-                  <span className="text-[11px] font-semibold text-muted-foreground">Reason</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{t('admin.ops.credits.colReason', 'Reason')}</span>
                   <p className="text-foreground font-medium leading-relaxed">{credit.reason}</p>
                 </div>
                 <div className="space-y-2 pt-4 border-t border-border/60">
@@ -469,14 +511,14 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
                         setEditing(true);
                       }}
                     >
-                      <Pencil className="h-3.5 w-3.5" /> Edit
+                      <Pencil className="h-3.5 w-3.5" /> {t('common.edit', 'Edit')}
                     </Button>
                     <Button variant="outline" className="text-xs h-9 gap-1.5 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                      <Trash2 className="h-3.5 w-3.5" /> {t('common.delete', 'Delete')}
                     </Button>
                   </div>
                   <Button variant="outline" onClick={close} className="w-full text-xs h-9">
-                    Close
+                    {t('common.close', 'Close')}
                   </Button>
                 </div>
               </>
@@ -488,15 +530,15 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title="Delete this credit note?"
-        description="The customer's credit balance goes down by this amount."
-        confirmLabel="Delete"
+        title={t('admin.ops.credits.deleteTitle', 'Delete this credit note?')}
+        description={t('admin.ops.credits.deleteDesc', "The customer's credit balance goes down by this amount.")}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!credit) return;
           remove.mutate(credit.id, {
             onSuccess: () => {
-              toast.success(`Credit note #${credit.id} deleted`);
+              toast.success(t('admin.ops.credits.deleted', 'Credit note #{id} deleted', { id: credit.id }));
               close();
             },
           });
@@ -507,6 +549,7 @@ function CreditSheet({ credit, onClose }: { credit: CreditNote | null; onClose: 
 }
 
 function IssueCreditForm({ onDone }: { onDone: () => void }) {
+  const t = useTranslations();
   const { create } = useCreditMutations();
   const [customer, setCustomer] = useState<BillingCustomerOption | null>(null);
   const [amount, setAmount] = useState('');
@@ -515,14 +558,14 @@ function IssueCreditForm({ onDone }: { onDone: () => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer) {
-      toast.error('Choose a customer');
+      toast.error(t('admin.ops.credits.chooseCustomer', 'Choose a customer'));
       return;
     }
     create.mutate(
       { customerId: customer.id, amount: Number(amount), reason },
       {
         onSuccess: (note) => {
-          toast.success(`Credit note #${note.id} issued to ${customer.name}`);
+          toast.success(t('admin.ops.credits.issued', 'Credit note #{id} issued to {name}', { id: note.id, name: customer.name }));
           onDone();
         },
       },
@@ -536,19 +579,19 @@ function IssueCreditForm({ onDone }: { onDone: () => void }) {
           <div className="p-2 rounded-lg bg-primary/10 text-primary">
             <Plus className="h-4 w-4" />
           </div>
-          Issue Credit Note
+          {t('admin.ops.credits.issue', 'Issue Credit Note')}
         </DialogTitle>
-        <DialogDescription className="text-xs">Record a credit owed to a customer (goodwill, outage, billing correction).</DialogDescription>
+        <DialogDescription className="text-xs">{t('admin.ops.credits.issueDesc', 'Record a credit owed to a customer (goodwill, outage, billing correction).')}</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="space-y-4 pt-2">
         <div className="space-y-1.5">
-          <label htmlFor="cn-customer" className="text-xs font-semibold">Customer *</label>
+          <label htmlFor="cn-customer" className="text-xs font-semibold">{t('admin.ops.credits.colCustomer', 'Customer')} *</label>
           <BillingCustomerPicker id="cn-customer" value={customer} onChange={setCustomer} />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="cn-amount" className="text-xs font-semibold">Amount (৳) *</label>
+          <label htmlFor="cn-amount" className="text-xs font-semibold">{t('admin.ops.credits.amountTaka', 'Amount (৳)')} *</label>
           <Input
             id="cn-amount"
             type="number"
@@ -562,7 +605,7 @@ function IssueCreditForm({ onDone }: { onDone: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="cn-reason" className="text-xs font-semibold">Reason *</label>
+          <label htmlFor="cn-reason" className="text-xs font-semibold">{t('admin.ops.credits.colReason', 'Reason')} *</label>
           <Textarea
             id="cn-reason"
             required
@@ -570,7 +613,7 @@ function IssueCreditForm({ onDone }: { onDone: () => void }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="text-xs min-h-16"
-            placeholder="Why the customer is credited"
+            placeholder={t('admin.ops.credits.reasonPlaceholder', 'Why the customer is credited')}
           />
         </div>
 
@@ -580,7 +623,7 @@ function IssueCreditForm({ onDone }: { onDone: () => void }) {
             disabled={create.isPending}
             className="w-full text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground h-9 shadow-xs"
           >
-            {create.isPending ? 'Issuing…' : 'Issue Credit Note'}
+            {create.isPending ? t('admin.ops.credits.issuing', 'Issuing…') : t('admin.ops.credits.issue', 'Issue Credit Note')}
           </Button>
         </div>
       </form>

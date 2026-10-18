@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { PermissionMatrixEditor } from '../components/PermissionMatrix';
 import { CustomAccessTable } from '../components/CustomAccessTable';
 import {
@@ -17,20 +19,22 @@ import {
   useRolePermissions,
   useSaveRolePermissions,
 } from '../hooks/use-user-access';
+import { roleLabel } from '../labels';
 import type { AccessRole } from '../types';
 
 const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin', icon: Shield },
-  { value: 'resellerAdmin', label: 'Reseller / POP', icon: Users },
-  { value: 'employee', label: 'Employee', icon: Key },
-  { value: 'user', label: 'Customer', icon: Lock },
-] as const satisfies readonly { value: AccessRole; label: string; icon: typeof Shield }[];
+  { value: 'admin', icon: Shield },
+  { value: 'resellerAdmin', icon: Users },
+  { value: 'employee', icon: Key },
+  { value: 'user', icon: Lock },
+] as const satisfies readonly { value: AccessRole; icon: typeof Shield }[];
 
 interface UserAccessPageProps {
   portal?: 'admin' | 'platform';
 }
 
 export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
+  const t = useTranslations();
   const [role, setRole] = useState<AccessRole>('employee');
   const catalog = useAccessCatalog(role);
   const rolePerms = useRolePermissions(role);
@@ -40,10 +44,10 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
   if (catalog.isError || !catalog.data) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load user access"
+        <EmptyState variant="error"
+          title={t('platform.userAccess.page.loadFailed', 'Failed to load user access')}
           description={errorMessage(catalog.error)}
-          actionLabel="Retry"
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => catalog.refetch()}
         />
       </div>
@@ -67,9 +71,11 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">User Access Management</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('nav.user-access', 'User Access Management')}</h1>
               <p className="text-muted-foreground text-sm">
-                Default permissions by role and per-user overrides — {portal === 'platform' ? 'platform' : 'your organisation'}.
+                {portal === 'platform'
+                  ? t('admin.userAccess.page.subtitlePlatform', 'Default permissions by role and per-user overrides — platform.')
+                  : t('admin.userAccess.page.subtitleOrg', 'Default permissions by role and per-user overrides — your organisation.')}
               </p>
             </div>
           </div>
@@ -80,12 +86,13 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
           {ROLE_OPTIONS.map((opt) => {
             const isActive = role === opt.value;
             const RoleIcon = opt.icon;
+            const userCount = counts[opt.value]?.users ?? 0;
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => setRole(opt.value)}
-                title={`${counts[opt.value]?.users ?? 0} account(s) with this role`}
+                title={t('admin.userAccess.page.roleAccounts', '{n} account(s) with this role', { n: formatCount(userCount) })}
                 className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                   isActive
                     ? 'border-primary/40 bg-primary/5 text-foreground'
@@ -93,8 +100,8 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                 }`}
               >
                 <RoleIcon className={`h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
-                <span className="font-medium">{opt.label}</span>
-                <span className="font-mono tabular-nums text-xs text-muted-foreground">{counts[opt.value]?.users ?? 0}</span>
+                <span className="font-medium">{roleLabel(t, opt.value)}</span>
+                <span className="font-mono tabular-nums text-xs text-muted-foreground">{formatCount(userCount)}</span>
               </button>
             );
           })}
@@ -104,11 +111,11 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
           <TabsList className="bg-muted/40 p-1 rounded-xl">
             <TabsTrigger value="default" className="gap-1.5 rounded-lg px-4 font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Shield className="h-3.5 w-3.5" />
-              Default access
+              {t('admin.userAccess.page.tabDefault', 'Default access')}
             </TabsTrigger>
             <TabsTrigger value="custom" className="gap-1.5 rounded-lg px-4 font-semibold data-[state=active]:bg-card data-[state=active]:shadow-sm">
               <Users className="h-3.5 w-3.5" />
-              Custom access
+              {t('admin.userAccess.page.tabCustom', 'Custom access')}
             </TabsTrigger>
           </TabsList>
 
@@ -121,18 +128,21 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                       <span className="p-1.5 rounded-lg border border-border/60 bg-muted/40">
                         <Lock className="h-4 w-4 text-primary" />
                       </span>
-                      Role permissions — {ROLE_OPTIONS.find((o) => o.value === role)?.label}
+                      {t('admin.userAccess.page.rolePermsTitle', 'Role permissions — {role}', { role: roleLabel(t, role) })}
                     </CardTitle>
                     <CardDescription className="text-xs">
                       {rolePerms.data?.source === 'platform'
-                        ? 'Platform defaults for this role.'
+                        ? t('admin.userAccess.page.descPlatform', 'Platform defaults for this role.')
                         : rolePerms.data && !rolePerms.data.exists
-                          ? 'No defaults saved for this role yet — accounts with it only get what custom access grants.'
-                          : 'What every account with this role can do unless it has a custom override.'}
+                          ? t('admin.userAccess.page.descNone', 'No defaults saved for this role yet — accounts with it only get what custom access grants.')
+                          : t('admin.userAccess.page.descTenant', 'What every account with this role can do unless it has a custom override.')}
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="font-mono text-[10px] shrink-0">
-                    {enabledCount} / {totalActions} actions
+                  <Badge variant="outline" className="font-mono text-xs shrink-0">
+                    {t('admin.userAccess.page.actionsCount', '{enabled} / {total} actions', {
+                      enabled: formatCount(enabledCount),
+                      total: formatCount(totalActions),
+                    })}
                   </Badge>
                 </div>
               </CardHeader>
@@ -140,7 +150,13 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                 {rolePerms.isLoading ? (
                   <PageSkeleton variant="table" rows={4} />
                 ) : rolePerms.isError || !rolePerms.data ? (
-                  <EmptyState title="Could not load role permissions" description={errorMessage(rolePerms.error)} actionLabel="Retry" onAction={() => rolePerms.refetch()} />
+                  <EmptyState
+                    variant="error"
+                    title={t('admin.userAccess.page.roleLoadFailed', 'Could not load role permissions')}
+                    description={errorMessage(rolePerms.error)}
+                    actionLabel={t('common.retry', 'Retry')}
+                    onAction={() => rolePerms.refetch()}
+                  />
                 ) : (
                   <PermissionMatrixEditor
                     key={`${role}-${rolePerms.dataUpdatedAt}`}
@@ -162,9 +178,11 @@ export function UserAccessPage({ portal = 'admin' }: UserAccessPageProps) {
                   <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                     <Users className="h-4 w-4" />
                   </span>
-                  Custom user access
+                  {t('admin.userAccess.page.customTitle', 'Custom user access')}
                 </CardTitle>
-                <CardDescription className="text-xs">Staff and POP accounts with individual permission overrides.</CardDescription>
+                <CardDescription className="text-xs">
+                  {t('admin.userAccess.page.customDesc', 'Staff and POP accounts with individual permission overrides.')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <CustomAccessTable />

@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
+import { useTranslations } from '@/i18n/locale-context';
 
-const METHODS = ['Cash', 'bKash', 'Nagad', 'Rocket', 'Bank', 'Card'];
+const METHODS = ['Cash', 'bKash', 'Nagad', 'Rocket', 'Bank', 'Card'] as const;
 
 export interface SettleTarget {
   id: string;
@@ -22,6 +23,7 @@ export interface SettleTarget {
 
 /** Marks a pending invoice as paid (PUT /v1/reseller/customer-payments/{rid}/{id}). */
 export function SettlePaymentDialog({ target, onClose }: { target: SettleTarget | null; onClose: () => void }) {
+  const t = useTranslations();
   const update = useUpdatePaymentStatus();
   const [method, setMethod] = useState('Cash');
   const [trxId, setTrxId] = useState('');
@@ -40,15 +42,24 @@ export function SettlePaymentDialog({ target, onClose }: { target: SettleTarget 
     onClose();
   };
 
+  const methodItems: Record<string, string> = {
+    Cash: t('admin.customerPayments.method.cash', 'Cash'),
+    bKash: 'bKash',
+    Nagad: 'Nagad',
+    Rocket: 'Rocket',
+    Bank: t('admin.customerPayments.method.bank', 'Bank'),
+    Card: t('admin.customerPayments.method.cardOnly', 'Card'),
+  };
+
   return (
     <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record payment received</DialogTitle>
+          <DialogTitle>{t('admin.customerPayments.settle.title', 'Record payment received')}</DialogTitle>
           <DialogDescription>
             {target ? (
               <>
-                Invoice <span className="font-mono">{target.invoiceNo}</span> — {target.customerName} —{' '}
+                {t('admin.customerPayments.settle.invoice', 'Invoice')} <span className="font-mono">{target.invoiceNo}</span> — {target.customerName} —{' '}
                 <CurrencyDisplay amount={target.amountBdt} className="inline" />
               </>
             ) : null}
@@ -56,26 +67,26 @@ export function SettlePaymentDialog({ target, onClose }: { target: SettleTarget 
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="space-y-1.5">
-            <Label>Received via</Label>
-            <Select value={method} onValueChange={(v) => v && setMethod(v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Label htmlFor="receivedVia">{t('admin.customerPayments.settle.receivedVia', 'Received via')}</Label>
+            <Select value={method} onValueChange={(v) => v && setMethod(v)} items={methodItems}>
+              <SelectTrigger id="receivedVia"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                  <SelectItem key={m} value={m}>{methodItems[m]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>TrxID / reference</Label>
-            <Input value={trxId} onChange={(e) => setTrxId(e.target.value)} placeholder="Optional" />
+            <Label htmlFor="trxId">{t('admin.customerPayments.settle.trxId', 'TrxID / reference')}</Label>
+            <Input id="trxId" value={trxId} onChange={(e) => setTrxId(e.target.value)} placeholder={t('admin.customerPayments.settle.optional', 'Optional')} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t('admin.customerPayments.settle.cancel', 'Cancel')}</Button>
           <Button onClick={() => submit().catch(() => undefined)} disabled={update.isPending}>
             {update.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            Mark as paid
+            {t('admin.customerPayments.settle.markPaid', 'Mark as paid')}
           </Button>
         </DialogFooter>
       </DialogContent>

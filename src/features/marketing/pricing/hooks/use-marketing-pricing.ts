@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 
+import { formatCount } from '@/lib/format';
 export type FeatureValue = string | boolean;
 
 export interface PricingTier {
@@ -106,7 +107,7 @@ export function useMarketingPricing() {
       const comparisonPlans: ComparisonPlan[] = tiers.map((t) => ({
         id: t.id,
         name: t.name,
-        subtitle: t.customers ? `Up to ${t.customers.toLocaleString()} subscribers` : 'Unlimited subscribers',
+        subtitle: t.customers ? `Up to ${formatCount(t.customers)} subscribers` : 'Unlimited subscribers',
         priceBdt: t.priceBdt,
         period: `/${t.period === 'month' ? 'mo' : t.period}`,
         cta: t.trialDays > 0 ? 'Start Free Trial' : 'Get Started',
@@ -117,7 +118,7 @@ export function useMarketingPricing() {
         {
           title: 'Plan limits',
           features: [
-            { label: 'Subscribers', values: tiers.map((t) => (t.customers ? t.customers.toLocaleString() : 'Unlimited')) },
+            { label: 'Subscribers', values: tiers.map((t) => (t.customers ? formatCount(t.customers) : 'Unlimited')) },
             { label: 'Free trial', values: tiers.map((t) => (t.trialDays > 0 ? `${t.trialDays} days` : false)) },
           ],
         },

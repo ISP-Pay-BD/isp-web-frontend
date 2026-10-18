@@ -1,4 +1,4 @@
-# 07 — Motion (M1–M7)
+# 07 — Motion (M1–M7) — ✅ implemented
 
 Two parts: (1) a review of [`15-ANIMATION-AND-UX-ROADMAP.md`](../15-ANIMATION-AND-UX-ROADMAP.md) against the code and the project's own briefs, and (2) fixes to the motion that ships today.
 
@@ -78,7 +78,7 @@ Commit `015f045` removed most of these, but 17 files still use it, including sha
 Nothing imports these:
 - `src/components/motion/GlareSurface.tsx`
 - `src/components/motion/MagneticTabs.tsx`
-- `src/components/motion/Magnetic.tsx` (the landing uses `Magnetic` from `motion-kit.tsx`)
+- ~~`src/components/motion/Magnetic.tsx`~~ — **kept**: `MorphArrowButton` (the mobile sticky CTA) imports it.
 - `src/components/ui/radial-orbital-timeline.tsx`
 - `src/components/motion/index.ts` (a barrel nobody imports; call sites import files directly)
 
@@ -112,3 +112,19 @@ Edit `15-ANIMATION-AND-UX-ROADMAP.md`:
 3. Tick the items that are done (§6 Phase 2 count-up; Phase 4 tilt, journey, orbit).
 4. Fix §1: only `transform` and `opacity` are cheap; portal timings follow the M5 tokens.
 5. Add one line at the top: "Where this conflicts with a `DESIGN_BRIEF.md`, the brief wins."
+
+
+---
+
+## What was built
+
+| Fix | Result |
+|---|---|
+| M1 | `.lp-glow` rests at 50%/70% and is moved with the individual `translate` property (`--dx`/`--dy`, set by `PointerGlow`); `left`/`top` are no longer animated. |
+| M2 | `.lp-rise-word` uses opacity+translate on phones; the 10px blur keyframes apply from 768px up. |
+| M3 | `transition-all` removed everywhere (progress bars use `transition-[width]`; UI primitives list their properties). A ratchet test forbids it. |
+| M4 | Deleted `GlareSurface`, `MagneticTabs`, `radial-orbital-timeline` and the unused `components/motion/index.ts` barrel. `Magnetic.tsx` stays (used by `MorphArrowButton`). |
+| M5 | Timing tokens in `:root` (`--ease-out-ui`, `--ease-out-marketing`, `--dur-press`, `--dur-ui` = 200ms, `--dur-marketing`); `.ui-page-enter` now 200ms. |
+| M6 | The infinite ping on the customer online dot and the pulsing "Online" badge dot are gone (text label stays). |
+| M7 | `15-ANIMATION-AND-UX-ROADMAP.md` carries a status banner and the review verdicts (see that file). |
+| + | New motion that earns its place: the customer **validity ring** (CSS transition, once), collapsible sidebar groups (CSS), confirmation dialogs. |

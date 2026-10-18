@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 
@@ -101,13 +102,33 @@ export function useLeads({ page, pageSize, search, stage }: { page: number; page
 /** Body keys are the backend's snake_case fields. */
 export type LeadPayload = Record<string, unknown>;
 
+type Translate = ReturnType<typeof useTranslations>;
+
+export function leadStageLabel(t: Translate, stage: LeadStage): string {
+  switch (stage) {
+    case 'new':
+      return t('admin.ops.leads.stageNew', 'New');
+    case 'contacted':
+      return t('admin.ops.leads.stageContacted', 'Contacted');
+    case 'survey':
+      return t('admin.ops.leads.stageSurvey', 'Line Survey');
+    case 'negotiation':
+      return t('admin.ops.leads.stageNegotiation', 'Negotiation');
+    case 'won':
+      return t('admin.ops.leads.stageWon', 'Won');
+    case 'lost':
+      return t('admin.ops.leads.stageLost', 'Lost');
+  }
+}
+
 export function useSaveLead() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: async ({ id, body }: { id?: string; body: LeadPayload }) =>
       mapLead(id ? await http.put<unknown>(`/v1/network-ops/leads/${id}`, body) : await http.post<unknown>('/v1/network-ops/leads', body)),
     onSuccess: (_lead, { id }) => {
-      toast.success(id ? 'Lead updated' : 'Lead added');
+      toast.success(id ? t('admin.ops.leads.toastUpdated', 'Lead updated') : t('admin.ops.leads.toastAdded', 'Lead added'));
       qc.invalidateQueries({ queryKey: leadKeys.all });
     },
   });
@@ -115,11 +136,12 @@ export function useSaveLead() {
 
 export function useMoveLeadStage() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: async ({ id, stage, surveyFeasible }: { id: string; stage: LeadStage; surveyFeasible?: boolean }) =>
       mapLead(await http.post<unknown>(`/v1/network-ops/leads/${id}/stage`, { stage, survey_feasible: surveyFeasible })),
     onSuccess: (lead) => {
-      toast.success(`Lead moved to ${lead.stage}`);
+      toast.success(t('admin.ops.leads.toastMoved', 'Lead moved to {stage}', { stage: leadStageLabel(t, lead.stage) }));
       qc.invalidateQueries({ queryKey: leadKeys.all });
     },
   });
@@ -127,10 +149,11 @@ export function useMoveLeadStage() {
 
 export function useDeleteLead() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: (id: string) => http.delete<unknown>(`/v1/network-ops/leads/${id}`),
     onSuccess: () => {
-      toast.success('Lead deleted');
+      toast.success(t('admin.ops.leads.toastDeleted', 'Lead deleted'));
       qc.invalidateQueries({ queryKey: leadKeys.all });
     },
   });

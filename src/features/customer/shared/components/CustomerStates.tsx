@@ -1,7 +1,10 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from '@/i18n/locale-context';
 
 export interface CustomerLoadingSkeletonProps {
   variant?:
@@ -372,21 +375,24 @@ interface CustomerErrorStateProps {
   onRetry?: () => void;
 }
 
-export function CustomerErrorState({
-  message = 'Could not load this page. Check your connection and try again.',
-  onRetry,
-}: CustomerErrorStateProps) {
+export function CustomerErrorState({ message, onRetry }: CustomerErrorStateProps) {
+  const t = useTranslations();
+
   return (
     <div className="border-destructive/25 bg-destructive/5 flex min-h-[260px] flex-col items-center justify-center rounded-xl border px-8 py-12 text-center shadow-[var(--shadow-xs)]">
       <div className="border-destructive/20 bg-card text-destructive mb-4 flex h-12 w-12 items-center justify-center rounded-lg border">
         <AlertCircle className="h-5 w-5" />
       </div>
-      <h3 className="text-foreground text-base font-semibold tracking-tight">Could not load data</h3>
-      <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">{message}</p>
+      <h3 className="text-foreground text-base font-semibold tracking-tight">
+        {t('customer.common.errorTitle', 'Could not load data')}
+      </h3>
+      <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">
+        {message || t('customer.common.errorMessage', 'Could not load this page. Check your connection and try again.')}
+      </p>
       {onRetry ? (
-        <Button variant="outline" size="sm" onClick={onRetry} className="mt-5 gap-2">
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Try again</span>
+        <Button variant="outline" onClick={onRetry} className="mt-5 h-11 gap-2 px-5">
+          <RefreshCw className="h-4 w-4" />
+          <span>{t('customer.common.tryAgain', 'Try again')}</span>
         </Button>
       ) : null}
     </div>

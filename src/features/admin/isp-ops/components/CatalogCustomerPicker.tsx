@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Check, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { useCustomerOptions } from '../hooks/use-catalog';
 import type { CustomerOption } from '../catalog.types';
 
@@ -20,11 +22,12 @@ export function CatalogCustomerPicker({
   onChange: (next: CustomerOption[]) => void;
   multiple?: boolean;
 }) {
+  const t = useTranslations();
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => setSearch(input.trim()), 300); // debounce server search
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSearch(input.trim()), 300); // debounce server search
+    return () => clearTimeout(timer);
   }, [input]);
   const { data, isLoading, isError, error } = useCustomerOptions(search);
 
@@ -41,18 +44,18 @@ export function CatalogCustomerPicker({
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Search customer by name, mobile or ID…"
+          placeholder={t('admin.ops.catalogPicker.placeholder', 'Search customer by name, mobile or ID…')}
           className="h-9 pl-8 text-xs"
-          aria-label="Search customers"
+          aria-label={t('admin.ops.catalogPicker.searchLabel', 'Search customers')}
         />
       </div>
       <div className="max-h-56 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40">
         {isLoading ? (
-          <p className="p-3 text-xs text-muted-foreground">Loading customers…</p>
+          <p className="p-3 text-xs text-muted-foreground">{t('admin.ops.catalogPicker.loading', 'Loading customers…')}</p>
         ) : isError ? (
-          <p className="p-3 text-xs text-destructive">{error?.message ?? 'Could not load customers'}</p>
+          <p className="p-3 text-xs text-destructive">{error?.message ?? t('admin.ops.catalogPicker.loadFailed', 'Could not load customers')}</p>
         ) : (data ?? []).length === 0 ? (
-          <p className="p-3 text-xs text-muted-foreground">No customers found</p>
+          <p className="p-3 text-xs text-muted-foreground">{t('admin.ops.catalogPicker.empty', 'No customers found')}</p>
         ) : (
           (data ?? []).map((c) => {
             const isOn = selected.some((s) => s.id === c.id);
@@ -77,7 +80,9 @@ export function CatalogCustomerPicker({
         )}
       </div>
       {multiple && selected.length > 0 && (
-        <p className="text-[11px] text-muted-foreground">{selected.length} customer(s) selected</p>
+        <p className="text-xs text-muted-foreground">
+          {t('admin.ops.catalogPicker.selected', '{n} customer(s) selected', { n: formatCount(selected.length) })}
+        </p>
       )}
     </div>
   );

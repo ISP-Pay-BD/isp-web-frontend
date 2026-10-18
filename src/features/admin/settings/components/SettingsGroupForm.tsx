@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Can } from '@/components/shared/Can';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 import type { SettingsField, SettingsGroup } from '../types';
 import { useSaveSettingsGroup } from '../hooks/use-settings';
 
@@ -23,6 +24,7 @@ type Draft = Record<string, string | boolean>;
  * returns secrets, only whether one is set).
  */
 export function SettingsGroupForm({ data }: { data: SettingsGroup }) {
+  const t = useTranslations();
   const save = useSaveSettingsGroup(data.group);
   const initial = useMemo(() => {
     const out: Draft = {};
@@ -48,7 +50,7 @@ export function SettingsGroupForm({ data }: { data: SettingsGroup }) {
         const reset: Draft = {};
         for (const section of next.sections) for (const f of section.fields) reset[f.key] = f.value;
         setDraft(reset);
-        toast.success(`${data.label} saved`);
+        toast.success(t('admin.settings.group.saved', '{label} saved', { label: data.label }));
       },
     });
   };
@@ -64,8 +66,12 @@ export function SettingsGroupForm({ data }: { data: SettingsGroup }) {
                 <CardTitle className="text-sm font-semibold text-foreground">{section.label}</CardTitle>
                 {section.enableKey && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{enabled ? 'Enabled' : 'Disabled'}</span>
-                    <Switch checked={enabled === true} onCheckedChange={(v) => set(section.enableKey as string, v === true)} />
+                    <span className="text-xs text-muted-foreground">{enabled ? t('status.enabled', 'Enabled') : t('status.disabled', 'Disabled')}</span>
+                    <Switch
+                      checked={enabled === true}
+                      onCheckedChange={(v) => set(section.enableKey as string, v === true)}
+                      aria-label={section.label}
+                    />
                   </div>
                 )}
               </CardHeader>
@@ -83,15 +89,15 @@ export function SettingsGroupForm({ data }: { data: SettingsGroup }) {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
         <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <Lock className="h-3.5 w-3.5" /> Secrets are write-only — leave a secret blank to keep the saved one.
+          <Lock className="h-3.5 w-3.5" /> {t('admin.settings.group.secretsHint', 'Secrets are write-only — leave a secret blank to keep the saved one.')}
         </span>
         <Can menu="software_settings" action="update">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={!dirty || save.isPending} onClick={() => setDraft(initial)} className="text-xs">
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Discard
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('admin.settings.group.discard', 'Discard')}
             </Button>
             <Button size="sm" disabled={!dirty || save.isPending} onClick={handleSave} className="text-xs">
-              <Save className="mr-1.5 h-3.5 w-3.5" /> {save.isPending ? 'Saving…' : 'Save changes'}
+              <Save className="mr-1.5 h-3.5 w-3.5" /> {save.isPending ? t('admin.settings.group.saving', 'Saving…') : t('admin.settings.group.saveChanges', 'Save changes')}
             </Button>
           </div>
         </Can>
@@ -109,6 +115,7 @@ function FieldInput({
   value: string | boolean | undefined;
   onChange: (value: string | boolean) => void;
 }) {
+  const t = useTranslations();
   const id = `setting-${field.key}`;
   const text = typeof value === 'string' ? value : '';
 
@@ -128,8 +135,8 @@ function FieldInput({
       <Label htmlFor={id} className="text-xs font-medium text-foreground flex items-center gap-1.5">
         {field.label}
         {field.type === 'secret' && field.isSet && (
-          <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-emerald-500">
-            set {field.hint}
+          <Badge variant="outline" tone="success" className="text-xs font-mono">
+            {t('admin.settings.group.secretSet', 'set')} {field.hint}
           </Badge>
         )}
       </Label>
@@ -153,7 +160,7 @@ function FieldInput({
           id={id}
           type={field.type === 'secret' ? 'password' : field.type === 'number' ? 'number' : 'text'}
           autoComplete={field.type === 'secret' ? 'new-password' : 'off'}
-          placeholder={field.type === 'secret' && field.isSet ? 'Leave blank to keep the saved value' : undefined}
+          placeholder={field.type === 'secret' && field.isSet ? t('admin.settings.group.keepSaved', 'Leave blank to keep the saved value') : undefined}
           value={text}
           onChange={(e) => onChange(e.target.value)}
           className="bg-background/80 border-border/70 text-xs font-mono"

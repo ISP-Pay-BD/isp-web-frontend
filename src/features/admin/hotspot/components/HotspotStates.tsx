@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { ApiError } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 import type { HotspotRouterState } from '../hooks/useHotspotRouter';
 
 /** 503 ROUTER_UNREACHABLE from the hotspot API — the MikroTik could not be reached. */
@@ -28,14 +29,17 @@ export function HotspotQueryError({
   onRetry: () => void;
   className?: string;
 }) {
+  const { t } = useLocale();
   if (isRouterOffline(error)) {
     return (
       <EmptyState
         className={className}
         icon={<WifiOff className="h-5 w-5" />}
-        title={`${routerName || 'Router'} is offline`}
-        description={errorMessage(error, 'Unable to reach the router.')}
-        actionLabel="Retry"
+        title={t('admin.hotspot.states.offline', '{name} is offline', {
+          name: routerName || t('admin.hotspot.states.routerFallback', 'Router'),
+        })}
+        description={errorMessage(error, t('admin.hotspot.states.unreachable', 'Unable to reach the router.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={onRetry}
       />
     );
@@ -46,7 +50,7 @@ export function HotspotQueryError({
       icon={<AlertTriangle className="h-5 w-5" />}
       title={title}
       description={errorMessage(error)}
-      actionLabel="Retry"
+      actionLabel={t('common.retry', 'Retry')}
       onAction={onRetry}
     />
   );
@@ -66,15 +70,16 @@ export function HotspotRouterGate({
   children: ReactNode;
 }) {
   const navigate = useRouter();
+  const { t } = useLocale();
   const { routersQuery, router } = state;
   if (routersQuery.isLoading) return <>{skeleton ?? <PageSkeleton variant="table" rows={6} />}</>;
   if (routersQuery.isError) {
     return (
       <EmptyState
         icon={<AlertTriangle className="h-5 w-5" />}
-        title="Failed to load routers"
+        title={t('admin.hotspot.states.routersFailed', 'Failed to load routers')}
         description={errorMessage(routersQuery.error)}
-        actionLabel="Retry"
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => void routersQuery.refetch()}
       />
     );
@@ -83,9 +88,12 @@ export function HotspotRouterGate({
     return (
       <EmptyState
         icon={<Router className="h-5 w-5" />}
-        title="No active routers"
-        description="Hotspot data is read live from a MikroTik router. Add a router and mark it active first."
-        actionLabel="Go to routers"
+        title={t('admin.hotspot.states.noRouters', 'No active routers')}
+        description={t(
+          'admin.hotspot.states.noRoutersDesc',
+          'Hotspot data is read live from a MikroTik router. Add a router and mark it active first.',
+        )}
+        actionLabel={t('admin.hotspot.states.goRouters', 'Go to routers')}
         onAction={() => navigate.push('/admin/routers')}
       />
     );

@@ -1,5 +1,8 @@
+'use client';
+
 import { cn } from '@/lib/utils';
-import { methodLabel } from '../lib/mappers';
+import { useTranslations } from '@/i18n/locale-context';
+import { paymentMethodLabel } from '../lib/labels';
 import type { MethodKey } from '../types';
 
 const STYLES: Record<MethodKey, { pill: string; dot: string }> = {
@@ -15,17 +18,18 @@ const STYLES: Record<MethodKey, { pill: string; dot: string }> = {
 
 /** Gateway / method chip for a payment row. */
 export function MethodPill({ method, methodRaw, className }: { method: MethodKey; methodRaw: string; className?: string }) {
+  const t = useTranslations();
   const s = STYLES[method];
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-[11px] border shadow-2xs',
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs border shadow-2xs',
         s.pill,
         className,
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', s.dot)} />
-      {methodLabel({ method, methodRaw })}
+      {paymentMethodLabel(t, { method, methodRaw })}
     </span>
   );
 }

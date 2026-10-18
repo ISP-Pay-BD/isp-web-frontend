@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useLocale } from '@/i18n/locale-context';
 
 interface OltModalProps {
   open: boolean;
@@ -54,6 +55,7 @@ function initialValues(olt: OltRow | null, brands: OltBrandOption[]): OltFormVal
 }
 
 export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
+  const { t, te } = useLocale();
   const editing = olt !== null;
   const schema = useMemo(() => makeOltSchema(editing), [editing]);
   const save = useSaveOlt();
@@ -105,7 +107,7 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
       }
       return;
     }
-    toast.success(editing ? `${values.name} updated` : `${values.name} onboarded`);
+    toast.success(editing ? t('admin.olt.modal.updated', '{name} updated', { name: values.name }) : t('admin.olt.modal.onboarded', '{name} onboarded', { name: values.name }));
     reset(initialValues(null, brands));
     onOpenChange(false);
   };
@@ -114,22 +116,22 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit OLT Node' : 'Onboard New OLT Node'}</DialogTitle>
+          <DialogTitle>{editing ? t('admin.olt.modal.editTitle', 'Edit OLT Node') : t('admin.olt.modal.newTitle', 'Onboard New OLT Node')}</DialogTitle>
           <DialogDescription>
-            Register a GPON / EPON OLT so its ONUs can be synchronized and diagnosed.
+            {t('admin.olt.modal.desc', 'Register a GPON / EPON OLT so its ONUs can be synchronized and diagnosed.')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name">OLT Name *</Label>
-              <Input id="name" placeholder="e.g. Core_GPON_01" {...register('name')} />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              <Label htmlFor="name">{t('admin.olt.modal.name', 'OLT Name *')}</Label>
+              <Input id="name" placeholder={t('admin.olt.modal.namePlaceholder', 'e.g. Core_GPON_01')} {...register('name')} />
+              {errors.name && <p className="text-xs text-destructive">{te(errors.name.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="brand">Brand / Vendor *</Label>
+              <Label htmlFor="brand">{t('admin.olt.modal.brand', 'Brand / Vendor *')}</Label>
               <Select
                 items={brandItems}
                 value={brand}
@@ -139,7 +141,7 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
                 }}
               >
                 <SelectTrigger id="brand">
-                  <SelectValue placeholder={brands.length ? 'Select brand' : 'No brands available'} />
+                  <SelectValue placeholder={brands.length ? t('admin.olt.modal.selectBrand', 'Select brand') : t('admin.olt.modal.noBrands', 'No brands available')} />
                 </SelectTrigger>
                 <SelectContent>
                   {brandItems.map((b) => (
@@ -147,26 +149,26 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.brand && <p className="text-xs text-destructive">{errors.brand.message}</p>}
+              {errors.brand && <p className="text-xs text-destructive">{te(errors.brand.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="ip">IP Address / Host *</Label>
-              <Input id="ip" className="font-mono text-sm" placeholder="IPv4 address or host name" {...register('ip')} />
-              {errors.ip && <p className="text-xs text-destructive">{errors.ip.message}</p>}
+              <Label htmlFor="ip">{t('admin.olt.modal.ip', 'IP Address / Host *')}</Label>
+              <Input id="ip" className="font-mono text-sm" placeholder={t('admin.olt.modal.ipPlaceholder', 'IPv4 address or host name')} {...register('ip')} />
+              {errors.ip && <p className="text-xs text-destructive">{te(errors.ip.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="port">Port *</Label>
+              <Label htmlFor="port">{t('admin.olt.modal.port', 'Port *')}</Label>
               <Input id="port" type="number" className="font-mono text-sm" {...register('port', { valueAsNumber: true })} />
-              {errors.port && <p className="text-xs text-destructive">{errors.port.message}</p>}
+              {errors.port && <p className="text-xs text-destructive">{te(errors.port.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="protocol">Protocol *</Label>
+            <Label htmlFor="protocol">{t('admin.olt.modal.protocol', 'Protocol *')}</Label>
             <Select
               items={PROTOCOL_OPTIONS}
               value={protocol}
@@ -178,7 +180,7 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
               }}
             >
               <SelectTrigger id="protocol">
-                <SelectValue placeholder="Protocol" />
+                <SelectValue placeholder={t('admin.olt.modal.protocolPlaceholder', 'Protocol')} />
               </SelectTrigger>
               <SelectContent>
                 {PROTOCOL_OPTIONS.map((p) => (
@@ -190,16 +192,16 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
 
           {protocol === 'snmp' && (
             <div className="space-y-1.5">
-              <Label htmlFor="snmpOid">SNMP SysDescr OID</Label>
+              <Label htmlFor="snmpOid">{t('admin.olt.modal.snmpOid', 'SNMP SysDescr OID')}</Label>
               <Input id="snmpOid" className="font-mono text-xs" placeholder="1.3.6.1.2.1.1.1.0" {...register('snmpOid')} />
-              {errors.snmpOid && <p className="text-xs text-destructive">{errors.snmpOid.message}</p>}
+              {errors.snmpOid && <p className="text-xs text-destructive">{te(errors.snmpOid.message ?? '')}</p>}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="username">
-                {protocol === 'snmp' ? 'SNMP Community *' : 'Login Username *'}
+                {protocol === 'snmp' ? t('admin.olt.modal.community', 'SNMP Community *') : t('admin.olt.modal.username', 'Login Username *')}
               </Label>
               <Input
                 id="username"
@@ -207,39 +209,39 @@ export function OltModal({ open, onOpenChange, olt, brands }: OltModalProps) {
                 placeholder={protocol === 'snmp' ? 'public' : 'admin'}
                 {...register('username')}
               />
-              {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
+              {errors.username && <p className="text-xs text-destructive">{te(errors.username.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Login Password{editing ? '' : ' *'}</Label>
+              <Label htmlFor="password">{t('admin.olt.modal.password', 'Login Password')}{editing ? '' : ' *'}</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                placeholder={editing ? 'Leave blank to keep current' : ''}
+                placeholder={editing ? t('admin.olt.modal.passwordKeep', 'Leave blank to keep current') : ''}
                 {...register('password')}
               />
-              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+              {errors.password && <p className="text-xs text-destructive">{te(errors.password.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="loginKey">Login Key (optional)</Label>
+            <Label htmlFor="loginKey">{t('admin.olt.modal.loginKey', 'Login Key (optional)')}</Label>
             <Input
               id="loginKey"
               autoComplete="off"
-              placeholder={editing && olt?.hasLoginKey ? 'Stored — leave blank to keep' : 'Optional auth key for the OLT session'}
+              placeholder={editing && olt?.hasLoginKey ? t('admin.olt.modal.loginKeyStored', 'Stored — leave blank to keep') : t('admin.olt.modal.loginKeyHint', 'Optional auth key for the OLT session')}
               {...register('loginKey')}
             />
-            {errors.loginKey && <p className="text-xs text-destructive">{errors.loginKey.message}</p>}
+            {errors.loginKey && <p className="text-xs text-destructive">{te(errors.loginKey.message ?? '')}</p>}
           </div>
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : editing ? 'Update Node' : 'Save OLT Configuration'}
+              {isSubmitting ? t('admin.olt.modal.saving', 'Saving...') : editing ? t('admin.olt.modal.update', 'Update Node') : t('admin.olt.modal.save', 'Save OLT Configuration')}
             </Button>
           </DialogFooter>
         </form>

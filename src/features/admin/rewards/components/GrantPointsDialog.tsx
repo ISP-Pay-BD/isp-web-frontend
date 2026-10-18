@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { CustomerPicker } from '@/features/admin/customer-payments/components/CustomerPicker';
 import type { CustomerOption } from '@/features/admin/customer-payments/types';
 import { ApiError } from '@/lib/api/client';
+import { useTranslations } from '@/i18n/locale-context';
 import { useGrantRewardPoints } from '../hooks/use-rewards';
 
 /** Grant (positive) or deduct (negative) reward points for one customer, with a reason. */
 export function GrantPointsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useTranslations();
   const grant = useGrantRewardPoints();
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
   const [points, setPoints] = useState('');
@@ -33,9 +35,9 @@ export function GrantPointsDialog({ open, onOpenChange }: { open: boolean; onOpe
   const submit = () => {
     const value = Number(points);
     const next: Record<string, string> = {};
-    if (!customer) next.customer_id = 'Choose a customer';
-    if (!Number.isInteger(value) || value === 0) next.points = 'Enter a whole, non-zero number (negative to deduct)';
-    if (note.trim().length < 3) next.note = 'Give a short reason';
+    if (!customer) next.customer_id = t('admin.rewards.grant.errCustomer', 'Choose a customer');
+    if (!Number.isInteger(value) || value === 0) next.points = t('admin.rewards.grant.errPoints', 'Enter a whole, non-zero number (negative to deduct)');
+    if (note.trim().length < 3) next.note = t('admin.rewards.grant.errNote', 'Give a short reason');
     setErrors(next);
     if (Object.keys(next).length || !customer) return;
 
@@ -69,41 +71,41 @@ export function GrantPointsDialog({ open, onOpenChange }: { open: boolean; onOpe
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Grant or adjust points</DialogTitle>
+          <DialogTitle>{t('admin.rewards.grant.title', 'Grant or adjust points')}</DialogTitle>
           <DialogDescription>
-            Posted to the customer&apos;s reward ledger as a manual adjustment and recorded in the audit log.
+            {t('admin.rewards.grant.desc', "Posted to the customer's reward ledger as a manual adjustment and recorded in the audit log.")}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="space-y-1.5">
-            <Label>Customer</Label>
+            <Label>{t('admin.rewards.grant.customer', 'Customer')}</Label>
             <CustomerPicker value={customer} onChange={setCustomer} invalid={!!errors.customer_id} />
             {errors.customer_id ? <p className="text-destructive text-xs">{errors.customer_id}</p> : null}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="grant-points">Points</Label>
+            <Label htmlFor="grant-points">{t('admin.rewards.grant.points', 'Points')}</Label>
             <Input
               id="grant-points"
               inputMode="numeric"
-              placeholder="e.g. 50, or -20 to deduct"
+              placeholder={t('admin.rewards.grant.pointsPlaceholder', 'e.g. 50, or -20 to deduct')}
               value={points}
               onChange={(e) => setPoints(e.target.value)}
             />
             {errors.points ? <p className="text-destructive text-xs">{errors.points}</p> : null}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="grant-note">Reason</Label>
+            <Label htmlFor="grant-note">{t('admin.rewards.grant.reason', 'Reason')}</Label>
             <Textarea id="grant-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             {errors.note ? <p className="text-destructive text-xs">{errors.note}</p> : null}
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button onClick={submit} disabled={grant.isPending}>
             {grant.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            Save
+            {t('common.save', 'Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

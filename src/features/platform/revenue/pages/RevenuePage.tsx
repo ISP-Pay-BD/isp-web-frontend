@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import {
@@ -23,57 +24,62 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { DataTable } from '@/features/shared/data-table';
 import { formatBdt } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 const COLORS = ['#e85a1a', '#2563eb', '#16a34a', '#9333ea'];
 
 type TierRow = { plan: string; planType: string | null; tenants: number; mrrBdt: number };
 
-const tierColumns: LegacyColumnDef<TierRow, unknown>[] = [
-  {
-    accessorKey: 'plan',
-    header: 'Plan',
-    size: 160,
-    enableHiding: false,
-    cell: ({ row }) => (
-      <span className="font-medium">
-        {row.original.plan}
-        {row.original.planType ? (
-          <span className="ml-1.5 text-[10px] uppercase text-muted-foreground">{row.original.planType}</span>
-        ) : null}
-      </span>
-    ),
-  },
-  {
-    accessorKey: 'tenants',
-    header: 'Active tenants',
-    size: 120,
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.tenants}</span>
-    ),
-  },
-  {
-    accessorKey: 'mrrBdt',
-    header: 'MRR (BDT)',
-    size: 160,
-    cell: ({ row }) => (
-      <span className="font-semibold tabular-nums">৳{formatBdt(row.original.mrrBdt)}</span>
-    ),
-  },
-];
-
 export function RevenuePage() {
+  const t = useTranslations();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'revenue'],
     queryFn: () => platformService.getPlatformRevenue(),
   });
 
+  const tierColumns = useMemo<LegacyColumnDef<TierRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'plan',
+        header: t('platform.revenue.page.colPlan', 'Plan'),
+        size: 160,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.plan}
+            {row.original.planType ? (
+              <span className="ml-1.5 text-xs uppercase text-muted-foreground">{row.original.planType}</span>
+            ) : null}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'tenants',
+        header: t('platform.revenue.page.colTenants', 'Active tenants'),
+        size: 120,
+        cell: ({ row }) => (
+          <span className="tabular-nums">{row.original.tenants}</span>
+        ),
+      },
+      {
+        accessorKey: 'mrrBdt',
+        header: t('platform.revenue.page.colMrr', 'MRR (BDT)'),
+        size: 160,
+        cell: ({ row }) => (
+          <span className="font-semibold tabular-nums">৳{formatBdt(row.original.mrrBdt)}</span>
+        ),
+      },
+    ],
+    [t],
+  );
+
   if (isLoading) return <PageSkeleton variant="dashboard" rows={5} />;
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load revenue"
-        description={error instanceof Error ? error.message : 'Could not retrieve platform revenue analytics.'}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.revenue.page.loadFailed', 'Failed to load revenue')}
+        description={error instanceof Error ? error.message : t('platform.revenue.page.loadFailedHint', 'Could not retrieve platform revenue analytics.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -82,27 +88,27 @@ export function RevenuePage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Platform Revenue"
-        subtitle="Tenant subscription value, collected payments, payment methods and tier analytics"
+        title={t('platform.revenue.title', 'Platform Revenue')}
+        subtitle={t('platform.revenue.page.subtitle', 'Tenant subscription value, collected payments, payment methods and tier analytics')}
       />
 
             <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums">{`৳${formatBdt(data.mrrBdt)}`}</span>{' '}
-          <span className="text-muted-foreground">monthly recurring (active subscriptions)</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiMrr', 'monthly recurring (active subscriptions)')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{`৳${formatBdt(data.arrBdt)}`}</span>{' '}
-          <span className="text-muted-foreground">annual run rate</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiArr', 'annual run rate')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{data.activeTenants}</span>{' '}
-          <span className="text-muted-foreground">active tenants</span>
-          <span className="text-muted-foreground"> · {data.trialTenants} trial · {data.suspendedTenants} suspended</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiTenants', 'active tenants')}</span>
+          <span className="text-muted-foreground"> · {t('platform.revenue.page.trialSuspended', '{trial} trial · {suspended} suspended', { trial: data.trialTenants, suspended: data.suspendedTenants })}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{`৳${formatBdt(data.monthRevenue)}`}</span>{' '}
-          <span className="text-muted-foreground">collected this month</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiMonth', 'collected this month')}</span>
           {data.growthPercentage !== null ? (
             <span className={data.growthPercentage >= 0 ? 'text-emerald-600' : 'text-red-600'}>
               {' '}
@@ -113,19 +119,19 @@ export function RevenuePage() {
         </p>
         <p>
           <span className="font-semibold tabular-nums">{`৳${formatBdt(data.totalRevenue)}`}</span>{' '}
-          <span className="text-muted-foreground">collected all time</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiAllTime', 'collected all time')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{`৳${formatBdt(data.averageRevenuePerTenant)}`}</span>{' '}
-          <span className="text-muted-foreground">avg revenue / tenant</span>
+          <span className="text-muted-foreground">{t('platform.revenue.page.kpiAvg', 'avg revenue / tenant')}</span>
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/60 overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base">Revenue Trend</CardTitle>
-            <CardDescription>Tenant payments collected per month (last 6 months)</CardDescription>
+            <CardTitle className="text-base">{t('platform.revenue.page.trend', 'Revenue Trend')}</CardTitle>
+            <CardDescription>{t('platform.revenue.page.trendHint', 'Tenant payments collected per month (last 6 months)')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[260px]">
@@ -173,13 +179,13 @@ export function RevenuePage() {
 
         <Card className="border-border/60 overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-base">Payment Methods</CardTitle>
-            <CardDescription>Collected by payment method (last {data.methodWindowMonths} months)</CardDescription>
+            <CardTitle className="text-base">{t('platform.revenue.page.methods', 'Payment Methods')}</CardTitle>
+            <CardDescription>{t('platform.revenue.page.methodsHint', 'Collected by payment method (last {n} months)', { n: data.methodWindowMonths })}</CardDescription>
           </CardHeader>
           <CardContent>
             {data.methodBreakdown.length === 0 ? (
               <p className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
-                No tenant payments in this window.
+                {t('platform.revenue.page.noPayments', 'No tenant payments in this window.')}
               </p>
             ) : (
             <div className="h-[260px]">
@@ -226,17 +232,17 @@ export function RevenuePage() {
 
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle className="text-base">Monthly recurring value by package</CardTitle>
+          <CardTitle className="text-base">{t('platform.revenue.page.byPackage', 'Monthly recurring value by package')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataTable urlState
             columns={tierColumns}
             data={data.tierBreakdown}
             getRowId={(row) => row.plan}
             searchKey="plan"
-            searchPlaceholder="Filter plan..."
-            emptyTitle="No tier data"
-            emptyDescription="No active tenant subscriptions."
+            searchPlaceholder={t('platform.revenue.page.filterPlan', 'Filter plan...')}
+            emptyTitle={t('platform.revenue.page.emptyTitle', 'No tier data')}
+            emptyDescription={t('platform.revenue.page.emptyHint', 'No active tenant subscriptions.')}
             enableColumnVisibility={false}
           />
         </CardContent>

@@ -87,7 +87,7 @@ export function PaymentJourney({ steps, payment }: PaymentJourneyProps) {
               >
                 <div className="flex items-start justify-between gap-6">
                   <div className="min-w-0">
-                    <p className="text-landing-cta font-mono text-xs">
+                    <p className="text-landing-accent font-mono text-xs">
                       {k('step').replace('{n}', String(i + 1))}
                     </p>
                     <h3 className="font-landing-display mt-3 text-2xl font-semibold tracking-tight text-white">
@@ -100,7 +100,7 @@ export function PaymentJourney({ steps, payment }: PaymentJourneyProps) {
                       <span className="font-landing-display text-xl font-semibold text-white">
                         {step.metric}
                       </span>
-                      <span className="text-white/45">
+                      <span className="text-white/60">
                         {bn && step.metricHighlightBn
                           ? step.metricHighlightBn
                           : step.metricHighlight}

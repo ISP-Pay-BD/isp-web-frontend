@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /**
  * ACS / TR-069 CPE registry + queued config jobs (/v1/network-ops/acs/*).
@@ -112,46 +113,50 @@ export function useAcsJobs(deviceId: string | null) {
 }
 
 export function useSaveAcsDevice() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, body }: { id?: string; body: Record<string, unknown> }) =>
       mapDevice(id ? await http.put<unknown>(`/v1/network-ops/acs/devices/${id}`, body) : await http.post<unknown>('/v1/network-ops/acs/devices', body)),
     onSuccess: (_d, { id }) => {
-      toast.success(id ? 'CPE updated' : 'CPE registered');
+      toast.success(id ? t('admin.ops.acs.toast.updated', 'CPE updated') : t('admin.ops.acs.toast.registered', 'CPE registered'));
       qc.invalidateQueries({ queryKey: acsKeys.all });
     },
   });
 }
 
 export function useDeleteAcsDevice() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => http.delete<unknown>(`/v1/network-ops/acs/devices/${id}`),
     onSuccess: () => {
-      toast.success('CPE removed');
+      toast.success(t('admin.ops.acs.toast.removed', 'CPE removed'));
       qc.invalidateQueries({ queryKey: acsKeys.all });
     },
   });
 }
 
 export function useQueueAcsJob() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ deviceId, action, parameters }: { deviceId: string; action: AcsJobAction; parameters?: Record<string, string> }) =>
       http.post<unknown>(`/v1/network-ops/acs/devices/${deviceId}/jobs`, { action, parameters }),
     onSuccess: () => {
-      toast.success('Job queued — it runs when the ACS worker picks it up');
+      toast.success(t('admin.ops.acs.toast.queued', 'Job queued — it runs when the ACS worker picks it up'));
       qc.invalidateQueries({ queryKey: acsKeys.all });
     },
   });
 }
 
 export function useCancelAcsJob() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => http.post<unknown>(`/v1/network-ops/acs/jobs/${id}/cancel`),
     onSuccess: () => {
-      toast.success('Job cancelled');
+      toast.success(t('admin.ops.acs.toast.cancelled', 'Job cancelled'));
       qc.invalidateQueries({ queryKey: acsKeys.all });
     },
   });

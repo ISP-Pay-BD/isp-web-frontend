@@ -18,15 +18,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 import { CalendarRange, Download, Loader2, Receipt, Ticket, TrendingUp, User } from 'lucide-react';
 
 type Period = 'today' | '7d' | 'month' | 'all';
 
-const PERIODS: { value: Period; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: 'month', label: 'This month' },
-  { value: 'all', label: 'All time' },
+type Translate = ReturnType<typeof useLocale>['t'];
+
+const periods = (t: Translate): { value: Period; label: string }[] => [
+  { value: 'today', label: t('admin.hotspot.reports.today', 'Today') },
+  { value: '7d', label: t('admin.hotspot.reports.last7', 'Last 7 days') },
+  { value: 'month', label: t('admin.hotspot.reports.thisMonth', 'This month') },
+  { value: 'all', label: t('admin.hotspot.reports.allTime', 'All time') },
 ];
 
 function periodRange(period: Period): { from?: string; to?: string } {
@@ -38,29 +41,34 @@ function periodRange(period: Period): { from?: string; to?: string } {
 }
 
 export function HotspotReportsPage() {
+  const { t } = useLocale();
   const hs = useHotspotRouter();
   const [period, setPeriod] = useState<Period>('month');
+  const periodOptions = periods(t);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot Sales & Revenue Report"
-        subtitle="Voucher sales recorded on the selected router by profiles whose expiry mode records sales."
+        title={t('admin.hotspot.reports.title', 'Hotspot Sales & Revenue Report')}
+        subtitle={t(
+          'admin.hotspot.reports.subtitle',
+          'Voucher sales recorded on the selected router by profiles whose expiry mode records sales.',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Sales Reports' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.hotspot', 'Hotspot'), href: '/admin/hotspot' },
+          { label: t('admin.hotspot.reports.crumb', 'Sales Reports') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             <HotspotRouterSelect state={hs} />
-            <Select value={period} onValueChange={(v) => v && setPeriod(v as Period)} items={PERIODS}>
-              <SelectTrigger className="h-9 min-w-36" aria-label="Period">
+            <Select value={period} onValueChange={(v) => v && setPeriod(v as Period)} items={periodOptions}>
+              <SelectTrigger className="h-9 min-w-36" aria-label={t('admin.hotspot.reports.period', 'Period')}>
                 <CalendarRange className="h-4 w-4 text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PERIODS.map((p) => (
+                {periodOptions.map((p) => (
                   <SelectItem key={p.value} value={p.value}>
                     {p.label}
                   </SelectItem>
@@ -80,6 +88,7 @@ export function HotspotReportsPage() {
 }
 
 function ReportBody({ routerId, routerName, period }: { routerId: string; routerName: string; period: Period }) {
+  const { t } = useLocale();
   const table = useServerTable();
   const { page, pageSize } = table;
   const [exporting, setExporting] = useState(false);
@@ -91,7 +100,7 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
     try {
       const rows = await fetchHotspotReportRows(routerId, range);
       if (rows.length === 0) {
-        toast.info('No sales in this period to export');
+        toast.info(t('admin.hotspot.reports.nothingToExport', 'No sales in this period to export'));
         return;
       }
       downloadCsv(
@@ -99,9 +108,9 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
         ['Date', 'Time', 'Username', 'Profile', 'Price (BDT)', 'Comment'],
         rows.map((r) => [r.date, r.time, r.username, r.profile, r.price, r.comment]),
       );
-      toast.success(`Exported ${rows.length} sales`);
+      toast.success(t('admin.hotspot.reports.exported', 'Exported {n} sales', { n: rows.length }));
     } catch (err) {
-      toast.error(errorMessage(err, 'Export failed.'));
+      toast.error(errorMessage(err, t('admin.hotspot.reports.exportFailed', 'Export failed.')));
     } finally {
       setExporting(false);
     }
@@ -111,7 +120,7 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
     () => [
       {
         accessorKey: 'date',
-        header: 'Sale Date',
+        header: t('admin.hotspot.reports.colDate', 'Sale Date'),
         enableHiding: false,
         size: 160,
         cell: ({ row }) => (
@@ -122,7 +131,7 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
       },
       {
         accessorKey: 'username',
-        header: 'Voucher User',
+        header: t('admin.hotspot.reports.colUser', 'Voucher User'),
         enableHiding: false,
         size: 200,
         cell: ({ row }) => (
@@ -136,7 +145,7 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
       },
       {
         accessorKey: 'profile',
-        header: 'Profile',
+        header: t('admin.hotspot.col.profile', 'Profile'),
         size: 160,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background text-xs font-medium">
@@ -146,7 +155,7 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
       },
       {
         accessorKey: 'price',
-        header: 'Amount',
+        header: t('admin.hotspot.reports.colAmount', 'Amount'),
         size: 120,
         cell: ({ row }) => (
           <span className="font-bold text-sm tabular-nums text-foreground">{formatBdtWithSymbol(row.original.price)}</span>
@@ -154,12 +163,12 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
       },
       {
         accessorKey: 'comment',
-        header: 'Comment',
+        header: t('admin.hotspot.reports.colComment', 'Comment'),
         size: 200,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.comment || '—'}</span>,
       },
     ],
-    [],
+    [t],
   );
 
   if (report.isError) {
@@ -167,56 +176,59 @@ function ReportBody({ routerId, routerName, period }: { routerId: string; router
       <HotspotQueryError
         error={report.error}
         routerName={routerName}
-        title="Failed to load hotspot sales"
+        title={t('admin.hotspot.reports.loadFailed', 'Failed to load hotspot sales')}
         onRetry={() => void report.refetch()}
       />
     );
   }
 
   const d = report.data;
-  const periodLabel = PERIODS.find((p) => p.value === period)?.label ?? '';
+  const periodLabel = periods(t).find((p) => p.value === period)?.label ?? '';
 
   return (
     <>
       <HotspotKpiRow>
         <HotspotKpi
-          label="Total Sales"
+          label={t('admin.hotspot.reports.kpiTotal', 'Total Sales')}
           value={d ? formatBdtWithSymbol(d.totalSales) : '—'}
           hint={periodLabel}
           icon={<TrendingUp className="h-4 w-4 text-primary" />}
         />
         <HotspotKpi
-          label="Vouchers Sold"
+          label={t('admin.hotspot.reports.kpiSold', 'Vouchers Sold')}
           value={d ? d.count : '—'}
-          hint="Sales recorded on the router"
+          hint={t('admin.hotspot.reports.kpiSoldHint', 'Sales recorded on the router')}
           icon={<Ticket className="h-4 w-4 text-emerald-500" />}
           positive
         />
         <HotspotKpi
-          label="Avg per Voucher"
+          label={t('admin.hotspot.reports.kpiAvg', 'Avg per Voucher')}
           value={d ? formatBdtWithSymbol(d.count > 0 ? Math.round(d.totalSales / d.count) : 0) : '—'}
-          hint="Total ÷ vouchers sold"
+          hint={t('admin.hotspot.reports.kpiAvgHint', 'Total ÷ vouchers sold')}
           icon={<Receipt className="h-4 w-4 text-primary" />}
         />
         <HotspotKpi
-          label="Period"
+          label={t('admin.hotspot.reports.period', 'Period')}
           value={<span className="text-lg">{periodLabel}</span>}
-          hint={range.from ? `${range.from} → ${range.to}` : 'Every recorded sale'}
+          hint={range.from ? `${range.from} → ${range.to}` : t('admin.hotspot.reports.everySale', 'Every recorded sale')}
           icon={<CalendarRange className="h-4 w-4 text-sky-500" />}
         />
       </HotspotKpiRow>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={d?.items ?? []}
         isLoading={report.isLoading}
-        emptyTitle="No sales in this period"
-        emptyDescription="A sale is recorded when a voucher on a “record sale” profile logs in for the first time."
+        emptyTitle={t('admin.hotspot.reports.emptyTitle', 'No sales in this period')}
+        emptyDescription={t(
+          'admin.hotspot.reports.emptyDesc',
+          'A sale is recorded when a voucher on a “record sale” profile logs in for the first time.',
+        )}
         getRowId={(r) => `${r.no}-${r.username}`}
         toolbarActions={
           <Button variant="outline" size="sm" onClick={() => void handleExport()} disabled={exporting || !d?.count} className="h-9">
             {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Export Sales CSV
+            {t('admin.hotspot.reports.exportCsv', 'Export Sales CSV')}
           </Button>
         }
         // The report endpoint has no text search — paging only.

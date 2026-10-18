@@ -1,40 +1,104 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import Link from 'next/link';
-import { Search, Plus, ArrowDownLeft, ArrowUpRight, Download, X, Scale, Loader2, Users } from 'lucide-react';
+import { Plus, ArrowDownLeft, ArrowUpRight, Download, Scale, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
-import { TablePagination } from '@/components/shared/TablePagination';
+import { DataTable } from '@/features/shared/data-table';
 import { Can } from '@/components/shared/Can';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatBdtWithSymbol } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   downloadCashbookCsv,
   monthToDateRange,
   useCashbook,
+  type CashbookEntry,
   type CashbookFilters,
 } from '@/features/admin/reports/hooks/use-billing-reports';
 
 /** Cash book: successful customer collections (in) and recorded expenses (out) for a period. */
 export function CashbookPage() {
+  const t = useTranslations();
   const [filters, setFilters] = useState<CashbookFilters>(() => ({ page: 1, pageSize: 20, search: '', method: 'all', ...monthToDateRange() }));
-  const [searchInput, setSearchInput] = useState('');
   const [exporting, setExporting] = useState(false);
   const { data, isLoading, isError, error, isFetching, refetch } = useCashbook(filters);
 
-  useEffect(() => {
-    const t = setTimeout(() => setFilters((f) => (f.search === searchInput.trim() ? f : { ...f, page: 1, search: searchInput.trim() })), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
+  const columns = useMemo<LegacyColumnDef<CashbookEntry, unknown>[]>(
+    () => [
+      {
+        id: 'date',
+        header: t('admin.customerPayments.receipt.date', 'Date'),
+        enableSorting: false,
+        cell: ({ row: { original: e } }) => (
+          <span className="font-mono text-muted-foreground whitespace-nowrap">{e.at.length > 10 ? formatDateTime(e.at) : formatDate(e.at)}</span>
+        ),
+      },
+      {
+        id: 'type',
+        header: t('admin.ops.cashbook.colType', 'Type'),
+        enableSorting: false,
+        meta: { mobile: 'status' },
+        cell: ({ row: { original: e } }) => (
+          <Badge variant="outline" tone={e.direction === 'in' ? 'success' : 'danger'}>
+            {e.direction === 'in' ? t('admin.ops.cashbook.cashIn', 'Cash in') : t('admin.ops.cashbook.cashOut', 'Cash out')}
+          </Badge>
+        ),
+      },
+      {
+        id: 'party',
+        header: t('admin.ops.cashbook.colParty', 'Party'),
+        enableSorting: false,
+        meta: { mobile: 'title' },
+        cell: ({ row: { original: e } }) => <span className="font-medium text-foreground">{e.party || '—'}</span>,
+      },
+      {
+        id: 'method',
+        header: t('admin.ops.cashbook.colMethod', 'Method / head'),
+        enableSorting: false,
+        cell: ({ row: { original: e } }) => e.method || '—',
+      },
+      {
+        id: 'reference',
+        header: t('admin.ops.cashbook.colReference', 'Reference'),
+        enableSorting: false,
+        cell: ({ row: { original: e } }) =>
+          e.direction === 'in' && e.refId ? (
+            <Link href={`/admin/invoices/${e.refId}`} className="font-mono hover:text-primary">{e.reference || `#${e.refId}`}</Link>
+          ) : (
+            <span className="font-mono">{e.reference || '—'}</span>
+          ),
+      },
+      {
+        id: 'handledBy',
+        header: t('admin.ops.cashbook.colHandledBy', 'Handled by'),
+        enableSorting: false,
+        cell: ({ row: { original: e } }) => <span className="text-muted-foreground">{e.handledBy || '—'}</span>,
+      },
+      {
+        id: 'amount',
+        header: () => <div className="text-right">{t('admin.ops.cashbook.colAmount', 'Amount')}</div>,
+        enableSorting: false,
+        meta: { mobileLabel: t('admin.ops.cashbook.colAmount', 'Amount') },
+        cell: ({ row: { original: e } }) => (
+          <div className={cn('font-mono font-semibold md:text-right', e.direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500')}>
+            {e.direction === 'in' ? '+' : '-'} <CurrencyDisplay amount={e.amountBdt} />
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
 
   const patch = (next: Partial<CashbookFilters>) => setFilters((f) => ({ ...f, page: 1, ...next }));
 
@@ -42,7 +106,7 @@ export function CashbookPage() {
     setExporting(true);
     try {
       await downloadCashbookCsv(filters);
-      toast.success('Cash book exported to CSV');
+      toast.success(t('admin.ops.cashbook.exported', 'Cash book exported to CSV'));
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -52,7 +116,7 @@ export function CashbookPage() {
 
   if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError && !data) {
-    return <EmptyState title="Failed to load cash book" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.cashbook.loadFailed', 'Failed to load cash book')} description={errorMessage(error)} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   const s = data?.summary;
@@ -61,41 +125,62 @@ export function CashbookPage() {
   return (
     <div className="space-y-6 w-full pb-16">
       <PageHeader
-        title="Cash Book"
-        subtitle="Customer collections and expenses for the selected period"
-        breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'Collections' }, { label: 'Cash book' }]}
+        title={t('admin.ops.cashbook.title', 'Cash Book')}
+        subtitle={t('admin.ops.cashbook.subtitle', 'Customer collections and expenses for the selected period')}
+        breadcrumb={[
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.collections', 'Collections') },
+          { label: t('nav.collections-cashbook', 'Cash book') },
+        ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" value={filters.from} max={filters.to} onChange={(e) => e.target.value && patch({ from: e.target.value })} className="h-8 w-[140px] text-xs" aria-label="From" />
-            <Input type="date" value={filters.to} min={filters.from} onChange={(e) => e.target.value && patch({ to: e.target.value })} className="h-8 w-[140px] text-xs" aria-label="To" />
+            <Input type="date" value={filters.from} max={filters.to} onChange={(e) => e.target.value && patch({ from: e.target.value })} className="h-8 w-[140px] text-xs" aria-label={t('admin.ops.cashbook.from', 'From')} />
+            <Input type="date" value={filters.to} min={filters.from} onChange={(e) => e.target.value && patch({ to: e.target.value })} className="h-8 w-[140px] text-xs" aria-label={t('admin.ops.cashbook.to', 'To')} />
             <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting} className="text-xs h-8">
-              {exporting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1.5 h-3.5 w-3.5" />} Export CSV
+              {exporting ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1.5 h-3.5 w-3.5" />} {t('admin.ops.cashbook.exportCsv', 'Export CSV')}
             </Button>
             <Can menu="customer_payment" action="create">
-              <Link href="/admin/customer-payments/new">
-                <Button size="sm" className="text-xs h-8 gap-1.5"><Plus className="h-3.5 w-3.5" /> Record payment</Button>
-              </Link>
+              <Button size="sm" className="text-xs h-8 gap-1.5" render={<Link href="/admin/customer-payments/new" />}><Plus className="h-3.5 w-3.5" /> {t('admin.ops.cashbook.recordPayment', 'Record payment')}</Button>
             </Can>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Cash in" icon={<ArrowDownLeft className="h-4 w-4" />} tone="bg-emerald-500/10 text-emerald-500" hint={`${s?.cashInCount ?? 0} collections`}>
+        <Kpi
+          label={t('admin.ops.cashbook.cashIn', 'Cash in')}
+          icon={<ArrowDownLeft className="h-4 w-4" />}
+          tone="bg-emerald-500/10 text-emerald-500"
+          hint={t('admin.ops.cashbook.hintCollections', '{n} collections', { n: s?.cashInCount ?? 0 })}
+        >
           <CurrencyDisplay amount={s?.cashIn ?? 0} />
         </Kpi>
         <Kpi
-          label="Cash out"
+          label={t('admin.ops.cashbook.cashOut', 'Cash out')}
           icon={<ArrowUpRight className="h-4 w-4" />}
           tone="bg-rose-500/10 text-rose-500"
-          hint={s?.expensesTracked ? `${s?.cashOutCount ?? 0} expenses` : 'Expense ledger not set up'}
+          hint={
+            s?.expensesTracked
+              ? t('admin.ops.cashbook.hintExpenses', '{n} expenses', { n: s?.cashOutCount ?? 0 })
+              : t('admin.ops.cashbook.hintNoLedger', 'Expense ledger not set up')
+          }
         >
           <CurrencyDisplay amount={s?.cashOut ?? 0} />
         </Kpi>
-        <Kpi label="Net" icon={<Scale className="h-4 w-4" />} tone="bg-primary/10 text-primary" hint={`${formatDate(filters.from)} – ${formatDate(filters.to)}`}>
+        <Kpi
+          label={t('admin.ops.cashbook.kpiNet', 'Net')}
+          icon={<Scale className="h-4 w-4" />}
+          tone="bg-primary/10 text-primary"
+          hint={`${formatDate(filters.from)} – ${formatDate(filters.to)}`}
+        >
           <CurrencyDisplay amount={s?.net ?? 0} />
         </Kpi>
-        <Kpi label="Collectors" icon={<Users className="h-4 w-4" />} tone="bg-amber-500/10 text-amber-500" hint="who recorded collections">
+        <Kpi
+          label={t('admin.ops.cashbook.kpiCollectors', 'Collectors')}
+          icon={<Users className="h-4 w-4" />}
+          tone="bg-amber-500/10 text-amber-500"
+          hint={t('admin.ops.cashbook.hintCollectors', 'who recorded collections')}
+        >
           {s?.byCollector.length ?? 0}
         </Kpi>
       </div>
@@ -103,12 +188,12 @@ export function CashbookPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Collections by method</CardTitle>
-            <CardDescription className="text-xs">Click a method to filter the entries</CardDescription>
+            <CardTitle className="text-sm">{t('admin.ops.cashbook.byMethod', 'Collections by method')}</CardTitle>
+            <CardDescription className="text-xs">{t('admin.ops.cashbook.byMethodHint', 'Click a method to filter the entries')}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button size="sm" variant={filters.method === 'all' ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => patch({ method: 'all' })}>
-              All
+              {t('admin.customers.list.pillAll', 'All')}
             </Button>
             {(s?.byMethod ?? []).map((m) => {
               const key = m.method.toLowerCase();
@@ -121,100 +206,54 @@ export function CashbookPage() {
                   disabled={!m.method}
                   onClick={() => patch({ method: key })}
                 >
-                  {m.method || 'Unspecified'} <span className="font-mono opacity-80">৳{m.total.toLocaleString()}</span>
+                  {m.method || t('admin.ops.cashbook.unspecified', 'Unspecified')} <span className="font-mono opacity-80">{formatBdtWithSymbol(m.total)}</span>
                 </Button>
               );
             })}
-            {!s?.byMethod.length ? <p className="text-xs text-muted-foreground">No collections in this period.</p> : null}
+            {!s?.byMethod.length ? <p className="text-xs text-muted-foreground">{t('admin.ops.cashbook.noCollections', 'No collections in this period.')}</p> : null}
           </CardContent>
         </Card>
         <Card className="border-border/70">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Collections by collector</CardTitle>
-            <CardDescription className="text-xs">Staff who recorded the payments</CardDescription>
+            <CardTitle className="text-sm">{t('admin.ops.cashbook.byCollector', 'Collections by collector')}</CardTitle>
+            <CardDescription className="text-xs">{t('admin.ops.cashbook.byCollectorHint', 'Staff who recorded the payments')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1.5">
             {(s?.byCollector ?? []).length ? (
               s!.byCollector.map((c) => (
                 <div key={c.name || 'none'} className="flex items-center justify-between text-xs">
-                  <span className="text-foreground">{c.name || 'Online / not recorded'}</span>
+                  <span className="text-foreground">{c.name || t('admin.ops.cashbook.notRecorded', 'Online / not recorded')}</span>
                   <span className="font-mono">
-                    ৳{c.total.toLocaleString()} <span className="text-muted-foreground">({c.count})</span>
+                    {formatBdtWithSymbol(c.total)} <span className="text-muted-foreground">({c.count})</span>
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-muted-foreground">No collections in this period.</p>
+              <p className="text-xs text-muted-foreground">{t('admin.ops.cashbook.noCollections', 'No collections in this period.')}</p>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Card className={cn('border-border/70 overflow-hidden', isFetching && 'opacity-80')}>
-        <CardContent className="p-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input placeholder="Search customer, invoice, TrxID or expense..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-9 pr-8 h-9 text-xs" />
-            {searchInput ? (
-              <button type="button" onClick={() => setSearchInput('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
-          </div>
-        </CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-y border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Party</th>
-                <th className="py-3 px-4">Method / head</th>
-                <th className="py-3 px-4">Reference</th>
-                <th className="py-3 px-4">Handled by</th>
-                <th className="py-3 px-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {entries.length === 0 ? (
-                <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No cash entries in this period.</td></tr>
-              ) : (
-                entries.map((e) => (
-                  <tr key={e.key} className="hover:bg-muted/30">
-                    <td className="py-3 px-4 font-mono text-muted-foreground whitespace-nowrap">{e.at.length > 10 ? formatDateTime(e.at) : formatDate(e.at)}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline" className={e.direction === 'in' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600' : 'border-rose-500/30 bg-rose-500/10 text-rose-600'}>
-                        {e.direction === 'in' ? 'Cash in' : 'Cash out'}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 font-medium text-foreground">{e.party || '—'}</td>
-                    <td className="py-3 px-4">{e.method || '—'}</td>
-                    <td className="py-3 px-4 font-mono">
-                      {e.direction === 'in' && e.refId ? (
-                        <Link href={`/admin/invoices/${e.refId}`} className="hover:text-primary">{e.reference || `#${e.refId}`}</Link>
-                      ) : (
-                        e.reference || '—'
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground">{e.handledBy || '—'}</td>
-                    <td className={cn('py-3 px-4 text-right font-mono font-semibold', e.direction === 'in' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500')}>
-                      {e.direction === 'in' ? '+' : '-'} <CurrencyDisplay amount={e.amountBdt} />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <TablePagination
-          currentPage={filters.page}
-          pageSize={filters.pageSize}
-          totalItems={data?.meta.total ?? 0}
-          onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
-          onPageSizeChange={(pageSize) => patch({ pageSize })}
-          pageSizeOptions={[10, 20, 50, 100]}
-        />
-      </Card>
+      <DataTable
+        urlState
+        className={cn(isFetching && 'opacity-80')}
+        columns={columns}
+        data={entries}
+        getRowId={(e) => e.key}
+        searchPlaceholder={t('admin.ops.cashbook.searchPlaceholder', 'Search customer, invoice, TrxID or expense...')}
+        emptyTitle={t('admin.ops.cashbook.emptyTitle', 'No cash entries in this period.')}
+        pageSizeOptions={[10, 20, 50, 100]}
+        server={{
+          page: filters.page,
+          pageSize: filters.pageSize,
+          total: data?.meta.total ?? 0,
+          onPageChange: (page) => setFilters((f) => ({ ...f, page })),
+          onPageSizeChange: (pageSize) => patch({ pageSize }),
+          search: filters.search,
+          onSearchChange: (search) => setFilters((f) => (f.search === search ? f : { ...f, page: 1, search })),
+        }}
+      />
     </div>
   );
 }
@@ -228,7 +267,7 @@ function Kpi({ label, icon, tone, hint, children }: { label: string; icon: React
           <div className={cn('p-2 rounded-lg', tone)}>{icon}</div>
         </div>
         <div className="mt-2 text-xl font-bold tracking-tight text-foreground tabular-nums">{children}</div>
-        <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
       </CardContent>
     </Card>
   );

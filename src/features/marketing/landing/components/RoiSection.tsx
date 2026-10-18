@@ -49,6 +49,8 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="subs-count"
+                      aria-label="Active subscribers (number of lines)"
                       type="number"
                       min="0"
                       max="100000"
@@ -72,7 +74,7 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   onChange={(e) => setSubscribers(Number(e.target.value))}
                   className="accent-landing-cta w-full cursor-pointer"
                 />
-                <div className="mt-1 flex justify-between font-mono text-[11px] text-white/40">
+                <div className="mt-1 flex justify-between font-mono text-[11px] text-white/60">
                   <span>100</span>
                   <span>5,000</span>
                   <span>10,000+</span>
@@ -100,7 +102,7 @@ export function RoiSection({ roi }: RoiSectionProps) {
                     placeholder="e.g. 5000"
                     className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white focus:outline-none"
                   />
-                  <span className="absolute top-3 right-4 font-mono text-sm text-white/40">
+                  <span className="absolute top-3 right-4 font-mono text-sm text-white/60">
                     BDT
                   </span>
                 </div>
@@ -122,7 +124,7 @@ export function RoiSection({ roi }: RoiSectionProps) {
 
             <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-6">
               <div>
-                <p className="text-xs font-medium text-white/45">Estimated total savings</p>
+                <p className="text-xs font-medium text-white/60">Estimated total savings</p>
                 <div className="font-landing-display mt-3 text-4xl font-semibold text-white tabular-nums sm:text-5xl">
                   {formatBdtWithSymbol(annualSavings)}
                   <span className="text-lg font-normal text-white/50"> / year</span>

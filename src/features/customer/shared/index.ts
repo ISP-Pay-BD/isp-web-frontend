@@ -16,6 +16,7 @@ export {
   type CustomerLoadingSkeletonProps,
 } from './components/CustomerStates';
 export * from './schemas/customer-forms.schema';
+export { statusLabel } from './lib/status-label';
 export {
   customerKeys,
   useCustomerDashboard,

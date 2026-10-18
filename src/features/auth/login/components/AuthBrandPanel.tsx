@@ -5,13 +5,16 @@ import Image from 'next/image';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { ShieldCheck, Zap, Server, ArrowUpRight } from 'lucide-react';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface AuthBrandPanelProps {
   variant?: 'login' | 'forgot';
 }
 
 export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
+  const t = useTranslations();
   const isLogin = variant === 'login';
+  const [headlineLead, headlineTail] = t('auth.brand.loginHeadline', 'Run your ISP from {em}', { em: '\n' }).split('\n');
 
   return (
     <div className="relative hidden overflow-hidden bg-landing-bg lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:p-14 border-r border-white/[0.08]">
@@ -38,50 +41,52 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
         className="group relative z-10 inline-flex items-center gap-3.5 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.99] w-fit"
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.06] p-2 ring-1 ring-white/15 backdrop-blur-md transition group-hover:ring-landing-cta/50 group-hover:bg-white/[0.1]">
-          <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={28} height={28} priority />
+          <Image src={brandAssets.logo} alt={t('common.sidebar.logoAlt', '{name} logo', { name: siteConfig.name })} width={28} height={28} priority />
         </div>
         <div>
-          <p className="font-landing-display text-lg font-semibold tracking-tight text-white group-hover:text-landing-cta transition-colors">
+          <p className="font-landing-display text-lg font-semibold tracking-tight text-white group-hover:text-landing-accent transition-colors">
             {siteConfig.name}
           </p>
-          <p className="text-xs font-medium text-white/50">ISP Billing &amp; Operations Cloud</p>
+          <p className="text-xs font-medium text-white/50">{t('auth.brand.tagline', 'ISP Billing & Operations Cloud')}</p>
         </div>
       </Link>
 
       {/* Main Narrative & Value Statement */}
       <div className="relative z-10 max-w-lg space-y-8 my-auto">
         <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-landing-cta/30 bg-landing-cta/10 px-3 py-1 text-xs font-medium text-landing-cta backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-landing-cta/30 bg-landing-cta/10 px-3 py-1 text-xs font-medium text-landing-accent backdrop-blur-sm">
             <span className="h-1.5 w-1.5 rounded-full bg-landing-cta animate-pulse" />
-            <span>Enterprise ISP Operating Suite</span>
+            <span>{t('auth.brand.badge', 'Enterprise ISP Operating Suite')}</span>
           </div>
 
           <h1 className="font-landing-display text-3xl xl:text-4xl font-semibold tracking-tight text-white leading-[1.2] text-balance">
             {isLogin ? (
               <>
-                Run your ISP from <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70">one unified console</span>
+                {headlineLead}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70">{t('auth.brand.loginHeadlineEm', 'one unified console')}</span>
+                {headlineTail}
               </>
             ) : (
-              'Reset access securely'
+              t('auth.brand.forgotHeadline', 'Reset access securely')
             )}
           </h1>
           <p className="text-sm xl:text-base leading-relaxed text-white/65">
             {isLogin
-              ? 'Real-time MikroTik sync, bKash & Nagad automated reconciliation, OLT telemetry, and field staff ledgers built for Bangladesh operators.'
-              : 'We will send a one-time cryptographic reset link. Your current credentials stay active until you finish.'}
+              ? t('auth.brand.loginIntro', 'Real-time MikroTik sync, bKash & Nagad automated reconciliation, OLT telemetry, and field staff ledgers built for Bangladesh operators.')
+              : t('auth.brand.forgotIntro', 'We will send a one-time cryptographic reset link. Your current credentials stay active until you finish.')}
           </p>
         </div>
 
         {/* Feature Highlights Grid */}
         <div className="grid gap-3 pt-2">
           <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md transition hover:bg-white/[0.05] hover:border-white/20">
-            <div className="rounded-xl bg-landing-cta/15 p-2 text-landing-cta shrink-0 mt-0.5">
+            <div className="rounded-xl bg-landing-cta/15 p-2 text-landing-accent shrink-0 mt-0.5">
               <Zap className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-landing-display text-xs font-semibold text-white">Sub-second Auto Reconciliation</h4>
+              <h4 className="font-landing-display text-xs font-semibold text-white">{t('auth.brand.feat1Title', 'Sub-second Auto Reconciliation')}</h4>
               <p className="mt-0.5 text-xs text-white/50 leading-relaxed">
-                Every bKash/Nagad payment auto-matched to invoices in ~0.8s without manual SMS verification.
+                {t('auth.brand.feat1Body', 'Every bKash/Nagad payment auto-matched to invoices in ~0.8s without manual SMS verification.')}
               </p>
             </div>
           </div>
@@ -91,9 +96,9 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
               <Server className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="font-landing-display text-xs font-semibold text-white">Automated MikroTik Sync</h4>
+              <h4 className="font-landing-display text-xs font-semibold text-white">{t('auth.brand.feat2Title', 'Automated MikroTik Sync')}</h4>
               <p className="mt-0.5 text-xs text-white/50 leading-relaxed">
-                PPPoE and hotspot lines disconnect on expiry and reconnect instantly on payment settlement.
+                {t('auth.brand.feat2Body', 'PPPoE and hotspot lines disconnect on expiry and reconnect instantly on payment settlement.')}
               </p>
             </div>
           </div>
@@ -101,14 +106,14 @@ export function AuthBrandPanel({ variant = 'login' }: AuthBrandPanelProps) {
       </div>
 
       {/* Footer Metrics */}
-      <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-white/45">
-        <p>© {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
+      <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-6 text-xs text-white/60">
+        <p>{t('auth.brand.rights', '© {year} {name}. All rights reserved.', { year: new Date().getFullYear(), name: siteConfig.name })}</p>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1.5 text-emerald-400">
             <ShieldCheck className="h-3.5 w-3.5" /> 99.98% SLA
           </span>
           <a href="/status" className="flex items-center gap-0.5 hover:text-white transition-colors">
-            Status <ArrowUpRight className="h-3 w-3" />
+            {t('auth.brand.status', 'Status')} <ArrowUpRight className="h-3 w-3" />
           </a>
         </div>
       </div>

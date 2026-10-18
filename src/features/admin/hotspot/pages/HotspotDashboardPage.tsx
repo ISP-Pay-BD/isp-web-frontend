@@ -28,30 +28,33 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
 import { formatMac } from '@/lib/format/network';
+import { useLocale } from '@/i18n/locale-context';
 import { Activity, BarChart3, Clock, Cpu, Laptop, MoreHorizontal, ScrollText, TrendingUp, Users, UserX } from 'lucide-react';
 
 export function HotspotDashboardPage() {
+  const { t } = useLocale();
   const hs = useHotspotRouter();
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot Live Dashboard"
-        subtitle="Live guest sessions, router health and the hotspot log of the selected router."
+        title={t('admin.hotspot.dashboard.title', 'Hotspot Live Dashboard')}
+        subtitle={t(
+          'admin.hotspot.dashboard.subtitle',
+          'Live guest sessions, router health and the hotspot log of the selected router.',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Live Dashboard' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.hotspot', 'Hotspot'), href: '/admin/hotspot' },
+          { label: t('admin.hotspot.dashboard.crumb', 'Live Dashboard') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             <HotspotRouterSelect state={hs} />
-            <Link href="/admin/hotspot/reports">
-              <Button size="sm" className="h-9">
+            <Button size="sm" className="h-9" render={<Link href="/admin/hotspot/reports" />}>
                 <BarChart3 className="mr-2 h-4 w-4" />
-                Sales Report
+                {t('admin.hotspot.dashboard.salesReport', 'Sales Report')}
               </Button>
-            </Link>
           </div>
         }
       />
@@ -63,6 +66,7 @@ export function HotspotDashboardPage() {
 }
 
 function LiveDashboard({ routerId, routerName }: { routerId: string; routerName: string }) {
+  const { t } = useLocale();
   const table = useServerTable();
   const { page, pageSize, search } = table;
   const [kick, setKick] = useState<HotspotSession | null>(null);
@@ -75,7 +79,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
     () => [
       {
         accessorKey: 'user',
-        header: 'Guest / Voucher User',
+        header: t('admin.hotspot.dashboard.colGuest', 'Guest / Voucher User'),
         enableHiding: false,
         size: 200,
         cell: ({ row }) => (
@@ -86,7 +90,9 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
             <div>
               <span className="font-semibold text-foreground text-sm">{row.original.user || '—'}</span>
               {row.original.loginBy ? (
-                <span className="text-xs text-muted-foreground block">via {row.original.loginBy}</span>
+                <span className="text-xs text-muted-foreground block">
+                  {t('admin.hotspot.dashboard.via', 'via {via}', { via: row.original.loginBy })}
+                </span>
               ) : null}
             </div>
           </div>
@@ -94,7 +100,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
       },
       {
         accessorKey: 'macAddress',
-        header: 'MAC Address',
+        header: t('admin.hotspot.col.mac', 'MAC Address'),
         size: 160,
         cell: ({ row }) =>
           row.original.macAddress ? (
@@ -107,13 +113,13 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
       },
       {
         accessorKey: 'address',
-        header: 'IP Address',
+        header: t('admin.hotspot.col.ip', 'IP Address'),
         size: 140,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.address || '—'}</span>,
       },
       {
         accessorKey: 'uptime',
-        header: 'Session Uptime',
+        header: t('admin.hotspot.dashboard.colUptime', 'Session Uptime'),
         size: 150,
         cell: ({ row }) => (
           <div className="text-xs text-muted-foreground">
@@ -121,13 +127,17 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
               <Clock className="h-3.5 w-3.5 text-primary" />
               <span>{row.original.uptime || '—'}</span>
             </div>
-            {row.original.sessionTimeLeft ? <span className="block pl-5">{row.original.sessionTimeLeft} left</span> : null}
+            {row.original.sessionTimeLeft ? (
+              <span className="block pl-5">
+                {t('admin.hotspot.dashboard.timeLeft', '{time} left', { time: row.original.sessionTimeLeft })}
+              </span>
+            ) : null}
           </div>
         ),
       },
       {
         id: 'traffic',
-        header: 'Traffic (In / Out)',
+        header: t('admin.hotspot.col.traffic', 'Traffic (In / Out)'),
         size: 170,
         cell: ({ row }) => (
           <div className="text-xs font-mono">
@@ -144,17 +154,17 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger
-              aria-label="Session options"
+              aria-label={t('admin.hotspot.dashboard.sessionOptions', 'Session Options')}
               className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
             >
               <MoreHorizontal className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Session Options</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('admin.hotspot.dashboard.sessionOptions', 'Session Options')}</DropdownMenuLabel>
                 <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setKick(row.original)}>
                   <UserX className="h-3.5 w-3.5 mr-2" />
-                  Disconnect Session
+                  {t('admin.hotspot.dashboard.disconnectSession', 'Disconnect Session')}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -162,7 +172,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (dashboard.isError) {
@@ -170,7 +180,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
       <HotspotQueryError
         error={dashboard.error}
         routerName={routerName}
-        title="Failed to load hotspot dashboard"
+        title={t('admin.hotspot.dashboard.loadFailed', 'Failed to load hotspot dashboard')}
         onRetry={() => {
           void dashboard.refetch();
           void sessions.refetch();
@@ -180,7 +190,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
   }
 
   const d = dashboard.data;
-  const routerInfo = d ? [d.boardName, d.os && `RouterOS ${d.os}`, d.uptime && `up ${d.uptime}`].filter(Boolean).join(' · ') : '';
+  const routerInfo = d ? [d.boardName, d.os && `RouterOS ${d.os}`, d.uptime && t('admin.hotspot.dashboard.up', 'up {time}', { time: d.uptime })].filter(Boolean).join(' · ') : '';
 
   return (
     <>
@@ -189,26 +199,26 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
       ) : (
         <HotspotKpiRow>
           <HotspotKpi
-            label="Live Sessions"
+            label={t('admin.hotspot.kpi.liveSessions', 'Live Sessions')}
             value={d.activeSessions}
-            hint="Guests online now"
+            hint={t('admin.hotspot.kpi.liveSessionsHint', 'Guests online now')}
             icon={<Activity className="h-4 w-4 text-emerald-500" />}
             positive
           />
           <HotspotKpi
-            label="Hotspot Users"
+            label={t('admin.hotspot.kpi.users', 'Hotspot Users')}
             value={d.totalUsers}
-            hint="Accounts & vouchers on the router"
+            hint={t('admin.hotspot.kpi.usersHint', 'Accounts & vouchers on the router')}
             icon={<Users className="h-4 w-4 text-sky-500" />}
           />
           <HotspotKpi
-            label="Sales Today"
+            label={t('admin.hotspot.kpi.salesToday', 'Sales Today')}
             value={formatBdtWithSymbol(d.incomeToday)}
-            hint={`This month ${formatBdtWithSymbol(d.incomeMonth)}`}
+            hint={t('admin.hotspot.dashboard.thisMonth', 'This month {amount}', { amount: formatBdtWithSymbol(d.incomeMonth) })}
             icon={<TrendingUp className="h-4 w-4 text-amber-500" />}
           />
           <HotspotKpi
-            label="Router CPU"
+            label={t('admin.hotspot.dashboard.routerCpu', 'Router CPU')}
             value={`${d.cpuLoad}%`}
             hint={routerInfo || undefined}
             icon={<Cpu className="h-4 w-4 text-primary" />}
@@ -220,17 +230,17 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
         <HotspotQueryError
           error={sessions.error}
           routerName={routerName}
-          title="Failed to load live sessions"
+          title={t('admin.hotspot.dashboard.sessionsFailed', 'Failed to load live sessions')}
           onRetry={() => void sessions.refetch()}
         />
       ) : (
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={sessions.data?.items ?? []}
           isLoading={sessions.isLoading}
-          emptyTitle="No guests online"
-          emptyDescription="Active hotspot sessions on this router appear here."
-          searchPlaceholder="Search by user, MAC or IP..."
+          emptyTitle={t('admin.hotspot.dashboard.emptyTitle', 'No guests online')}
+          emptyDescription={t('admin.hotspot.dashboard.emptyDesc', 'Active hotspot sessions on this router appear here.')}
+          searchPlaceholder={t('admin.hotspot.dashboard.searchPlaceholder', 'Search by user, MAC or IP...')}
           getRowId={(r) => r.id}
           server={table.server(sessions.data?.meta.total ?? 0)}
         />
@@ -241,7 +251,7 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <ScrollText className="h-4 w-4 text-primary" />
-              Hotspot Log
+              {t('admin.hotspot.dashboard.log', 'Hotspot Log')}
               <Badge variant="outline" className="ml-1 font-mono text-xs tabular-nums">
                 {d.logs.length}
               </Badge>
@@ -265,16 +275,23 @@ function LiveDashboard({ routerId, routerName }: { routerId: string; routerName:
         onOpenChange={(open) => {
           if (!open) setKick(null);
         }}
-        title="Disconnect this session?"
-        description={kick ? `${kick.user || kick.address} will be logged out of the hotspot and can log in again.` : undefined}
-        confirmLabel="Disconnect"
+        title={t('admin.hotspot.dashboard.disconnectTitle', 'Disconnect this session?')}
+        description={
+          kick
+            ? t('admin.hotspot.dashboard.disconnectDesc', '{who} will be logged out of the hotspot and can log in again.', {
+                who: kick.user || kick.address,
+              })
+            : undefined
+        }
+        confirmLabel={t('admin.hotspot.dashboard.disconnect', 'Disconnect')}
         destructive
         onConfirm={() => {
           if (!kick) return;
           const target = kick;
           setKick(null);
           disconnect.mutate(target.id, {
-            onSuccess: () => toast.success(`${target.user || target.address} disconnected`),
+            onSuccess: () =>
+              toast.success(t('admin.hotspot.dashboard.disconnected', '{who} disconnected', { who: target.user || target.address })),
           });
         }}
       />

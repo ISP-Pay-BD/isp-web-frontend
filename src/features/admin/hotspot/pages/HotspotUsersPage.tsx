@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatMac, isValidMac } from '@/lib/format/network';
+import { useLocale } from '@/i18n/locale-context';
 import {
   Plus,
   Users,
@@ -63,18 +64,22 @@ const DURATION_RE = /^(\d{1,4}[wdhm]){1,4}$/;
 const ALL_PROFILES = '__all__';
 
 export function HotspotUsersPage() {
+  const { t } = useLocale();
   const hs = useHotspotRouter();
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot Users & Client Accounts"
-        subtitle="Hotspot logins on the selected router: bound MAC, time limit, traffic and status."
+        title={t('admin.hotspot.users.title', 'Hotspot Users & Client Accounts')}
+        subtitle={t(
+          'admin.hotspot.users.subtitle',
+          'Hotspot logins on the selected router: bound MAC, time limit, traffic and status.',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Users' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.hotspot', 'Hotspot'), href: '/admin/hotspot' },
+          { label: t('admin.hotspot.users.crumb', 'Users') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
@@ -82,7 +87,7 @@ export function HotspotUsersPage() {
             {hs.router ? (
               <Button size="sm" onClick={() => setCreateOpen(true)} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Hotspot User
+                {t('admin.hotspot.users.add', 'Add Hotspot User')}
               </Button>
             ) : null}
           </div>
@@ -114,6 +119,7 @@ function UsersBody({
   createOpen: boolean;
   onCreateOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useLocale();
   const table = useServerTable();
   const { page, pageSize, search } = table;
   const [profileFilter, setProfileFilter] = useState('');
@@ -133,7 +139,7 @@ function UsersBody({
     () => [
       {
         accessorKey: 'name',
-        header: 'User Account',
+        header: t('admin.hotspot.users.colAccount', 'User Account'),
         enableHiding: false,
         size: 220,
         cell: ({ row }) => (
@@ -152,7 +158,7 @@ function UsersBody({
       },
       {
         accessorKey: 'profile',
-        header: 'Profile',
+        header: t('admin.hotspot.col.profile', 'Profile'),
         size: 150,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background font-medium">
@@ -162,7 +168,7 @@ function UsersBody({
       },
       {
         accessorKey: 'macAddress',
-        header: 'Bound MAC',
+        header: t('admin.hotspot.users.colMac', 'Bound MAC'),
         size: 160,
         cell: ({ row }) =>
           row.original.macAddress ? (
@@ -170,25 +176,25 @@ function UsersBody({
               {formatMac(row.original.macAddress)}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">Not bound</span>
+            <span className="text-xs text-muted-foreground">{t('admin.hotspot.users.notBound', 'Not bound')}</span>
           ),
       },
       {
         id: 'time',
-        header: 'Uptime / Limit',
+        header: t('admin.hotspot.users.colTime', 'Uptime / Limit'),
         size: 150,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5 text-primary" />
             <span>
-              {row.original.uptime || '0s'} / {row.original.limitUptime || 'no limit'}
+              {row.original.uptime || '0s'} / {row.original.limitUptime || t('admin.hotspot.users.noLimit', 'no limit')}
             </span>
           </div>
         ),
       },
       {
         id: 'traffic',
-        header: 'Traffic (In / Out)',
+        header: t('admin.hotspot.col.traffic', 'Traffic (In / Out)'),
         size: 170,
         cell: ({ row }) => (
           <div className="text-xs font-mono">
@@ -200,16 +206,16 @@ function UsersBody({
       },
       {
         accessorKey: 'disabled',
-        header: 'Status',
+        header: t('admin.hotspot.col.status', 'Status'),
         size: 110,
         cell: ({ row }) => {
           const enabled = !row.original.disabled;
           return (
             <Badge
               variant="outline"
-              className={enabled ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-muted text-muted-foreground'}
+              tone={enabled ? 'success' : 'neutral'}
             >
-              {enabled ? 'Enabled' : 'Disabled'}
+              {enabled ? t('admin.hotspot.users.enabled', 'Enabled') : t('admin.hotspot.users.disabled', 'Disabled')}
             </Badge>
           );
         },
@@ -223,47 +229,59 @@ function UsersBody({
           return (
             <DropdownMenu>
               <DropdownMenuTrigger
-                aria-label={`Actions for ${u.name}`}
+                aria-label={t('admin.customers.list.actionsFor', 'Actions for {name}', { name: u.name })}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>User Actions</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('admin.hotspot.users.actions', 'User Actions')}</DropdownMenuLabel>
                   <DropdownMenuItem disabled={!u.limitUptime} onClick={() => setExtendTarget(u)}>
                     <Clock className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                    {u.limitUptime ? 'Extend Time Limit' : 'No Time Limit'}
+                    {u.limitUptime
+                      ? t('admin.hotspot.users.extend', 'Extend Time Limit')
+                      : t('admin.hotspot.users.noTimeLimit', 'No Time Limit')}
                   </DropdownMenuItem>
                   {u.macAddress ? (
                     <DropdownMenuItem
                       onClick={() =>
                         mutateUser(
                           { id: u.id, resetMac: true },
-                          { onSuccess: () => toast.success(`MAC binding cleared for ${u.name}`) },
+                          {
+                            onSuccess: () =>
+                              toast.success(t('admin.hotspot.users.macCleared', 'MAC binding cleared for {name}', { name: u.name })),
+                          },
                         )
                       }
                     >
                       <RotateCcw className="h-3.5 w-3.5 mr-2" />
-                      Reset MAC Binding
+                      {t('admin.hotspot.users.resetMac', 'Reset MAC Binding')}
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem
                     onClick={() =>
                       mutateUser(
                         { id: u.id, disabled: !u.disabled },
-                        { onSuccess: () => toast.success(`${u.name} ${u.disabled ? 'enabled' : 'disabled'}`) },
+                        {
+                          onSuccess: () =>
+                            toast.success(
+                              u.disabled
+                                ? t('admin.hotspot.users.userEnabled', '{name} enabled', { name: u.name })
+                                : t('admin.hotspot.users.userDisabled', '{name} disabled', { name: u.name }),
+                            ),
+                        },
                       )
                     }
                   >
                     {u.disabled ? <Power className="h-3.5 w-3.5 mr-2" /> : <Ban className="h-3.5 w-3.5 mr-2" />}
-                    {u.disabled ? 'Enable User' : 'Disable User'}
+                    {u.disabled ? t('admin.hotspot.users.enable', 'Enable User') : t('admin.hotspot.users.disable', 'Disable User')}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleteTarget(u)}>
                   <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Delete User
+                  {t('admin.hotspot.users.delete', 'Delete User')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -271,7 +289,7 @@ function UsersBody({
         },
       },
     ],
-    [mutateUser],
+    [mutateUser, t],
   );
 
   if (users.isError) {
@@ -279,7 +297,7 @@ function UsersBody({
       <HotspotQueryError
         error={users.error}
         routerName={routerName}
-        title="Failed to load hotspot users"
+        title={t('admin.hotspot.users.loadFailed', 'Failed to load hotspot users')}
         onRetry={() => void users.refetch()}
       />
     );
@@ -291,39 +309,47 @@ function UsersBody({
     <>
       <HotspotKpiRow>
         <HotspotKpi
-          label={search || profileFilter ? 'Matching Users' : 'Total Users'}
+          label={
+            search || profileFilter
+              ? t('admin.hotspot.users.kpiMatching', 'Matching Users')
+              : t('admin.hotspot.users.kpiTotal', 'Total Users')
+          }
           value={users.isLoading ? '—' : total}
-          hint="Users & voucher accounts"
+          hint={t('admin.hotspot.users.kpiTotalHint', 'Users & voucher accounts')}
           icon={<Users className="h-4 w-4 text-primary" />}
         />
         <HotspotKpi
-          label="Enabled"
+          label={t('admin.hotspot.users.enabled', 'Enabled')}
           value={summary ? summary.enabled : '—'}
-          hint="Allowed to log in"
+          hint={t('admin.hotspot.users.kpiEnabledHint', 'Allowed to log in')}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           positive
         />
         <HotspotKpi
-          label="Disabled"
+          label={t('admin.hotspot.users.disabled', 'Disabled')}
           value={summary ? summary.disabled : '—'}
-          hint="Blocked from logging in"
+          hint={t('admin.hotspot.users.kpiDisabledHint', 'Blocked from logging in')}
           icon={<Ban className="h-4 w-4 text-muted-foreground" />}
         />
         <HotspotKpi
-          label="Total Traffic"
+          label={t('admin.hotspot.users.kpiTraffic', 'Total Traffic')}
           value={summary ? formatBytes(summary.bytesIn + summary.bytesOut) : '—'}
-          hint="Counted on the router"
+          hint={t('admin.hotspot.users.kpiTrafficHint', 'Counted on the router')}
           icon={<ArrowDownUp className="h-4 w-4 text-primary" />}
         />
       </HotspotKpiRow>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={users.data?.items ?? []}
         isLoading={users.isLoading}
-        emptyTitle={search || profileFilter ? 'No users match' : 'No hotspot users yet'}
-        emptyDescription="Hotspot users on this router appear here."
-        searchPlaceholder="Search by username or comment..."
+        emptyTitle={
+          search || profileFilter
+            ? t('admin.hotspot.users.emptyFiltered', 'No users match')
+            : t('admin.hotspot.users.emptyTitle', 'No hotspot users yet')
+        }
+        emptyDescription={t('admin.hotspot.users.emptyDesc', 'Hotspot users on this router appear here.')}
+        searchPlaceholder={t('admin.hotspot.users.searchPlaceholder', 'Search by username or comment...')}
         getRowId={(r) => r.id}
         toolbarActions={
           profiles.length > 0 ? (
@@ -334,11 +360,11 @@ function UsersBody({
                 table.resetPage();
               }}
             >
-              <SelectTrigger className="h-9 min-w-40" aria-label="Filter by profile">
+              <SelectTrigger className="h-9 min-w-40" aria-label={t('admin.hotspot.users.filterProfile', 'Filter by profile')}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_PROFILES}>All profiles</SelectItem>
+                <SelectItem value={ALL_PROFILES}>{t('admin.hotspot.users.allProfiles', 'All profiles')}</SelectItem>
                 {profiles.map((p) => (
                   <SelectItem key={p.id || p.name} value={p.name}>
                     {p.name}
@@ -370,7 +396,14 @@ function UsersBody({
             { id: target.id, extendUptime },
             {
               onSuccess: (res) => {
-                toast.success(`${target.name} time limit is now ${res?.limit_uptime ?? 'extended'}`);
+                toast.success(
+                  res?.limit_uptime
+                    ? t('admin.hotspot.users.extendedTo', '{name} time limit is now {limit}', {
+                        name: target.name,
+                        limit: res.limit_uptime,
+                      })
+                    : t('admin.hotspot.users.extended', '{name} time limit extended', { name: target.name }),
+                );
                 setExtendTarget(null);
               },
             },
@@ -383,15 +416,23 @@ function UsersBody({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Delete this hotspot user?"
-        description={deleteTarget ? `${deleteTarget.name} will be removed from the router and can no longer log in.` : undefined}
-        confirmLabel="Delete"
+        title={t('admin.hotspot.users.deleteTitle', 'Delete this hotspot user?')}
+        description={
+          deleteTarget
+            ? t('admin.hotspot.users.deleteDesc', '{name} will be removed from the router and can no longer log in.', {
+                name: deleteTarget.name,
+              })
+            : undefined
+        }
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           const target = deleteTarget;
           setDeleteTarget(null);
           if (!target) return;
-          remove.mutate(target.id, { onSuccess: () => toast.success(`${target.name} deleted`) });
+          remove.mutate(target.id, {
+            onSuccess: () => toast.success(t('admin.hotspot.users.deleted', '{name} deleted', { name: target.name })),
+          });
         }}
       />
     </>
@@ -409,6 +450,7 @@ function ExtendDialog({
   onClose: () => void;
   onSubmit: (duration: string) => void;
 }) {
+  const { t } = useLocale();
   const [duration, setDuration] = useState('1d');
   const valid = DURATION_RE.test(duration.trim());
 
@@ -429,32 +471,41 @@ function ExtendDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Extend Time Limit
+              {t('admin.hotspot.users.extend', 'Extend Time Limit')}
             </DialogTitle>
             <DialogDescription>
-              {user ? `${user.name} can be online for ${user.limitUptime} in total. Add more time to that limit.` : null}
+              {user
+                ? t('admin.hotspot.users.extendDesc', '{name} can be online for {limit} in total. Add more time to that limit.', {
+                    name: user.name,
+                    limit: user.limitUptime,
+                  })
+                : null}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5 py-4">
-            <Label htmlFor="ext-duration">Add time</Label>
+            <Label htmlFor="ext-duration">{t('admin.hotspot.users.addTime', 'Add time')}</Label>
             <Input
               id="ext-duration"
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              placeholder="e.g. 1h, 1d, 7d"
+              placeholder={t('admin.hotspot.users.addTimePlaceholder', 'e.g. 1h, 1d, 7d')}
               className="font-mono"
               aria-invalid={!valid}
               required
             />
-            {!valid ? <p className="text-destructive text-xs">Use a duration like 30m, 12h, 1d or 1w.</p> : null}
+            {!valid ? (
+              <p className="text-destructive text-xs">
+                {t('admin.hotspot.users.durationError', 'Use a duration like 30m, 12h, 1d or 1w.')}
+              </p>
+            ) : null}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={!valid || pending}>
               {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Extend
+              {t('admin.hotspot.users.extendAction', 'Extend')}
             </Button>
           </DialogFooter>
         </form>
@@ -487,14 +538,15 @@ function CreateUserDialog({
   profiles: HotspotProfile[];
   servers: string[];
 }) {
+  const { t } = useLocale();
   const create = useCreateHotspotUser(routerId);
   const [form, setForm] = useState<CreateHotspotUserInput>(EMPTY_USER);
   const set = (patch: Partial<CreateHotspotUserInput>) => setForm((f) => ({ ...f, ...patch }));
   const profile = form.profile || profiles[0]?.name || '';
 
-  const macError = form.macAddress && !isValidMac(form.macAddress) ? 'Use the form AA:BB:CC:DD:EE:FF' : '';
-  const timeError = form.timeLimit && !DURATION_RE.test(form.timeLimit) ? 'Use a duration like 12h or 1d' : '';
-  const nameError = /\s/.test(form.name) ? 'No spaces in usernames' : '';
+  const macError = form.macAddress && !isValidMac(form.macAddress) ? t('admin.hotspot.users.macError', 'Use the form AA:BB:CC:DD:EE:FF') : '';
+  const timeError = form.timeLimit && !DURATION_RE.test(form.timeLimit) ? t('admin.hotspot.users.timeError', 'Use a duration like 12h or 1d') : '';
+  const nameError = /\s/.test(form.name) ? t('admin.hotspot.users.nameError', 'No spaces in usernames') : '';
   const invalid = Boolean(macError || timeError || nameError) || !form.name.trim() || !form.password || !profile;
 
   const close = (next: boolean) => {
@@ -513,7 +565,7 @@ function CreateUserDialog({
               { ...form, name: form.name.trim(), profile, macAddress: form.macAddress ? formatMac(form.macAddress) : '' },
               {
                 onSuccess: () => {
-                  toast.success(`Hotspot user "${form.name.trim()}" created`);
+                  toast.success(t('admin.hotspot.users.created', 'Hotspot user "{name}" created', { name: form.name.trim() }));
                   close(false);
                 },
               },
@@ -523,30 +575,38 @@ function CreateUserDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Add Hotspot User
+              {t('admin.hotspot.users.add', 'Add Hotspot User')}
             </DialogTitle>
-            <DialogDescription>Creates a login on the router with the selected profile.</DialogDescription>
+            <DialogDescription>
+              {t('admin.hotspot.users.createDesc', 'Creates a login on the router with the selected profile.')}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="usr-name">Username *</Label>
+                <Label htmlFor="usr-name">{t('admin.hotspot.users.username', 'Username *')}</Label>
                 <Input id="usr-name" value={form.name} onChange={(e) => set({ name: e.target.value })} aria-invalid={Boolean(nameError)} required />
                 {nameError ? <p className="text-destructive text-xs">{nameError}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="usr-pass">Password *</Label>
+                <Label htmlFor="usr-pass">{t('admin.hotspot.users.password', 'Password *')}</Label>
                 <Input id="usr-pass" value={form.password} onChange={(e) => set({ password: e.target.value })} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="usr-profile">Profile *</Label>
+                <Label htmlFor="usr-profile">{t('admin.hotspot.users.profileRequired', 'Profile *')}</Label>
                 <Select value={profile || null} onValueChange={(v) => v && set({ profile: String(v) })}>
                   <SelectTrigger id="usr-profile" className="w-full">
-                    <SelectValue placeholder={profiles.length ? 'Select profile' : 'No profiles on router'} />
+                    <SelectValue
+                      placeholder={
+                        profiles.length
+                          ? t('admin.hotspot.users.selectProfile', 'Select profile')
+                          : t('admin.hotspot.users.noProfiles', 'No profiles on router')
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {profiles.map((p) => (
@@ -558,13 +618,13 @@ function CreateUserDialog({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="usr-server">Hotspot Server</Label>
+                <Label htmlFor="usr-server">{t('admin.hotspot.users.server', 'Hotspot Server')}</Label>
                 <Select value={form.server || 'all'} onValueChange={(v) => set({ server: v && v !== 'all' ? String(v) : '' })}>
                   <SelectTrigger id="usr-server" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All servers</SelectItem>
+                    <SelectItem value="all">{t('admin.hotspot.users.allServers', 'All servers')}</SelectItem>
                     {servers.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
@@ -577,57 +637,62 @@ function CreateUserDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="usr-time">Time Limit</Label>
+                <Label htmlFor="usr-time">{t('admin.hotspot.users.timeLimit', 'Time Limit')}</Label>
                 <Input
                   id="usr-time"
                   value={form.timeLimit}
                   onChange={(e) => set({ timeLimit: e.target.value.trim() })}
-                  placeholder="From profile if empty"
+                  placeholder={t('admin.hotspot.users.timeLimitPlaceholder', 'From profile if empty')}
                   className="font-mono"
                   aria-invalid={Boolean(timeError)}
                 />
                 {timeError ? <p className="text-destructive text-xs">{timeError}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="usr-data">Data Limit (MB)</Label>
+                <Label htmlFor="usr-data">{t('admin.hotspot.users.dataLimit', 'Data Limit (MB)')}</Label>
                 <Input
                   id="usr-data"
                   type="number"
                   min={0}
                   value={form.dataLimitMb}
                   onChange={(e) => set({ dataLimitMb: e.target.value })}
-                  placeholder="Unlimited if empty"
+                  placeholder={t('admin.hotspot.users.dataLimitPlaceholder', 'Unlimited if empty')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="usr-mac">Bound MAC Address</Label>
+                <Label htmlFor="usr-mac">{t('admin.hotspot.users.boundMac', 'Bound MAC Address')}</Label>
                 <Input
                   id="usr-mac"
                   value={form.macAddress}
                   onChange={(e) => set({ macAddress: e.target.value.trim() })}
-                  placeholder="Optional"
+                  placeholder={t('admin.hotspot.users.optional', 'Optional')}
                   className="font-mono uppercase"
                   aria-invalid={Boolean(macError)}
                 />
                 {macError ? <p className="text-destructive text-xs">{macError}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="usr-comment">Comment</Label>
-                <Input id="usr-comment" value={form.comment} onChange={(e) => set({ comment: e.target.value })} placeholder="Optional" />
+                <Label htmlFor="usr-comment">{t('admin.hotspot.users.comment', 'Comment')}</Label>
+                <Input
+                  id="usr-comment"
+                  value={form.comment}
+                  onChange={(e) => set({ comment: e.target.value })}
+                  placeholder={t('admin.hotspot.users.optional', 'Optional')}
+                />
               </div>
             </div>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => close(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={invalid || create.isPending}>
               {create.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create User
+              {t('admin.hotspot.users.createAction', 'Create User')}
             </Button>
           </DialogFooter>
         </form>

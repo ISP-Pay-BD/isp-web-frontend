@@ -3,6 +3,7 @@
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { gatewayLabel } from '../hooks/use-platform-checkout';
+import { useTranslations } from '@/i18n/locale-context';
 
 const BRAND: Record<string, string> = {
   bkash: '#e2136e',
@@ -22,8 +23,9 @@ export function GatewayPicker({
   onChange: (slug: string) => void;
   className?: string;
 }) {
+  const t = useTranslations();
   if (!providers.length) {
-    return <p className="text-xs text-muted-foreground">No online payment gateway is available right now.</p>;
+    return <p className="text-xs text-muted-foreground">{t('admin.payment.gateway.none', 'No online payment gateway is available right now.')}</p>;
   }
   return (
     <div className={cn('grid gap-2 grid-cols-2 sm:grid-cols-3', className)}>

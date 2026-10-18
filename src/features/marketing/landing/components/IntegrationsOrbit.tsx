@@ -47,7 +47,7 @@ export function IntegrationsOrbit({ integrations, plugins }: IntegrationsOrbitPr
                   className="h-full w-auto object-contain"
                 />
               </div>
-              <p className="mt-5 text-[11px] font-medium tracking-wide text-white/45">
+              <p className="mt-5 text-[11px] font-medium tracking-wide text-white/60">
                 {k('coreRail')}
               </p>
               <h3 className="font-landing-display mt-1.5 text-xl font-semibold text-white">
@@ -59,7 +59,7 @@ export function IntegrationsOrbit({ integrations, plugins }: IntegrationsOrbitPr
         </Reveal>
 
         <Reveal className="mt-10">
-          <p className="text-sm text-white/45">{k('also')}</p>
+          <p className="text-sm text-white/60">{k('also')}</p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {integrations.map((item) => (
               <li

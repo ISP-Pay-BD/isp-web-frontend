@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PortalPageMotion } from '@/components/layout/PortalPageMotion';
 import { AuthGuard, ExpiredBanner } from '@/features/shared/permission';
+import { CustomerBottomNav } from '@/features/customer/shared/components/CustomerBottomNav';
 
 export default function CustomerPortalLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function CustomerPortalLayout({ children }: { children: ReactNode
       <AuthGuard allowedRoles={['user']}>
         <ExpiredBanner />
         <PortalPageMotion>{children}</PortalPageMotion>
+        <CustomerBottomNav />
       </AuthGuard>
     </AppShell>
   );

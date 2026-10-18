@@ -47,7 +47,7 @@ export function OperatorConsole({
         <span className="size-2.5 rounded-full bg-white/15" />
         <span className="size-2.5 rounded-full bg-white/15" />
         <span className="size-2.5 rounded-full bg-white/15" />
-        <span className="ml-3 truncate rounded-md bg-white/[0.05] px-3 py-1 font-mono text-[11px] text-white/40">
+        <span className="ml-3 truncate rounded-md bg-white/[0.05] px-3 py-1 font-mono text-[11px] text-white/60">
           isppaybd.com/admin/payments
         </span>
       </div>
@@ -59,7 +59,7 @@ export function OperatorConsole({
               key={key}
               className={cn(
                 'rounded-lg px-3 py-2',
-                key === 'navPayments' && 'bg-landing-cta/10 text-landing-cta font-medium',
+                key === 'navPayments' && 'bg-landing-cta/10 text-landing-accent font-medium',
               )}
             >
               {k(key)}
@@ -70,7 +70,7 @@ export function OperatorConsole({
         <div className="min-w-0 flex-1 p-5">
           <div className="flex items-baseline justify-between">
             <p className="font-landing-display text-base font-semibold text-white">{k('title')}</p>
-            <span className="text-xs text-white/40">{k('today')}</span>
+            <span className="text-xs text-white/60">{k('today')}</span>
           </div>
 
           <dl className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
@@ -79,14 +79,14 @@ export function OperatorConsole({
                 <dd className="font-landing-display mt-1 text-lg font-semibold text-white tabular-nums">
                   {item.value}
                 </dd>
-                <dt className="text-[11px] text-white/45">{item.label}</dt>
+                <dt className="text-[11px] text-white/60">{item.label}</dt>
               </div>
             ))}
           </dl>
 
           <table className="mt-4 w-full text-left text-xs">
             <thead>
-              <tr className="border-b border-white/10 text-[11px] text-white/40">
+              <tr className="border-b border-white/10 text-[11px] text-white/60">
                 <th className="py-2 pr-3 font-medium">{k('colTime')}</th>
                 <th className="py-2 pr-3 font-medium">{k('colGateway')}</th>
                 <th className="hidden py-2 pr-3 font-medium xl:table-cell">TrxID</th>
@@ -100,7 +100,7 @@ export function OperatorConsole({
                 const status = STATUS[payment.status];
                 return (
                   <tr key={payment.trxId} className="border-b border-white/[0.06] last:border-0">
-                    <td className="py-2.5 pr-3 text-white/40">{payment.time}</td>
+                    <td className="py-2.5 pr-3 text-white/60">{payment.time}</td>
                     <td className="py-2.5 pr-3 font-sans text-white/80">{payment.gateway}</td>
                     <td className="hidden py-2.5 pr-3 text-white/55 xl:table-cell">
                       {payment.trxId}

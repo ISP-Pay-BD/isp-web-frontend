@@ -26,6 +26,7 @@ import { DataTable } from '@/features/shared/data-table';
 import { toast } from 'sonner';
 import { Pin, Plus, Newspaper, Eye, CheckCircle2, Edit, Trash2 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useAdminNews,
   useDeleteNews,
@@ -35,12 +36,16 @@ import {
   type NewsStatus,
 } from '../hooks/use-admin-news';
 
-const AUDIENCE_LABEL: Record<NewsAudience, string> = {
-  all: 'All Audiences',
-  customers: 'Broadband Customers',
-  resellers: 'Reseller POPs',
-  employees: 'Employees',
-};
+type Translate = ReturnType<typeof useTranslations>;
+
+function audienceLabels(t: Translate): Record<NewsAudience, string> {
+  return {
+    all: t('admin.news.audience.all', 'All Audiences'),
+    customers: t('admin.news.audience.customers', 'Broadband Customers'),
+    resellers: t('admin.news.audience.resellers', 'Reseller POPs'),
+    employees: t('admin.news.audience.employees', 'Employees'),
+  };
+}
 
 interface NoticeForm {
   title: string;
@@ -54,6 +59,9 @@ interface NoticeForm {
 const EMPTY: NoticeForm = { title: '', audience: 'all', status: 'published', body: '', url: '', image: null };
 
 export function AdminNewsPage() {
+  const t = useTranslations();
+  const AUDIENCE_LABEL = audienceLabels(t);
+  const statusLabel = (s: NewsStatus) => (s === 'published' ? t('admin.news.status.published', 'Published') : t('admin.news.status.draft', 'Draft'));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -77,12 +85,12 @@ export function AdminNewsPage() {
   const handleTogglePin = (item: NewsItem) =>
     saveNews.mutate(
       { id: item.id, input: { pinned: !item.pinned } },
-      { onSuccess: () => toast.success(!item.pinned ? 'Notice pinned to the top of subscriber feeds' : 'Notice unpinned') },
+      { onSuccess: () => toast.success(!item.pinned ? t('admin.news.toast.pinned', 'Notice pinned to the top of subscriber feeds') : t('admin.news.toast.unpinned', 'Notice unpinned')) },
     );
 
   const handleSave = () => {
     if (!form.title.trim() || !form.body.trim()) {
-      toast.error('Notice title and content are required');
+      toast.error(t('admin.news.toast.required', 'Notice title and content are required'));
       return;
     }
     saveNews.mutate(
@@ -92,7 +100,13 @@ export function AdminNewsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(editingId ? 'Notice updated' : form.status === 'published' ? `Notice "${form.title.trim()}" published` : 'Notice saved as draft');
+          toast.success(
+            editingId
+              ? t('admin.news.toast.updated', 'Notice updated')
+              : form.status === 'published'
+                ? t('admin.news.toast.published', 'Notice "{title}" published', { title: form.title.trim() })
+                : t('admin.news.toast.draftSaved', 'Notice saved as draft'),
+          );
           setEditorOpen(false);
         },
       },
@@ -103,16 +117,16 @@ export function AdminNewsPage() {
     () => [
       {
         accessorKey: 'title',
-        header: 'Notice Title & Overview',
+        header: t('admin.news.colTitle', 'Notice Title & Overview'),
         size: 280,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="max-w-md space-y-1">
             <div className="flex items-center gap-2 font-semibold text-xs text-foreground">
               {row.original.pinned && (
-                <Badge variant="secondary" className="gap-1 text-[10px] bg-amber-500/15 text-amber-500 border border-amber-500/30 px-1.5 py-0">
+                <Badge variant="secondary" tone="warning" className="gap-1 text-xs border px-1.5 py-0">
                   <Pin className="h-3 w-3 fill-current" />
-                  Pinned
+                  {t('admin.news.pinned', 'Pinned')}
                 </Badge>
               )}
               <span>{row.original.title}</span>
@@ -123,29 +137,29 @@ export function AdminNewsPage() {
       },
       {
         accessorKey: 'audience',
-        header: 'Target Audience',
+        header: t('admin.news.colAudience', 'Target Audience'),
         size: 150,
-        cell: ({ row }) => <Badge variant="outline" className="text-[10px] font-mono">{AUDIENCE_LABEL[row.original.audience]}</Badge>,
+        cell: ({ row }) => <Badge variant="outline" className="text-xs font-mono">{AUDIENCE_LABEL[row.original.audience]}</Badge>,
       },
       {
         accessorKey: 'status',
-        header: 'Publication Status',
+        header: t('admin.news.colStatus', 'Publication Status'),
         size: 130,
         cell: ({ row }) => {
           const s = row.original.status;
           return (
             <Badge
               variant={s === 'published' ? 'default' : 'secondary'}
-              className={`text-[10px] font-mono capitalize ${s === 'published' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
+              tone={s === 'published' ? 'success' : undefined} className="text-xs font-mono capitalize"
             >
-              {s}
+              {statusLabel(s)}
             </Badge>
           );
         },
       },
       {
         accessorKey: 'publishedAt',
-        header: 'Created',
+        header: t('admin.news.colCreated', 'Created'),
         size: 130,
         cell: ({ row }) => (
           <span className="font-mono text-xs text-muted-foreground">{row.original.publishedAt ? formatDate(row.original.publishedAt) : '—'}</span>
@@ -153,7 +167,7 @@ export function AdminNewsPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
         size: 200,
         enableSorting: false,
         enableHiding: false,
@@ -164,18 +178,18 @@ export function AdminNewsPage() {
               variant="ghost"
               className={`h-8 text-xs gap-1 ${row.original.pinned ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground'}`}
               onClick={() => handleTogglePin(row.original)}
-              title={row.original.pinned ? 'Unpin Notice' : 'Pin to Top'}
+              title={row.original.pinned ? t('admin.news.unpinNotice', 'Unpin Notice') : t('admin.news.pinToTop', 'Pin to Top')}
             >
               <Pin className={`h-3.5 w-3.5 ${row.original.pinned ? 'fill-current' : ''}`} />
-              <span className="hidden sm:inline">{row.original.pinned ? 'Unpin' : 'Pin'}</span>
+              <span className="hidden sm:inline">{row.original.pinned ? t('admin.news.unpin', 'Unpin') : t('admin.news.pin', 'Pin')}</span>
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => setPreviewItem(row.original)} title="View">
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => setPreviewItem(row.original)} title={t('admin.news.view', 'View')} aria-label={t('admin.news.view', 'View')}>
               <Eye className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditor(row.original)} title="Edit">
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditor(row.original)} title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}>
               <Edit className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(row.original.id)} title="Delete">
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(row.original.id)} title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -183,12 +197,20 @@ export function AdminNewsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [t],
   );
 
   if (news.isLoading) return <PageSkeleton variant="table" />;
   if (news.isError && !news.data) {
-    return <EmptyState title="Failed to load news" description="Could not fetch notices." actionLabel="Retry" onAction={() => news.refetch()} />;
+    return (
+      <EmptyState
+        variant="error"
+        title={t('admin.news.loadFailed', 'Failed to load news')}
+        description={t('admin.news.loadFailedDesc', 'Could not fetch notices.')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
+        onAction={() => news.refetch()}
+      />
+    );
   }
 
   const stats = news.data?.stats;
@@ -196,27 +218,27 @@ export function AdminNewsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="News & Notices"
-        subtitle="Publish maintenance bulletins, offers and service announcements to subscriber portals and the mobile app"
+        title={t('admin.news.title', 'News & Notices')}
+        subtitle={t('admin.news.subtitle', 'Publish maintenance bulletins, offers and service announcements to subscriber portals and the mobile app')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Engagement' },
-          { label: 'News & Notices' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.engagement', 'Engagement') },
+          { label: t('admin.news.title', 'News & Notices') },
         ]}
         actions={
           <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => openEditor(null)}>
             <Plus className="h-4 w-4" />
-            Publish Notice
+            {t('admin.news.publishNotice', 'Publish Notice')}
           </Button>
         }
       />
 
       <OpsSummaryStrip
         items={[
-          { label: 'Total Notices', value: stats?.total ?? 0 },
-          { label: 'Active Published', value: `${stats?.published ?? 0} Live` },
-          { label: 'Drafts', value: stats?.draft ?? 0 },
-          { label: 'Pinned Bulletins', value: `${stats?.pinned ?? 0} Featured` },
+          { label: t('admin.news.kpiTotal', 'Total Notices'), value: stats?.total ?? 0 },
+          { label: t('admin.news.kpiPublished', 'Active Published'), value: t('admin.news.kpiLive', '{n} Live', { n: stats?.published ?? 0 }) },
+          { label: t('admin.news.kpiDrafts', 'Drafts'), value: stats?.draft ?? 0 },
+          { label: t('admin.news.kpiPinned', 'Pinned Bulletins'), value: t('admin.news.kpiFeatured', '{n} Featured', { n: stats?.pinned ?? 0 }) },
         ]}
       />
 
@@ -226,31 +248,39 @@ export function AdminNewsPage() {
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <Newspaper className="h-4 w-4 text-primary" />
-                Portal Bulletins & News Articles
+                {t('admin.news.cardTitle', 'Portal Bulletins & News Articles')}
               </CardTitle>
-              <CardDescription>Published notices appear in the customer portal and app feed; pinned ones stay on top</CardDescription>
+              <CardDescription>{t('admin.news.cardDesc', 'Published notices appear in the customer portal and app feed; pinned ones stay on top')}</CardDescription>
             </div>
-            <Select value={status} onValueChange={(v) => { if (v) { setStatus(v); setPage(1); } }}>
-              <SelectTrigger className="h-9 w-[140px] text-xs">
+            <Select
+              value={status}
+              onValueChange={(v) => { if (v) { setStatus(v); setPage(1); } }}
+              items={{
+                all: t('admin.news.filterAll', 'All statuses'),
+                published: t('admin.news.status.published', 'Published'),
+                draft: t('admin.news.filterDrafts', 'Drafts'),
+              }}
+            >
+              <SelectTrigger aria-label={t('admin.news.filterStatus', 'Filter by status')} className="h-9 min-w-[140px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-                <SelectItem value="draft">Drafts</SelectItem>
+                <SelectItem value="all">{t('admin.news.filterAll', 'All statuses')}</SelectItem>
+                <SelectItem value="published">{t('admin.news.status.published', 'Published')}</SelectItem>
+                <SelectItem value="draft">{t('admin.news.filterDrafts', 'Drafts')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataTable urlState
             columns={columns}
             data={news.data?.items ?? []}
             getRowId={(row) => row.id}
             searchKey="title"
-            searchPlaceholder="Search notices by title or content..."
-            emptyTitle="No notices yet"
-            emptyDescription="Publish your first notice to reach subscribers."
+            searchPlaceholder={t('admin.news.searchPlaceholder', 'Search notices by title or content...')}
+            emptyTitle={t('admin.news.emptyTitle', 'No notices yet')}
+            emptyDescription={t('admin.news.emptyDesc', 'Publish your first notice to reach subscribers.')}
             server={{
               page,
               pageSize,
@@ -269,7 +299,7 @@ export function AdminNewsPage() {
             toolbarActions={
               <Button size="sm" onClick={() => openEditor(null)} className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                New Notice
+                {t('admin.news.newNotice', 'New Notice')}
               </Button>
             }
           />
@@ -281,20 +311,20 @@ export function AdminNewsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Newspaper className="h-5 w-5 text-primary" />
-              {editingId ? 'Edit Notice' : 'Publish News Notice'}
+              {editingId ? t('admin.news.editTitle', 'Edit Notice') : t('admin.news.publishTitle', 'Publish News Notice')}
             </DialogTitle>
-            <DialogDescription>Shown in customer portals and the mobile self-care app.</DialogDescription>
+            <DialogDescription>{t('admin.news.editorDesc', 'Shown in customer portals and the mobile self-care app.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Notice Title</Label>
-              <Input value={form.title} maxLength={100} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Scheduled maintenance tonight" className="text-xs" />
+              <Label htmlFor="notice-title" className="text-xs font-semibold">{t('admin.news.fieldTitle', 'Notice Title')}</Label>
+              <Input id="notice-title" value={form.title} maxLength={100} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t('admin.news.titlePlaceholder', 'e.g. Scheduled maintenance tonight')} className="text-xs" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Target Audience</Label>
-                <Select value={form.audience} onValueChange={(v) => { if (v) setForm({ ...form, audience: v as NewsAudience }); }}>
-                  <SelectTrigger className="text-xs">
+                <Label htmlFor="target-audience" className="text-xs font-semibold">{t('admin.news.colAudience', 'Target Audience')}</Label>
+                <Select value={form.audience} onValueChange={(v) => { if (v) setForm({ ...form, audience: v as NewsAudience }); }} items={AUDIENCE_LABEL}>
+                  <SelectTrigger id="target-audience" className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -307,40 +337,44 @@ export function AdminNewsPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Status</Label>
-                <Select value={form.status} onValueChange={(v) => { if (v) setForm({ ...form, status: v as NewsStatus }); }}>
-                  <SelectTrigger className="text-xs">
+                <Label htmlFor="status" className="text-xs font-semibold">{t('admin.news.fieldStatus', 'Status')}</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => { if (v) setForm({ ...form, status: v as NewsStatus }); }}
+                  items={{ published: t('admin.news.publishNow', 'Publish Immediately'), draft: t('admin.news.saveDraft', 'Save as Draft') }}
+                >
+                  <SelectTrigger id="status" className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="published">Publish Immediately</SelectItem>
-                    <SelectItem value="draft">Save as Draft</SelectItem>
+                    <SelectItem value="published">{t('admin.news.publishNow', 'Publish Immediately')}</SelectItem>
+                    <SelectItem value="draft">{t('admin.news.saveDraft', 'Save as Draft')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Notice Content</Label>
-              <Textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Enter full notice details..." className="h-28 text-xs font-mono resize-y leading-relaxed" />
+              <Label htmlFor="notice-content" className="text-xs font-semibold">{t('admin.news.fieldContent', 'Notice Content')}</Label>
+              <Textarea id="notice-content" value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder={t('admin.news.contentPlaceholder', 'Enter full notice details...')} className="h-28 text-xs font-mono resize-y leading-relaxed" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Link (optional)</Label>
-                <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." className="text-xs" />
+                <Label htmlFor="link-optional" className="text-xs font-semibold">{t('admin.news.fieldLink', 'Link (optional)')}</Label>
+                <Input id="link-optional" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://..." className="text-xs" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Image (optional)</Label>
-                <Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setForm({ ...form, image: e.target.files?.[0] ?? null })} className="text-xs" />
+                <Label htmlFor="image-optional" className="text-xs font-semibold">{t('admin.news.fieldImage', 'Image (optional)')}</Label>
+                <Input id="image-optional" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setForm({ ...form, image: e.target.files?.[0] ?? null })} className="text-xs" />
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditorOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saveNews.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              {saveNews.isPending ? 'Saving…' : editingId ? 'Save Changes' : 'Publish Notice'}
+              {saveNews.isPending ? t('admin.news.saving', 'Saving…') : editingId ? t('admin.news.saveChanges', 'Save Changes') : t('admin.news.publishNotice', 'Publish Notice')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -351,10 +385,10 @@ export function AdminNewsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Newspaper className="h-5 w-5 text-primary" />
-              Notice Preview
+              {t('admin.news.previewTitle', 'Notice Preview')}
             </DialogTitle>
             <DialogDescription>
-              Published for: <span className="font-semibold text-foreground">{previewItem ? AUDIENCE_LABEL[previewItem.audience] : ''}</span>
+              {t('admin.news.publishedFor', 'Published for:')} <span className="font-semibold text-foreground">{previewItem ? AUDIENCE_LABEL[previewItem.audience] : ''}</span>
             </DialogDescription>
           </DialogHeader>
           {previewItem && (
@@ -362,8 +396,8 @@ export function AdminNewsPage() {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-foreground">{previewItem.title}</span>
                 {previewItem.pinned && (
-                  <Badge variant="secondary" className="text-[10px] bg-amber-500/15 text-amber-500 border border-amber-500/30">
-                    Pinned
+                  <Badge variant="secondary" tone="warning" className="text-xs border">
+                    {t('admin.news.pinned', 'Pinned')}
                   </Badge>
                 )}
               </div>
@@ -375,14 +409,14 @@ export function AdminNewsPage() {
                   {previewItem.url}
                 </a>
               )}
-              <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
-                <span className="capitalize">Status: {previewItem.status}</span>
-                <span>Created: {previewItem.publishedAt ? formatDateTime(previewItem.publishedAt) : '—'}</span>
+              <div className="flex justify-between text-xs text-muted-foreground font-mono">
+                <span>{t('admin.news.previewStatus', 'Status: {status}', { status: statusLabel(previewItem.status) })}</span>
+                <span>{t('admin.news.previewCreated', 'Created: {date}', { date: previewItem.publishedAt ? formatDateTime(previewItem.publishedAt) : '—' })}</span>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setPreviewItem(null)}>Close</Button>
+            <Button onClick={() => setPreviewItem(null)}>{t('common.close', 'Close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -390,15 +424,15 @@ export function AdminNewsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete notice"
-        description="The notice is removed from every subscriber feed."
-        confirmLabel="Delete"
+        title={t('admin.news.deleteTitle', 'Delete notice')}
+        description={t('admin.news.deleteDesc', 'The notice is removed from every subscriber feed.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleteId) return;
           deleteNews.mutate(deleteId, {
             onSuccess: () => {
-              toast.success('Notice deleted');
+              toast.success(t('admin.news.toast.deleted', 'Notice deleted'));
               setDeleteId(null);
             },
           });

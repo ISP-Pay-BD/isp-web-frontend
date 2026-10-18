@@ -21,7 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { applyServerErrors } from '../../shared/form-errors';
 import { fromLocalInput } from '../../shared/format';
-import { useDebouncedValue } from '../../shared/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useLocale } from '@/i18n/locale-context';
 import { useInstallationCustomers, useInstallationMutations } from '../hooks/use-installations';
 import type { CustomerOption } from '../types';
 
@@ -56,6 +57,7 @@ interface AssignInstallationDialogProps {
 
 /** Create an installation work order already assigned to this employee. */
 export function AssignInstallationDialog({ open, onOpenChange, employeeId, employeeName }: AssignInstallationDialogProps) {
+  const { t, te } = useLocale();
   const { create } = useInstallationMutations();
   const [customer, setCustomer] = useState<CustomerOption | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -92,12 +94,17 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
         customerId: customer?.id,
         assignedEmployeeId: employeeId,
       });
-      toast.success(`Installation assigned to ${employeeName}`);
+      toast.success(t('admin.hr.assignInstall.assigned', 'Installation assigned to {name}', { name: employeeName }));
       reset();
       setCustomer(null);
       onOpenChange(false);
     } catch (err) {
-      applyServerErrors(err, setError, { scheduled_at: 'scheduledAt', customer_id: 'title', assigned_employee_id: 'title' });
+      applyServerErrors(
+        err,
+        setError,
+        { scheduled_at: 'scheduledAt', customer_id: 'title', assigned_employee_id: 'title' },
+        t('admin.hr.common.wentWrong', 'Something went wrong. Please try again.'),
+      );
     }
   };
 
@@ -105,21 +112,21 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Assign Installation</DialogTitle>
+          <DialogTitle>{t('admin.hr.assignInstall.title', 'Assign Installation')}</DialogTitle>
           <DialogDescription>
-            Create a field work order for {employeeName}. They start and complete it with GPS from the employee portal.
+            {t('admin.hr.assignInstall.desc', 'Create a field work order for {name}. They start and complete it with GPS from the employee portal.', { name: employeeName })}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="inst-title">Job Title *</Label>
+            <Label htmlFor="inst-title">{t('admin.hr.assignInstall.jobTitle', 'Job Title *')}</Label>
             <Input id="inst-title" {...register('title')} />
-            {errors.title && <p className="text-destructive text-xs">{errors.title.message}</p>}
+            {errors.title && <p className="text-destructive text-xs">{te(errors.title.message ?? '')}</p>}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="inst-customer">Customer</Label>
+            <Label htmlFor="inst-customer">{t('admin.hr.assignInstall.customer', 'Customer')}</Label>
             {customer ? (
               <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm">
                 <span className="flex items-center gap-2">
@@ -127,7 +134,7 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
                   <span className="font-medium">{customer.name || `#${customer.id}`}</span>
                   {customer.mobile ? <span className="font-mono text-xs text-muted-foreground">{customer.mobile}</span> : null}
                 </span>
-                <button type="button" onClick={() => setCustomer(null)} className="text-muted-foreground hover:text-foreground">
+                <button type="button" onClick={() => setCustomer(null)} aria-label={t('admin.hr.assignInstall.removeCustomer', 'Remove customer')} className="text-muted-foreground hover:text-foreground">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -138,7 +145,7 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
                   <Input
                     id="inst-customer"
                     className="pl-9"
-                    placeholder="Search customer by name, mobile or ID (optional)"
+                    placeholder={t('admin.hr.assignInstall.searchCustomer', 'Search customer by name, mobile or ID (optional)')}
                     value={customerSearch}
                     onChange={(e) => setCustomerSearch(e.target.value)}
                   />
@@ -146,11 +153,11 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
                 {debouncedSearch.length >= 2 ? (
                   <div className="max-h-40 overflow-y-auto rounded-lg border border-border/60">
                     {customers.isFetching && !customers.data ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
+                      <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.hr.assignInstall.searching', 'Searching…')}</p>
                     ) : customers.isError ? (
                       <p className="px-3 py-2 text-xs text-destructive">{customers.error.message}</p>
                     ) : (customers.data ?? []).length === 0 ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">No matching customers.</p>
+                      <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.hr.assignInstall.noCustomers', 'No matching customers.')}</p>
                     ) : (
                       (customers.data ?? []).map((c) => (
                         <button
@@ -171,41 +178,41 @@ export function AssignInstallationDialog({ open, onOpenChange, employeeId, emplo
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="inst-address">Address *</Label>
+            <Label htmlFor="inst-address">{t('admin.hr.assignInstall.address', 'Address *')}</Label>
             <Textarea id="inst-address" rows={2} {...register('address')} />
-            {errors.address && <p className="text-destructive text-xs">{errors.address.message}</p>}
+            {errors.address && <p className="text-destructive text-xs">{te(errors.address.message ?? '')}</p>}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-1.5 sm:col-span-1">
-              <Label htmlFor="inst-when">Scheduled</Label>
+              <Label htmlFor="inst-when">{t('admin.hr.assignInstall.scheduled', 'Scheduled')}</Label>
               <Input id="inst-when" type="datetime-local" {...register('scheduledAt')} />
-              {errors.scheduledAt && <p className="text-destructive text-xs">{errors.scheduledAt.message}</p>}
+              {errors.scheduledAt && <p className="text-destructive text-xs">{te(errors.scheduledAt.message ?? '')}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="inst-lat">Latitude</Label>
+              <Label htmlFor="inst-lat">{t('admin.hr.assignInstall.latitude', 'Latitude')}</Label>
               <Input id="inst-lat" inputMode="decimal" {...register('latitude')} />
-              {errors.latitude && <p className="text-destructive text-xs">{errors.latitude.message}</p>}
+              {errors.latitude && <p className="text-destructive text-xs">{te(errors.latitude.message ?? '')}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="inst-lng">Longitude</Label>
+              <Label htmlFor="inst-lng">{t('admin.hr.assignInstall.longitude', 'Longitude')}</Label>
               <Input id="inst-lng" inputMode="decimal" {...register('longitude')} />
-              {errors.longitude && <p className="text-destructive text-xs">{errors.longitude.message}</p>}
+              {errors.longitude && <p className="text-destructive text-xs">{te(errors.longitude.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="inst-notes">Notes</Label>
+            <Label htmlFor="inst-notes">{t('admin.hr.assignInstall.notes', 'Notes')}</Label>
             <Textarea id="inst-notes" rows={2} {...register('notes')} />
-            {errors.notes && <p className="text-destructive text-xs">{errors.notes.message}</p>}
+            {errors.notes && <p className="text-destructive text-xs">{te(errors.notes.message ?? '')}</p>}
           </div>
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Assigning...' : 'Assign Job'}
+              {isSubmitting ? t('admin.hr.assignInstall.assigning', 'Assigning...') : t('admin.hr.assignInstall.assignJob', 'Assign Job')}
             </Button>
           </DialogFooter>
         </form>

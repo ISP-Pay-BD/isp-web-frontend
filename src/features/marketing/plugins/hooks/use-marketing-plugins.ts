@@ -3,6 +3,7 @@
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
 import { camelizeKeys, num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 import { formatBdtWithSymbol } from '@/lib/format';
 import type { PluginRequestInput, PublicPlugin, PublicPluginsParams, PublicPluginsResult } from '../types';
 
@@ -90,9 +91,29 @@ export function useRequestPlugin(slug: string) {
   });
 }
 
+type Translate = ReturnType<typeof useTranslations>;
+
+/** Billing cycle is free text from the catalog: known values are translated, anything else is shown as entered. */
+function cycleLabel(t: Translate, cycle: string): string {
+  switch (cycle.toLowerCase().replace(/[^a-z]/g, '')) {
+    case 'monthly':
+      return t('marketing.pluginDetail.cycleMonthly', 'monthly');
+    case 'quarterly':
+      return t('marketing.pluginDetail.cycleQuarterly', 'quarterly');
+    case 'yearly':
+    case 'annual':
+    case 'annually':
+      return t('marketing.pluginDetail.cycleYearly', 'yearly');
+    case 'onetime':
+      return t('marketing.pluginDetail.cycleOneTime', 'one-time');
+    default:
+      return cycle;
+  }
+}
+
 /** "Free" when 0, else "৳2,500 / monthly". */
-export function pluginPriceLabel(plugin: Pick<PublicPlugin, 'priceBdt' | 'billingCycle'>): string {
-  if (plugin.priceBdt <= 0) return 'Free';
+export function pluginPriceLabel(t: Translate, plugin: Pick<PublicPlugin, 'priceBdt' | 'billingCycle'>): string {
+  if (plugin.priceBdt <= 0) return t('common.free', 'Free');
   const price = formatBdtWithSymbol(plugin.priceBdt);
-  return plugin.billingCycle ? `${price} / ${plugin.billingCycle}` : price;
+  return plugin.billingCycle ? `${price} / ${cycleLabel(t, plugin.billingCycle)}` : price;
 }

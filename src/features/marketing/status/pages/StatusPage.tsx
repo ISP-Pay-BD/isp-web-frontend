@@ -8,6 +8,8 @@ import { camelizeKeys, num, str } from '@/lib/api/case';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Reveal } from '@/components/motion/Reveal';
+import { useTranslations } from '@/i18n/locale-context';
+import { formatCount, formatDateTime } from '@/lib/format';
 import type { PublicStatus, ServiceHealth } from '../types';
 
 function toHealth(value: unknown): ServiceHealth {
@@ -31,39 +33,31 @@ function toPublicStatus(value: unknown): PublicStatus {
   };
 }
 
-const HEALTH: Record<ServiceHealth, { label: string; tone: string; banner: string; Icon: typeof CheckCircle2 }> = {
+const HEALTH: Record<ServiceHealth, { tone: string; banner: string; Icon: typeof CheckCircle2 }> = {
   operational: {
-    label: 'All systems operational',
     tone: 'text-emerald-400',
     banner: 'border-emerald-500/30 bg-emerald-500/10',
     Icon: CheckCircle2,
   },
   degraded: {
-    label: 'Degraded performance',
     tone: 'text-amber-400',
     banner: 'border-amber-500/30 bg-amber-500/10',
     Icon: AlertTriangle,
   },
   outage: {
-    label: 'Service outage',
     tone: 'text-red-400',
     banner: 'border-red-500/30 bg-red-500/10',
     Icon: XCircle,
   },
 };
 
-const COMPONENT_LABEL: Record<ServiceHealth, string> = {
-  operational: 'Operational',
-  degraded: 'Degraded',
-  outage: 'Outage',
-};
-
 function formatCheckedAt(value: string): string {
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? value : formatDateTime(d);
 }
 
 export function StatusPage() {
+  const t = useTranslations();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['marketing', 'status'],
     queryFn: async ({ signal }) => toPublicStatus(await http.get<unknown>('/v1/public/status', undefined, signal)),
@@ -86,9 +80,12 @@ export function StatusPage() {
       <div className="min-h-dvh bg-landing-bg px-4 py-16 text-white">
         <div className="mx-auto max-w-2xl">
           <EmptyState
-            title="Status unavailable"
-            description="We couldn't reach the status service. Try again in a moment."
-            actionLabel="Retry"
+            title={t('marketing.status.unavailableTitle', 'Status unavailable')}
+            description={t(
+              'marketing.status.unavailableDesc',
+              "We couldn't reach the status service. Try again in a moment.",
+            )}
+            actionLabel={t('common.retry', 'Retry')}
             onAction={() => refetch()}
           />
         </div>
@@ -97,19 +94,33 @@ export function StatusPage() {
   }
 
   const overall = HEALTH[data.overall];
+  const overallLabel = {
+    operational: t('marketing.status.overallOperational', 'All systems operational'),
+    degraded: t('marketing.status.overallDegraded', 'Degraded performance'),
+    outage: t('marketing.status.overallOutage', 'Service outage'),
+  }[data.overall];
+  const componentLabel = {
+    operational: t('marketing.status.componentOperational', 'Operational'),
+    degraded: t('marketing.status.componentDegraded', 'Degraded'),
+    outage: t('marketing.status.componentOutage', 'Outage'),
+  };
 
   return (
     <div className="min-h-dvh bg-landing-bg text-white">
       <div className="mx-auto max-w-2xl px-4 py-16">
         <Reveal>
-          <p className="text-sm font-medium text-landing-cta">ISP Pay BD</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">System status</h1>
-          <p className="mt-2 text-white/60">Public network and portal availability</p>
+          <p className="text-sm font-medium text-landing-accent">ISP Pay BD</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+            {t('marketing.status.title', 'System status')}
+          </h1>
+          <p className="mt-2 text-white/60">
+            {t('marketing.status.subtitle', 'Public network and portal availability')}
+          </p>
 
           <div className={`mt-8 flex items-center gap-3 rounded-xl border px-4 py-3 ${overall.banner}`}>
             <overall.Icon className={`h-5 w-5 ${overall.tone}`} />
             <div>
-              <div className="font-medium">{overall.label}</div>
+              <div className="font-medium">{overallLabel}</div>
               {data.message ? <div className="text-xs text-white/50">{data.message}</div> : null}
             </div>
           </div>
@@ -130,9 +141,9 @@ export function StatusPage() {
                   </div>
                   <div className="flex items-center gap-3 text-xs">
                     <span className="font-mono tabular-nums text-white/50">
-                      {c.latencyMs === null ? '—' : `${c.latencyMs} ms`}
+                      {c.latencyMs === null ? '—' : `${formatCount(c.latencyMs)} ms`}
                     </span>
-                    <span className={health.tone}>{COMPONENT_LABEL[c.status]}</span>
+                    <span className={health.tone}>{componentLabel[c.status]}</span>
                   </div>
                 </li>
               );
@@ -141,14 +152,16 @@ export function StatusPage() {
         ) : null}
 
         {data.checkedAt ? (
-          <p className="mt-6 text-center text-xs text-white/40">
-            Last checked {formatCheckedAt(data.checkedAt)} · refreshes every minute
+          <p className="mt-6 text-center text-xs text-white/60">
+            {t('marketing.status.lastChecked', 'Last checked {when} · refreshes every minute', {
+              when: formatCheckedAt(data.checkedAt),
+            })}
           </p>
         ) : null}
 
-        <p className="mt-10 text-center text-sm text-white/40">
+        <p className="mt-10 text-center text-sm text-white/60">
           <Link href="/" className="underline hover:text-white">
-            Back to home
+            {t('marketing.status.backHome', 'Back to home')}
           </Link>
         </p>
       </div>

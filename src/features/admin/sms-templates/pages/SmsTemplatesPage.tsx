@@ -40,8 +40,10 @@ import {
   useUpdateSmsEvent,
 } from '@/features/admin/sms/hooks/use-sms';
 import { smsParts, type SmsTemplateRow } from '@/features/admin/sms/types';
+import { useTranslations } from '@/i18n/locale-context';
 
 export function SmsTemplatesPage() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -100,14 +102,14 @@ export function SmsTemplatesPage() {
 
   const handleSaveTemplate = () => {
     if (!formData.name.trim() || !formData.body.trim()) {
-      toast.error('Template name and body are required');
+      toast.error(t('admin.smsTemplates.page.required', 'Template name and body are required'));
       return;
     }
     saveTemplate.mutate(
       { id: editingTemplate?.id, name: formData.name.trim(), body: formData.body },
       {
         onSuccess: () => {
-          toast.success(editingTemplate ? 'Template updated successfully' : 'New template created successfully');
+          toast.success(editingTemplate ? t('admin.smsTemplates.page.updated', 'Template updated successfully') : t('admin.smsTemplates.page.created', 'New template created successfully'));
           setIsModalOpen(false);
         },
       },
@@ -117,14 +119,14 @@ export function SmsTemplatesPage() {
   const handleTestDispatch = () => {
     if (!previewTemplate) return;
     if (!testPhoneNumber.trim()) {
-      toast.error('Enter a test phone number');
+      toast.error(t('admin.smsTemplates.page.phoneRequired', 'Enter a test phone number'));
       return;
     }
     testSms.mutate(
       { mobile: testPhoneNumber.trim(), content: previewTemplate.messageBody, customerId: sample?.customerId },
       {
         onSuccess: () => {
-          toast.success(`Test message sent to ${testPhoneNumber.trim()}`);
+          toast.success(t('admin.smsTemplates.page.testSent', 'Test message sent to {phone}', { phone: testPhoneNumber.trim() }));
           setPreviewTemplate(null);
         },
       },
@@ -135,33 +137,33 @@ export function SmsTemplatesPage() {
     () => [
       {
         accessorKey: 'templateName',
-        header: 'Template Name',
+        header: t('admin.smsTemplates.page.colName', 'Template Name'),
         size: 200,
         enableHiding: false,
         cell: ({ row }) => (
           <div>
             <span className="font-semibold text-foreground block">{row.original.templateName}</span>
-            <span className="text-[11px] text-muted-foreground font-mono">ID: {row.original.id}</span>
+            <span className="text-xs text-muted-foreground font-mono">ID: {row.original.id}</span>
           </div>
         ),
       },
       {
         accessorKey: 'templateType',
-        header: 'Category',
+        header: t('admin.smsTemplates.page.colCategory', 'Category'),
         size: 110,
         cell: ({ row }) => (
           <Badge
             variant={row.original.templateType === 'default' ? 'default' : 'secondary'}
-            className="capitalize text-[11px] gap-1"
+            className="capitalize text-xs gap-1"
           >
             {row.original.templateType === 'default' && <Lock className="h-3 w-3" />}
-            {row.original.templateType === 'default' ? 'system' : 'custom'}
+            {row.original.templateType === 'default' ? t('admin.smsTemplates.page.system', 'system') : t('admin.smsTemplates.page.custom', 'custom')}
           </Badge>
         ),
       },
       {
         accessorKey: 'messageBody',
-        header: 'Message Body Preview',
+        header: t('admin.smsTemplates.page.colBody', 'Message Body Preview'),
         size: 380,
         cell: ({ row }) => (
           <div className="space-y-1 py-1 max-w-lg">
@@ -170,7 +172,7 @@ export function SmsTemplatesPage() {
             </span>
             <div className="flex flex-wrap gap-1">
               {row.original.variables.map((v) => (
-                <span key={v} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                <span key={v} className="text-xs font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                   {`{${v}}`}
                 </span>
               ))}
@@ -180,7 +182,7 @@ export function SmsTemplatesPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Action</span>,
+        header: () => <span className="sr-only">{t('common.actions', 'Actions')}</span>,
         size: 130,
         enableSorting: false,
         enableHiding: false,
@@ -191,7 +193,8 @@ export function SmsTemplatesPage() {
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
               onClick={() => setPreviewTemplate(row.original)}
-              title="Test Preview & Dispatch"
+              title={t('admin.smsTemplates.page.previewTitle', 'Test Preview & Dispatch')}
+              aria-label={t('admin.smsTemplates.page.previewTitle', 'Test Preview & Dispatch')}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -203,7 +206,8 @@ export function SmsTemplatesPage() {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => handleOpenEditModal(row.original)}
-                    title="Edit Template"
+                    title={t('admin.smsTemplates.page.editTemplate', 'Edit Template')}
+                    aria-label={t('admin.smsTemplates.page.editTemplate', 'Edit Template')}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -214,7 +218,8 @@ export function SmsTemplatesPage() {
                     size="icon"
                     className="h-8 w-8 text-destructive hover:bg-destructive/10"
                     onClick={() => setDeleteId(row.original.id)}
-                    title="Delete Template"
+                    title={t('admin.smsTemplates.page.deleteTemplate', 'Delete Template')}
+                    aria-label={t('admin.smsTemplates.page.deleteTemplate', 'Delete Template')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -225,16 +230,16 @@ export function SmsTemplatesPage() {
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (templatesQuery.isLoading) return <PageSkeleton variant="table" />;
   if (templatesQuery.isError && !templatesQuery.data) {
     return (
-      <EmptyState
-        title="Failed to load templates"
-        description="Could not fetch SMS templates."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.smsTemplates.page.loadFailed', 'Failed to load templates')}
+        description={t('admin.smsTemplates.page.loadFailedHint', 'Could not fetch SMS templates.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => templatesQuery.refetch()}
       />
     );
@@ -246,18 +251,18 @@ export function SmsTemplatesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="SMS Templates & Triggers"
-        subtitle="Manage reusable message templates and automatic system event notifications"
+        title={t('admin.smsTemplates.page.title', 'SMS Templates & Triggers')}
+        subtitle={t('admin.smsTemplates.page.subtitle', 'Manage reusable message templates and automatic system event notifications')}
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Communications' },
-          { label: 'Templates & Triggers' },
+          { label: t('admin.smsTemplates.page.crumbComms', 'Communications') },
+          { label: t('admin.smsTemplates.page.crumbTemplates', 'Templates & Triggers') },
         ]}
         actions={
           <Can menu="sms_template" action="create">
             <Button onClick={handleOpenAddModal} className="gap-1.5 bg-primary text-primary-foreground">
               <Plus className="h-4 w-4" />
-              Add Template
+              {t('admin.smsTemplates.page.addTemplate', 'Add Template')}
             </Button>
           </Can>
         }
@@ -265,11 +270,11 @@ export function SmsTemplatesPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Total Templates', value: options.data ? allTemplates.length : (templatesQuery.data?.meta.total ?? 0) },
-          { label: 'System Templates', value: options.data ? allTemplates.filter((t) => t.templateType === 'default').length : '—' },
-          { label: 'Custom Templates', value: options.data ? allTemplates.filter((t) => t.templateType === 'custom').length : '—' },
-          { label: 'Active Automated Triggers', value: events.data ? `${activeEventsCount} of ${eventRows.length}` : '—' },
-          { label: 'Default Gateway', value: overview.data?.gateway.name ?? 'Not configured' },
+          { label: t('admin.smsTemplates.page.kpiTotal', 'Total Templates'), value: options.data ? allTemplates.length : (templatesQuery.data?.meta.total ?? 0) },
+          { label: t('admin.smsTemplates.page.kpiSystem', 'System Templates'), value: options.data ? allTemplates.filter((tpl) => tpl.templateType === 'default').length : '—' },
+          { label: t('admin.smsTemplates.page.kpiCustom', 'Custom Templates'), value: options.data ? allTemplates.filter((tpl) => tpl.templateType === 'custom').length : '—' },
+          { label: t('admin.smsTemplates.page.kpiTriggers', 'Active Automated Triggers'), value: events.data ? t('admin.smsTemplates.page.activeOf', '{active} of {total}', { active: activeEventsCount, total: eventRows.length }) : '—' },
+          { label: t('admin.smsTemplates.page.kpiGateway', 'Default Gateway'), value: overview.data?.gateway.name ?? t('admin.smsTemplates.page.notConfigured', 'Not configured') },
         ]}
       />
 
@@ -277,32 +282,32 @@ export function SmsTemplatesPage() {
         <TabsList className="bg-muted/40 p-1 border border-border/60">
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
-            Message Templates ({templatesQuery.data?.meta.total ?? 0})
+            {t('admin.smsTemplates.page.tabTemplates', 'Message Templates ({n})', { n: templatesQuery.data?.meta.total ?? 0 })}
           </TabsTrigger>
           <TabsTrigger value="events" className="gap-2">
             <Bell className="h-4 w-4" />
-            Event Triggers ({activeEventsCount}/{eventRows.length})
+            {t('admin.smsTemplates.page.tabEvents', 'Event Triggers ({active}/{total})', { active: activeEventsCount, total: eventRows.length })}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-4">
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Registered SMS Templates</CardTitle>
+              <CardTitle className="text-base">{t('admin.smsTemplates.page.registered', 'Registered SMS Templates')}</CardTitle>
               <CardDescription>
-                System templates are shared by every account and read-only; custom templates are yours to edit.
+                {t('admin.smsTemplates.page.registeredHint', 'System templates are shared by every account and read-only; custom templates are yours to edit.')}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DataTable
+              <DataTable urlState
                 columns={columns}
                 data={templates}
                 isLoading={templatesQuery.isFetching && !templatesQuery.data}
                 getRowId={(row) => row.id}
                 searchKey="templateName"
-                searchPlaceholder="Search templates by name or body..."
-                emptyTitle="No templates found"
-                emptyDescription="Create your first SMS template to get started."
+                searchPlaceholder={t('admin.smsTemplates.page.searchPlaceholder', 'Search templates by name or body...')}
+                emptyTitle={t('admin.smsTemplates.page.emptyTitle', 'No templates found')}
+                emptyDescription={t('admin.smsTemplates.page.emptyHint', 'Create your first SMS template to get started.')}
                 server={{
                   page,
                   pageSize,
@@ -322,7 +327,7 @@ export function SmsTemplatesPage() {
                   <Can menu="sms_template" action="create">
                     <Button size="sm" onClick={handleOpenAddModal} className="gap-1.5">
                       <Plus className="h-4 w-4" />
-                      Add Template
+                      {t('admin.smsTemplates.page.addTemplate', 'Add Template')}
                     </Button>
                   </Can>
                 }
@@ -336,19 +341,19 @@ export function SmsTemplatesPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Zap className="h-4 w-4 text-primary" />
-                Automatic System Event SMS Triggers
+                {t('admin.smsTemplates.page.eventsTitle', 'Automatic System Event SMS Triggers')}
               </CardTitle>
               <CardDescription>
-                Which template is sent automatically on each billing and subscriber event
-                {!canEditEvents && events.data ? ' — managed by your ISP admin (read-only)' : ''}
+                {t('admin.smsTemplates.page.eventsHint', 'Which template is sent automatically on each billing and subscriber event')}
+                {!canEditEvents && events.data ? ` ${t('admin.smsTemplates.page.eventsReadOnly', '— managed by your ISP admin (read-only)')}` : ''}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-border/50 border-t border-border/60">
               {events.isLoading ? (
-                <p className="p-4 text-xs text-muted-foreground">Loading event triggers…</p>
+                <p className="p-4 text-xs text-muted-foreground">{t('admin.smsTemplates.page.loadingEvents', 'Loading event triggers…')}</p>
               ) : events.isError ? (
                 <div className="p-4">
-                  <EmptyState title="Could not load event triggers" actionLabel="Retry" onAction={() => events.refetch()} />
+                  <EmptyState variant="error" title={t('admin.smsTemplates.page.eventsFailed', 'Could not load event triggers')} actionLabel={t('common.retry', 'Retry')} onAction={() => events.refetch()} />
                 </div>
               ) : (
                 eventRows.map((evt) => (
@@ -361,19 +366,19 @@ export function SmsTemplatesPage() {
                         <span className="font-semibold text-sm text-foreground">{evt.label}</span>
                         <Badge
                           variant={evt.enabled ? 'default' : 'secondary'}
-                          className={`text-[10px] ${evt.enabled ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
+                          tone={evt.enabled ? 'success' : undefined} className="text-xs"
                         >
-                          {evt.enabled ? 'Active Trigger' : 'Disabled'}
+                          {evt.enabled ? t('admin.smsTemplates.page.triggerActive', 'Active Trigger') : t('admin.smsTemplates.page.triggerDisabled', 'Disabled')}
                         </Badge>
                         {!evt.configured && (
-                          <Badge variant="outline" className="text-[10px]">
-                            Default
+                          <Badge variant="outline" className="text-xs">
+                            {t('admin.smsTemplates.page.triggerDefault', 'Default')}
                           </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{evt.description}</p>
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-xs font-medium text-muted-foreground">Assigned Template:</span>
+                        <span className="text-xs font-medium text-muted-foreground">{t('admin.smsTemplates.page.assigned', 'Assigned Template:')}</span>
                         <Select
                           value={evt.templateId}
                           disabled={!canEditEvents || updateEvent.isPending}
@@ -381,30 +386,30 @@ export function SmsTemplatesPage() {
                             if (val)
                               updateEvent.mutate(
                                 { event: evt.event, templateId: val, enabled: evt.enabled },
-                                { onSuccess: () => toast.success('Event template mapping updated') },
+                                { onSuccess: () => toast.success(t('admin.smsTemplates.page.mappingUpdated', 'Event template mapping updated')) },
                               );
                           }}
                         >
                           <SelectTrigger className="h-8 text-xs font-mono w-56">
-                            <SelectValue placeholder="Select template..." />
+                            <SelectValue placeholder={t('admin.smsTemplates.page.selectTemplate', 'Select template...')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {allTemplates.map((t) => (
-                              <SelectItem key={t.id} value={t.id} className="text-xs">
-                                {t.templateName}
+                            {allTemplates.map((tpl) => (
+                              <SelectItem key={tpl.id} value={tpl.id} className="text-xs">
+                                {tpl.templateName}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-                    <Switch
+                    <Switch aria-label={evt.label}
                       checked={evt.enabled}
                       disabled={!canEditEvents || updateEvent.isPending}
                       onCheckedChange={(checked) =>
                         updateEvent.mutate(
                           { event: evt.event, templateId: evt.templateId, enabled: checked },
-                          { onSuccess: () => toast.success(`'${evt.label}' trigger ${checked ? 'enabled' : 'disabled'}`) },
+                          { onSuccess: () => toast.success(checked ? t('admin.smsTemplates.page.triggerEnabledToast', "'{label}' trigger enabled", { label: evt.label }) : t('admin.smsTemplates.page.triggerDisabledToast', "'{label}' trigger disabled", { label: evt.label })) },
                         )
                       }
                     />
@@ -422,33 +427,33 @@ export function SmsTemplatesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
-              {editingTemplate ? 'Edit SMS Template' : 'Create New SMS Template'}
+              {editingTemplate ? t('admin.smsTemplates.page.editTitle', 'Edit SMS Template') : t('admin.smsTemplates.page.createTitle', 'Create New SMS Template')}
             </DialogTitle>
-            <DialogDescription>Define your template and insert personalized placeholders.</DialogDescription>
+            <DialogDescription>{t('admin.smsTemplates.page.formDesc', 'Define your template and insert personalized placeholders.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Template Name</Label>
-              <Input
+              <Label htmlFor="template-name" className="text-xs font-semibold">{t('admin.smsTemplates.page.colName', 'Template Name')}</Label>
+              <Input id="template-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Monthly Bill Reminder"
+                placeholder={t('admin.smsTemplates.page.namePlaceholder', 'e.g. Monthly Bill Reminder')}
                 className="text-xs"
               />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Template Message Body</Label>
-                <span className="text-[11px] font-mono text-muted-foreground">
-                  {formData.body.length} chars | {smsParts(formData.body)} part(s)
+                <Label className="text-xs font-semibold">{t('admin.smsTemplates.page.bodyLabel', 'Template Message Body')}</Label>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {t('admin.smsTemplates.page.counter', '{chars} chars | {parts} part(s)', { chars: formData.body.length, parts: smsParts(formData.body) })}
                 </span>
               </div>
               <Textarea
                 ref={textareaRef}
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
-                placeholder="Dear {name}, your monthly bill of {amount} is due on {expire_date}..."
+                placeholder={t('admin.smsTemplates.page.bodyPlaceholder', 'Dear {name}, your monthly bill of {amount} is due on {expire_date}...')}
                 className="h-32 font-mono text-xs leading-relaxed resize-y"
               />
             </div>
@@ -457,7 +462,7 @@ export function SmsTemplatesPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span>Click placeholder to insert at cursor:</span>
+                  <span>{t('admin.smsTemplates.page.insertHint', 'Click placeholder to insert at cursor:')}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {variables.map((p) => (
@@ -477,11 +482,11 @@ export function SmsTemplatesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSaveTemplate} disabled={saveTemplate.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              {saveTemplate.isPending ? 'Saving…' : editingTemplate ? 'Update Template' : 'Save Template'}
+              {saveTemplate.isPending ? t('admin.smsTemplates.page.saving', 'Saving…') : editingTemplate ? t('admin.smsTemplates.page.update', 'Update Template') : t('admin.smsTemplates.page.save', 'Save Template')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -493,26 +498,26 @@ export function SmsTemplatesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
-              Template Preview & Test Send
+              {t('admin.smsTemplates.page.previewHeading', 'Template Preview & Test Send')}
             </DialogTitle>
-            <DialogDescription>Rendered by the server against one of your active customers</DialogDescription>
+            <DialogDescription>{t('admin.smsTemplates.page.previewDesc', 'Rendered by the server against one of your active customers')}</DialogDescription>
           </DialogHeader>
           {previewTemplate && (
             <div className="space-y-4 py-2 text-xs">
               <div className="space-y-1.5">
                 <span className="text-muted-foreground font-semibold">
-                  Rendered Sample SMS{sample ? ` (for ${sample.name})` : ''}:
+                  {sample ? t('admin.smsTemplates.page.sampleFor', 'Rendered Sample SMS (for {name}):', { name: sample.name }) : t('admin.smsTemplates.page.sample', 'Rendered Sample SMS:')}
                 </span>
                 <div className="p-3 rounded-lg bg-muted/40 font-mono text-xs border border-border/60 leading-relaxed whitespace-pre-wrap">
                   {preview.isFetching && !sample
-                    ? 'Rendering…'
+                    ? t('admin.smsTemplates.page.rendering', 'Rendering…')
                     : (sample?.message ?? previewTemplate.messageBody)}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Test Recipient Phone</Label>
-                <Input
+                <Label htmlFor="test-recipient-phone" className="text-xs font-semibold">{t('admin.smsTemplates.page.testPhone', 'Test Recipient Phone')}</Label>
+                <Input id="test-recipient-phone"
                   value={testPhoneNumber}
                   onChange={(e) => setTestPhoneNumber(e.target.value)}
                   placeholder="017xxxxxxxx"
@@ -523,12 +528,12 @@ export function SmsTemplatesPage() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
-              Close
+              {t('common.close', 'Close')}
             </Button>
             {previewTemplate && (
               <Button onClick={handleTestDispatch} disabled={testSms.isPending} className="gap-1.5 bg-primary text-primary-foreground">
                 <Send className="h-4 w-4" />
-                {testSms.isPending ? 'Sending…' : 'Send Test SMS'}
+                {testSms.isPending ? t('admin.smsTemplates.page.sending', 'Sending…') : t('admin.smsTemplates.page.sendTest', 'Send Test SMS')}
               </Button>
             )}
           </DialogFooter>
@@ -538,15 +543,15 @@ export function SmsTemplatesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete SMS Template"
-        description="Are you sure you want to delete this SMS template? Event triggers using it fall back to the system default."
-        confirmLabel="Delete"
+        title={t('admin.smsTemplates.page.deleteTitle', 'Delete SMS Template')}
+        description={t('admin.smsTemplates.page.deleteDesc', 'Are you sure you want to delete this SMS template? Event triggers using it fall back to the system default.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleteId) return;
           deleteTemplate.mutate(deleteId, {
             onSuccess: () => {
-              toast.success('Template deleted successfully');
+              toast.success(t('admin.smsTemplates.page.deleted', 'Template deleted successfully'));
               setDeleteId(null);
             },
           });

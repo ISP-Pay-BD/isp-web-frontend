@@ -5,6 +5,7 @@ import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useBillingCustomerOptions,
   useDebouncedValue,
@@ -23,6 +24,7 @@ export function BillingCustomerPicker({
   onChange: (c: BillingCustomerOption | null) => void;
   invalid?: boolean;
 }) {
+  const t = useTranslations();
   const [search, setSearch] = useState('');
   const debounced = useDebouncedValue(search.trim(), 350);
   const options = useBillingCustomerOptions(debounced, value === null);
@@ -36,7 +38,7 @@ export function BillingCustomerPicker({
             {[value.mobile, value.pppoeId].filter(Boolean).map((v) => ` · ${v}`).join('')}
           </span>
         </div>
-        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="Clear customer" onClick={() => onChange(null)}>
+        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label={t('admin.ops.picker.clear', 'Clear customer')} onClick={() => onChange(null)}>
           <X className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -52,7 +54,7 @@ export function BillingCustomerPicker({
           id={id}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search name, mobile or PPPoE ID…"
+          placeholder={t('admin.ops.picker.placeholder', 'Search name, mobile or PPPoE ID…')}
           className="h-9 pl-8 text-xs"
           aria-invalid={invalid || undefined}
           autoComplete="off"
@@ -60,11 +62,11 @@ export function BillingCustomerPicker({
       </div>
       <div className="max-h-44 overflow-y-auto rounded-lg border border-border/60">
         {options.isLoading ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.ops.picker.searching', 'Searching…')}</p>
         ) : options.isError ? (
           <p className="px-3 py-2 text-xs text-destructive">{errorMessage(options.error)}</p>
         ) : results.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-muted-foreground">No customers found.</p>
+          <p className="px-3 py-2 text-xs text-muted-foreground">{t('admin.ops.picker.none', 'No customers found.')}</p>
         ) : (
           results.map((c) => (
             <button
@@ -74,7 +76,7 @@ export function BillingCustomerPicker({
               className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent/60"
             >
               <span className="font-medium text-foreground">{c.name}</span>
-              <span className="font-mono text-[11px] text-muted-foreground">{[c.mobile, c.pppoeId].filter(Boolean).join(' · ')}</span>
+              <span className="font-mono text-xs text-muted-foreground">{[c.mobile, c.pppoeId].filter(Boolean).join(' · ')}</span>
             </button>
           ))
         )}

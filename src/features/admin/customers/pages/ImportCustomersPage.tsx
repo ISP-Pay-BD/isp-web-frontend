@@ -4,12 +4,14 @@ import { PageHero, PageContent } from '@/components/motion/PageHero';
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { saveBlob } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import { useImportCustomers } from '../hooks/use-customers';
 import type { ImportResult } from '../types';
 
@@ -35,6 +37,7 @@ const ACCEPT = '.xlsx,.xls,.csv';
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export function ImportCustomersPage() {
+  const t = useTranslations();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -47,7 +50,7 @@ export function ImportCustomersPage() {
     setFileError(null);
     if (!f) return;
     if (f.size > MAX_BYTES) {
-      setFileError('The file is larger than 10 MB.');
+      setFileError(t('admin.customers.import.tooLarge', 'The file is larger than 10 MB.'));
       return;
     }
     setFile(f);
@@ -75,25 +78,25 @@ export function ImportCustomersPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <PageHero className="flex items-center gap-3">
-        <Link href="/admin/customers">
-          <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label={t('admin.customers.import.back', 'Back to customers')} render={<Link href="/admin/customers" />}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Import Customers via Excel</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('admin.customers.import.title', 'Import Customers via Excel')}</h1>
           <p className="text-muted-foreground text-sm">
-            Batch provision subscriber accounts from a spreadsheet (.xlsx / .xls / .csv).
+            {t('admin.customers.import.subtitle', 'Batch provision subscriber accounts from a spreadsheet (.xlsx / .xls / .csv).')}
           </p>
         </div>
       </PageHero>
       <PageContent className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Upload Spreadsheet File</CardTitle>
+            <CardTitle className="text-base">{t('admin.customers.import.uploadTitle', 'Upload Spreadsheet File')}</CardTitle>
             <CardDescription>
-              The first row must be exactly the template header. Each row creates the PPPoE secret on the named router
-              (if missing) and the customer record; package, router and area are matched by name.
+              {t(
+                'admin.customers.import.uploadHint',
+                'The first row must be exactly the template header. Each row creates the PPPoE secret on the named router (if missing) and the customer record; package, router and area are matched by name.',
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -120,22 +123,22 @@ export function ImportCustomersPage() {
                 <div className="flex flex-col items-center gap-2 text-emerald-600 dark:text-emerald-400">
                   <FileSpreadsheet className="h-10 w-10" />
                   <div className="font-semibold text-sm">{file.name}</div>
-                  <div className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · ready to import</div>
+                  <div className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · {t('admin.customers.import.ready', 'ready to import')}</div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
                   <UploadCloud className="h-10 w-10 text-muted-foreground" />
-                  <div className="font-medium text-sm">Click to select or drag and drop file here</div>
-                  <div className="text-xs text-muted-foreground">Supports .XLSX, .XLS, .CSV up to 10MB</div>
+                  <div className="font-medium text-sm">{t('admin.customers.import.dropHint', 'Click to select or drag and drop file here')}</div>
+                  <div className="text-xs text-muted-foreground">{t('admin.customers.import.supports', 'Supports .XLSX, .XLS, .CSV up to 10MB')}</div>
                 </div>
               )}
             </button>
             {fileError && <p className="text-xs text-destructive">{fileError}</p>}
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>Required columns: Customer Name, Mobile, PackageName, Router name</span>
+              <span>{t('admin.customers.import.required', 'Required columns: Customer Name, Mobile, PackageName, Router name')}</span>
               <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={downloadTemplate}>
-                Download Template (CSV)
+                {t('admin.customers.import.template', 'Download Template (CSV)')}
               </Button>
             </div>
 
@@ -150,10 +153,10 @@ export function ImportCustomersPage() {
                   if (inputRef.current) inputRef.current.value = '';
                 }}
               >
-                Clear
+                {t('admin.customers.import.clear', 'Clear')}
               </Button>
               <Button onClick={handleImport} disabled={!file || importMutation.isPending} className="bg-primary hover:bg-primary/90">
-                {importMutation.isPending ? `Importing… ${progress}%` : 'Import Customers'}
+                {importMutation.isPending ? t('admin.customers.import.importing', 'Importing… {progress}%', { progress }) : t('admin.customers.import.submit', 'Import Customers')}
               </Button>
             </div>
             {importMutation.isError && (
@@ -171,10 +174,15 @@ export function ImportCustomersPage() {
                 ) : (
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
                 )}
-                Import Result
+                {t('admin.customers.import.resultTitle', 'Import Result')}
               </CardTitle>
               <CardDescription>
-                {result.rowCount} rows read · {result.createdCount} created · {result.errorCount} failed · {result.warningCount} warnings
+                {t('admin.customers.import.summary', '{rows} rows read · {created} created · {failed} failed · {warnings} warnings', {
+                  rows: result.rowCount,
+                  created: result.createdCount,
+                  failed: result.errorCount,
+                  warnings: result.warningCount,
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -183,36 +191,38 @@ export function ImportCustomersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-20">Row</TableHead>
-                        <TableHead className="w-24">Type</TableHead>
-                        <TableHead>Message</TableHead>
+                        <TableHead className="w-20">{t('admin.customers.import.colRow', 'Row')}</TableHead>
+                        <TableHead className="w-24">{t('admin.customers.import.colType', 'Type')}</TableHead>
+                        <TableHead>{t('admin.customers.import.colMessage', 'Message')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {result.errors.map((e, i) => (
                         <TableRow key={`e${i}`}>
                           <TableCell className="font-mono text-xs">{e.row}</TableCell>
-                          <TableCell className="text-xs text-destructive">Error</TableCell>
-                          <TableCell className="text-xs">{e.message}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" tone="danger">{t('admin.customers.import.error', 'Error')}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs break-words whitespace-normal">{e.message}</TableCell>
                         </TableRow>
                       ))}
                       {result.warnings.map((w, i) => (
                         <TableRow key={`w${i}`}>
                           <TableCell className="font-mono text-xs">{w.row}</TableCell>
-                          <TableCell className="text-xs text-amber-500">Warning</TableCell>
-                          <TableCell className="text-xs">{w.message}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" tone="warning">{t('admin.customers.import.warning', 'Warning')}</Badge>
+                          </TableCell>
+                          <TableCell className="text-xs break-words whitespace-normal">{w.message}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Every row was imported without issues.</p>
+                <p className="text-sm text-muted-foreground">{t('admin.customers.import.allGood', 'Every row was imported without issues.')}</p>
               )}
               <div className="flex justify-end">
-                <Link href="/admin/customers">
-                  <Button variant="outline">Back to customers</Button>
-                </Link>
+                <Button variant="outline" render={<Link href="/admin/customers" />}>{t('admin.customers.import.back', 'Back to customers')}</Button>
               </div>
             </CardContent>
           </Card>

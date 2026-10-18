@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { DateRangeInputs, KpiCard } from '../../shared/components';
 import { downloadCsv } from '../../shared/table-utils';
 import { money, percentOf } from '../../shared/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 const fmt = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -35,54 +36,69 @@ function presetRanges() {
   const y = now.getFullYear();
   const m = now.getMonth();
   return [
-    { key: 'this-month', label: 'This month', from: fmt(new Date(y, m, 1)), to: fmt(now) },
+    { key: 'thisMonth', from: fmt(new Date(y, m, 1)), to: fmt(now) },
     {
-      key: 'last-month',
-      label: 'Last month',
+      key: 'lastMonth',
       from: fmt(new Date(y, m - 1, 1)),
       to: fmt(new Date(y, m, 0)),
     },
-    { key: 'this-year', label: 'This year', from: fmt(new Date(y, 0, 1)), to: fmt(now) },
+    { key: 'thisYear', from: fmt(new Date(y, 0, 1)), to: fmt(now) },
   ];
 }
 
 interface BreakdownGroup {
   group: 'Income' | 'Expenses';
+  title: string;
+  totalLabel: string;
   total: number;
   lines: Array<{ label: string; amount: number }>;
 }
 
-function breakdown(s: AccountingSummary): BreakdownGroup[] {
+type Tr = (key: string, fallback: string) => string;
+
+/** `tr` supplies the wording: the screen passes its translator, the CSV export an identity one (stays English). */
+function breakdown(s: AccountingSummary, tr: Tr): BreakdownGroup[] {
   return [
     {
       group: 'Income',
+      title: tr('admin.accounting.reports.groupIncome', 'Income'),
+      totalLabel: tr('admin.accounting.reports.totalIncomeRow', 'Total income'),
       total: s.income.total,
       lines: [
-        { label: 'Customer payments received', amount: s.income.customersPaymentReceived },
-        { label: 'Other income', amount: s.income.otherIncome },
-        { label: 'Bandwidth sales', amount: s.income.bandwidthSell },
-        { label: 'OTC (one-time connection charges)', amount: s.income.otc },
+        { label: tr('admin.accounting.reports.lineCustomerPayments', 'Customer payments received'), amount: s.income.customersPaymentReceived },
+        { label: tr('admin.accounting.reports.lineOtherIncome', 'Other income'), amount: s.income.otherIncome },
+        { label: tr('admin.accounting.reports.lineBandwidthSales', 'Bandwidth sales'), amount: s.income.bandwidthSell },
+        { label: tr('admin.accounting.reports.lineOtc', 'OTC (one-time connection charges)'), amount: s.income.otc },
       ],
     },
     {
       group: 'Expenses',
+      title: tr('admin.accounting.reports.groupExpenses', 'Expenses'),
+      totalLabel: tr('admin.accounting.reports.totalExpensesRow', 'Total expenses'),
       total: s.expense.total,
       lines: [
-        { label: 'Employee payments', amount: s.expense.employeePayment },
-        { label: 'Other expenses', amount: s.expense.otherExpenses },
-        { label: 'Bandwidth purchases', amount: s.expense.bandwidthBuy },
+        { label: tr('admin.accounting.reports.lineEmployeePayments', 'Employee payments'), amount: s.expense.employeePayment },
+        { label: tr('admin.accounting.reports.lineOtherExpenses', 'Other expenses'), amount: s.expense.otherExpenses },
+        { label: tr('admin.accounting.reports.lineBandwidthPurchases', 'Bandwidth purchases'), amount: s.expense.bandwidthBuy },
       ],
     },
   ];
 }
 
 export function AccountingReportsPage() {
+  const t = useTranslations();
   const presets = useMemo(() => presetRanges(), []);
+  const presetLabel = (key: string) =>
+    key === 'thisMonth'
+      ? t('admin.accounting.reports.thisMonth', 'This month')
+      : key === 'lastMonth'
+        ? t('admin.accounting.reports.lastMonth', 'Last month')
+        : t('admin.accounting.reports.thisYear', 'This year');
   const [range, setRange] = useState({ from: presets[0].from, to: presets[0].to });
   const { data, isLoading, isError, error, refetch, isFetching, isPlaceholderData } =
     useAccountingSummary(range.from, range.to);
 
-  const groups = useMemo(() => (data ? breakdown(data) : []), [data]);
+  const groups = useMemo(() => (data ? breakdown(data, t) : []), [data, t]);
   const margin = data ? percentOf(data.netAmount, data.income.total) : null;
 
   const handleExportCSV = () => {
@@ -91,14 +107,14 @@ export function AccountingReportsPage() {
       `accounts_summary_${data.fromDate || range.from}_${data.toDate || range.to}.csv`,
       ['Group', 'Line item', 'Amount (BDT)', '% of group'],
       [
-        ...groups.flatMap((g) => [
+        ...breakdown(data, (_key, fallback) => fallback).flatMap((g) => [
           ...g.lines.map((l) => [g.group, l.label, l.amount, percentOf(l.amount, g.total) ?? '']),
-          [g.group, `Total ${g.group.toLowerCase()}`, g.total, g.total ? '100.0%' : ''],
+          [g.group, g.totalLabel, g.total, g.total ? '100.0%' : ''],
         ]),
         ['Net', 'Net amount (income − expenses)', data.netAmount, ''],
       ],
     );
-    toast.success('Accounts summary exported');
+    toast.success(t('admin.accounting.reports.toast.exported', 'Accounts summary exported'));
   };
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
@@ -107,16 +123,16 @@ export function AccountingReportsPage() {
     <div className="w-full space-y-6 pb-12">
       {/* Top Header */}
       <PageHeader
-        title="Accounts Report"
+        title={t('nav.acc-reports', 'Accounts Report')}
         subtitle={
           data?.fromDate
-            ? `Income and expense totals from ${data.fromDate} to ${data.toDate}.`
-            : 'Income and expense totals for the selected period.'
+            ? t('admin.accounting.reports.subtitleRange', 'Income and expense totals from {from} to {to}.', { from: data.fromDate, to: data.toDate })
+            : t('admin.accounting.reports.subtitle', 'Income and expense totals for the selected period.')
         }
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Accounting' },
-          { label: 'Reports' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('nav.accounting', 'Accounting') },
+          { label: t('common.crumb.reports', 'Reports') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -127,7 +143,7 @@ export function AccountingReportsPage() {
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Refresh
+              {t('admin.accounting.reports.refresh', 'Refresh')}
             </Button>
             <Button
               variant="outline"
@@ -137,7 +153,7 @@ export function AccountingReportsPage() {
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-              Export CSV
+              {t('admin.accounting.reports.exportCsv', 'Export CSV')}
             </Button>
           </div>
         }
@@ -155,7 +171,7 @@ export function AccountingReportsPage() {
               onClick={() => setRange({ from: p.from, to: p.to })}
               className="h-7 px-2.5 text-xs"
             >
-              {p.label}
+              {presetLabel(p.key)}
             </Button>
           ))}
         </div>
@@ -163,10 +179,10 @@ export function AccountingReportsPage() {
       </div>
 
       {isError || !data ? (
-        <EmptyState
-          title="Failed to load accounts summary"
-          description={error?.message ?? 'Could not load the period summary.'}
-          actionLabel="Retry"
+        <EmptyState variant="error"
+          title={t('admin.accounting.reports.loadFailed', 'Failed to load accounts summary')}
+          description={error?.message ?? t('admin.accounting.reports.loadFailedHint', 'Could not load the period summary.')}
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => refetch()}
         />
       ) : (
@@ -174,30 +190,30 @@ export function AccountingReportsPage() {
           {/* KPI Stats Ribbon */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
-              label="Net Amount"
+              label={t('admin.accounting.reports.kpiNet', 'Net Amount')}
               value={money(data.netAmount)}
-              hint="Income − expenses"
+              hint={t('admin.accounting.reports.kpiNetHint', 'Income − expenses')}
               icon={Scale}
               tone={data.netAmount >= 0 ? 'emerald' : 'rose'}
             />
             <KpiCard
-              label="Total Income"
+              label={t('admin.accounting.reports.kpiIncome', 'Total Income')}
               value={money(data.income.total)}
-              hint="All income lines"
+              hint={t('admin.accounting.reports.kpiIncomeHint', 'All income lines')}
               icon={TrendingUp}
               tone="emerald"
             />
             <KpiCard
-              label="Total Expense"
+              label={t('admin.accounting.reports.kpiExpense', 'Total Expense')}
               value={money(data.expense.total)}
-              hint="All expense lines"
+              hint={t('admin.accounting.reports.kpiExpenseHint', 'All expense lines')}
               icon={TrendingDown}
               tone="rose"
             />
             <KpiCard
-              label="Margin"
+              label={t('admin.accounting.reports.kpiMargin', 'Margin')}
               value={margin ?? '—'}
-              hint="Net ÷ income"
+              hint={t('admin.accounting.reports.kpiMarginHint', 'Net ÷ income')}
               icon={PieChart}
               tone="blue"
             />
@@ -209,9 +225,9 @@ export function AccountingReportsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40 text-muted-foreground border-border/60 border-b font-medium">
-                    <TableHead className="text-xs font-semibold">Line item</TableHead>
-                    <TableHead className="text-right text-xs font-semibold">Amount (BDT)</TableHead>
-                    <TableHead className="text-right text-xs font-semibold">% of group</TableHead>
+                    <TableHead className="text-xs font-semibold">{t('admin.accounting.reports.colLine', 'Line item')}</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">{t('admin.accounting.reports.colAmount', 'Amount (BDT)')}</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">{t('admin.accounting.reports.colPercent', '% of group')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-border/40 divide-y">
@@ -223,7 +239,7 @@ export function AccountingReportsPage() {
                           colSpan={3}
                           className={cn('text-xs font-bold tracking-wider uppercase', tone)}
                         >
-                          {g.group}
+                          {g.title}
                         </TableCell>
                       </TableRow>,
                       ...g.lines.map((l) => (
@@ -239,7 +255,7 @@ export function AccountingReportsPage() {
                       )),
                       <TableRow key={`${g.group}-total`} className="hover:bg-transparent">
                         <TableCell className="text-foreground text-xs font-bold">
-                          Total {g.group.toLowerCase()}
+                          {g.totalLabel}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -254,7 +270,7 @@ export function AccountingReportsPage() {
                     ];
                   })}
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableCell className="text-foreground text-xs font-bold">Net amount</TableCell>
+                    <TableCell className="text-foreground text-xs font-bold">{t('admin.accounting.reports.netAmount', 'Net amount')}</TableCell>
                     <TableCell
                       className={cn(
                         'text-right font-mono text-sm font-black tabular-nums',
@@ -264,7 +280,7 @@ export function AccountingReportsPage() {
                       {money(data.netAmount)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-right font-mono text-xs tabular-nums">
-                      {margin ? `${margin} margin` : '—'}
+                      {margin ? t('admin.accounting.reports.marginSuffix', '{margin} margin', { margin }) : '—'}
                     </TableCell>
                   </TableRow>
                 </TableBody>

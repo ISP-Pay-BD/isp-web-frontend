@@ -16,6 +16,7 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { handleApiError, errorMessage } from '@/lib/api/utils/error-handler';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from '@/i18n/locale-context';
 
 function toFormValues(c: CustomerDetail): CustomerEditValues {
   return {
@@ -38,6 +39,7 @@ function toFormValues(c: CustomerDetail): CustomerEditValues {
 }
 
 export function EditCustomerPage({ id }: { id: string }) {
+  const t = useTranslations();
   const router = useRouter();
   // Compact detail: DB fields only, no live router/OLT lookups.
   const { data: customer, isLoading, isError, error, refetch } = useCustomer(id, { compact: true });
@@ -54,10 +56,10 @@ export function EditCustomerPage({ id }: { id: string }) {
   if (isLoading) return <PageSkeleton variant="form" rows={6} />;
   if (isError || !customer) {
     return (
-      <EmptyState
-        title="Could not load this customer"
-        description={errorMessage(error, 'The customer was not found.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.customers.form.loadFailed', 'Could not load this customer')}
+        description={errorMessage(error, t('admin.customers.form.notFound', 'The customer was not found.'))}
+        actionLabel={t('admin.customers.form.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -79,7 +81,7 @@ export function EditCustomerPage({ id }: { id: string }) {
       }
     }
     if (Object.keys(payload).length === 0) {
-      toast.info('Nothing changed');
+      toast.info(t('admin.customers.form.nothingChanged', 'Nothing changed'));
       return;
     }
     try {
@@ -93,15 +95,13 @@ export function EditCustomerPage({ id }: { id: string }) {
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <PageHero className="flex items-center gap-3">
-        <Link href={`/admin/customers/${id}`}>
-          <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label={t('admin.customers.form.backToCustomer', 'Back to customer')} render={<Link href={`/admin/customers/${id}`} />}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Edit Customer: {customer.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t('admin.customers.form.editTitle', 'Edit Customer: {name}', { name: customer.name })}</h1>
           <p className="text-muted-foreground text-sm font-mono">
-            {customer.username || '—'} • ID: {customer.id}
+            {customer.username || '—'} • {t('admin.customers.form.id', 'ID')}: {customer.id}
           </p>
         </div>
       </PageHero>
@@ -113,13 +113,11 @@ export function EditCustomerPage({ id }: { id: string }) {
             <PppoeSection mode="edit" />
 
             <div className="flex justify-end gap-3">
-              <Link href={`/admin/customers/${id}`}>
-                <Button type="button" variant="outline">
-                  Cancel
+              <Button type="button" variant="outline" render={<Link href={`/admin/customers/${id}`} />}>
+                  {t('admin.customers.form.cancel', 'Cancel')}
                 </Button>
-              </Link>
               <Button type="submit" disabled={form.formState.isSubmitting || updateMutation.isPending} className="bg-primary hover:bg-primary/90">
-                <Save className="mr-1.5 h-4 w-4" /> {updateMutation.isPending ? 'Saving…' : 'Update Customer'}
+                <Save className="mr-1.5 h-4 w-4" /> {updateMutation.isPending ? t('admin.customers.form.saving', 'Saving…') : t('admin.customers.form.updateCustomer', 'Update Customer')}
               </Button>
             </div>
           </form>

@@ -22,6 +22,8 @@ import {
   PaginationItem,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
+import { EntriesSummary } from './EntriesSummary';
 import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 
 export interface TablePaginationProps {
@@ -46,6 +48,7 @@ export function TablePagination({
   showItemCount = true,
 }: TablePaginationProps) {
   const id = useId();
+  const t = useTranslations();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(Math.max(1, currentPage), totalPages);
 
@@ -81,7 +84,7 @@ export function TablePagination({
       {/* Left: Page Size Selector */}
       <div className="flex items-center gap-2.5">
         <Label htmlFor={`${id}-page-size`} className="text-xs text-muted-foreground whitespace-nowrap">
-          Rows per page:
+          {t('common.table.rowsPerPage', 'Rows per page:')}
         </Label>
         <Select
           value={String(pageSize)}
@@ -111,9 +114,7 @@ export function TablePagination({
       {/* Middle: Item Count Info */}
       {showItemCount && (
         <div className="text-xs text-muted-foreground font-mono">
-          Showing <span className="font-bold text-foreground">{startItem}</span> to{' '}
-          <span className="font-bold text-foreground">{endItem}</span> of{' '}
-          <span className="font-bold text-foreground">{totalItems}</span> entries
+          <EntriesSummary from={startItem} to={endItem} total={totalItems} />
         </div>
       )}
 
@@ -129,8 +130,8 @@ export function TablePagination({
                 className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                 onClick={() => onPageChange(1)}
                 disabled={safePage <= 1}
-                aria-label="First page"
-                title="First page"
+                aria-label={t('common.table.firstPage', 'First page')}
+                title={t('common.table.firstPage', 'First page')}
               >
                 <ChevronFirst className="h-3.5 w-3.5" />
               </Button>
@@ -144,8 +145,8 @@ export function TablePagination({
                 className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                 onClick={() => onPageChange(safePage - 1)}
                 disabled={safePage <= 1}
-                aria-label="Previous page"
-                title="Previous page"
+                aria-label={t('common.table.previousPage', 'Previous page')}
+                title={t('common.table.previousPage', 'Previous page')}
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
@@ -176,7 +177,7 @@ export function TablePagination({
                         : 'border-border/70 hover:bg-muted/80 text-foreground'
                     )}
                     onClick={() => onPageChange(p)}
-                    aria-label={`Page ${p}`}
+                    aria-label={t('common.table.pageN', 'Page {n}', { n: p })}
                     aria-current={isCurrent ? 'page' : undefined}
                   >
                     {p}
@@ -193,8 +194,8 @@ export function TablePagination({
                 className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                 onClick={() => onPageChange(safePage + 1)}
                 disabled={safePage >= totalPages}
-                aria-label="Next page"
-                title="Next page"
+                aria-label={t('common.table.nextPage', 'Next page')}
+                title={t('common.table.nextPage', 'Next page')}
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
@@ -208,8 +209,8 @@ export function TablePagination({
                 className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                 onClick={() => onPageChange(totalPages)}
                 disabled={safePage >= totalPages}
-                aria-label="Last page"
-                title="Last page"
+                aria-label={t('common.table.lastPage', 'Last page')}
+                title={t('common.table.lastPage', 'Last page')}
               >
                 <ChevronLast className="h-3.5 w-3.5" />
               </Button>

@@ -14,11 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PlatformContact } from '@/features/platform/types';
+import { useTranslations } from '@/i18n/locale-context';
 
 const STATUS_OPTIONS: PlatformContact['status'][] = ['new', 'contacted', 'qualified', 'won', 'lost'];
 const PER_PAGE = 20;
 
 export function ContactsPage() {
+  const t = useTranslations();
+  const statusLabel = (s: PlatformContact['status']) => t(`platform.contacts.list.status.${s}`, s);
+  const statusItems = Object.fromEntries(STATUS_OPTIONS.map((s) => [s, statusLabel(s)]));
   const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -26,11 +30,11 @@ export function ContactsPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearch(searchInput.trim());
       setPage(1);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -43,7 +47,7 @@ export function ContactsPage() {
     mutationFn: ({ id, status: next }: { id: string; status: PlatformContact['status'] }) =>
       platformService.updateLeadStatus(id, next),
     onSuccess: () => {
-      toast.success('Contact status updated');
+      toast.success(t('platform.contacts.list.toast.statusUpdated', 'Contact status updated'));
       void queryClient.invalidateQueries({ queryKey: ['platform', 'contacts'] });
       void queryClient.invalidateQueries({ queryKey: ['platform', 'dashboard'] });
     },
@@ -52,10 +56,10 @@ export function ContactsPage() {
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load contacts"
-        description={error instanceof Error ? error.message : 'Could not retrieve inbound lead requests.'}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.contacts.list.loadFailed', 'Failed to load contacts')}
+        description={error instanceof Error ? error.message : t('platform.contacts.list.loadFailedHint', 'Could not retrieve inbound lead requests.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -67,30 +71,30 @@ export function ContactsPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Inbound Leads & Contacts"
-        subtitle="Contact-form inquiries and addon requests from the public marketing pages"
+        title={t('platform.contacts.list.title', 'Inbound Leads & Contacts')}
+        subtitle={t('platform.contacts.list.subtitle', 'Contact-form inquiries and addon requests from the public marketing pages')}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Contacts' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('nav.platform-contacts', 'Contacts') },
         ]}
       />
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{summary.total}</span>{' '}
-          <span className="text-muted-foreground">total inquiries</span>
+          <span className="text-muted-foreground">{t('platform.contacts.list.kpiTotal', 'total inquiries')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-primary">{summary.new}</span>{' '}
-          <span className="text-muted-foreground">new</span>
+          <span className="text-muted-foreground">{statusLabel('new')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-500">{summary.qualified}</span>{' '}
-          <span className="text-muted-foreground">qualified</span>
+          <span className="text-muted-foreground">{statusLabel('qualified')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-500">{summary.won}</span>{' '}
-          <span className="text-muted-foreground">won</span>
+          <span className="text-muted-foreground">{statusLabel('won')}</span>
         </p>
       </div>
 
@@ -98,14 +102,15 @@ export function ContactsPage() {
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search name, company, email, phone, message..."
+            placeholder={t('platform.contacts.list.searchPlaceholder', 'Search name, company, email, phone, message...')}
+            aria-label={t('platform.contacts.list.searchLabel', 'Search contacts')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="pl-8 h-9 text-xs"
           />
         </div>
         <select
-          aria-label="Filter by status"
+          aria-label={t('platform.contacts.list.filterStatus', 'Filter by status')}
           value={status}
           onChange={(e) => {
             setStatus(e.target.value);
@@ -113,10 +118,10 @@ export function ContactsPage() {
           }}
           className="h-9 rounded-md border border-input bg-background px-3 text-xs capitalize"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('platform.contacts.list.allStatuses', 'All statuses')}</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {statusLabel(s)}
             </option>
           ))}
         </select>
@@ -125,9 +130,13 @@ export function ContactsPage() {
       <div className="space-y-3">
         {data.items.length === 0 ? (
           <EmptyState
-            title={filtered ? 'No contacts match' : 'No contacts yet'}
-            description={filtered ? 'Try adjusting your search or status filter.' : 'Inquiries from the public site will appear here.'}
-            actionLabel={filtered ? 'Clear filters' : undefined}
+            title={filtered ? t('platform.contacts.list.emptyFiltered', 'No contacts match') : t('platform.contacts.list.emptyNone', 'No contacts yet')}
+            description={
+              filtered
+                ? t('platform.contacts.list.emptyFilteredHint', 'Try adjusting your search or status filter.')
+                : t('platform.contacts.list.emptyNoneHint', 'Inquiries from the public site will appear here.')
+            }
+            actionLabel={filtered ? t('platform.contacts.list.clearFilters', 'Clear filters') : undefined}
             onAction={
               filtered
                 ? () => {
@@ -145,11 +154,11 @@ export function ContactsPage() {
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-sm text-foreground">{c.name}</span>
-                      <Badge variant="outline" className="text-[10px] font-mono">
+                      <Badge variant="outline" className="text-xs font-mono">
                         {c.source}
                       </Badge>
                       {c.pluginSlug ? (
-                        <Badge variant="secondary" className="text-[10px] font-mono">
+                        <Badge variant="secondary" className="text-xs font-mono">
                           {c.pluginSlug}
                         </Badge>
                       ) : null}
@@ -170,20 +179,21 @@ export function ContactsPage() {
                         &ldquo;{c.message}&rdquo;
                       </p>
                     ) : null}
-                    <div className="text-[10px] text-muted-foreground font-mono pt-1">{platformDateTime(c.createdAt)}</div>
+                    <div className="text-xs text-muted-foreground font-mono pt-1">{platformDateTime(c.createdAt)}</div>
                   </div>
                   <Select
                     value={c.status}
+                    items={statusItems}
                     disabled={statusMutation.isPending}
                     onValueChange={(value) => statusMutation.mutate({ id: c.id, status: value as PlatformContact['status'] })}
                   >
-                    <SelectTrigger className="h-8 w-[130px] capitalize shrink-0 text-xs font-semibold">
+                    <SelectTrigger aria-label={t('platform.contacts.list.contactStatus', 'Contact status')} className="h-8 min-w-[130px] capitalize shrink-0 text-xs font-semibold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {STATUS_OPTIONS.map((s) => (
                         <SelectItem key={s} value={s} className="capitalize text-xs">
-                          {s}
+                          {statusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -198,13 +208,17 @@ export function ContactsPage() {
       {data.totalPages > 1 ? (
         <div className="flex items-center justify-end gap-2 text-xs">
           <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Previous
+            {t('common.previous', 'Previous')}
           </Button>
           <span className="text-muted-foreground">
-            Page {data.page} of {data.totalPages} · {data.total} results
+            {t('platform.contacts.list.pageInfo', 'Page {page} of {pages} · {total} results', {
+              page: data.page,
+              pages: data.totalPages,
+              total: data.total,
+            })}
           </span>
           <Button size="sm" variant="outline" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
-            Next
+            {t('common.next', 'Next')}
           </Button>
         </div>
       ) : null}

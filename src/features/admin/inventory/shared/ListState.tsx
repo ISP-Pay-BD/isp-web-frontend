@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { EmptyState, TableSkeleton } from '@/components/shared';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface ListStateProps {
   isLoading: boolean;
@@ -31,9 +32,10 @@ export function ListState({
   rows = 8,
   children,
 }: ListStateProps) {
+  const t = useTranslations();
   if (isLoading) return <TableSkeleton rows={rows} />;
   if (isError) {
-    return <EmptyState title={errorTitle} description={errorMessage(error)} actionLabel="Retry" onAction={onRetry} />;
+    return <EmptyState title={errorTitle} description={errorMessage(error)} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={onRetry} />;
   }
   if (isEmpty) return <EmptyState icon={icon} title={emptyTitle} description={emptyDescription} />;
   return <>{children}</>;

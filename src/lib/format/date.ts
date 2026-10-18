@@ -1,5 +1,7 @@
 /** Date / time formatters — Bangladesh locale defaults */
 
+import { dateLocale, isBangla } from './locale';
+
 const BD_TZ = 'Asia/Dhaka';
 
 export function formatDate(
@@ -8,7 +10,7 @@ export function formatDate(
 ): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('en-GB', {
+  return new Intl.DateTimeFormat(dateLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -40,6 +42,12 @@ export function formatRelativeDays(value: string | Date | number, now = new Date
   if (Number.isNaN(date.getTime())) return '—';
   const diffMs = date.getTime() - now.getTime();
   const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  if (isBangla()) {
+    if (days === 0) return 'আজ';
+    if (days === 1) return 'আগামীকাল';
+    if (days === -1) return 'গতকাল';
+    return days > 1 ? `${days} দিন পরে` : `${Math.abs(days)} দিন আগে`;
+  }
   if (days === 0) return 'today';
   if (days === 1) return 'tomorrow';
   if (days === -1) return 'yesterday';

@@ -1,105 +1,182 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, ThumbsUp, ThumbsDown, Search, Calendar } from 'lucide-react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { CheckCircle2, XCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useCustomerActions, useFreeRequestCounts, useFreeRequests } from '../hooks/use-customers';
-import { useDebouncedValue } from '../hooks/use-debounced-value';
 import type { FreeRequest } from '../types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { TablePagination } from '@/components/shared/TablePagination';
+import { DataTable } from '@/features/shared/data-table';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
+import { useUrlParam } from '@/hooks/use-url-state';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
+import { customerStatusLabel } from '../lib/labels';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
-const fmtDate = (v: string | null) =>
-  v ? new Date(v.replace(' ', 'T')).toLocaleDateString('en-BD', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const STATUS_FILTERS: readonly StatusFilter[] = ['all', 'pending', 'approved', 'rejected'];
+
+const fmtDate = (v: string | null) => (v ? formatDate(v.replace(' ', 'T')) : '—');
 
 export function FreeRequestsPage() {
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search.trim());
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
-  const [pageSize, setPageSize] = useState(20);
-  const pageKey = `${statusFilter}|${debouncedSearch}|${pageSize}`;
-  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
-  const page = pageState.key === pageKey ? pageState.page : 1;
+  const t = useTranslations();
+  const table = useServerTable();
+  const { search } = table;
+  const [statusParam, setStatusParam] = useUrlParam('status');
+  const statusFilter: StatusFilter = STATUS_FILTERS.find((s) => s === statusParam) ?? 'pending';
   const [rejectTarget, setRejectTarget] = useState<FreeRequest | null>(null);
 
   const { data, isLoading, isError, error, isFetching, refetch } = useFreeRequests({
     status: statusFilter,
-    search: debouncedSearch,
-    page,
-    perPage: pageSize,
+    search,
+    page: table.page,
+    perPage: table.pageSize,
   });
   const countsQuery = useFreeRequestCounts();
   const { approveFreeRequest, rejectFreeRequest } = useCustomerActions();
 
+  const requests = useMemo(() => data?.items ?? [], [data?.items]);
+  const busy = approveFreeRequest.isPending || rejectFreeRequest.isPending;
+  const approveMutate = approveFreeRequest.mutate;
+
+  const columns = useMemo<LegacyColumnDef<FreeRequest, unknown>[]>(
+    () => [
+      {
+        id: 'serial',
+        header: '#',
+        enableSorting: false,
+        enableHiding: false,
+        meta: { mobile: 'hide' },
+        cell: ({ row, table: tbl }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {(table.page - 1) * table.pageSize + tbl.getRowModel().rows.findIndex((r) => r.id === row.id) + 1}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'customerName',
+        header: t('admin.customers.freeRequests.colCustomer', 'Customer'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => {
+          const req = row.original;
+          return (
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-xs font-bold text-primary">
+                {req.customerName.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <Link href={`/admin/customers/${req.customerId}`} className="text-sm font-semibold text-foreground hover:text-primary hover:underline">
+                  {req.customerName || `#${req.customerId}`}
+                </Link>
+                <div className="mt-0.5 font-mono text-xs font-normal text-muted-foreground">{req.customerMobile || '—'}</div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'resellerName',
+        header: t('admin.customers.freeRequests.colRequestedBy', 'Requested by'),
+        cell: ({ row }) =>
+          row.original.resellerName ? (
+            <Badge variant="outline" className="bg-muted/30 text-xs font-medium">
+              {row.original.resellerName}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">{t('admin.customers.freeRequests.direct', 'Direct')}</span>
+          ),
+      },
+      {
+        accessorKey: 'customerExpiry',
+        header: t('admin.customers.freeRequests.colExpiry', 'Current Expiry'),
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{fmtDate(row.original.customerExpiry)}</span>,
+      },
+      {
+        accessorKey: 'requestedAt',
+        header: t('admin.customers.freeRequests.colRequestDate', 'Request Date'),
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{fmtDate(row.original.requestedAt)}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: t('admin.customers.freeRequests.colStatus', 'Status'),
+        cell: ({ row }) => <StatusBadge status={row.original.status} label={customerStatusLabel(t, row.original.status)} />,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('admin.customers.freeRequests.colAction', 'Action')}</span>,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const req = row.original;
+          if (req.status === 'pending') {
+            return (
+              <div className="flex items-center justify-end gap-1.5">
+                <Button size="sm" disabled={busy} className="h-8 bg-emerald-700 text-xs text-white hover:bg-emerald-800" onClick={() => approveMutate(req.id)}>
+                  <ThumbsUp className="mr-1 h-3 w-3" /> {t('admin.customers.freeRequests.approve', 'Approve')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  className="h-8 border-destructive/30 text-xs text-destructive hover:bg-destructive/10"
+                  onClick={() => setRejectTarget(req)}
+                >
+                  <ThumbsDown className="mr-1 h-3 w-3" /> {t('admin.customers.freeRequests.reject', 'Reject')}
+                </Button>
+              </div>
+            );
+          }
+          return req.status === 'approved' ? (
+            <span className="flex items-center justify-end gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5" /> {t('admin.customers.status.approved', 'Approved')}
+            </span>
+          ) : (
+            <span className="flex items-center justify-end gap-1 text-xs font-medium text-destructive">
+              <XCircle className="h-3.5 w-3.5" /> {t('admin.customers.status.rejected', 'Rejected')}
+            </span>
+          );
+        },
+      },
+    ],
+    [busy, approveMutate, table.page, table.pageSize, t],
+  );
+
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (isError) {
     return (
-      <EmptyState
-        title="Error loading free user requests"
+      <EmptyState variant="error"
+        title={t('admin.customers.freeRequests.loadFailed', 'Error loading free user requests')}
         description={errorMessage(error)}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.freeRequests.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
   }
 
-  const requests = data?.items ?? [];
   const counts = countsQuery.data;
-  const busy = approveFreeRequest.isPending || rejectFreeRequest.isPending;
   const n = (v: number | undefined) => (counts ? v ?? 0 : '…');
-
-  const actionCell = (req: FreeRequest, compact = false) =>
-    req.status === 'pending' ? (
-      <div className={cn('flex items-center gap-1.5', compact ? 'pt-1' : 'justify-end')}>
-        <Button
-          size="sm"
-          disabled={busy}
-          className={cn('bg-emerald-500 hover:bg-emerald-600 text-white', compact ? 'flex-1 h-8 text-xs' : 'h-7 text-[11px]')}
-          onClick={() => approveFreeRequest.mutate(req.id)}
-        >
-          <ThumbsUp className="mr-1 h-3 w-3" /> Approve
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          className={cn('text-destructive border-destructive/30 hover:bg-destructive/10', compact ? 'h-8 text-xs' : 'h-7 text-[11px]')}
-          onClick={() => setRejectTarget(req)}
-        >
-          <ThumbsDown className="mr-1 h-3 w-3" /> Reject
-        </Button>
-      </div>
-    ) : req.status === 'approved' ? (
-      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium justify-end">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Approved
-      </span>
-    ) : (
-      <span className="flex items-center gap-1 text-xs text-red-500 font-medium justify-end">
-        <XCircle className="h-3.5 w-3.5" /> Rejected
-      </span>
-    );
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Free User Requests"
-        subtitle="POP requests to make a customer's connection free. Approving sets the customer's expiry far in the future; rejecting restores normal billing."
+        title={t('admin.customers.freeRequests.title', 'Free User Requests')}
+        subtitle={t('admin.customers.freeRequests.subtitle', "POP requests to make a customer's connection free. Approving sets the customer's expiry far in the future; rejecting restores normal billing.")}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Customers', url: '/admin/customers' },
-          { label: 'Free User Requests' },
+          { label: t('admin.customers.freeRequests.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('admin.customers.freeRequests.breadcrumbCustomers', 'Customers'), url: '/admin/customers' },
+          { label: t('admin.customers.freeRequests.title', 'Free User Requests') },
         ]}
       />
 
@@ -107,44 +184,38 @@ export function FreeRequestsPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{n(counts?.pending)}</span>{' '}
-          <span className="text-muted-foreground">pending</span>
+          <span className="text-muted-foreground">{t('admin.customers.freeRequests.kpiPending', 'pending')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{n(counts?.approved)}</span>{' '}
-          <span className="text-muted-foreground">approved</span>
+          <span className="text-muted-foreground">{t('admin.customers.freeRequests.kpiApproved', 'approved')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-destructive">{n(counts?.rejected)}</span>{' '}
-          <span className="text-muted-foreground">rejected</span>
+          <span className="text-muted-foreground">{t('admin.customers.freeRequests.kpiRejected', 'rejected')}</span>
         </p>
       </div>
 
-      {/* Toolbar */}
+      {/* Status filter */}
       <Card className="border-border/70 shadow-2xs bg-card">
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search customer name or mobile..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9 text-xs"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 self-start sm:self-center">
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
             {(
               [
-                { key: 'all', label: 'All', count: counts ? counts.pending + counts.approved + counts.rejected : undefined },
-                { key: 'pending', label: 'Pending', count: counts?.pending },
-                { key: 'approved', label: 'Approved', count: counts?.approved },
-                { key: 'rejected', label: 'Rejected', count: counts?.rejected },
+                { key: 'all', label: t('admin.customers.freeRequests.filterAll', 'All'), count: counts ? counts.pending + counts.approved + counts.rejected : undefined },
+                { key: 'pending', label: t('admin.customers.status.pending', 'Pending'), count: counts?.pending },
+                { key: 'approved', label: t('admin.customers.status.approved', 'Approved'), count: counts?.approved },
+                { key: 'rejected', label: t('admin.customers.status.rejected', 'Rejected'), count: counts?.rejected },
               ] as { key: StatusFilter; label: string; count?: number }[]
             ).map((f) => (
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setStatusFilter(f.key)}
+                onClick={() => {
+                  setStatusParam(f.key === 'pending' ? '' : f.key);
+                  table.resetPage();
+                }}
+                aria-pressed={statusFilter === f.key}
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition duration-150',
                   statusFilter === f.key
@@ -160,111 +231,24 @@ export function FreeRequestsPage() {
         </CardContent>
       </Card>
 
-      {/* Desktop Table */}
-      <Card className={cn('border-border/70 shadow-2xs bg-card overflow-hidden hidden sm:block', isFetching && 'opacity-80')}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-medium tracking-wide">
-                <th className="py-3.5 px-4">#</th>
-                <th className="py-3.5 px-4">Customer</th>
-                <th className="py-3.5 px-4 hidden lg:table-cell">Requested by</th>
-                <th className="py-3.5 px-4 hidden xl:table-cell">Current Expiry</th>
-                <th className="py-3.5 px-4">Request Date</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {requests.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    No requests match the current filter.
-                  </td>
-                </tr>
-              ) : (
-                requests.map((req, i) => (
-                  <tr key={req.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="py-3.5 px-4 text-muted-foreground font-mono text-xs">{(page - 1) * pageSize + i + 1}</td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs border border-primary/20 shrink-0">
-                          {req.customerName.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <Link href={`/admin/customers/${req.customerId}`} className="font-semibold text-foreground text-sm hover:text-primary hover:underline">
-                            {req.customerName || `#${req.customerId}`}
-                          </Link>
-                          <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{req.customerMobile || '—'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 hidden lg:table-cell">
-                      {req.resellerName ? (
-                        <Badge variant="outline" className="text-[10px] font-medium bg-muted/30">{req.resellerName}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground/50 text-xs">Direct</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 hidden xl:table-cell">
-                      <span className="font-mono text-xs text-muted-foreground">{fmtDate(req.customerExpiry)}</span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="font-mono text-xs text-muted-foreground">{fmtDate(req.requestedAt)}</span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <StatusBadge status={req.status} />
-                    </td>
-                    <td className="py-3.5 px-4 text-right">{actionCell(req)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <TablePagination
-          currentPage={page}
-          pageSize={pageSize}
-          totalItems={data?.meta.total ?? 0}
-          onPageChange={(p) => setPageState({ key: pageKey, page: p })}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[10, 20, 50, 100]}
-        />
-      </Card>
-
-      {/* Mobile Card Layout */}
-      <div className="sm:hidden space-y-3">
-        {requests.length === 0 ? (
-          <Card className="border-border/70 shadow-2xs bg-card p-8 text-center text-muted-foreground text-sm">
-            No requests match the current filter.
-          </Card>
-        ) : (
-          requests.map((req) => (
-            <Card key={req.id} className="border-border/70 bg-card shadow-2xs p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-foreground text-sm truncate">{req.customerName || `#${req.customerId}`}</h3>
-                  <p className="text-[11px] text-muted-foreground font-mono">{req.customerMobile || '—'}</p>
-                </div>
-                <StatusBadge status={req.status} />
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" /> {fmtDate(req.requestedAt)}
-                {req.resellerName ? ` · ${req.resellerName}` : ''}
-              </div>
-              {req.status === 'pending' && actionCell(req, true)}
-            </Card>
-          ))
-        )}
-      </div>
+      <DataTable
+        urlState
+        className={cn(isFetching && 'opacity-80')}
+        columns={columns}
+        data={requests}
+        getRowId={(r) => r.id}
+        searchPlaceholder={t('admin.customers.freeRequests.searchPlaceholder', 'Search customer name or mobile...')}
+        emptyTitle={t('admin.customers.freeRequests.emptyTitle', 'No requests match the current filter.')}
+        server={table.server(data?.meta.total ?? 0)}
+      />
 
       {/* Reject Confirmation */}
       <ConfirmDialog
         open={rejectTarget !== null}
         onOpenChange={(open) => !open && setRejectTarget(null)}
-        title="Reject Free User Request?"
-        description="The customer's billing status goes back to active (normal billing)."
-        confirmLabel="Reject Request"
+        title={t('admin.customers.freeRequests.rejectTitle', 'Reject Free User Request?')}
+        description={t('admin.customers.freeRequests.rejectHint', "The customer's billing status goes back to active (normal billing).")}
+        confirmLabel={t('admin.customers.freeRequests.rejectConfirm', 'Reject Request')}
         destructive
         onConfirm={async () => {
           if (rejectTarget) {

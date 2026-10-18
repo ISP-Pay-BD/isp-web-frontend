@@ -14,18 +14,27 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Printer, Copy, Send, ArrowLeft, Receipt, Sliders } from 'lucide-react';
 import { usePaymentReceipt, useSendPaymentSms } from '@/features/admin/customer-payments/hooks/use-customer-payments';
-import { methodLabel, receiptSmsText } from '@/features/admin/customer-payments/lib/mappers';
+import { receiptSmsText } from '@/features/admin/customer-payments/lib/mappers';
 import type { PaymentReceipt } from '@/features/admin/customer-payments/types';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatBdtWithSymbol } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useLocale, useTranslations } from '@/i18n/locale-context';
+import { ledgerStatusLabel, paymentMethodLabel } from '@/features/admin/customer-payments/lib/labels';
 
-const STATUS_LINE: Record<PaymentReceipt['status'], string> = {
-  completed: '[ PAYMENT RECEIVED ]',
-  pending: '[ PAYMENT PENDING ]',
-  failed: '[ PAYMENT FAILED ]',
-};
+type Translate = ReturnType<typeof useTranslations>;
 
-function escPosText(r: PaymentReceipt, withSupport: boolean): string {
+function statusLine(t: Translate, status: PaymentReceipt['status']): string {
+  switch (status) {
+    case 'completed':
+      return t('admin.ops.posReceipt.statusLine.completed', '[ PAYMENT RECEIVED ]');
+    case 'pending':
+      return t('admin.ops.posReceipt.statusLine.pending', '[ PAYMENT PENDING ]');
+    default:
+      return t('admin.ops.posReceipt.statusLine.failed', '[ PAYMENT FAILED ]');
+  }
+}
+
+function escPosText(t: Translate, r: PaymentReceipt, withSupport: boolean): string {
   const line = '========================================';
   const dash = '----------------------------------------';
   const center = (s: string) => {
@@ -35,20 +44,31 @@ function escPosText(r: PaymentReceipt, withSupport: boolean): string {
   const row = (k: string, v: string) => `${k.padEnd(11)}: ${v}`;
   const out = [line];
   if (r.issuer.name) out.push(center(r.issuer.name.toUpperCase()));
-  if (withSupport && r.issuer.phone) out.push(center(`Tel: ${r.issuer.phone}`));
+  if (withSupport && r.issuer.phone) out.push(center(`${t('admin.customerPayments.receipt.tel', 'Tel')}: ${r.issuer.phone}`));
   if (withSupport && r.issuer.address) out.push(center(r.issuer.address));
-  out.push(line, row('Receipt No', r.invoiceNo), row('Date', formatDateTime(r.paidAt ?? r.createdAt ?? '')));
-  if (r.collector) out.push(row('Collector', r.collector));
-  out.push(dash, row('Customer', r.customer?.name || '—'));
-  if (r.customer?.packageName) out.push(row('Package', r.customer.packageName));
-  if (r.billingMonth) out.push(row('Month', r.billingMonth));
-  out.push(row('Method', methodLabel(r)));
+  out.push(
+    line,
+    row(t('admin.ops.posReceipt.receiptNo', 'Receipt No'), r.invoiceNo),
+    row(t('admin.customerPayments.receipt.date', 'Date'), formatDateTime(r.paidAt ?? r.createdAt ?? '')),
+  );
+  if (r.collector) out.push(row(t('admin.ops.posReceipt.collector', 'Collector'), r.collector));
+  out.push(dash, row(t('admin.ops.posReceipt.customer', 'Customer'), r.customer?.name || '—'));
+  if (r.customer?.packageName) out.push(row(t('admin.customers.list.colPackage', 'Package'), r.customer.packageName));
+  if (r.billingMonth) out.push(row(t('admin.ops.posReceipt.month', 'Month'), r.billingMonth));
+  out.push(row(t('admin.customerPayments.receipt.method', 'Method'), paymentMethodLabel(t, r)));
   if (r.trxId) out.push(row('TrxID', r.trxId));
-  out.push(dash, row('TOTAL', `BDT ${r.amountBdt.toFixed(2)}`), row('Status', r.status.toUpperCase()), line);
+  out.push(
+    dash,
+    row(t('admin.ops.posReceipt.total', 'Total').toUpperCase(), `BDT ${r.amountBdt.toFixed(2)}`),
+    row(t('admin.customerPayments.receipt.status', 'Status'), ledgerStatusLabel(t, r.status).toUpperCase()),
+    line,
+  );
   return out.join('\n');
 }
 
 export function PosReceiptPage() {
+  const t = useTranslations();
+  const { locale } = useLocale();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const paymentId = params?.id ?? '';
@@ -63,9 +83,9 @@ export function PosReceiptPage() {
   if (isError || !receipt) {
     return (
       <EmptyState
-        title="Receipt not available"
-        description={isError ? errorMessage(error) : 'No payment found for this receipt.'}
-        actionLabel={isError ? 'Retry' : 'Back to Customer Payments'}
+        title={t('admin.ops.posReceipt.unavailable', 'Receipt not available')}
+        description={isError ? errorMessage(error) : t('admin.ops.posReceipt.notFound', 'No payment found for this receipt.')}
+        actionLabel={isError ? t('admin.customers.list.retry', 'Retry') : t('admin.ops.posReceipt.backToPayments', 'Back to Customer Payments')}
         onAction={() => (isError ? refetch() : router.push('/admin/customer-payments'))}
       />
     );
@@ -75,9 +95,9 @@ export function PosReceiptPage() {
 
   const handleCopyRaw = () => {
     navigator.clipboard
-      .writeText(escPosText(receipt, includeSupport))
-      .then(() => toast.success('Receipt text copied'))
-      .catch(() => toast.error('Clipboard is not available'));
+      .writeText(escPosText(t, receipt, includeSupport))
+      .then(() => toast.success(t('admin.ops.posReceipt.copied', 'Receipt text copied')))
+      .catch(() => toast.error(t('admin.ops.posReceipt.clipboardUnavailable', 'Clipboard is not available')));
   };
 
   return (
@@ -106,27 +126,25 @@ export function PosReceiptPage() {
       `}</style>
 
       <PageHeader
-        title="POS Thermal Receipt"
-        subtitle={`Receipt slip for invoice ${receipt.invoiceNo}`}
+        title={t('admin.ops.posReceipt.title', 'POS Thermal Receipt')}
+        subtitle={t('admin.ops.posReceipt.subtitle', 'Receipt slip for invoice {invoice}', { invoice: receipt.invoiceNo })}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Customer Payments', url: '/admin/customer-payments' },
-          { label: 'POS Receipt' },
+          { label: t('nav.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('nav.customers-payments', 'Customer Payments'), url: '/admin/customer-payments' },
+          { label: t('admin.ops.posReceipt.crumb', 'POS Receipt') },
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <Link href="/admin/customer-payments">
-              <Button variant="outline" size="sm" className="text-xs border-border/70">
-                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Back to Ledger
+            <Button variant="outline" size="sm" className="text-xs border-border/70" render={<Link href="/admin/customer-payments" />}>
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> {t('admin.ops.posReceipt.backToLedger', 'Back to Ledger')}
               </Button>
-            </Link>
             <Button variant="outline" size="sm" onClick={handleCopyRaw} className="text-xs border-border/70 hover:border-primary/50 text-foreground">
               <Copy className="mr-1.5 h-3.5 w-3.5 text-primary" />
-              Copy text
+              {t('admin.ops.posReceipt.copyText', 'Copy text')}
             </Button>
             <Button size="sm" onClick={() => window.print()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs shadow-md shadow-primary/25 font-semibold">
               <Printer className="mr-1.5 h-3.5 w-3.5" />
-              Print Receipt
+              {t('admin.ops.posReceipt.printReceipt', 'Print Receipt')}
             </Button>
           </div>
         }
@@ -139,24 +157,30 @@ export function PosReceiptPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Receipt className="h-4 w-4 text-primary" />
-                  Transaction Summary
+                  {t('admin.ops.posReceipt.summaryTitle', 'Transaction Summary')}
                 </CardTitle>
-                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-xs font-mono uppercase">
-                  {methodLabel(receipt)}
+                <Badge variant="outline" tone="success" className="text-xs font-mono uppercase">
+                  {paymentMethodLabel(t, receipt)}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-4 text-xs">
-              <SummaryRow label="Customer" value={receipt.customer?.name || '—'} />
-              {receipt.customer?.packageName ? <SummaryRow label="Package" value={receipt.customer.packageName} /> : null}
-              {receipt.billingMonth ? <SummaryRow label="Billing month" value={receipt.billingMonth} /> : null}
-              {receipt.collector ? <SummaryRow label="Collected by" value={receipt.collector} /> : null}
-              <SummaryRow label="Payment date" value={paidOn} mono />
+              <SummaryRow label={t('admin.ops.posReceipt.customer', 'Customer')} value={receipt.customer?.name || '—'} />
+              {receipt.customer?.packageName ? (
+                <SummaryRow label={t('admin.customers.list.colPackage', 'Package')} value={receipt.customer.packageName} />
+              ) : null}
+              {receipt.billingMonth ? (
+                <SummaryRow label={t('admin.customerPayments.receipt.billingMonth', 'Billing month')} value={receipt.billingMonth} />
+              ) : null}
+              {receipt.collector ? (
+                <SummaryRow label={t('admin.customerPayments.receipt.collectedBy', 'Collected by')} value={receipt.collector} />
+              ) : null}
+              <SummaryRow label={t('admin.ops.posReceipt.paymentDate', 'Payment date')} value={paidOn} mono />
               {receipt.trxId ? <SummaryRow label="TrxID" value={receipt.trxId} mono /> : null}
               <div className="flex items-center justify-between pt-1">
-                <span className="text-muted-foreground font-semibold">Total:</span>
+                <span className="text-muted-foreground font-semibold">{t('admin.ops.posReceipt.total', 'Total')}:</span>
                 <span className="text-base font-bold font-mono text-emerald-500">
-                  ৳{receipt.amountBdt.toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                  {formatBdtWithSymbol(receipt.amountBdt)}
                 </span>
               </div>
             </CardContent>
@@ -166,13 +190,15 @@ export function PosReceiptPage() {
             <CardHeader className="border-b border-border/50 pb-3">
               <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Sliders className="h-4 w-4 text-primary" />
-                Printer Formatting
+                {t('admin.ops.posReceipt.printerTitle', 'Printer Formatting')}
               </CardTitle>
-              <CardDescription className="text-xs">Paper width, preview style and printed sections</CardDescription>
+              <CardDescription className="text-xs">
+                {t('admin.ops.posReceipt.printerDesc', 'Paper width, preview style and printed sections')}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-4 text-xs">
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-2">Paper roll width</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-2">{t('admin.ops.posReceipt.paperWidth', 'Paper roll width')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['80mm', '58mm'] as const).map((w) => (
                     <button
@@ -191,27 +217,29 @@ export function PosReceiptPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-2">Preview</label>
+                <label className="text-xs font-medium text-muted-foreground block mb-2">{t('admin.ops.posReceipt.preview', 'Preview')}</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(['paper', 'dark'] as const).map((t) => (
+                  {(['paper', 'dark'] as const).map((theme) => (
                     <button
-                      key={t}
+                      key={theme}
                       type="button"
-                      onClick={() => setPaperTheme(t)}
+                      onClick={() => setPaperTheme(theme)}
                       className={`p-2.5 rounded-lg border text-center font-semibold transition ${
-                        paperTheme === t
+                        paperTheme === theme
                           ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary'
                           : 'border-border/70 bg-card/40 text-muted-foreground hover:border-border'
                       }`}
                     >
-                      {t === 'paper' ? 'Thermal paper' : 'Dark preview'}
+                      {theme === 'paper'
+                        ? t('admin.ops.posReceipt.themePaper', 'Thermal paper')
+                        : t('admin.ops.posReceipt.themeDark', 'Dark preview')}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <span className="text-foreground">Company phone &amp; address</span>
-                <Switch checked={includeSupport} onCheckedChange={setIncludeSupport} />
+                <span className="text-foreground">{t('admin.ops.posReceipt.companyContact', 'Company phone & address')}</span>
+                <Switch aria-label={t('admin.ops.posReceipt.companyContact', 'Company phone & address')} checked={includeSupport} onCheckedChange={setIncludeSupport} />
               </div>
               <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/50">
                 {receipt.customer ? (
@@ -220,15 +248,15 @@ export function PosReceiptPage() {
                       size="sm"
                       variant="outline"
                       disabled={sendSms.isPending}
-                      onClick={() => sendSms.mutate({ customerId: receipt.customer!.id, content: receiptSmsText(receipt) })}
+                      onClick={() => sendSms.mutate({ customerId: receipt.customer!.id, content: receiptSmsText(receipt, locale) })}
                       className="h-8 text-xs border-border/70 text-foreground"
                     >
-                      <Send className="mr-1.5 h-3 w-3 text-primary" /> Send SMS
+                      <Send className="mr-1.5 h-3 w-3 text-primary" /> {t('admin.customers.expiredPage.sendSms', 'Send SMS')}
                     </Button>
                   </Can>
                 ) : null}
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="h-8 text-xs border-border/70 text-foreground">
-                  <Printer className="mr-1.5 h-3 w-3 text-primary" /> Print
+                  <Printer className="mr-1.5 h-3 w-3 text-primary" /> {t('admin.ops.posReceipt.print', 'Print')}
                 </Button>
               </div>
             </CardContent>
@@ -251,47 +279,51 @@ export function PosReceiptPage() {
                 {receipt.issuer.name ? (
                   <div className="font-extrabold text-base tracking-wider uppercase">{receipt.issuer.name}</div>
                 ) : null}
-                {receipt.issuer.slogan ? <div className="text-[11px] font-semibold opacity-80">{receipt.issuer.slogan}</div> : null}
+                {receipt.issuer.slogan ? <div className="text-xs font-semibold opacity-80">{receipt.issuer.slogan}</div> : null}
                 {includeSupport && (receipt.issuer.phone || receipt.issuer.address) ? (
-                  <div className="text-[10px] opacity-75 leading-tight pt-0.5">
+                  <div className="text-xs opacity-75 leading-tight pt-0.5">
                     {receipt.issuer.address ? <div>{receipt.issuer.address}</div> : null}
-                    {receipt.issuer.phone ? <div>Tel: {receipt.issuer.phone}</div> : null}
+                    {receipt.issuer.phone ? <div>
+                        {t('admin.customerPayments.receipt.tel', 'Tel')}: {receipt.issuer.phone}
+                      </div> : null}
                   </div>
                 ) : null}
               </div>
 
               <div className="border-t-2 border-dashed border-current opacity-40 my-2" />
 
-              <div className="space-y-1 text-left text-[11px]">
-                <SlipRow label="Receipt No" value={receipt.invoiceNo} bold />
-                <SlipRow label="Date" value={paidOn} />
-                {receipt.collector ? <SlipRow label="Collector" value={receipt.collector} /> : null}
+              <div className="space-y-1 text-left text-xs">
+                <SlipRow label={t('admin.ops.posReceipt.receiptNo', 'Receipt No')} value={receipt.invoiceNo} bold />
+                <SlipRow label={t('admin.customerPayments.receipt.date', 'Date')} value={paidOn} />
+                {receipt.collector ? <SlipRow label={t('admin.ops.posReceipt.collector', 'Collector')} value={receipt.collector} /> : null}
               </div>
 
               <div className="border-t border-dashed border-current opacity-40 my-2" />
 
-              <div className="space-y-1 text-left text-[11px]">
-                <SlipRow label="Customer" value={receipt.customer?.name || '—'} bold />
-                {receipt.customer?.packageName ? <SlipRow label="Package" value={receipt.customer.packageName} /> : null}
-                {receipt.billingMonth ? <SlipRow label="Month" value={receipt.billingMonth} /> : null}
-                <SlipRow label="Method" value={methodLabel(receipt)} bold />
+              <div className="space-y-1 text-left text-xs">
+                <SlipRow label={t('admin.ops.posReceipt.customer', 'Customer')} value={receipt.customer?.name || '—'} bold />
+                {receipt.customer?.packageName ? (
+                  <SlipRow label={t('admin.customers.list.colPackage', 'Package')} value={receipt.customer.packageName} />
+                ) : null}
+                {receipt.billingMonth ? <SlipRow label={t('admin.ops.posReceipt.month', 'Month')} value={receipt.billingMonth} /> : null}
+                <SlipRow label={t('admin.customerPayments.receipt.method', 'Method')} value={paymentMethodLabel(t, receipt)} bold />
                 {receipt.trxId ? <SlipRow label="TrxID" value={receipt.trxId} /> : null}
               </div>
 
               <div className="border-t-2 border-dashed border-current opacity-40 my-2 pt-2" />
               <div className="flex justify-between items-center text-sm font-extrabold">
-                <span>TOTAL:</span>
+                <span>{t('admin.ops.posReceipt.total', 'Total').toUpperCase()}:</span>
                 <span className="text-base tracking-tight">
-                  ৳{receipt.amountBdt.toLocaleString('en-BD', { minimumFractionDigits: 2 })}
+                  {formatBdtWithSymbol(receipt.amountBdt)}
                 </span>
               </div>
               <div className="border-b-2 border-dashed border-current opacity-40 my-2" />
 
-              <div className="py-1 text-center font-bold text-[11px] uppercase tracking-wider">{STATUS_LINE[receipt.status]}</div>
+              <div className="py-1 text-center font-bold text-xs uppercase tracking-wider">{statusLine(t, receipt.status)}</div>
 
-              <div className="pt-3 text-[10px] opacity-75 space-y-1 leading-relaxed border-t border-dashed border-current">
-                <p className="font-semibold uppercase tracking-wider">*** Thank you ***</p>
-                <p>Keep this receipt for payment verification.</p>
+              <div className="pt-3 text-xs opacity-75 space-y-1 leading-relaxed border-t border-dashed border-current">
+                <p className="font-semibold uppercase tracking-wider">{t('admin.ops.posReceipt.thanks', '*** Thank you ***')}</p>
+                <p>{t('admin.ops.posReceipt.keepNote', 'Keep this receipt for payment verification.')}</p>
               </div>
             </div>
           </div>

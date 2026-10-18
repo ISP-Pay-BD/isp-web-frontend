@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { toast } from 'sonner';
 import {
@@ -50,10 +50,12 @@ import { ListState } from '@/features/admin/inventory/shared/ListState';
 import { FieldError, fieldError } from '@/features/admin/inventory/shared/form-utils';
 import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '@/features/admin/inventory/shared/table-utils';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const MENU = 'inventory_purchess';
 
 export function VendorsPage() {
-  const router = useRouter();
+  const t = useTranslations();
   const table = useServerTable();
   const query = useSuppliers({ page: table.page, pageSize: table.pageSize, search: table.search });
   const summary = useInventorySummary();
@@ -88,9 +90,9 @@ export function VendorsPage() {
           v.billCount,
         ]),
       );
-      toast.success(`Exported ${rows.length} vendors`);
+      toast.success(t('admin.purchase.vendors.exported', 'Exported {n} vendors', { n: rows.length }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+      toast.error(e instanceof Error ? e.message : t('admin.purchase.vendors.exportFailed', 'Export failed'));
     } finally {
       setExporting(false);
     }
@@ -100,7 +102,7 @@ export function VendorsPage() {
     () => [
       {
         accessorKey: 'companyName',
-        header: 'Vendor & Company Name',
+        header: t('admin.purchase.vendors.colVendor', 'Vendor & Company Name'),
         enableHiding: false,
         size: 260,
         cell: ({ row }) => {
@@ -131,7 +133,7 @@ export function VendorsPage() {
       },
       {
         accessorKey: 'contactPerson',
-        header: 'Contact Person',
+        header: t('admin.purchase.vendors.colContact', 'Contact Person'),
         size: 180,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
@@ -142,7 +144,7 @@ export function VendorsPage() {
       },
       {
         accessorKey: 'mobileNumber',
-        header: 'Mobile / Phone',
+        header: t('admin.purchase.vendors.colPhone', 'Mobile / Phone'),
         size: 180,
         cell: ({ row }) => {
           const v = row.original;
@@ -159,7 +161,7 @@ export function VendorsPage() {
       },
       {
         accessorKey: 'purchaseTotal',
-        header: 'Total Purchased',
+        header: t('admin.purchase.vendors.colPurchased', 'Total Purchased'),
         size: 160,
         cell: ({ row }) => (
           <div>
@@ -167,7 +169,9 @@ export function VendorsPage() {
               {formatBdtWithSymbol(row.original.purchaseTotal)}
             </span>
             <p className="text-xs text-muted-foreground">
-              {row.original.billCount} {row.original.billCount === 1 ? 'bill' : 'bills'}
+              {row.original.billCount === 1
+                ? t('admin.purchase.vendors.billOne', '{n} bill', { n: row.original.billCount })
+                : t('admin.purchase.vendors.billMany', '{n} bills', { n: row.original.billCount })}
             </p>
           </div>
         ),
@@ -180,14 +184,14 @@ export function VendorsPage() {
           const v = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger aria-label={t('common.actions', 'Actions')} className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Vendor Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => router.push(`/admin/purchase/bills?vendor_id=${encodeURIComponent(v.id)}`)}>
+                <DropdownMenuLabel>{t('admin.purchase.vendors.actionsLabel', 'Vendor Actions')}</DropdownMenuLabel>
+                <DropdownMenuItem render={<Link href={`/admin/purchase/bills?vendor_id=${encodeURIComponent(v.id)}`} />}>
                   <Receipt className="h-3.5 w-3.5 mr-2" />
-                  View Purchase Bills
+                  {t('admin.purchase.vendors.viewBills', 'View Purchase Bills')}
                 </DropdownMenuItem>
                 <Can menu={MENU} action="update">
                   <DropdownMenuItem
@@ -197,14 +201,14 @@ export function VendorsPage() {
                     }}
                   >
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Vendor
+                    {t('admin.purchase.vendors.edit', 'Edit Vendor')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="delete">
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(v)}>
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Vendor
+                    {t('admin.purchase.vendors.delete', 'Delete Vendor')}
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
@@ -213,24 +217,24 @@ export function VendorsPage() {
         },
       },
     ],
-    [router],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Suppliers & Equipment Vendors"
-        subtitle="Hardware distributors, cable suppliers and other vendors you purchase from."
+        title={t('admin.purchase.vendors.title', 'Suppliers & Equipment Vendors')}
+        subtitle={t('admin.purchase.vendors.subtitle', 'Hardware distributors, cable suppliers and other vendors you purchase from.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Purchase', href: '/admin/purchase/bills' },
-          { label: 'Vendors' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.purchase', 'Purchase'), href: '/admin/purchase/bills' },
+          { label: t('admin.purchase.vendors.crumb', 'Vendors') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              {exporting ? 'Exporting…' : 'Export Directory'}
+              {exporting ? t('admin.customers.list.exporting', 'Exporting…') : t('admin.purchase.vendors.exportDirectory', 'Export Directory')}
             </Button>
             <Can menu={MENU} action="create">
               <Button
@@ -242,7 +246,7 @@ export function VendorsPage() {
                 className="h-9"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Vendor
+                {t('admin.purchase.vendors.add', 'Add Vendor')}
               </Button>
             </Can>
           </div>
@@ -252,22 +256,22 @@ export function VendorsPage() {
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <KpiTile
-          label="Total Suppliers"
+          label={t('admin.purchase.vendors.kpiSuppliers', 'Total Suppliers')}
           icon={<Building2 className="h-4 w-4 text-primary" />}
-          value={s ? s.vendorsCount.toLocaleString() : '—'}
-          hint="Registered vendors"
+          value={s ? formatCount(s.vendorsCount) : '—'}
+          hint={t('admin.purchase.vendors.kpiSuppliersHint', 'Registered vendors')}
         />
         <KpiTile
-          label="Total Purchased"
+          label={t('admin.purchase.vendors.kpiPurchased', 'Total Purchased')}
           icon={<Coins className="h-4 w-4 text-primary" />}
           value={s ? formatBdtWithSymbol(s.purchaseTotal) : '—'}
-          hint="Across all purchase bills"
+          hint={t('admin.purchase.vendors.kpiPurchasedHint', 'Across all purchase bills')}
         />
         <KpiTile
-          label="Units Purchased"
+          label={t('admin.purchase.vendors.kpiUnits', 'Units Purchased')}
           icon={<Boxes className="h-4 w-4 text-emerald-500" />}
-          value={s ? s.purchasedQty.toLocaleString() : '—'}
-          hint="Quantity on purchase bills"
+          value={s ? formatCount(s.purchasedQty) : '—'}
+          hint={t('admin.purchase.vendors.kpiUnitsHint', 'Quantity on purchase bills')}
           hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
         />
       </div>
@@ -278,17 +282,17 @@ export function VendorsPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         isEmpty={!table.search && page?.meta.total === 0}
-        errorTitle="Failed to load vendors"
-        emptyTitle="No vendors yet"
-        emptyDescription="Add the suppliers you purchase stock from."
+        errorTitle={t('admin.purchase.vendors.loadFailed', 'Failed to load vendors')}
+        emptyTitle={t('admin.purchase.vendors.emptyTitle', 'No vendors yet')}
+        emptyDescription={t('admin.purchase.vendors.emptyDesc', 'Add the suppliers you purchase stock from.')}
         icon={<Building2 className="h-5 w-5" />}
       >
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={page?.items ?? []}
           getRowId={(r) => r.id}
-          searchPlaceholder="Search vendor by company, contact, phone or email..."
-          emptyTitle="No vendors match your search"
+          searchPlaceholder={t('admin.purchase.vendors.search', 'Search vendor by company, contact, phone or email...')}
+          emptyTitle={t('admin.purchase.vendors.emptyFiltered', 'No vendors match your search')}
           server={{
             page: table.page,
             pageSize: table.pageSize,
@@ -310,14 +314,20 @@ export function VendorsPage() {
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title="Delete vendor?"
-        description={deleting ? `"${deleting.companyName}" will be removed from the vendor directory.` : undefined}
-        confirmLabel="Delete"
+        title={t('admin.purchase.vendors.deleteTitle', 'Delete vendor?')}
+        description={
+          deleting
+            ? t('admin.purchase.vendors.deleteDesc', '"{name}" will be removed from the vendor directory.', { name: deleting.companyName })
+            : undefined
+        }
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleting) return;
           const target = deleting;
-          deleteSupplier.mutate(target.id, { onSuccess: () => toast.success(`"${target.companyName}" deleted`) });
+          deleteSupplier.mutate(target.id, {
+            onSuccess: () => toast.success(t('admin.purchase.vendors.deleted', '"{name}" deleted', { name: target.companyName })),
+          });
           setDeleting(null);
         }}
       />
@@ -327,19 +337,23 @@ export function VendorsPage() {
 
 type VendorField = keyof SupplierPayload;
 
-const FIELDS: Array<{ key: VendorField; label: string; required?: boolean; type?: string; half?: boolean }> = [
-  { key: 'company_name', label: 'Company / Vendor Name', required: true },
-  { key: 'contact_person', label: 'Contact Person', required: true, half: true },
-  { key: 'email', label: 'Email', required: true, type: 'email', half: true },
-  { key: 'mobile_number', label: 'Mobile Number', required: true, type: 'tel', half: true },
-  { key: 'phone_number', label: 'Phone Number', type: 'tel', half: true },
-  { key: 'website', label: 'Website', half: true },
-  { key: 'facebook_url', label: 'Facebook URL', half: true },
-  { key: 'skype_id', label: 'Skype ID', half: true },
-  { key: 'address', label: 'Address' },
+type FieldDef = { key: VendorField; label: string; required?: boolean; type?: string; half?: boolean };
+
+const vendorFields = (t: ReturnType<typeof useTranslations>): FieldDef[] => [
+  { key: 'company_name', label: t('admin.purchase.vendors.fieldCompany', 'Company / Vendor Name'), required: true },
+  { key: 'contact_person', label: t('admin.purchase.vendors.fieldContact', 'Contact Person'), required: true, half: true },
+  { key: 'email', label: t('admin.purchase.vendors.fieldEmail', 'Email'), required: true, type: 'email', half: true },
+  { key: 'mobile_number', label: t('admin.purchase.vendors.fieldMobile', 'Mobile Number'), required: true, type: 'tel', half: true },
+  { key: 'phone_number', label: t('admin.purchase.vendors.fieldPhone', 'Phone Number'), type: 'tel', half: true },
+  { key: 'website', label: t('admin.purchase.vendors.fieldWebsite', 'Website'), half: true },
+  { key: 'facebook_url', label: t('admin.purchase.vendors.fieldFacebook', 'Facebook URL'), half: true },
+  { key: 'skype_id', label: t('admin.purchase.vendors.fieldSkype', 'Skype ID'), half: true },
+  { key: 'address', label: t('admin.purchase.vendors.fieldAddress', 'Address') },
 ];
 
 function VendorForm({ vendor, onDone }: { vendor: Supplier | null; onDone: () => void }) {
+  const t = useTranslations();
+  const fields = vendorFields(t);
   const [values, setValues] = useState<Record<VendorField, string>>({
     company_name: vendor?.companyName ?? '',
     contact_person: vendor?.contactPerson ?? '',
@@ -358,7 +372,7 @@ function VendorForm({ vendor, onDone }: { vendor: Supplier | null; onDone: () =>
     e.preventDefault();
     const errors: Partial<Record<VendorField, string>> = {};
     if (values.mobile_number && !/^\+?\d{6,15}$/.test(values.mobile_number.trim())) {
-      errors.mobile_number = 'Mobile number must be 6–15 digits (optional leading +)';
+      errors.mobile_number = t('admin.purchase.vendors.mobileError', 'Mobile number must be 6–15 digits (optional leading +)');
     }
     setLocalError(errors);
     if (Object.keys(errors).length > 0) return;
@@ -379,7 +393,11 @@ function VendorForm({ vendor, onDone }: { vendor: Supplier | null; onDone: () =>
       { id: vendor?.id, body },
       {
         onSuccess: () => {
-          toast.success(vendor ? `"${body.company_name}" updated` : `Vendor "${body.company_name}" added`);
+          toast.success(
+            vendor
+              ? t('admin.purchase.vendors.updated', '"{name}" updated', { name: body.company_name })
+              : t('admin.purchase.vendors.added', 'Vendor "{name}" added', { name: body.company_name }),
+          );
           onDone();
         },
       },
@@ -391,13 +409,13 @@ function VendorForm({ vendor, onDone }: { vendor: Supplier | null; onDone: () =>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5 text-primary" />
-          {vendor ? 'Edit Vendor' : 'Add Supplier / Vendor'}
+          {vendor ? t('admin.purchase.vendors.edit', 'Edit Vendor') : t('admin.purchase.vendors.formAddTitle', 'Add Supplier / Vendor')}
         </DialogTitle>
-        <DialogDescription>Vendors can be selected on requisition and purchase bill lines.</DialogDescription>
+        <DialogDescription>{t('admin.purchase.vendors.formDesc', 'Vendors can be selected on requisition and purchase bill lines.')}</DialogDescription>
       </DialogHeader>
 
       <div className="grid grid-cols-2 gap-3 py-4">
-        {FIELDS.map((f) => {
+        {fields.map((f) => {
           const message = localError[f.key] ?? fieldError(save.error, f.key);
           return (
             <div key={f.key} className={f.half ? 'col-span-2 space-y-1.5 sm:col-span-1' : 'col-span-2 space-y-1.5'}>
@@ -421,10 +439,14 @@ function VendorForm({ vendor, onDone }: { vendor: Supplier | null; onDone: () =>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : vendor ? 'Save Changes' : 'Add Vendor'}
+          {save.isPending
+            ? t('admin.purchase.vendors.saving', 'Saving…')
+            : vendor
+              ? t('admin.purchase.vendors.saveChanges', 'Save Changes')
+              : t('admin.purchase.vendors.add', 'Add Vendor')}
         </Button>
       </DialogFooter>
     </form>

@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import {
   FileText,
   PenLine,
@@ -16,7 +17,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  sourceLabel,
   useExportJournal,
   useJournalEntries,
   useJournalSummary,
@@ -25,7 +25,8 @@ import {
   type JournalSource,
 } from '../hooks/use-journal-entries';
 import { NewJournalVoucherDialog } from '../components/NewJournalVoucherDialog';
-import { PageSkeleton, EmptyState, Can, TablePagination } from '@/components/shared';
+import { PageSkeleton, EmptyState, Can } from '@/components/shared';
+import { DataTable } from '@/features/shared/data-table';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,29 +47,33 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { replaceQuery } from '@/hooks/use-url-state';
 import { useServerTable } from '../../shared/table-utils';
-import { DateRangeInputs, DebouncedSearchInput, KpiCard } from '../../shared/components';
-import { money } from '../../shared/format';
+import { DateRangeInputs, KpiCard } from '../../shared/components';
+import { humanize, money } from '../../shared/format';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
-const SOURCE_TABS: Array<{ value: JournalSource; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'manual', label: 'Manual' },
-  { value: 'system', label: 'Auto-posted' },
-];
+const SOURCE_TABS: JournalSource[] = ['all', 'manual', 'system'];
+
+type Translate = ReturnType<typeof useTranslations>;
+
+/** "Manual" for hand-posted vouchers, otherwise "Auto · <origin>". */
+function sourceText(t: Translate, referenceType: string): string {
+  if (!referenceType || referenceType === 'manual') return t('admin.accounting.journal.source.manual', 'Manual');
+  const origin = t(`admin.accounting.journal.origin.${referenceType}`, humanize(referenceType));
+  return t('admin.accounting.journal.source.auto', 'Auto · {origin}', { origin });
+}
 
 function SourceBadge({ referenceType }: { referenceType: string }) {
+  const t = useTranslations();
   const manual = !referenceType || referenceType === 'manual';
   return (
     <Badge
       variant="outline"
-      className={cn(
-        'text-[10px] font-medium whitespace-nowrap',
-        manual
-          ? 'bg-primary/10 text-primary border-primary/20'
-          : 'border-blue-500/20 bg-blue-500/10 text-blue-400',
-      )}
+      tone={manual ? undefined : 'info'} className="text-xs font-medium whitespace-nowrap"
     >
-      {sourceLabel(referenceType)}
+      {sourceText(t, referenceType)}
     </Badge>
   );
 }
@@ -83,8 +88,7 @@ export function JournalEntriesPage() {
 }
 
 function JournalEntriesView() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const t = useTranslations();
   const accountId = useSearchParams().get('account_id') ?? '';
 
   const { page, pageSize, search, setPage, onPageSizeChange, onSearchChange, resetPage } =
@@ -111,8 +115,88 @@ function JournalEntriesView() {
 
   const clearAccount = () => {
     resetPage();
-    router.replace(pathname);
+    replaceQuery((params) => params.delete('account_id'));
   };
+
+  const columns = useMemo<LegacyColumnDef<JournalEntryItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'id',
+        header: t('admin.accounting.journal.colId', 'Entry ID'),
+        cell: ({ row }) => (
+          <span className="bg-primary/10 border-primary/20 text-primary rounded-md border px-2 py-1 font-mono text-xs font-bold">
+            #{row.original.id}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'date',
+        header: t('admin.accounting.journal.colDate', 'Date'),
+        cell: ({ row }) => (
+          <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs whitespace-nowrap">
+            <Calendar className="h-3.5 w-3.5" />
+            {row.original.date}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'description',
+        header: t('admin.accounting.journal.colDescription', 'Voucher Description'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="text-foreground hover:text-primary text-left font-medium transition-colors"
+            onClick={() => setSelectedEntry(row.original)}
+          >
+            {row.original.description || '—'}
+          </button>
+        ),
+      },
+      {
+        id: 'source',
+        header: t('admin.accounting.journal.colSource', 'Source'),
+        accessorFn: (entry) => sourceText(t, entry.referenceType),
+        cell: ({ row }) => <SourceBadge referenceType={row.original.referenceType} />,
+      },
+      {
+        accessorKey: 'totalDebit',
+        header: t('admin.accounting.journal.colDebit', 'Debit (BDT)'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-emerald-400 tabular-nums">
+            {money(row.original.totalDebit)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'totalCredit',
+        header: t('admin.accounting.journal.colCredit', 'Credit (BDT)'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-blue-400 tabular-nums">
+            {money(row.original.totalCredit)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground h-7 w-7"
+            aria-label={t('admin.accounting.journal.viewEntry', 'View entry {id}', { id: row.original.id })}
+            onClick={() => setSelectedEntry(row.original)}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+        ),
+      },
+    ],
+    [t],
+  );
 
   if (list.isPending) return <PageSkeleton variant="table" rows={8} />;
 
@@ -120,12 +204,12 @@ function JournalEntriesView() {
     <div className="w-full space-y-6 pb-12">
       {/* Top Header */}
       <PageHeader
-        title="General Journal & Double-Entry Vouchers"
-        subtitle="Every posted debit-credit voucher: manual journals and entries posted automatically from approved incomes, expenses and payments."
+        title={t('admin.accounting.journal.title', 'General Journal & Double-Entry Vouchers')}
+        subtitle={t('admin.accounting.journal.subtitle', 'Every posted debit-credit voucher: manual journals and entries posted automatically from approved incomes, expenses and payments.')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Accounting' },
-          { label: 'Journal Entries' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('nav.accounting', 'Accounting') },
+          { label: t('nav.acc-journal', 'Journal Entries') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -139,7 +223,7 @@ function JournalEntriesView() {
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', list.isFetching && 'animate-spin')} />
-              Refresh
+              {t('admin.accounting.journal.refresh', 'Refresh')}
             </Button>
             <Button
               variant="outline"
@@ -149,14 +233,16 @@ function JournalEntriesView() {
                 exportCsv.mutate(filters, {
                   onSuccess: (n) =>
                     toast.success(
-                      n ? `Exported ${n} journal entries` : 'No journal entries to export',
+                      n
+                        ? t('admin.accounting.journal.toast.exported', 'Exported {n} journal entries', { n: formatCount(n) })
+                        : t('admin.accounting.journal.toast.nothingToExport', 'No journal entries to export'),
                     ),
                 })
               }
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-              {exportCsv.isPending ? 'Exporting…' : 'Export Journal'}
+              {exportCsv.isPending ? t('admin.accounting.journal.exporting', 'Exporting…') : t('admin.accounting.journal.export', 'Export Journal')}
             </Button>
             <Can menu="accounting" action="create">
               <Button
@@ -165,7 +251,7 @@ function JournalEntriesView() {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 gap-1.5 text-xs font-semibold shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                New Journal Voucher
+                {t('admin.accounting.journal.newVoucher', 'New Journal Voucher')}
               </Button>
             </Can>
           </div>
@@ -175,34 +261,34 @@ function JournalEntriesView() {
       {/* KPI Stats Ribbon — /journal-entries/summary with the list's filters */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Total Vouchers"
-          value={s ? s.count.toLocaleString() : '—'}
-          hint={summary.isError ? 'Totals unavailable' : 'Journal entries in this view'}
+          label={t('admin.accounting.journal.kpiTotal', 'Total Vouchers')}
+          value={s ? formatCount(s.count) : '—'}
+          hint={summary.isError ? t('admin.accounting.journal.totalsUnavailable', 'Totals unavailable') : t('admin.accounting.journal.kpiTotalHint', 'Journal entries in this view')}
           icon={FileText}
           tone="purple"
         />
         <KpiCard
-          label="Manual Vouchers"
-          value={s ? s.manualCount.toLocaleString() : '—'}
-          hint="Posted by hand"
+          label={t('admin.accounting.journal.kpiManual', 'Manual Vouchers')}
+          value={s ? formatCount(s.manualCount) : '—'}
+          hint={t('admin.accounting.journal.kpiManualHint', 'Posted by hand')}
           icon={PenLine}
           tone="emerald"
         />
         <KpiCard
-          label="Auto-posted"
-          value={s ? s.systemCount.toLocaleString() : '—'}
-          hint="Posted automatically by the system"
+          label={t('admin.accounting.journal.tabAuto', 'Auto-posted')}
+          value={s ? formatCount(s.systemCount) : '—'}
+          hint={t('admin.accounting.journal.kpiAutoHint', 'Posted automatically by the system')}
           icon={Cpu}
           tone="blue"
         />
         <KpiCard
-          label="Total Debit / Credit"
+          label={t('admin.accounting.journal.kpiDebitCredit', 'Total Debit / Credit')}
           value={s ? money(s.totalDebit) : '—'}
           hint={
             s
               ? s.totalDebit === s.totalCredit
-                ? 'Debits equal credits'
-                : `Credits ${money(s.totalCredit)}`
+                ? t('admin.accounting.journal.debitsEqual', 'Debits equal credits')
+                : t('admin.accounting.journal.creditsAmount', 'Credits {amount}', { amount: money(s.totalCredit) })
               : undefined
           }
           icon={ArrowRightLeft}
@@ -210,151 +296,89 @@ function JournalEntriesView() {
         />
       </div>
 
-      {/* Filter Bar */}
-      <div className="border-border/60 bg-card/60 flex flex-col gap-3 rounded-xl border p-3.5 shadow-sm backdrop-blur-sm lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-        <DebouncedSearchInput
-          onSearchChange={onSearchChange}
-          placeholder="Search by voucher ID or description..."
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          {accountId && (
-            <Badge
-              variant="outline"
-              className="bg-primary/10 text-primary border-primary/20 h-9 gap-1.5 px-3 text-xs"
-            >
-              Account:{' '}
-              {filteredAccount
-                ? `${filteredAccount.accountCode} — ${filteredAccount.accountName}`
-                : `#${accountId}`}
-              <button
-                type="button"
-                aria-label="Clear account filter"
-                onClick={clearAccount}
-                className="hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </Badge>
-          )}
-          <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
-            {SOURCE_TABS.map((t) => (
-              <Button
-                key={t.value}
-                type="button"
-                size="sm"
-                variant={source === t.value ? 'default' : 'ghost'}
-                onClick={() => {
-                  setSource(t.value);
-                  resetPage();
-                }}
-                className="h-7 px-2.5 text-xs"
-              >
-                {t.label}
-              </Button>
-            ))}
-          </div>
-          <DateRangeInputs
-            from={range.from}
-            to={range.to}
-            onChange={(r) => {
-              setRange(r);
-              resetPage();
-            }}
-          />
-        </div>
-      </div>
-
       {/* Journal Table */}
       {list.isError ? (
-        <EmptyState
-          title="Failed to load journal entries"
+        <EmptyState variant="error"
+          title={t('admin.accounting.journal.loadFailed', 'Failed to load journal entries')}
           description={list.error.message}
-          actionLabel="Retry"
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => list.refetch()}
         />
-      ) : list.entries.length === 0 ? (
-        <EmptyState
-          title="No journal entries found"
-          description={
-            search || source !== 'all' || range.from || range.to || accountId
-              ? 'No vouchers match the current filters.'
-              : 'Posted vouchers will appear here.'
-          }
-        />
       ) : (
-        <div
-          className={cn(
-            'border-border/60 bg-card overflow-hidden rounded-xl border shadow-xs transition-opacity',
-            list.isPlaceholderData && 'opacity-60',
-          )}
-        >
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 text-muted-foreground border-border/60 border-b font-medium">
-                  <TableHead className="text-xs font-semibold">Entry ID</TableHead>
-                  <TableHead className="text-xs font-semibold">Date</TableHead>
-                  <TableHead className="text-xs font-semibold">Voucher Description</TableHead>
-                  <TableHead className="text-xs font-semibold">Source</TableHead>
-                  <TableHead className="text-right text-xs font-semibold">Debit (BDT)</TableHead>
-                  <TableHead className="text-right text-xs font-semibold">Credit (BDT)</TableHead>
-                  <TableHead className="text-right text-xs font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-border/40 divide-y">
-                {list.entries.map((entry) => (
-                  <TableRow
-                    key={entry.id}
-                    className="hover:bg-muted/30 group cursor-pointer transition-colors duration-150"
-                    onClick={() => setSelectedEntry(entry)}
+        <div className={cn('transition-opacity', list.isPlaceholderData && 'opacity-60')}>
+          <DataTable
+            urlState
+            columns={columns}
+            data={list.entries}
+            getRowId={(row) => row.id}
+            searchPlaceholder={t('admin.accounting.journal.searchPlaceholder', 'Search by voucher ID or description...')}
+            emptyTitle={t('admin.accounting.journal.emptyTitle', 'No journal entries found')}
+            emptyDescription={
+              search || source !== 'all' || range.from || range.to || accountId
+                ? t('admin.accounting.journal.emptyFiltered', 'No vouchers match the current filters.')
+                : t('admin.accounting.journal.emptyNone', 'Posted vouchers will appear here.')
+            }
+            server={{
+              page,
+              pageSize,
+              total: list.total,
+              onPageChange: setPage,
+              onPageSizeChange,
+              search,
+              onSearchChange,
+            }}
+            toolbarActions={
+              <>
+                {accountId && (
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/10 text-primary border-primary/20 h-9 gap-1.5 px-3 text-xs"
                   >
-                    <TableCell className="py-3">
-                      <span className="bg-primary/10 border-primary/20 text-primary rounded-md border px-2 py-1 font-mono text-xs font-bold">
-                        #{entry.id}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs whitespace-nowrap">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {entry.date}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <span className="text-foreground group-hover:text-primary text-xs font-medium transition-colors">
-                        {entry.description || '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-3">
-                      <SourceBadge referenceType={entry.referenceType} />
-                    </TableCell>
-                    <TableCell className="py-3 text-right font-mono text-xs font-bold text-emerald-400 tabular-nums">
-                      {money(entry.totalDebit)}
-                    </TableCell>
-                    <TableCell className="py-3 text-right font-mono text-xs font-bold text-blue-400 tabular-nums">
-                      {money(entry.totalCredit)}
-                    </TableCell>
-                    <TableCell className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-foreground h-7 w-7"
-                        aria-label={`View entry ${entry.id}`}
-                        onClick={() => setSelectedEntry(entry)}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <TablePagination
-            currentPage={page}
-            pageSize={pageSize}
-            totalItems={list.total}
-            onPageChange={setPage}
-            onPageSizeChange={onPageSizeChange}
+                    {t('admin.accounting.journal.accountChip', 'Account:')}{' '}
+                    {filteredAccount
+                      ? `${filteredAccount.accountCode} — ${filteredAccount.accountName}`
+                      : `#${accountId}`}
+                    <button
+                      type="button"
+                      aria-label={t('admin.accounting.journal.clearAccount', 'Clear account filter')}
+                      onClick={clearAccount}
+                      className="hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </Badge>
+                )}
+                <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
+                  {SOURCE_TABS.map((tab) => (
+                    <Button
+                      key={tab}
+                      type="button"
+                      size="sm"
+                      variant={source === tab ? 'default' : 'ghost'}
+                      onClick={() => {
+                        setSource(tab);
+                        resetPage();
+                      }}
+                      className="h-7 px-2.5 text-xs"
+                    >
+                      {tab === 'all'
+                        ? t('admin.accounting.journal.tabAll', 'All')
+                        : tab === 'manual'
+                          ? t('admin.accounting.journal.source.manual', 'Manual')
+                          : t('admin.accounting.journal.tabAuto', 'Auto-posted')}
+                    </Button>
+                  ))}
+                </div>
+                <DateRangeInputs
+                  from={range.from}
+                  to={range.to}
+                  onChange={(r) => {
+                    setRange(r);
+                    resetPage();
+                  }}
+                />
+              </>
+            }
           />
         </div>
       )}
@@ -368,21 +392,22 @@ function JournalEntriesView() {
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 font-mono text-[10px]"
+                    className="bg-primary/10 text-primary border-primary/20 font-mono text-xs"
                   >
                     #{selectedEntry.id}
                   </Badge>
                   <SourceBadge referenceType={selectedEntry.referenceType} />
                 </div>
                 <SheetTitle className="text-foreground text-xl font-bold">
-                  {selectedEntry.description || `Voucher #${selectedEntry.id}`}
+                  {selectedEntry.description ||
+                    t('admin.accounting.journal.voucherNo', 'Voucher #{id}', { id: selectedEntry.id })}
                 </SheetTitle>
                 <SheetDescription className="text-muted-foreground text-xs">
-                  Posted on {selectedEntry.date}
+                  {t('admin.accounting.journal.postedOn', 'Posted on {date}', { date: selectedEntry.date })}
                   {selectedEntry.referenceType &&
                   selectedEntry.referenceType !== 'manual' &&
                   selectedEntry.referenceId
-                    ? ` · reference #${selectedEntry.referenceId}`
+                    ? ` · ${t('admin.accounting.journal.reference', 'reference #{id}', { id: selectedEntry.referenceId })}`
                     : ''}
                 </SheetDescription>
               </SheetHeader>
@@ -391,9 +416,9 @@ function JournalEntriesView() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 border-border/60 border-b">
-                      <TableHead className="text-[11px] font-semibold">Account</TableHead>
-                      <TableHead className="text-right text-[11px] font-semibold">Debit</TableHead>
-                      <TableHead className="text-right text-[11px] font-semibold">Credit</TableHead>
+                      <TableHead className="text-xs font-semibold">{t('admin.accounting.journal.colAccount', 'Account')}</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">{t('admin.accounting.journal.debit', 'Debit')}</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">{t('admin.accounting.journal.credit', 'Credit')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-border/40 divide-y">
@@ -414,7 +439,7 @@ function JournalEntriesView() {
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/30 font-bold">
-                      <TableCell className="text-xs">Total</TableCell>
+                      <TableCell className="text-xs">{t('admin.accounting.journal.total', 'Total')}</TableCell>
                       <TableCell className="text-right font-mono text-xs tabular-nums">
                         {money(selectedEntry.totalDebit)}
                       </TableCell>
@@ -432,7 +457,7 @@ function JournalEntriesView() {
                   className="border-border hover:bg-accent text-xs"
                   onClick={() => setSelectedEntry(null)}
                 >
-                  Close
+                  {t('common.close', 'Close')}
                 </Button>
               </div>
             </div>

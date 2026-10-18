@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { http } from '@/lib/api/client';
 import { getResellerId } from '@/lib/api/auth-utils';
 import { num, str } from '@/lib/api/case';
@@ -100,6 +101,7 @@ export interface GatewayUpdate {
 
 /** PUT /v1/reseller/billing/gateways/{id} — empty secret values keep the stored secret. */
 export function useUpdatePaymentGateway() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, update }: { id: string; update: GatewayUpdate }) => {
@@ -115,8 +117,10 @@ export function useUpdatePaymentGateway() {
       qc.invalidateQueries({ queryKey: gatewayKeys.list });
       toast.success(
         update.enabled !== undefined && Object.keys(update).length === 1
-          ? `${gw.name} ${gw.enabled ? 'enabled' : 'disabled'}`
-          : `${gw.name} settings saved`,
+          ? gw.enabled
+            ? t('admin.paymentGateways.toast.enabled', '{name} enabled', { name: gw.name })
+            : t('admin.paymentGateways.toast.disabled', '{name} disabled', { name: gw.name })
+          : t('admin.paymentGateways.toast.saved', '{name} settings saved', { name: gw.name }),
       );
     },
   });

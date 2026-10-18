@@ -5,6 +5,7 @@ import { Search, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
 const KPI_TONES = {
   emerald: {
@@ -75,7 +76,7 @@ export function KpiCard({
         >
           {value}
         </div>
-        {hint ? <div className="text-muted-foreground mt-2 text-[11px]">{hint}</div> : null}
+        {hint ? <div className="text-muted-foreground mt-2 text-xs">{hint}</div> : null}
       </CardContent>
     </Card>
   );
@@ -94,11 +95,12 @@ export function DebouncedSearchInput({
   placeholder: string;
   className?: string;
 }) {
+  const t = useTranslations();
   const [value, setValue] = useState('');
 
   useEffect(() => {
-    const t = setTimeout(() => onSearchChange(value.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => onSearchChange(value.trim()), 300);
+    return () => clearTimeout(timer);
   }, [value, onSearchChange]);
 
   return (
@@ -114,7 +116,7 @@ export function DebouncedSearchInput({
       {value && (
         <button
           type="button"
-          aria-label="Clear search"
+          aria-label={t('admin.accounting.shared.clearSearch', 'Clear search')}
           onClick={() => setValue('')}
           className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
         >
@@ -135,20 +137,21 @@ export function DateRangeInputs({
   to: string;
   onChange: (range: { from: string; to: string }) => void;
 }) {
+  const t = useTranslations();
   return (
     <div className="flex items-center gap-2">
       <Input
         type="date"
-        aria-label="From date"
+        aria-label={t('admin.accounting.shared.fromDate', 'From date')}
         value={from}
         max={to || undefined}
         onChange={(e) => onChange({ from: e.target.value, to })}
         className="bg-background/80 h-9 w-[150px] font-mono text-xs"
       />
-      <span className="text-muted-foreground text-xs">to</span>
+      <span className="text-muted-foreground text-xs">{t('admin.accounting.shared.to', 'to')}</span>
       <Input
         type="date"
-        aria-label="To date"
+        aria-label={t('admin.accounting.shared.toDate', 'To date')}
         value={to}
         min={from || undefined}
         onChange={(e) => onChange({ from, to: e.target.value })}

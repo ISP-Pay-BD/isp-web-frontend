@@ -84,8 +84,8 @@ export function ContactSection() {
         <ul className="mt-10 divide-y divide-white/10 border-y border-white/10 sm:grid sm:grid-cols-3 sm:gap-8 sm:divide-y-0 sm:border-0">
           <li className="py-4 sm:border-t sm:border-white/10 sm:py-5">
             <a href="/register" className="group block">
-              <Rocket className="text-landing-cta h-5 w-5" aria-hidden />
-              <strong className="group-hover:text-landing-cta mt-3 block text-sm text-white">
+              <Rocket className="text-landing-accent h-5 w-5" aria-hidden />
+              <strong className="group-hover:text-landing-accent mt-3 block text-sm text-white">
                 {t('marketing.pages.contact.trialTitle')}
               </strong>
               <span className="mt-1 block text-xs text-white/55">
@@ -100,8 +100,8 @@ export function ContactSection() {
               rel="noopener noreferrer"
               className="group block"
             >
-              <MessageSquare className="text-landing-cta h-5 w-5" aria-hidden />
-              <strong className="group-hover:text-landing-cta mt-3 block text-sm text-white">
+              <MessageSquare className="text-landing-accent h-5 w-5" aria-hidden />
+              <strong className="group-hover:text-landing-accent mt-3 block text-sm text-white">
                 {t('marketing.pages.contact.whatsappTitle')}
               </strong>
               <span className="mt-1 block text-xs text-white/55">
@@ -111,8 +111,8 @@ export function ContactSection() {
           </li>
           <li className="py-4 sm:border-t sm:border-white/10 sm:py-5">
             <a href="#contact-form" className="group block">
-              <Building className="text-landing-cta h-5 w-5" aria-hidden />
-              <strong className="group-hover:text-landing-cta mt-3 block text-sm text-white">
+              <Building className="text-landing-accent h-5 w-5" aria-hidden />
+              <strong className="group-hover:text-landing-accent mt-3 block text-sm text-white">
                 Running 10k+ lines?
               </strong>
               <span className="mt-1 block text-xs text-white/55">
@@ -127,7 +127,7 @@ export function ContactSection() {
           {/* Left — Contact Info */}
           <div className="space-y-4 lg:col-span-5">
             <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-              <div className="bg-landing-panel text-landing-cta flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
+              <div className="bg-landing-panel text-landing-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
                 <MapPin className="h-5 w-5" />
               </div>
               <div>
@@ -141,7 +141,7 @@ export function ContactSection() {
             </div>
 
             <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-              <div className="bg-landing-panel text-landing-cta flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
+              <div className="bg-landing-panel text-landing-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
                 <Phone className="h-5 w-5" />
               </div>
               <div>
@@ -159,7 +159,7 @@ export function ContactSection() {
             </div>
 
             <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-              <div className="bg-landing-panel text-landing-cta flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
+              <div className="bg-landing-panel text-landing-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
                 <Mail className="h-5 w-5" />
               </div>
               <div>
@@ -173,7 +173,7 @@ export function ContactSection() {
             </div>
 
             <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-              <div className="bg-landing-panel text-landing-cta flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
+              <div className="bg-landing-panel text-landing-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10">
                 <Clock className="h-5 w-5" />
               </div>
               <div>

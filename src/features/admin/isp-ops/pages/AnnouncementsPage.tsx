@@ -27,6 +27,7 @@ import { DataTable } from '@/features/shared/data-table';
 import { toast } from 'sonner';
 import { Megaphone, Plus, Eye, CheckCircle2, Calendar, Edit, Trash2 } from 'lucide-react';
 import { formatDate, formatDateIso } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
 import {
   useAdminNews,
   useDeleteNews,
@@ -35,12 +36,14 @@ import {
   type NewsItem,
 } from '@/features/admin/news/hooks/use-admin-news';
 
-const AUDIENCE_LABEL: Record<NewsAudience, string> = {
-  all: 'All Subscribers',
-  customers: 'Broadband Customers',
-  resellers: 'Reseller POPs',
-  employees: 'Employees',
-};
+type Translate = ReturnType<typeof useLocale>['t'];
+
+const audienceLabels = (t: Translate): Record<NewsAudience, string> => ({
+  all: t('admin.ops.announcements.audAll', 'All Subscribers'),
+  customers: t('admin.ops.announcements.audCustomers', 'Broadband Customers'),
+  resellers: t('admin.ops.announcements.audResellers', 'Reseller POPs'),
+  employees: t('admin.ops.announcements.audEmployees', 'Employees'),
+});
 
 interface BannerForm {
   title: string;
@@ -57,6 +60,8 @@ const isLive = (b: NewsItem, now = Date.now()) =>
   (!b.endsAt || new Date(b.endsAt).getTime() >= now);
 
 export function AnnouncementsPage() {
+  const { t } = useLocale();
+  const audienceLabel = audienceLabels(t);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -90,16 +95,21 @@ export function AnnouncementsPage() {
   const handleToggleActive = (item: NewsItem) =>
     saveBanner.mutate(
       { id: item.id, input: { status: item.status === 'published' ? 'draft' : 'published' } },
-      { onSuccess: () => toast.success(item.status === 'published' ? 'Banner disabled' : 'Banner published') },
+      { onSuccess: () => toast.success(
+            item.status === 'published'
+              ? t('admin.ops.announcements.disabled', 'Banner disabled')
+              : t('admin.ops.announcements.published', 'Banner published'),
+          ),
+      },
     );
 
   const handleSave = () => {
     if (!form.title.trim()) {
-      toast.error('Announcement title is required');
+      toast.error(t('admin.ops.announcements.errTitle', 'Announcement title is required'));
       return;
     }
     if (form.startsAt && form.endsAt && form.endsAt < form.startsAt) {
-      toast.error('End date must be after the start date');
+      toast.error(t('admin.ops.announcements.errDates', 'End date must be after the start date'));
       return;
     }
     saveBanner.mutate(
@@ -117,7 +127,11 @@ export function AnnouncementsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(editingId ? 'Banner updated' : `Announcement "${form.title.trim()}" saved`);
+          toast.success(
+            editingId
+              ? t('admin.ops.announcements.updated', 'Banner updated')
+              : t('admin.ops.announcements.saved', 'Announcement "{title}" saved', { title: form.title.trim() }),
+          );
           setEditorOpen(false);
         },
       },
@@ -128,7 +142,7 @@ export function AnnouncementsPage() {
     () => [
       {
         accessorKey: 'title',
-        header: 'Announcement Banner Title',
+        header: t('admin.ops.announcements.colTitle', 'Announcement Banner Title'),
         size: 260,
         enableHiding: false,
         cell: ({ row }) => (
@@ -138,49 +152,57 @@ export function AnnouncementsPage() {
             </div>
             <div>
               <span className="font-semibold text-xs text-foreground block">{row.original.title}</span>
-              <span className="text-[10px] text-muted-foreground line-clamp-1">{row.original.body || 'Portal notification banner'}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">{row.original.body || t('admin.ops.announcements.defaultBody', 'Portal notification banner')}</span>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'audience',
-        header: 'Target Audience',
+        header: t('admin.ops.announcements.audience', 'Target Audience'),
         size: 150,
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-[10px] font-mono">
-            {AUDIENCE_LABEL[row.original.audience]}
+          <Badge variant="outline" className="text-xs font-mono">
+            {audienceLabel[row.original.audience]}
           </Badge>
         ),
       },
       {
         accessorKey: 'startsAt',
-        header: 'Active Schedule',
+        header: t('admin.ops.announcements.colSchedule', 'Active Schedule'),
         size: 210,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
             <Calendar className="h-3 w-3 text-primary" />
-            <span>{row.original.startsAt ? formatDate(row.original.startsAt) : 'Now'}</span>
+            <span>{row.original.startsAt ? formatDate(row.original.startsAt) : t('admin.ops.announcements.now', 'Now')}</span>
             <span>→</span>
-            <span>{row.original.endsAt ? formatDate(row.original.endsAt) : 'No end'}</span>
+            <span>{row.original.endsAt ? formatDate(row.original.endsAt) : t('admin.ops.announcements.noEnd', 'No end')}</span>
           </div>
         ),
       },
       {
         accessorKey: 'status',
-        header: 'Live Status',
+        header: t('admin.ops.announcements.colLive', 'Live Status'),
         size: 150,
         cell: ({ row }) => {
           const published = row.original.status === 'published';
           const live = isLive(row.original);
           return (
             <div className="flex items-center gap-2.5">
-              <Switch checked={published} onCheckedChange={() => handleToggleActive(row.original)} />
+              <Switch
+                checked={published}
+                onCheckedChange={() => handleToggleActive(row.original)}
+                aria-label={t('admin.ops.announcements.togglePublished', 'Published')}
+              />
               <Badge
                 variant={live ? 'default' : 'secondary'}
-                className={`text-[10px] font-mono ${live ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
+                tone={live ? 'success' : undefined} className="text-xs font-mono"
               >
-                {!published ? 'Disabled' : live ? 'Live' : 'Scheduled / Ended'}
+                {!published
+                  ? t('admin.ops.announcements.statusDisabled', 'Disabled')
+                  : live
+                    ? t('admin.ops.announcements.statusLive', 'Live')
+                    : t('admin.ops.announcements.statusScheduled', 'Scheduled / Ended')}
               </Badge>
             </div>
           );
@@ -188,19 +210,19 @@ export function AnnouncementsPage() {
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('common.actions', 'Actions')}</span>,
         size: 130,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => setPreviewItem(row.original)} title="Preview Banner">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => setPreviewItem(row.original)} title={t('admin.ops.announcements.preview', 'Preview Banner')} aria-label={t('admin.ops.announcements.preview', 'Preview Banner')}>
               <Eye className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditor(row.original)} title="Edit">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditor(row.original)} title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}>
               <Edit className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(row.original.id)} title="Delete">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(row.original.id)} title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -208,12 +230,12 @@ export function AnnouncementsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [t],
   );
 
   if (banners.isLoading) return <PageSkeleton variant="table" />;
   if (banners.isError && !banners.data) {
-    return <EmptyState title="Failed to load announcements" actionLabel="Retry" onAction={() => banners.refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.announcements.loadFailed', 'Failed to load announcements')} actionLabel={t('common.retry', 'Retry')} onAction={() => banners.refetch()} />;
   }
 
   const stats = banners.data?.stats;
@@ -221,26 +243,32 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Portal Announcement Banners"
-        subtitle="Schedule maintenance notices, holiday billing alerts and promotional banners on customer portals"
+        title={t('admin.ops.announcements.title', 'Portal Announcement Banners')}
+        subtitle={t(
+          'admin.ops.announcements.subtitle',
+          'Schedule maintenance notices, holiday billing alerts and promotional banners on customer portals',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Engagement' },
-          { label: 'Announcements' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.engagement', 'Engagement') },
+          { label: t('nav.announcements', 'Announcements') },
         ]}
         actions={
           <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => openEditor(null)}>
             <Plus className="h-4 w-4" />
-            Create Announcement
+            {t('admin.ops.announcements.create', 'Create Announcement')}
           </Button>
         }
       />
 
       <OpsSummaryStrip
         items={[
-          { label: 'Total Banners', value: stats?.total ?? 0 },
-          { label: 'Live Now', value: `${stats?.bannersLive ?? 0} Banners` },
-          { label: 'Disabled', value: stats?.draft ?? 0 },
+          { label: t('admin.ops.announcements.totalBanners', 'Total Banners'), value: stats?.total ?? 0 },
+          {
+            label: t('admin.ops.announcements.liveNow', 'Live Now'),
+            value: t('admin.ops.announcements.bannersCount', '{n} Banners', { n: stats?.bannersLive ?? 0 }),
+          },
+          { label: t('admin.ops.announcements.statusDisabled', 'Disabled'), value: stats?.draft ?? 0 },
         ]}
       />
 
@@ -248,19 +276,21 @@ export function AnnouncementsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Megaphone className="h-4 w-4 text-primary" />
-            Announcement Banners
+            {t('admin.ops.announcements.cardTitle', 'Announcement Banners')}
           </CardTitle>
-          <CardDescription>Banners are shown to their audience only inside the schedule window</CardDescription>
+          <CardDescription>
+            {t('admin.ops.announcements.cardDesc', 'Banners are shown to their audience only inside the schedule window')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable
+          <DataTable urlState
             columns={columns}
             data={banners.data?.items ?? []}
             getRowId={(row) => row.id}
             searchKey="title"
-            searchPlaceholder="Search banners by title..."
-            emptyTitle="No announcement banners"
-            emptyDescription="Create a banner to show a notice on customer portals."
+            searchPlaceholder={t('admin.ops.announcements.search', 'Search banners by title...')}
+            emptyTitle={t('admin.ops.announcements.emptyTitle', 'No announcement banners')}
+            emptyDescription={t('admin.ops.announcements.emptyDesc', 'Create a banner to show a notice on customer portals.')}
             server={{
               page,
               pageSize,
@@ -279,7 +309,7 @@ export function AnnouncementsPage() {
             toolbarActions={
               <Button size="sm" onClick={() => openEditor(null)} className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                New Banner
+                {t('admin.ops.announcements.newBanner', 'New Banner')}
               </Button>
             }
           />
@@ -291,25 +321,36 @@ export function AnnouncementsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-primary" />
-              {editingId ? 'Edit Announcement Banner' : 'Publish Announcement Banner'}
+              {editingId
+                ? t('admin.ops.announcements.editTitle', 'Edit Announcement Banner')
+                : t('admin.ops.announcements.publishTitle', 'Publish Announcement Banner')}
             </DialogTitle>
-            <DialogDescription>Shown as a header ribbon on customer self-care portals.</DialogDescription>
+            <DialogDescription>
+              {t('admin.ops.announcements.dialogDesc', 'Shown as a header ribbon on customer self-care portals.')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Banner Title</Label>
-              <Input value={form.title} maxLength={100} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Fiber core upgrade tonight" className="text-xs" />
+              <Label htmlFor="banner-title" className="text-xs font-semibold">{t('admin.ops.announcements.fieldTitle', 'Banner Title')}</Label>
+              <Input
+                id="banner-title"
+                value={form.title}
+                maxLength={100}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder={t('admin.ops.announcements.titlePlaceholder', 'e.g. Fiber core upgrade tonight')}
+                className="text-xs"
+              />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Target Audience</Label>
-              <Select value={form.audience} onValueChange={(v) => { if (v) setForm({ ...form, audience: v as NewsAudience }); }}>
-                <SelectTrigger className="text-xs">
+              <Label htmlFor="target-audience" className="text-xs font-semibold">{t('admin.ops.announcements.audience', 'Target Audience')}</Label>
+              <Select items={audienceLabel} value={form.audience} onValueChange={(v) => { if (v) setForm({ ...form, audience: v as NewsAudience }); }}>
+                <SelectTrigger id="target-audience" className="text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(AUDIENCE_LABEL) as NewsAudience[]).map((a) => (
+                  {(Object.keys(audienceLabel) as NewsAudience[]).map((a) => (
                     <SelectItem key={a} value={a}>
-                      {AUDIENCE_LABEL[a]}
+                      {audienceLabel[a]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -317,30 +358,36 @@ export function AnnouncementsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Start Date</Label>
-                <Input type="date" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} className="text-xs font-mono" />
+                <Label htmlFor="start-date" className="text-xs font-semibold">{t('admin.ops.announcements.startDate', 'Start Date')}</Label>
+                <Input id="start-date" type="date" value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} className="text-xs font-mono" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">End Date (optional)</Label>
-                <Input type="date" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} className="text-xs font-mono" />
+                <Label htmlFor="end-date-optional" className="text-xs font-semibold">{t('admin.ops.announcements.endDate', 'End Date (optional)')}</Label>
+                <Input id="end-date-optional" type="date" value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} className="text-xs font-mono" />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Message</Label>
-              <Textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} placeholder="Enter the banner message..." className="h-20 text-xs font-mono resize-y" />
+              <Label htmlFor="message" className="text-xs font-semibold">{t('admin.ops.announcements.message', 'Message')}</Label>
+              <Textarea
+                id="message"
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                placeholder={t('admin.ops.announcements.messagePlaceholder', 'Enter the banner message...')}
+                className="h-20 text-xs font-mono resize-y"
+              />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
-              <span className="font-semibold">Published</span>
-              <Switch checked={form.active} onCheckedChange={(c) => setForm({ ...form, active: c })} />
+              <span className="font-semibold">{t('admin.ops.announcements.togglePublished', 'Published')}</span>
+              <Switch aria-label={t('admin.ops.announcements.togglePublished', 'Published')} checked={form.active} onCheckedChange={(c) => setForm({ ...form, active: c })} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditorOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saveBanner.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              {saveBanner.isPending ? 'Saving…' : 'Save Banner'}
+              {saveBanner.isPending ? t('admin.ops.announcements.saving', 'Saving…') : t('admin.ops.announcements.save', 'Save Banner')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -351,9 +398,9 @@ export function AnnouncementsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-primary" />
-              Banner Preview
+              {t('admin.ops.announcements.previewTitle', 'Banner Preview')}
             </DialogTitle>
-            <DialogDescription>As rendered on the customer dashboard</DialogDescription>
+            <DialogDescription>{t('admin.ops.announcements.previewDesc', 'As rendered on the customer dashboard')}</DialogDescription>
           </DialogHeader>
           {previewItem && (
             <div className="space-y-4 py-2">
@@ -363,16 +410,21 @@ export function AnnouncementsPage() {
                   <span>{previewItem.title}</span>
                 </div>
                 {previewItem.body && <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{previewItem.body}</p>}
-                <p className="text-[11px] text-muted-foreground">
-                  For {AUDIENCE_LABEL[previewItem.audience]} ·{' '}
-                  <span className="font-mono text-foreground">{previewItem.startsAt ? formatDate(previewItem.startsAt) : 'now'}</span> →{' '}
-                  <span className="font-mono text-foreground">{previewItem.endsAt ? formatDate(previewItem.endsAt) : 'no end date'}</span>
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.ops.announcements.forAudience', 'For {audience} ·', { audience: audienceLabel[previewItem.audience] })}{' '}
+                  <span className="font-mono text-foreground">
+                    {previewItem.startsAt ? formatDate(previewItem.startsAt) : t('admin.ops.announcements.nowLower', 'now')}
+                  </span>{' '}
+                  →{' '}
+                  <span className="font-mono text-foreground">
+                    {previewItem.endsAt ? formatDate(previewItem.endsAt) : t('admin.ops.announcements.noEndDate', 'no end date')}
+                  </span>
                 </p>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setPreviewItem(null)}>Close Preview</Button>
+            <Button onClick={() => setPreviewItem(null)}>{t('admin.ops.announcements.closePreview', 'Close Preview')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -380,15 +432,15 @@ export function AnnouncementsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete banner"
-        description="The banner is removed from all portals."
-        confirmLabel="Delete"
+        title={t('admin.ops.announcements.deleteTitle', 'Delete banner')}
+        description={t('admin.ops.announcements.deleteDesc', 'The banner is removed from all portals.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleteId) return;
           deleteBanner.mutate(deleteId, {
             onSuccess: () => {
-              toast.success('Banner deleted');
+              toast.success(t('admin.ops.announcements.deleted', 'Banner deleted'));
               setDeleteId(null);
             },
           });

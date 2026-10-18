@@ -1,4 +1,4 @@
-# 05 — Platform and employee portals (P1–P2, E1–E2)
+# 05 — Platform and employee portals (P1–P2, E1–E2) — ✅ implemented
 
 Both portals are small: 24 platform screens and 6 employee screens. Most of their problems are the shared ones, which S1–S8 and T1–T4 fix. This file lists what is left.
 
@@ -30,7 +30,7 @@ The users are ISP field staff (installers, collectors), **on a phone, in the fie
 | Screen | Today | Status |
 |---|---|---|
 | `/employee/jobs` | Card list with filters and pagination | ✅ The model to copy |
-| `/employee/installations` | Hand-built `<table>`, in the **admin** feature folder (`admin/engines/pages/EmployeeInstallPage.tsx`) | ❌ E1 |
+| `/employee/installations` | Hand-built `<table>`, in the **admin** feature folder (`admin/engines/pages/EmployeeInstallPage.tsx`, now moved) | ❌ E1 |
 | `/employee/salaries`, `/employee/advance-salary` | DataTable | Fixed by T1 |
 | `/employee/attendance`, `/employee/profile` | Forms / summary | S1 + I3 only |
 
@@ -48,3 +48,13 @@ While you're there, move the screen from `features/admin/engines/pages/` to `fea
 ### E2 — Employee Bangla
 
 Field staff are the users least likely to read English comfortably. Do employee Bangla straight after the customer portal (I3).
+
+
+---
+
+## What was built
+
+- **P1** Platform tables inherit the `DataTable` phone cards (tenant name / plan / status as card, actions in the footer) and `urlState`.
+- **P2** `/platform/support-tickets` shows the list or the thread below `lg` (with an "All tickets" back button), the open ticket is `?ticket=` via `useUrlParam`, priority chips use `Badge tone`, controls are 40px.
+- **E1** Installations moved to `src/features/employee/installations/` as cards (customer, address, map link, `tel:` phone, schedule, status, full-width Start/Complete).
+- **E2** All six employee screens are bilingual (`employee.*`, `validation`); dates/months follow the active language; GPS errors are translated.

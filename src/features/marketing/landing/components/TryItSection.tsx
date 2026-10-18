@@ -15,7 +15,7 @@ const demoCards = [
     icon: Shield,
     accent: 'from-orange-500/20 to-amber-500/10',
     borderGlow: 'hover:border-landing-cta/40',
-    iconBg: 'bg-landing-cta/10 text-landing-cta border-landing-cta/20',
+    iconBg: 'bg-landing-cta/10 text-landing-accent border-landing-cta/20',
     sub: 'Full ISP management dashboard',
     user: 'demo@isppaybd.com',
     pass: '12345678',
@@ -91,7 +91,7 @@ export function TryItSection() {
                           <Icon className="h-6 w-6" />
                         </div>
                         <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-white/50">
-                          <KeyRound className="h-3 w-3 text-white/40" />
+                          <KeyRound className="h-3 w-3 text-white/60" />
                           Demo Ready
                         </span>
                       </div>
@@ -120,7 +120,7 @@ export function TryItSection() {
                     <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
                       <div className="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3 font-mono text-xs">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold tracking-wider text-white/40 uppercase">
+                          <span className="text-[11px] font-semibold tracking-wider text-white/60 uppercase">
                             User
                           </span>
                           <button
@@ -133,13 +133,13 @@ export function TryItSection() {
                             {copiedKey === userCopyId ? (
                               <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                             ) : (
-                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/40 group-hover/btn:text-white" />
+                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/60 group-hover/btn:text-white" />
                             )}
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-1">
-                          <span className="text-[11px] font-semibold tracking-wider text-white/40 uppercase">
+                          <span className="text-[11px] font-semibold tracking-wider text-white/60 uppercase">
                             Pass
                           </span>
                           <button
@@ -152,7 +152,7 @@ export function TryItSection() {
                             {copiedKey === passCopyId ? (
                               <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                             ) : (
-                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/40 group-hover/btn:text-white" />
+                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/60 group-hover/btn:text-white" />
                             )}
                           </button>
                         </div>

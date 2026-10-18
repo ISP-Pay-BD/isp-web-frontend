@@ -91,7 +91,7 @@ export function ReferralRegisterForm({ initialCode }: { initialCode: string }) {
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         <Reveal className="rounded-xl border border-white/10 bg-landing-panel/80 p-6 md:p-10">
           <div className="mb-6 border-b border-white/10 pb-6">
-            <p className="text-xs font-medium tracking-[0.08em] text-landing-cta">Customer referral</p>
+            <p className="text-xs font-medium tracking-[0.08em] text-landing-accent">Customer referral</p>
             <h1 className="font-landing-display mt-2 text-2xl font-semibold text-white md:text-3xl">
               Get connected with a referral code
             </h1>
@@ -137,7 +137,7 @@ export function ReferralRegisterForm({ initialCode }: { initialCode: string }) {
                   <p className="mt-1 text-xs text-red-400">This referral code is not valid.</p>
                 ) : info?.valid ? (
                   <div className="mt-2 flex items-center gap-2 rounded-lg border border-landing-cta/40 bg-landing-cta/10 px-3 py-2 text-xs text-white/90">
-                    <Gift className="h-4 w-4 shrink-0 text-landing-cta" />
+                    <Gift className="h-4 w-4 shrink-0 text-landing-accent" />
                     <span>
                       Referred by <strong>{info.referrerName || 'a subscriber'}</strong>
                       {info.ispName ? (

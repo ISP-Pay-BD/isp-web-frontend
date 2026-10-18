@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
-import { LifeBuoy, Plus, Search, Filter, ArrowRight, MessageSquare, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LifeBuoy, Plus, Search, Filter, ArrowRight, MessageSquare, HelpCircle, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import {
   CustomerPageShell,
   CustomerLoadingSkeleton,
@@ -16,14 +17,15 @@ import {
   useSupportContact,
 } from '@/features/customer/shared';
 import { useCustomerSupportTickets } from '../hooks/use-customer-support';
+import { ticketPriorityLabel, ticketPriorityTone, ticketStatusLabel, ticketStatusTone } from '../lib/ticket-labels';
 import { whatsappHref } from '@/lib/api/adapters/customer.adapter';
-import { formatDate } from '@/lib/format';
+import { formatCount, formatDate } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
 
 const PAGE_SIZE = 20;
 
-const STATUS_FILTERS = { all: 'All Tickets', open: 'Open', pending: 'In progress', closed: 'Closed' };
-
 export function CustomerSupportPage() {
+  const { t } = useLocale();
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error, refetch, isFetching } = useCustomerSupportTickets({
     page,
@@ -37,16 +39,23 @@ export function CustomerSupportPage() {
   const filteredTickets = useMemo(() => {
     if (!tickets) return [];
     const q = search.toLowerCase().trim();
-    return tickets.filter((t) => {
-      const matchSearch = !q || t.subject.toLowerCase().includes(q) || t.id.includes(q);
-      const matchStatus = statusFilter === 'all' || t.status === statusFilter;
+    return tickets.filter((ticket) => {
+      const matchSearch = !q || ticket.subject.toLowerCase().includes(q) || ticket.id.includes(q);
+      const matchStatus = statusFilter === 'all' || ticket.status === statusFilter;
       return matchSearch && matchStatus;
     });
   }, [tickets, search, statusFilter]);
 
+  const title = t('customer.support.title', 'Support tickets');
+  const crumbs = [
+    { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
+    { label: t('customer.support.crumb', 'Support') },
+  ];
+  const newTicketLabel = t('customer.support.newTicket', 'Open new ticket');
+
   if (isLoading) {
     return (
-      <CustomerPageShell title="Customer Support" subtitle="Loading support tickets...">
+      <CustomerPageShell title={title} subtitle={t('customer.support.loading', 'Loading your tickets…')} breadcrumbs={crumbs}>
         <CustomerLoadingSkeleton variant="support" />
       </CustomerPageShell>
     );
@@ -54,76 +63,79 @@ export function CustomerSupportPage() {
 
   if (isError || !data || !tickets) {
     return (
-      <CustomerPageShell title="Customer Support" subtitle="Helpdesk & NOC Tickets">
+      <CustomerPageShell title={title} breadcrumbs={crumbs}>
         <CustomerErrorState message={error?.message || undefined} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
 
-  const openCount = tickets.filter((t) => t.status === 'open').length;
-  const pendingCount = tickets.filter((t) => t.status === 'pending').length;
-  const closedCount = tickets.filter((t) => t.status === 'closed').length;
+  const openCount = tickets.filter((ticket) => ticket.status === 'open').length;
+  const pendingCount = tickets.filter((ticket) => ticket.status === 'pending').length;
+  const closedCount = tickets.filter((ticket) => ticket.status === 'closed').length;
   const totalPages = data.meta.totalPages;
   const support = contact.data;
   const whatsapp = support?.whatsapp ? whatsappHref(support.whatsapp) : '';
 
+  const statusFilters = {
+    all: t('customer.support.filterAll', 'All tickets'),
+    open: ticketStatusLabel(t, 'open'),
+    pending: ticketStatusLabel(t, 'pending'),
+    closed: ticketStatusLabel(t, 'closed'),
+  };
+
   return (
     <CustomerPageShell
-      title="Support Tickets"
-      subtitle="Open technical issues, report line problems, or request a technician visit."
-      breadcrumbs={[
-        { label: 'Customer', href: '/customer/dashboard' },
-        { label: 'Support' },
-      ]}
+      title={title}
+      subtitle={t('customer.support.subtitle', 'Open technical issues, report line problems, or request a technician visit.')}
+      breadcrumbs={crumbs}
       actions={
-        <Link href="/customer/support/new">
-          <Button className="font-semibold gap-2 shadow-sm">
-            <Plus className="h-4 w-4" />
-            Open New Ticket
-          </Button>
-        </Link>
+        <Button className="h-11 w-full gap-2 font-semibold shadow-sm sm:w-auto" render={<Link href="/customer/support/new" />}>
+          <Plus className="h-4 w-4" />
+          {newTicketLabel}
+        </Button>
       }
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
+        <div className="border-border/60 flex flex-wrap gap-x-6 gap-y-2 border-y py-3 text-sm">
           <p>
-            <span className="font-semibold tabular-nums">{data.meta.total}</span>{' '}
-            <span className="text-muted-foreground">tickets</span>
+            <span className="font-semibold tabular-nums">{formatCount(data.meta.total)}</span>{' '}
+            <span className="text-muted-foreground">{t('customer.support.countTickets', 'tickets')}</span>
           </p>
           <p>
-            <span className="font-semibold tabular-nums">{openCount}</span>{' '}
-            <span className="text-muted-foreground">open</span>
+            <span className="font-semibold tabular-nums">{formatCount(openCount)}</span>{' '}
+            <span className="text-muted-foreground">{t('customer.support.countOpen', 'open')}</span>
           </p>
           <p>
-            <span className="font-semibold tabular-nums">{pendingCount}</span>{' '}
-            <span className="text-muted-foreground">in progress</span>
+            <span className="font-semibold tabular-nums">{formatCount(pendingCount)}</span>{' '}
+            <span className="text-muted-foreground">{t('customer.support.countProgress', 'in progress')}</span>
           </p>
           <p>
-            <span className="font-semibold tabular-nums">{closedCount}</span>{' '}
-            <span className="text-muted-foreground">closed</span>
+            <span className="font-semibold tabular-nums">{formatCount(closedCount)}</span>{' '}
+            <span className="text-muted-foreground">{t('customer.support.countClosed', 'closed')}</span>
           </p>
-          {totalPages > 1 && <p className="text-muted-foreground">counts for this page</p>}
+          {totalPages > 1 && <p className="text-muted-foreground">{t('customer.support.countsPage', 'counts for this page')}</p>}
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border bg-card">
+        <div className="bg-card flex flex-col items-stretch justify-between gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:p-4">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
-              placeholder="Search ticket subject or ID..."
+              placeholder={t('customer.support.search', 'Search ticket subject or ID…')}
+              aria-label={t('customer.support.search', 'Search ticket subject or ID…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 text-xs h-9"
+              className="h-11 pl-9"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            <Select items={STATUS_FILTERS} value={statusFilter} onValueChange={(val) => setStatusFilter(val ?? 'all')}>
-              <SelectTrigger className="w-full sm:w-44 text-xs h-9">
-                <SelectValue placeholder="Filter by status" />
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Filter className="text-muted-foreground hidden h-4 w-4 sm:block" />
+            <Select items={statusFilters} value={statusFilter} onValueChange={(val) => setStatusFilter(val ?? 'all')}>
+              <SelectTrigger className="w-full data-[size=default]:h-11 sm:w-44" aria-label={t('customer.support.filterLabel', 'Filter by status')}>
+                <SelectValue placeholder={t('customer.support.filterLabel', 'Filter by status')} />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(STATUS_FILTERS).map(([value, label]) => (
+                {Object.entries(statusFilters).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>
@@ -135,131 +147,135 @@ export function CustomerSupportPage() {
 
         {filteredTickets.length === 0 ? (
           <CustomerEmptyState
-            icon={<LifeBuoy className="h-10 w-10 text-muted-foreground/60" />}
-            title="No support tickets found"
+            icon={<LifeBuoy className="text-muted-foreground/60 h-10 w-10" />}
+            title={t('customer.support.emptyTitle', 'No support tickets found')}
             description={
               tickets.length === 0
-                ? 'You have not opened any support tickets yet.'
-                : 'No tickets on this page match your search or filter.'
+                ? t('customer.support.emptyNone', 'You have not opened any support tickets yet.')
+                : t('customer.support.emptyFiltered', 'No tickets on this page match your search or filter.')
             }
             action={
-              <Link href="/customer/support/new">
-                <Button size="sm" className="gap-2 font-bold">
-                  <Plus className="h-4 w-4" />
-                  Create Ticket
-                </Button>
-              </Link>
+              <Button className="h-11 gap-2 font-semibold" render={<Link href="/customer/support/new" />}>
+                <Plus className="h-4 w-4" />
+                {t('customer.support.createTicket', 'Create ticket')}
+              </Button>
             }
           />
         ) : (
-          <div className="grid gap-3">
+          <ul className="grid gap-3">
             {filteredTickets.map((ticket) => {
               const lastMsg = ticket.messages[ticket.messages.length - 1];
+              const count = ticket.messages.length;
               return (
-                <Link key={ticket.id} href={`/customer/support/${ticket.id}`}>
-                  <Card className="hover:border-primary/50 transition cursor-pointer p-4 group">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2.5 flex-wrap">
-                          <span className="font-mono text-xs text-muted-foreground">#{ticket.id}</span>
-                          <Badge
-                            variant={ticket.status === 'open' ? 'default' : ticket.status === 'pending' ? 'secondary' : 'outline'}
-                            className="text-[11px] capitalize"
-                          >
-                            {ticket.status === 'pending' ? 'in progress' : ticket.status}
-                          </Badge>
-                          {ticket.priority && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] capitalize font-semibold ${
-                                ticket.priority === 'high'
-                                  ? 'border-rose-500 text-rose-600 dark:text-rose-400'
-                                  : ticket.priority === 'medium'
-                                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                                    : 'text-muted-foreground'
-                              }`}
-                            >
-                              {ticket.priority} priority
-                            </Badge>
-                          )}
-                        </div>
-
-                        <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                          {ticket.subject || 'Untitled ticket'}
+                <li key={ticket.id}>
+                  <Link
+                    href={`/customer/support/${ticket.id}`}
+                    className="focus-visible:ring-ring/50 group block min-h-11 rounded-xl outline-none focus-visible:ring-3"
+                  >
+                    <Card className="group-hover:border-primary/50 gap-3 p-4 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-foreground group-hover:text-primary line-clamp-2 min-w-0 text-base leading-snug font-semibold break-words transition-colors">
+                          {ticket.subject || t('customer.support.untitled', 'Untitled ticket')}
                         </h3>
+                        <StatusBadge
+                          status={ticket.status}
+                          tone={ticketStatusTone(ticket.status)}
+                          label={ticketStatusLabel(t, ticket.status)}
+                          className="shrink-0"
+                        />
+                      </div>
 
-                        {lastMsg && (
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            <span className="font-medium text-foreground">{lastMsg.fromMe ? 'You' : 'Support'}:</span>{' '}
-                            {lastMsg.body}
-                          </p>
+                      {lastMsg && (
+                        <p className="text-muted-foreground line-clamp-1 text-sm">
+                          <span className="text-foreground font-medium">
+                            {lastMsg.fromMe ? t('customer.ticket.you', 'You') : t('customer.ticket.support', 'Support')}:
+                          </span>{' '}
+                          {lastMsg.body}
+                        </p>
+                      )}
+
+                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                        <span className="font-mono">#{ticket.id}</span>
+                        {ticket.priority && (
+                          <Badge variant="outline" tone={ticketPriorityTone(ticket.priority)} className="font-semibold">
+                            {t('customer.ticket.priorityBadge', '{priority} priority', {
+                              priority: ticketPriorityLabel(t, ticket.priority),
+                            })}
+                          </Badge>
                         )}
-                      </div>
-
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
-                        <span className="text-xs text-muted-foreground font-mono">{formatDate(ticket.createdAt)}</span>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span>
+                          {t('customer.support.lastMessage', 'Last message {time}', {
+                            time: lastMsg?.sentAt || formatDate(ticket.createdAt),
+                          })}
+                        </span>
+                        <span className="ml-auto flex items-center gap-1">
                           <MessageSquare className="h-3.5 w-3.5" />
-                          <span>
-                            {ticket.messages.length} {ticket.messages.length === 1 ? 'message' : 'messages'}
-                          </span>
-                          <ArrowRight className="h-3.5 w-3.5 ml-1 text-primary group-hover:translate-x-0.5 transition-transform" />
-                        </div>
+                          {count === 1
+                            ? t('customer.support.messageOne', '1 message')
+                            : t('customer.support.messageMany', '{n} messages', { n: formatCount(count) })}
+                          <ArrowRight className="text-primary ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
                       </div>
-                    </div>
-                  </Card>
-                </Link>
+                    </Card>
+                  </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex items-center justify-end gap-2 text-sm">
             <span>
-              Page {page} of {totalPages}
+              {t('customer.support.pageOf', 'Page {page} of {total}', { page: formatCount(page), total: formatCount(totalPages) })}
             </span>
             <Button
-              size="sm"
+              size="icon"
               variant="outline"
-              className="h-8"
+              className="h-11 w-11"
+              aria-label={t('customer.support.prevPage', 'Previous page')}
               disabled={page <= 1 || isFetching}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
-              size="sm"
+              size="icon"
               variant="outline"
-              className="h-8"
+              className="h-11 w-11"
+              aria-label={t('customer.support.nextPage', 'Next page')}
               disabled={page >= totalPages || isFetching}
               onClick={() => setPage((p) => p + 1)}
             >
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         )}
 
         {support && (support.mobile || whatsapp) && (
-          <div className="rounded-xl border bg-muted/40 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <HelpCircle className="h-4 w-4 text-primary shrink-0" />
+          <div className="bg-muted/40 flex flex-col gap-3 rounded-xl border p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2.5">
+              <HelpCircle className="text-primary mt-0.5 h-4 w-4 shrink-0" />
               <span>
-                Complete outage? Contact {support.name || 'your provider'} directly
-                {support.mobile && (
-                  <>
-                    {' '}
-                    at <strong className="font-mono">{support.mobile}</strong>
-                  </>
-                )}
-                .
+                {t('customer.support.outage', 'Complete outage? Contact {name} directly.', {
+                  name: support.name || t('customer.support.yourProvider', 'your provider'),
+                })}
               </span>
             </div>
-            {whatsapp && (
-              <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="text-primary font-bold hover:underline shrink-0">
-                WhatsApp →
-              </a>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {support.mobile && (
+                <Button variant="outline" className="h-11 gap-2 font-mono" render={<a href={`tel:${support.mobile}`} />}>
+                  <Phone className="h-4 w-4" />
+                  {support.mobile}
+                </Button>
+              )}
+              {whatsapp && (
+                <Button variant="outline" className="h-11 gap-2 font-semibold" render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}>
+                  {t('customer.support.whatsapp', 'WhatsApp')}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>

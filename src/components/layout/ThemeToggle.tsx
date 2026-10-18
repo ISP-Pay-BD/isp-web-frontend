@@ -4,6 +4,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSyncExternalStore, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -62,6 +63,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className }: ThemeToggleProps) {
+  const t = useTranslations();
   const { setTheme } = useTheme();
   // Server default (dark) is returned on SSR; client synchronizes to stored DOM state after hydration
   const theme = useSyncExternalStore(subscribe, readTheme, (): ThemeMode => 'dark');
@@ -72,14 +74,15 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   }
 
   const dark = theme === 'dark';
+  const label = dark ? t('common.theme.toLight', 'Switch to light mode') : t('common.theme.toDark', 'Switch to dark mode');
 
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={label}
       aria-pressed={dark}
-      title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={label}
       className={cn(
         'text-muted-foreground hover:bg-accent hover:text-foreground relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-transparent transition-colors duration-150 hover:border-border active:scale-95',
         className,

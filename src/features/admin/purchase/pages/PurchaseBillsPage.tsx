@@ -35,7 +35,7 @@ import { useSupplierOptions } from '@/features/admin/inventory/hooks/use-supplie
 import { KpiTile } from '@/features/admin/inventory/shared/KpiTile';
 import { ListState } from '@/features/admin/inventory/shared/ListState';
 import { OptionSelect } from '@/features/admin/inventory/shared/OptionSelect';
-import { useUrlParam } from '@/features/admin/inventory/shared/hooks';
+import { useUrlParam } from '@/hooks/use-url-state';
 import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '@/features/admin/inventory/shared/table-utils';
 import { PURCHASE_DOC_URL, mapDoc, type PurchaseDoc } from '../api';
 import { usePurchaseBills, type PurchaseBillListParams } from '../hooks/use-purchase-bills';
@@ -46,13 +46,9 @@ import { RecordPaymentDialog } from '../components/RecordPaymentDialog';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
 import { DateRangeFilter } from '../components/DateRangeFilter';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const MENU = 'inventory_purchess';
-
-const PAYMENT_STATUS_OPTIONS = [
-  { value: 'paid', label: 'Paid' },
-  { value: 'partial', label: 'Partially paid' },
-  { value: 'unpaid', label: 'Unpaid' },
-];
 
 type PaymentStatusFilter = NonNullable<PurchaseBillListParams['paymentStatus']>;
 
@@ -65,6 +61,7 @@ export function PurchaseBillsPage() {
 }
 
 function PurchaseBillsView() {
+  const t = useTranslations();
   const table = useServerTable();
   const [vendorId, setVendorId] = useUrlParam('vendor_id');
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatusFilter>('');
@@ -89,6 +86,14 @@ function PurchaseBillsView() {
   const vendorOptions = useMemo(
     () => (suppliersQuery.data ?? []).map((v) => ({ value: v.id, label: v.companyName })),
     [suppliersQuery.data],
+  );
+  const paymentStatusOptions = useMemo(
+    () => [
+      { value: 'paid', label: t('status.paid', 'Paid') },
+      { value: 'partial', label: t('admin.purchase.bills.partial', 'Partially paid') },
+      { value: 'unpaid', label: t('status.unpaid', 'Unpaid') },
+    ],
+    [t],
   );
   const page = query.data;
   const totals = page?.totals;
@@ -126,9 +131,9 @@ function PurchaseBillsView() {
           b.remarks,
         ]),
       );
-      toast.success(`Exported ${rows.length} purchase bills`);
+      toast.success(t('admin.purchase.bills.exported', 'Exported {n} purchase bills', { n: rows.length }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+      toast.error(e instanceof Error ? e.message : t('admin.purchase.bills.exportFailed', 'Export failed'));
     } finally {
       setExporting(false);
     }
@@ -138,7 +143,7 @@ function PurchaseBillsView() {
     () => [
       {
         accessorKey: 'requisitionId',
-        header: 'Bill #',
+        header: t('admin.purchase.bills.colBill', 'Bill #'),
         enableHiding: false,
         size: 130,
         cell: ({ row }) => (
@@ -149,7 +154,7 @@ function PurchaseBillsView() {
       },
       {
         accessorKey: 'vendors',
-        header: 'Supplier / Vendor',
+        header: t('admin.purchase.bills.colVendor', 'Supplier / Vendor'),
         enableHiding: false,
         size: 240,
         cell: ({ row }) => {
@@ -162,7 +167,9 @@ function PurchaseBillsView() {
               <div className="min-w-0">
                 <span className="font-medium text-foreground text-sm line-clamp-1">{b.vendors.join(', ') || '—'}</span>
                 <span className="text-xs text-muted-foreground">
-                  {b.itemCount} {b.itemCount === 1 ? 'item line' : 'item lines'}
+                  {b.itemCount === 1
+                    ? t('admin.purchase.bills.itemLineOne', '{n} item line', { n: b.itemCount })
+                    : t('admin.purchase.bills.itemLineMany', '{n} item lines', { n: b.itemCount })}
                 </span>
               </div>
             </div>
@@ -171,13 +178,13 @@ function PurchaseBillsView() {
       },
       {
         accessorKey: 'requisitionDate',
-        header: 'Bill Date',
+        header: t('admin.purchase.bills.colDate', 'Bill Date'),
         size: 110,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.requisitionDate || '—'}</span>,
       },
       {
         accessorKey: 'total',
-        header: 'Total Bill',
+        header: t('admin.purchase.bills.colTotal', 'Total Bill'),
         size: 130,
         cell: ({ row }) => (
           <span className="font-semibold text-sm tabular-nums text-foreground">{formatBdtWithSymbol(row.original.total)}</span>
@@ -185,7 +192,7 @@ function PurchaseBillsView() {
       },
       {
         accessorKey: 'paidAmount',
-        header: 'Paid',
+        header: t('status.paid', 'Paid'),
         size: 130,
         cell: ({ row }) => (
           <span className="font-semibold text-sm tabular-nums text-emerald-600 dark:text-emerald-400">
@@ -195,7 +202,7 @@ function PurchaseBillsView() {
       },
       {
         accessorKey: 'dueAmount',
-        header: 'Balance Due',
+        header: t('admin.purchase.bills.colDue', 'Balance Due'),
         size: 130,
         cell: ({ row }) => (
           <span className="font-semibold text-sm tabular-nums text-rose-600 dark:text-rose-400">
@@ -205,7 +212,7 @@ function PurchaseBillsView() {
       },
       {
         accessorKey: 'paymentStatus',
-        header: 'Payment Status',
+        header: t('admin.purchase.bills.colPaymentStatus', 'Payment Status'),
         size: 130,
         cell: ({ row }) => <PaymentStatusBadge status={row.original.paymentStatus} />,
       },
@@ -217,34 +224,34 @@ function PurchaseBillsView() {
           const b = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger aria-label={t('common.actions', 'Actions')} className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Payable Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('admin.purchase.bills.actionsLabel', 'Payable Actions')}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setViewing(b.requisitionId)}>
                   <Eye className="h-3.5 w-3.5 mr-2" />
-                  View Bill & Payments
+                  {t('admin.purchase.bills.viewBill', 'View Bill & Payments')}
                 </DropdownMenuItem>
                 {b.dueAmount > 0 ? (
                   <Can menu={MENU} action="create">
                     <DropdownMenuItem onClick={() => setPaying(b.requisitionId)}>
                       <CreditCard className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                      Record Payment
+                      {t('admin.purchase.bills.recordPayment', 'Record Payment')}
                     </DropdownMenuItem>
                   </Can>
                 ) : null}
                 <Can menu={MENU} action="update">
                   <DropdownMenuItem onClick={() => setEditor({ docId: b.requisitionId })}>
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Bill
+                    {t('admin.purchase.bills.editBill', 'Edit Bill')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="delete">
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(b)}>
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Bill
+                    {t('admin.purchase.bills.deleteBill', 'Delete Bill')}
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
@@ -253,29 +260,29 @@ function PurchaseBillsView() {
         },
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Purchase Bills & Payables"
-        subtitle="Approved purchases, vendor payments and outstanding balances."
+        title={t('admin.purchase.bills.title', 'Purchase Bills & Payables')}
+        subtitle={t('admin.purchase.bills.subtitle', 'Approved purchases, vendor payments and outstanding balances.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Purchase', href: '/admin/purchase/bills' },
-          { label: 'Purchase Bills' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.purchase', 'Purchase'), href: '/admin/purchase/bills' },
+          { label: t('admin.purchase.bills.crumb', 'Purchase Bills') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              {exporting ? 'Exporting…' : 'Export Payables'}
+              {exporting ? t('admin.customers.list.exporting', 'Exporting…') : t('admin.purchase.bills.exportPayables', 'Export Payables')}
             </Button>
             <Can menu={MENU} action="create">
               <Button size="sm" onClick={() => setEditor({ docId: null })} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                New Bill
+                {t('admin.purchase.bills.newBill', 'New Bill')}
               </Button>
             </Can>
           </div>
@@ -285,32 +292,38 @@ function PurchaseBillsView() {
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <KpiTile
-          label={filtered ? 'Billed (Filtered)' : 'Total Billed'}
+          label={filtered ? t('admin.purchase.bills.kpiBilledFiltered', 'Billed (Filtered)') : t('admin.purchase.bills.kpiBilled', 'Total Billed')}
           icon={<Receipt className="h-4 w-4 text-primary" />}
           value={totals ? formatBdtWithSymbol(filtered ? totals.filtered : totals.all) : '—'}
-          hint={totals ? (filtered ? `of ${formatBdtWithSymbol(totals.all)} all-time` : 'All purchase bills') : undefined}
+          hint={
+            totals
+              ? filtered
+                ? t('admin.purchase.bills.kpiBilledOfAll', 'of {amount} all-time', { amount: formatBdtWithSymbol(totals.all) })
+                : t('admin.purchase.bills.kpiBilledHint', 'All purchase bills')
+              : undefined
+          }
         />
         <KpiTile
-          label="Paid"
+          label={t('status.paid', 'Paid')}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           value={totals ? formatBdtWithSymbol(totals.paid) : '—'}
           valueClassName="text-emerald-600 dark:text-emerald-400"
-          hint={filtered ? 'For the filtered bills' : 'Cleared disbursements'}
+          hint={filtered ? t('admin.purchase.bills.kpiFilteredHint', 'For the filtered bills') : t('admin.purchase.bills.kpiPaidHint', 'Cleared disbursements')}
           hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
         />
         <KpiTile
-          label="Outstanding Due"
+          label={t('admin.purchase.bills.kpiDue', 'Outstanding Due')}
           icon={<AlertCircle className="h-4 w-4 text-rose-500" />}
           value={totals ? formatBdtWithSymbol(totals.due) : '—'}
           valueClassName="text-rose-600 dark:text-rose-400"
-          hint={filtered ? 'For the filtered bills' : 'Pending vendor balance'}
+          hint={filtered ? t('admin.purchase.bills.kpiFilteredHint', 'For the filtered bills') : t('admin.purchase.bills.kpiDueHint', 'Pending vendor balance')}
           hintClassName="text-rose-600 dark:text-rose-400 font-medium"
         />
         <KpiTile
-          label="Bills"
+          label={t('admin.purchase.bills.kpiBills', 'Bills')}
           icon={<FileText className="h-4 w-4 text-primary" />}
-          value={page ? page.meta.total.toLocaleString() : '—'}
-          hint={filtered ? 'Matching current filters' : 'Approved purchase bills'}
+          value={page ? formatCount(page.meta.total) : '—'}
+          hint={filtered ? t('admin.purchase.bills.kpiMatching', 'Matching current filters') : t('admin.purchase.bills.kpiBillsHint', 'Approved purchase bills')}
         />
       </div>
 
@@ -320,17 +333,17 @@ function PurchaseBillsView() {
         error={query.error}
         onRetry={() => query.refetch()}
         isEmpty={!filtered && page?.meta.total === 0}
-        errorTitle="Failed to load purchase bills"
-        emptyTitle="No purchase bills yet"
-        emptyDescription="Record a bill directly or approve a requisition."
+        errorTitle={t('admin.purchase.bills.loadFailed', 'Failed to load purchase bills')}
+        emptyTitle={t('admin.purchase.bills.emptyTitle', 'No purchase bills yet')}
+        emptyDescription={t('admin.purchase.bills.emptyDesc', 'Record a bill directly or approve a requisition.')}
         icon={<Receipt className="h-5 w-5" />}
       >
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={page?.items ?? []}
           getRowId={(r) => r.requisitionId || r.id}
-          searchPlaceholder="Search by bill #, item or vendor..."
-          emptyTitle="No bills match your filters"
+          searchPlaceholder={t('admin.purchase.bills.search', 'Search by bill #, item or vendor...')}
+          emptyTitle={t('admin.purchase.bills.emptyFiltered', 'No bills match your filters')}
           server={{
             page: table.page,
             pageSize: table.pageSize,
@@ -349,7 +362,7 @@ function PurchaseBillsView() {
                   table.resetPage();
                 }}
                 options={vendorOptions}
-                noneLabel="All vendors"
+                noneLabel={t('admin.purchase.bills.allVendors', 'All vendors')}
                 className="h-9 w-44 text-xs"
               />
               <OptionSelect
@@ -358,9 +371,9 @@ function PurchaseBillsView() {
                   setPaymentStatus(v === 'paid' || v === 'partial' || v === 'unpaid' ? v : '');
                   table.resetPage();
                 }}
-                options={PAYMENT_STATUS_OPTIONS}
-                noneLabel="All payments"
-                className="h-9 w-36 text-xs"
+                options={paymentStatusOptions}
+                noneLabel={t('admin.purchase.bills.allPayments', 'All payments')}
+                className="h-9 w-44 text-xs"
               />
               <DateRangeFilter
                 from={range.from}
@@ -384,18 +397,23 @@ function PurchaseBillsView() {
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title="Delete purchase bill?"
+        title={t('admin.purchase.bills.deleteTitle', 'Delete purchase bill?')}
         description={
           deleting
-            ? `${deleting.requisitionId} (${formatBdtWithSymbol(deleting.total)}) will be deleted. Bills with recorded payments cannot be deleted — void the payments first.`
+            ? t('admin.purchase.bills.deleteDesc', '{id} ({amount}) will be deleted. Bills with recorded payments cannot be deleted — void the payments first.', {
+                id: deleting.requisitionId,
+                amount: formatBdtWithSymbol(deleting.total),
+              })
             : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleting) return;
           const target = deleting;
-          deleteBill.mutate(target.requisitionId, { onSuccess: () => toast.success(`${target.requisitionId} deleted`) });
+          deleteBill.mutate(target.requisitionId, {
+            onSuccess: () => toast.success(t('admin.purchase.bills.deleted', '{id} deleted', { id: target.requisitionId })),
+          });
           setDeleting(null);
         }}
       />

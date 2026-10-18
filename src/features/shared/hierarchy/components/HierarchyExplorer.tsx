@@ -7,16 +7,10 @@ import {
   Search,
   Table2,
   X,
-  Users,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  ShieldCheck,
-  Phone,
   Package,
-  Activity,
-  CheckCircle2,
-  XCircle,
   Loader2,
 } from 'lucide-react';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -31,6 +25,9 @@ import { findNodeById } from '../lib/layout';
 import { useHierarchyTree, useResellerSubscribers } from '../hooks/use-hierarchy';
 import { HierarchyGraph, HierarchyLayoutToggle } from './HierarchyGraph';
 import { HierarchyTable } from './HierarchyTable';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+import { hierarchyRoleLabel, hierarchyStatusLabel } from '../lib/labels';
 
 interface HierarchyExplorerProps {
   scope: HierarchyScope;
@@ -38,21 +35,15 @@ interface HierarchyExplorerProps {
   breadcrumb: { label: string; url?: string }[];
 }
 
-const roleLabel: Record<HierarchyRole, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Admin',
-  reseller: 'Reseller',
-  customer: 'Customer',
-};
-
-const legend = [
-  { role: 'Super Admin', color: 'bg-foreground' },
-  { role: 'Admin', color: 'bg-primary' },
-  { role: 'Reseller', color: 'bg-muted-foreground' },
-  { role: 'Customer', color: 'bg-border' },
-] as const;
+const legend: { role: HierarchyRole; color: string }[] = [
+  { role: 'super_admin', color: 'bg-foreground' },
+  { role: 'admin', color: 'bg-primary' },
+  { role: 'reseller', color: 'bg-muted-foreground' },
+  { role: 'customer', color: 'bg-border' },
+];
 
 export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyExplorerProps) {
+  const t = useTranslations();
   const { data, isLoading, isError, refetch } = useHierarchyTree(scope, resellerId);
   const [query, setQuery] = useState('');
   const [layout, setLayout] = useState<'TB' | 'LR'>('TB');
@@ -67,12 +58,12 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
     return <PageSkeleton variant="dashboard" />;
   }
 
-  if (isError || !data) {
+  if (isError || !data?.root || !data.summary) {
     return (
-      <EmptyState
-        title="Could not load hierarchy"
-        description="Retry to load the organization graph."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('shared.hierarchy.loadFailed', 'Could not load hierarchy')}
+        description={t('shared.hierarchy.loadFailedDesc', 'Retry to load the organization graph.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -85,36 +76,36 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
       <PageHeader title={title} subtitle={subtitle} breadcrumb={breadcrumb} />
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Chain</span>
-        <span>Super Admin</span>
+        <span className="font-medium text-foreground">{t('shared.hierarchy.chain', 'Chain')}</span>
+        <span>{hierarchyRoleLabel(t, 'super_admin')}</span>
         <span aria-hidden>→</span>
-        <span>Admin</span>
+        <span>{hierarchyRoleLabel(t, 'admin')}</span>
         <span aria-hidden>→</span>
-        <span>Reseller (POP)</span>
+        <span>{t('shared.hierarchy.resellerPop', 'Reseller (POP)')}</span>
         <span aria-hidden>→</span>
-        <span>Subscribers</span>
+        <span>{t('shared.hierarchy.subscribers', 'Subscribers')}</span>
       </div>
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {scope === 'platform' ? (
           <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-            <dt className="text-[11px] text-muted-foreground">Super Admin</dt>
-            <dd className="mt-1 font-mono text-xl font-semibold">{summary.superAdmins}</dd>
+            <dt className="text-xs text-muted-foreground">{hierarchyRoleLabel(t, 'super_admin')}</dt>
+            <dd className="mt-1 font-mono text-xl font-semibold">{formatCount(summary.superAdmins)}</dd>
           </div>
         ) : null}
         {(scope === 'platform' || scope === 'admin') && (
           <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-            <dt className="text-[11px] text-muted-foreground">Admins / tenants</dt>
-            <dd className="mt-1 font-mono text-xl font-semibold">{summary.admins}</dd>
+            <dt className="text-xs text-muted-foreground">{t('shared.hierarchy.adminsTenants', 'Admins / tenants')}</dt>
+            <dd className="mt-1 font-mono text-xl font-semibold">{formatCount(summary.admins)}</dd>
           </div>
         )}
         <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-          <dt className="text-[11px] text-muted-foreground">Resellers (POP)</dt>
-          <dd className="mt-1 font-mono text-xl font-semibold">{summary.resellers}</dd>
+          <dt className="text-xs text-muted-foreground">{t('shared.hierarchy.resellersPop', 'Resellers (POP)')}</dt>
+          <dd className="mt-1 font-mono text-xl font-semibold">{formatCount(summary.resellers)}</dd>
         </div>
         <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
-          <dt className="text-[11px] text-muted-foreground">Total Subscribers</dt>
-          <dd className="mt-1 font-mono text-xl font-semibold">{summary.customers.toLocaleString('en-BD')}</dd>
+          <dt className="text-xs text-muted-foreground">{t('shared.hierarchy.totalSubscribers', 'Total Subscribers')}</dt>
+          <dd className="mt-1 font-mono text-xl font-semibold">{formatCount(summary.customers)}</dd>
         </div>
       </dl>
 
@@ -123,11 +114,11 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
           <TabsList>
             <TabsTrigger value="graph" className="gap-1.5">
               <Network className="h-3.5 w-3.5" />
-              Graph
+              {t('shared.hierarchy.tabGraph', 'Graph')}
             </TabsTrigger>
             <TabsTrigger value="table" className="gap-1.5">
               <Table2 className="h-3.5 w-3.5" />
-              Table
+              {t('shared.hierarchy.tabTable', 'Table')}
             </TabsTrigger>
           </TabsList>
 
@@ -137,7 +128,8 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search POP reseller or admin…"
+                placeholder={t('shared.hierarchy.searchPlaceholder', 'Search POP reseller or admin…')}
+                aria-label={t('shared.hierarchy.searchPlaceholder', 'Search POP reseller or admin…')}
                 className="h-8 pl-8 text-xs"
               />
             </div>
@@ -145,16 +137,16 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {legend.map((item) => (
             <span key={item.role} className="inline-flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${item.color}`} aria-hidden />
-              {item.role}
+              {hierarchyRoleLabel(t, item.role)}
             </span>
           ))}
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
-            Click any node to view real-time live subscribers and statistics
+            {t('shared.hierarchy.clickHint', 'Click any node to view real-time live subscribers and statistics')}
           </span>
         </div>
 
@@ -174,12 +166,12 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
                 <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={selected.role === 'reseller' ? 'default' : 'secondary'} className="text-[10px]">
-                        {roleLabel[selected.role]}
+                      <Badge variant={selected.role === 'reseller' ? 'default' : 'secondary'} className="text-xs">
+                        {hierarchyRoleLabel(t, selected.role)}
                       </Badge>
-                      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground capitalize">
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground capitalize">
                         <span className={`h-1.5 w-1.5 rounded-full ${selected.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                        {selected.status ?? 'active'}
+                        {hierarchyStatusLabel(t, selected.status ?? 'active')}
                       </span>
                     </div>
                     <h3 className="mt-1.5 text-base font-semibold text-foreground">{selected.label}</h3>
@@ -191,7 +183,7 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
                     type="button"
                     onClick={() => setSelectedId(null)}
                     className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    aria-label="Clear selection"
+                    aria-label={t('shared.hierarchy.clearSelection', 'Clear selection')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -203,16 +195,19 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
                   <div className="space-y-4">
                     <dl className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg border border-border/50 bg-background/50 p-3">
-                        <dt className="text-[11px] text-muted-foreground">Direct Sub-Nodes</dt>
-                        <dd className="mt-1 font-mono text-lg font-semibold">{selected.childCount}</dd>
+                        <dt className="text-xs text-muted-foreground">{t('shared.hierarchy.directSubNodes', 'Direct Sub-Nodes')}</dt>
+                        <dd className="mt-1 font-mono text-lg font-semibold">{formatCount(selected.childCount)}</dd>
                       </div>
                       <div className="rounded-lg border border-border/50 bg-background/50 p-3">
-                        <dt className="text-[11px] text-muted-foreground">Total In Network</dt>
-                        <dd className="mt-1 font-mono text-lg font-semibold">{selected.descendantCount}</dd>
+                        <dt className="text-xs text-muted-foreground">{t('shared.hierarchy.totalInNetwork', 'Total In Network')}</dt>
+                        <dd className="mt-1 font-mono text-lg font-semibold">{formatCount(selected.descendantCount)}</dd>
                       </div>
                     </dl>
                     <p className="text-xs text-muted-foreground">
-                      Select a specific POP Reseller node in the graph to view live subscribers, package distributions, and customer details.
+                      {t(
+                        'shared.hierarchy.selectResellerHint',
+                        'Select a specific POP Reseller node in the graph to view live subscribers, package distributions, and customer details.',
+                      )}
                     </p>
                   </div>
                 )}
@@ -233,6 +228,7 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
  * On-Demand Lazy-Loaded Reseller Subscribers Panel
  */
 function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
+  const t = useTranslations();
   const resellerId = node.id.replace('reseller_', '');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -250,21 +246,21 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
       {/* Quick KPI stats */}
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-lg border border-border/50 bg-background/40 p-2">
-          <p className="text-[10px] text-muted-foreground">Total Subscribers</p>
+          <p className="text-xs text-muted-foreground">{t('shared.hierarchy.totalSubscribers', 'Total Subscribers')}</p>
           <p className="mt-0.5 font-mono text-base font-bold text-foreground">
-            {data?.stats?.total ?? node.descendantCount}
+            {formatCount(data?.stats?.total ?? node.descendantCount)}
           </p>
         </div>
         <div className="rounded-lg border border-border/50 bg-background/40 p-2">
-          <p className="text-[10px] text-emerald-500 font-medium">Active</p>
+          <p className="text-xs text-emerald-500 font-medium">{t('status.active', 'Active')}</p>
           <p className="mt-0.5 font-mono text-base font-bold text-emerald-500">
-            {data?.stats?.active ?? '—'}
+            {data?.stats ? formatCount(data.stats.active) : '—'}
           </p>
         </div>
         <div className="rounded-lg border border-border/50 bg-background/40 p-2">
-          <p className="text-[10px] text-muted-foreground">Inactive</p>
+          <p className="text-xs text-muted-foreground">{t('status.inactive', 'Inactive')}</p>
           <p className="mt-0.5 font-mono text-base font-bold text-muted-foreground">
-            {data?.stats?.inactive ?? '—'}
+            {data?.stats ? formatCount(data.stats.inactive) : '—'}
           </p>
         </div>
       </div>
@@ -279,8 +275,9 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
               setSearch(e.target.value);
               setPage(1);
             }}
-            placeholder="Search subscribers by name, phone…"
-            className="h-7 pl-7 text-[11px]"
+            placeholder={t('shared.hierarchy.subSearchPlaceholder', 'Search subscribers by name, phone…')}
+            aria-label={t('shared.hierarchy.subSearchPlaceholder', 'Search subscribers by name, phone…')}
+            className="h-7 pl-7 text-xs"
           />
         </div>
         <select
@@ -289,11 +286,12 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
             setStatusFilter(e.target.value as 'all' | 'active' | 'inactive');
             setPage(1);
           }}
-          className="h-7 rounded-md border border-border/60 bg-background px-2 text-[11px] text-foreground focus:outline-none"
+          aria-label={t('shared.hierarchy.filterStatus', 'Filter by status')}
+          className="h-7 rounded-md border border-border/60 bg-background px-2 text-xs text-foreground focus:outline-none"
         >
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">{t('shared.hierarchy.filterAll', 'All')}</option>
+          <option value="active">{t('status.active', 'Active')}</option>
+          <option value="inactive">{t('status.inactive', 'Inactive')}</option>
         </select>
       </div>
 
@@ -302,7 +300,7 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8 text-xs text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin text-primary mb-2" />
-            <span>Loading subscribers…</span>
+            <span>{t('shared.hierarchy.loadingSubscribers', 'Loading subscribers…')}</span>
           </div>
         ) : data?.items?.length ? (
           data.items.map((sub) => (
@@ -319,7 +317,7 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
                   />
                   <span className="truncate font-medium text-foreground text-[12px]">{sub.name}</span>
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="truncate flex items-center gap-1">
                     <Package className="h-2.5 w-2.5" />
                     {sub.packageName}
@@ -332,25 +330,28 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
               <div className="text-right shrink-0">
                 <Badge
                   variant={sub.status === 'active' ? 'outline' : 'secondary'}
-                  className="text-[9px] px-1.5 py-0"
+                  className="text-xs px-1.5 py-0"
                 >
-                  {sub.status}
+                  {hierarchyStatusLabel(t, sub.status)}
                 </Badge>
               </div>
             </div>
           ))
         ) : (
           <div className="rounded-lg border border-dashed border-border/60 p-4 text-center text-xs text-muted-foreground">
-            No subscribers found for this reseller.
+            {t('shared.hierarchy.noSubscribers', 'No subscribers found for this reseller.')}
           </div>
         )}
       </div>
 
       {/* Pagination & Full View CTA */}
       <div className="flex items-center justify-between border-t border-border/60 pt-2.5 text-xs">
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <span>
-            Page {data?.pagination?.page ?? 1} of {data?.pagination?.totalPages ?? 1}
+            {t('common.table.pageOf', 'Page {page} of {pages}', {
+              page: formatCount(data?.pagination?.page ?? 1),
+              pages: formatCount(data?.pagination?.totalPages ?? 1),
+            })}
           </span>
           {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
         </div>
@@ -361,7 +362,7 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
             disabled={page <= 1 || isLoading}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             className="h-6 w-6 p-0"
-            aria-label="Previous page"
+            aria-label={t('common.table.previousPage', 'Previous page')}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
@@ -371,15 +372,15 @@ function ResellerSubscribersPanel({ node }: { node: HierarchyNode }) {
             disabled={page >= (data?.pagination?.totalPages ?? 1) || isLoading}
             onClick={() => setPage((p) => p + 1)}
             className="h-6 w-6 p-0"
-            aria-label="Next page"
+            aria-label={t('common.table.nextPage', 'Next page')}
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
           <Link
             href={`/admin/customers?resellerId=${resellerId}`}
-            className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-2 text-[10px] font-medium text-primary-foreground hover:bg-primary/90 ml-1"
+            className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 ml-1"
           >
-            <span>View All</span>
+            <span>{t('common.viewAll', 'View All')}</span>
             <ExternalLink className="h-2.5 w-2.5" />
           </Link>
         </div>

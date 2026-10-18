@@ -15,8 +15,10 @@ import { TablePagination } from '@/components/shared/TablePagination';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { toast } from 'sonner';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { useDebouncedValue } from '@/features/admin/settings/hooks/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useTranslations } from '@/i18n/locale-context';
 import { PERMISSION_CATEGORIES } from './PermissionMatrix';
+import { actionLabel, categoryLabel, roleLabel, sectionLabel, sectionMatches } from '../labels';
 import {
   fetchTenantRoleDefaults,
   useAccessCandidates,
@@ -28,6 +30,8 @@ import {
 } from '../hooks/use-user-access';
 import type { AccessRole, CustomAccessRecord, PermissionMap } from '../types';
 
+import { formatCount, formatDateTime } from '@/lib/format';
+
 const ROLE_COLORS: Record<string, string> = {
   resellerAdmin: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   employee: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
@@ -35,22 +39,11 @@ const ROLE_COLORS: Record<string, string> = {
   user: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  all: 'All Roles',
-  resellerAdmin: 'Reseller / POP',
-  employee: 'Employee',
-};
-
-const ACTION_PRETTY_LABELS: Record<string, string> = {
-  read: 'View',
-  create: 'Create',
-  update: 'Edit',
-  delete: 'Delete',
-};
+const ROLE_FILTERS = ['all', 'resellerAdmin', 'employee'] as const;
 
 const CATALOG_ROLES: AccessRole[] = ['admin', 'resellerAdmin', 'employee', 'user'];
 const asCatalogRole = (role: string): AccessRole => (CATALOG_ROLES.includes(role as AccessRole) ? (role as AccessRole) : 'employee');
-const fmt = (iso: string) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleString() : '—');
+const fmt = (iso: string) => (iso ? formatDateTime(iso.replace(' ', 'T')) : '—');
 
 interface Editing {
   /** existing record id, or null when creating */
@@ -64,6 +57,7 @@ interface Editing {
 }
 
 export function CustomAccessTable() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -100,7 +94,7 @@ export function CustomAccessTable() {
         { id: editing.id, status: editing.status, permissions: editing.permissions },
         {
           onSuccess: () => {
-            toast.success(`Permissions updated for ${editing.name}`);
+            toast.success(t('admin.userAccess.custom.toastUpdated', 'Permissions updated for {name}', { name: editing.name }));
             setEditing(null);
           },
         },
@@ -110,7 +104,7 @@ export function CustomAccessTable() {
         { userId: editing.userId, status: editing.status, permissions: editing.permissions },
         {
           onSuccess: () => {
-            toast.success(`Custom access added for ${editing.name}`);
+            toast.success(t('admin.userAccess.custom.toastAdded', 'Custom access added for {name}', { name: editing.name }));
             setEditing(null);
           },
         },
@@ -127,7 +121,7 @@ export function CustomAccessTable() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search by name, email or mobile..."
+            placeholder={t('admin.userAccess.custom.searchPlaceholder', 'Search by name, email or mobile...')}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -136,7 +130,7 @@ export function CustomAccessTable() {
             className="pl-9 h-8.5 bg-muted/20 border-border/60 text-xs"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={t('common.table.clearSearch', 'Clear search')}>
               <X className="h-3.5 w-3.5" />
             </button>
           )}
@@ -144,9 +138,9 @@ export function CustomAccessTable() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
             <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1">
-              <Filter className="h-3 w-3" /> Role:
+              <Filter className="h-3 w-3" /> {t('admin.userAccess.custom.roleFilter', 'Role:')}
             </span>
-            {Object.entries(ROLE_LABELS).map(([key, label]) => (
+            {ROLE_FILTERS.map((key) => (
               <button
                 key={key}
                 type="button"
@@ -160,13 +154,13 @@ export function CustomAccessTable() {
                     : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
                 }`}
               >
-                {label}
+                {roleLabel(t, key)}
               </button>
             ))}
           </div>
           <Button onClick={() => setAddOpen(true)} size="sm" className="h-8 gap-1.5 text-xs font-semibold shrink-0">
             <UserPlus className="h-3.5 w-3.5" />
-            Add Custom Access
+            {t('admin.userAccess.custom.add', 'Add Custom Access')}
           </Button>
         </div>
       </div>
@@ -174,23 +168,27 @@ export function CustomAccessTable() {
       {list.isLoading ? (
         <PageSkeleton variant="table" rows={4} />
       ) : list.isError ? (
-        <EmptyState title="Could not load custom access" description={errorMessage(list.error)} actionLabel="Retry" onAction={() => list.refetch()} />
+        <EmptyState variant="error" title={t('admin.userAccess.custom.loadFailed', 'Could not load custom access')} description={errorMessage(list.error)} actionLabel={t('common.retry', 'Retry')} onAction={() => list.refetch()} />
       ) : records.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-border bg-card/40">
-          <p className="text-foreground text-sm font-semibold">No custom access users found</p>
-          <p className="text-muted-foreground text-xs mt-1">{search ? `No matches for "${search}"` : 'No users have custom overrides configured.'}</p>
+          <p className="text-foreground text-sm font-semibold">{t('admin.userAccess.custom.emptyTitle', 'No custom access users found')}</p>
+          <p className="text-muted-foreground text-xs mt-1">
+            {search
+              ? t('admin.userAccess.custom.noMatches', 'No matches for "{q}"', { q: search })
+              : t('admin.userAccess.custom.emptyDesc', 'No users have custom overrides configured.')}
+          </p>
         </div>
       ) : (
         <div className="rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs">
           <Table>
             <TableHeader className="bg-muted/40 border-b border-border/50">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">User</TableHead>
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Role</TableHead>
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Overrides</TableHead>
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Status</TableHead>
-                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">Account updated</TableHead>
-                <TableHead className="py-3 text-right font-semibold text-xs text-muted-foreground">Actions</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">{t('platform.userAccess.page.colUser', 'User')}</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">{t('platform.userAccess.page.colRole', 'Role')}</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">{t('admin.userAccess.custom.colOverrides', 'Overrides')}</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">{t('platform.userAccess.page.colStatus', 'Status')}</TableHead>
+                <TableHead className="py-3 font-semibold text-xs text-muted-foreground">{t('admin.userAccess.custom.colUpdated', 'Account updated')}</TableHead>
+                <TableHead className="py-3 text-right font-semibold text-xs text-muted-foreground">{t('common.actions', 'Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -204,23 +202,25 @@ export function CustomAccessTable() {
                           {(record.name || '?').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-foreground">{record.name || `User #${record.userId}`}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono">{record.email}</div>
+                          <div className="text-sm font-semibold text-foreground">{record.name || t('admin.userAccess.custom.userFallback', 'User #{id}', { id: record.userId })}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{record.email}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="py-3">
-                      <Badge variant="outline" className={`text-[10px] font-medium ${ROLE_COLORS[record.role] ?? 'bg-muted/50 text-muted-foreground'}`}>
-                        {record.roleLabel}
+                      <Badge variant="outline" className={`text-xs font-medium ${ROLE_COLORS[record.role] ?? 'bg-muted/50 text-muted-foreground'}`}>
+                        {roleLabel(t, record.role, record.roleLabel)}
                       </Badge>
                     </TableCell>
                     <TableCell className="py-3">
-                      <span className="font-mono text-xs font-semibold text-primary">{rules} rules</span>
+                      <span className="font-mono text-xs font-semibold text-primary">
+                        {t('admin.userAccess.custom.rules', '{n} rules', { n: formatCount(rules) })}
+                      </span>
                     </TableCell>
                     <TableCell className="py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${record.status === 'active' ? 'text-emerald-500' : 'text-muted-foreground'}`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${record.status === 'active' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-                        {record.status === 'active' ? 'Active' : 'Inactive'}
+                        {record.status === 'active' ? t('status.active', 'Active') : t('status.inactive', 'Inactive')}
                       </span>
                     </TableCell>
                     <TableCell className="py-3">
@@ -229,7 +229,7 @@ export function CustomAccessTable() {
                     <TableCell className="py-3 text-right">
                       <Button variant="outline" size="sm" onClick={() => openRecord(record)} className="h-7.5 gap-1.5 text-xs hover:border-primary hover:text-primary">
                         <Edit className="h-3 w-3" />
-                        Edit Permissions
+                        {t('admin.userAccess.custom.editPermissions', 'Edit Permissions')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -269,18 +269,18 @@ export function CustomAccessTable() {
           <DialogHeader className="pb-3 border-b border-border/40">
             <DialogTitle className="text-base font-bold flex items-center gap-2">
               <UserPlus className="h-4 w-4 text-primary" />
-              Add Custom User Access
+              {t('admin.userAccess.custom.addTitle', 'Add Custom User Access')}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Pick a staff member or POP account. It starts from its role&apos;s defaults.
+              {t('admin.userAccess.custom.addDesc', "Pick a staff member or POP account. It starts from its role's defaults.")}
             </DialogDescription>
           </DialogHeader>
           {candidates.isLoading ? (
             <PageSkeleton variant="table" rows={3} />
           ) : candidates.isError ? (
-            <EmptyState title="Could not load accounts" description={errorMessage(candidates.error)} actionLabel="Retry" onAction={() => candidates.refetch()} />
+            <EmptyState variant="error" title={t('admin.userAccess.custom.candidatesFailed', 'Could not load accounts')} description={errorMessage(candidates.error)} actionLabel={t('common.retry', 'Retry')} onAction={() => candidates.refetch()} />
           ) : (candidates.data ?? []).length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">Every active staff and POP account already has custom access.</p>
+            <p className="py-6 text-center text-xs text-muted-foreground">{t('admin.userAccess.custom.candidatesEmpty', 'Every active staff and POP account already has custom access.')}</p>
           ) : (
             <div className="max-h-80 overflow-y-auto divide-y divide-border/40">
               {(candidates.data ?? []).map((c) => (
@@ -292,10 +292,10 @@ export function CustomAccessTable() {
                 >
                   <div>
                     <div className="text-sm font-semibold text-foreground">{c.name}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{c.mobile || c.email}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{c.mobile || c.email}</div>
                   </div>
-                  <Badge variant="outline" className={`text-[10px] ${ROLE_COLORS[c.role] ?? ''}`}>
-                    {ROLE_LABELS[c.role] ?? c.role}
+                  <Badge variant="outline" className={`text-xs ${ROLE_COLORS[c.role] ?? ''}`}>
+                    {roleLabel(t, c.role)}
                   </Badge>
                 </button>
               ))}
@@ -307,9 +307,13 @@ export function CustomAccessTable() {
       <ConfirmDialog
         open={Boolean(confirmDelete)}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
-        title="Remove custom access?"
-        description={confirmDelete ? `${confirmDelete.name} goes back to the default permissions of their role.` : undefined}
-        confirmLabel="Remove"
+        title={t('admin.userAccess.custom.removeTitle', 'Remove custom access?')}
+        description={
+          confirmDelete
+            ? t('admin.userAccess.custom.removeDesc', '{name} goes back to the default permissions of their role.', { name: confirmDelete.name })
+            : undefined
+        }
+        confirmLabel={t('admin.userAccess.custom.removeConfirm', 'Remove')}
         destructive
         onConfirm={() => {
           const target = confirmDelete;
@@ -317,7 +321,7 @@ export function CustomAccessTable() {
           if (!target?.id) return;
           remove.mutate(target.id, {
             onSuccess: () => {
-              toast.success(`Custom override removed for ${target.name}`);
+              toast.success(t('admin.userAccess.custom.toastRemoved', 'Custom override removed for {name}', { name: target.name }));
               setEditing(null);
             },
           });
@@ -342,6 +346,7 @@ function PermissionDialog({
   onDelete: () => void;
   saving: boolean;
 }) {
+  const t = useTranslations();
   const role = asCatalogRole(editing?.role ?? 'employee');
   const catalog = useAccessCatalog(role);
   const sections = useMemo(() => catalog.data?.sections ?? [], [catalog.data]);
@@ -356,11 +361,9 @@ function PermissionDialog({
           const cat = PERMISSION_CATEGORIES.find((c) => c.id === dialogCategory);
           if (cat && !cat.keys.includes(s.key)) return false;
         }
-        const q = dialogSearch.trim().toLowerCase();
-        if (!q) return true;
-        return s.label.toLowerCase().includes(q) || s.key.toLowerCase().includes(q) || Object.values(s.actions).some((l) => l.toLowerCase().includes(q));
+        return sectionMatches(t, s, dialogSearch);
       }),
-    [sections, dialogCategory, dialogSearch],
+    [sections, dialogCategory, dialogSearch, t],
   );
 
   if (!editing) return null;
@@ -381,7 +384,7 @@ function PermissionDialog({
     setLoadingDefaults(true);
     try {
       setPerms(await fetchTenantRoleDefaults(role));
-      toast.info('Role defaults loaded — save to apply');
+      toast.info(t('admin.userAccess.custom.roleDefaultsLoaded', 'Role defaults loaded — save to apply'));
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -398,20 +401,20 @@ function PermissionDialog({
               <DialogTitle className="text-lg font-bold flex items-center gap-2">
                 <span>{editing.name}</span>
                 <Badge variant="outline" className={`text-xs ${ROLE_COLORS[editing.role] ?? ''}`}>
-                  {ROLE_LABELS[editing.role] ?? editing.role}
+                  {roleLabel(t, editing.role)}
                 </Badge>
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {editing.email || `User #${editing.userId}`}
+                {editing.email || t('admin.userAccess.custom.userFallback', 'User #{id}', { id: editing.userId })}
               </DialogDescription>
             </div>
             <div className="flex items-center gap-3 self-start sm:self-auto">
               <label className="flex items-center gap-2 text-xs">
                 <Switch checked={editing.status === 'active'} onCheckedChange={(v) => onChange({ ...editing, status: v ? 'active' : 'inactive' })} />
-                {editing.status === 'active' ? 'Override active' : 'Override paused'}
+                {editing.status === 'active' ? t('admin.userAccess.custom.overrideActive', 'Override active') : t('admin.userAccess.custom.overridePaused', 'Override paused')}
               </label>
               <Badge variant="secondary" className="text-xs font-mono font-semibold">
-                {total} enabled
+                {t('admin.userAccess.custom.enabledBadge', '{n} enabled', { n: formatCount(total) })}
               </Badge>
             </div>
           </div>
@@ -421,11 +424,11 @@ function PermissionDialog({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Search permissions..." value={dialogSearch} onChange={(e) => setDialogSearch(e.target.value)} className="pl-8 h-8 text-xs bg-muted/20 border-border/60" />
+              <Input placeholder={t('admin.userAccess.custom.searchPerms', 'Search permissions...')} value={dialogSearch} onChange={(e) => setDialogSearch(e.target.value)} className="pl-8 h-8 text-xs bg-muted/20 border-border/60" />
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <Button type="button" variant="outline" size="sm" onClick={() => void resetToRole()} disabled={loadingDefaults} className="h-7.5 px-2 text-xs">
-                <RotateCcw className="h-3 w-3 mr-1" /> {loadingDefaults ? 'Loading…' : 'Role defaults'}
+                <RotateCcw className="h-3 w-3 mr-1" /> {loadingDefaults ? t('common.loading', 'Loading…') : t('admin.userAccess.custom.roleDefaults', 'Role defaults')}
               </Button>
               <Button
                 type="button"
@@ -434,7 +437,7 @@ function PermissionDialog({
                 onClick={() => setPerms(Object.fromEntries(sections.map((s) => [s.key, Object.keys(s.actions)])))}
                 className="h-7.5 px-2 text-xs text-primary"
               >
-                <CheckSquare className="h-3 w-3 mr-1" /> Select All
+                <CheckSquare className="h-3 w-3 mr-1" /> {t('admin.userAccess.matrix.selectAll', 'Select All')}
               </Button>
               <Button
                 type="button"
@@ -449,16 +452,16 @@ function PermissionDialog({
                 }
                 className="h-7.5 px-2 text-xs"
               >
-                <Eye className="h-3 w-3 mr-1" /> View Only
+                <Eye className="h-3 w-3 mr-1" /> {t('admin.userAccess.matrix.viewOnly', 'View Only')}
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setPerms({})} className="h-7.5 px-2 text-xs text-muted-foreground hover:text-destructive">
-                <Square className="h-3 w-3 mr-1" /> Clear
+                <Square className="h-3 w-3 mr-1" /> {t('admin.userAccess.matrix.clear', 'Clear')}
               </Button>
             </div>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
             <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1 shrink-0 font-medium">
-              <Layers className="h-3.5 w-3.5" /> Category:
+              <Layers className="h-3.5 w-3.5" /> {t('admin.userAccess.custom.category', 'Category:')}
             </span>
             {PERMISSION_CATEGORIES.map((cat) => (
               <button
@@ -469,7 +472,7 @@ function PermissionDialog({
                   dialogCategory === cat.id ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
                 }`}
               >
-                {cat.label}
+                {categoryLabel(t, cat.id)}
               </button>
             ))}
           </div>
@@ -479,17 +482,17 @@ function PermissionDialog({
           {catalog.isLoading ? (
             <PageSkeleton variant="table" rows={4} />
           ) : catalog.isError ? (
-            <EmptyState title="Could not load the permission catalogue" description={errorMessage(catalog.error)} actionLabel="Retry" onAction={() => catalog.refetch()} />
+            <EmptyState variant="error" title={t('admin.userAccess.custom.catalogFailed', 'Could not load the permission catalogue')} description={errorMessage(catalog.error)} actionLabel={t('common.retry', 'Retry')} onAction={() => catalog.refetch()} />
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-xs text-muted-foreground">No matching permission modules.</div>
+            <div className="py-12 text-center text-xs text-muted-foreground">{t('admin.userAccess.custom.noModules', 'No matching permission modules.')}</div>
           ) : (
             <div className="rounded-lg border border-border/60 overflow-hidden">
               <table className="w-full text-left text-xs">
                 <thead className="bg-muted/40 border-b border-border/50 text-muted-foreground font-semibold">
                   <tr>
-                    <th className="py-2.5 px-3 w-[220px]">Module</th>
-                    <th className="py-2.5 px-3">Allowed Actions</th>
-                    <th className="py-2.5 px-3 text-right w-[100px]">Toggle</th>
+                    <th className="py-2.5 px-3 w-[220px]">{t('admin.userAccess.custom.dlgColModule', 'Module')}</th>
+                    <th className="py-2.5 px-3">{t('admin.userAccess.custom.dlgColActions', 'Allowed Actions')}</th>
+                    <th className="py-2.5 px-3 text-right w-[100px]">{t('admin.userAccess.custom.dlgColToggle', 'Toggle')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -500,9 +503,12 @@ function PermissionDialog({
                     return (
                       <tr key={section.key} className={`hover:bg-muted/20 transition-colors ${active.length > 0 ? 'bg-primary/[0.02]' : ''}`}>
                         <td className="py-2.5 px-3 align-top">
-                          <div className="font-semibold text-foreground text-xs">{section.label}</div>
-                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                            {active.filter((a) => allKeys.includes(a)).length} of {allKeys.length} enabled
+                          <div className="font-semibold text-foreground text-xs">{sectionLabel(t, section)}</div>
+                          <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                            {t('admin.userAccess.matrix.enabledOf', '{n} of {total} enabled', {
+                              n: formatCount(active.filter((a) => allKeys.includes(a)).length),
+                              total: formatCount(allKeys.length),
+                            })}
                           </div>
                         </td>
                         <td className="py-2.5 px-3 align-middle">
@@ -519,7 +525,7 @@ function PermissionDialog({
                                   }`}
                                 >
                                   <Checkbox id={id} checked={checked} onCheckedChange={(v) => toggle(section.key, actKey, v === true)} className="h-3.5 w-3.5" />
-                                  <span className="text-xs">{ACTION_PRETTY_LABELS[actKey] ?? label}</span>
+                                  <span className="text-xs">{actionLabel(t, actKey, label)}</span>
                                 </label>
                               );
                             })}
@@ -536,9 +542,9 @@ function PermissionDialog({
                               else next[section.key] = allKeys;
                               setPerms(next);
                             }}
-                            className="h-6 px-2 text-[11px] text-primary hover:bg-primary/10 font-medium"
+                            className="h-6 px-2 text-xs text-primary hover:bg-primary/10 font-medium"
                           >
-                            {isAll ? 'Deselect' : 'Select All'}
+                            {isAll ? t('admin.userAccess.matrix.deselect', 'Deselect') : t('admin.userAccess.matrix.selectAll', 'Select All')}
                           </Button>
                         </td>
                       </tr>
@@ -554,17 +560,21 @@ function PermissionDialog({
           {editing.id ? (
             <Button type="button" variant="ghost" size="sm" onClick={onDelete} className="text-xs h-8 text-destructive hover:bg-destructive/10 hover:text-destructive gap-1 px-2 self-start sm:self-auto">
               <Trash2 className="h-3.5 w-3.5" />
-              Delete Custom Override
+              {t('admin.userAccess.custom.deleteOverride', 'Delete Custom Override')}
             </Button>
           ) : (
             <span />
           )}
           <div className="flex items-center justify-end gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onClose} className="text-xs h-8 px-3">
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="button" size="sm" onClick={onSave} disabled={saving} className="text-xs font-semibold h-8 px-4 shadow-sm">
-              {saving ? 'Saving…' : editing.id ? 'Save Changes' : 'Create Override'}
+              {saving
+                ? t('admin.userAccess.matrix.saving', 'Saving...')
+                : editing.id
+                  ? t('admin.userAccess.custom.saveChanges', 'Save Changes')
+                  : t('admin.userAccess.custom.createOverride', 'Create Override')}
             </Button>
           </div>
         </div>

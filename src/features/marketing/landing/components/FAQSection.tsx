@@ -45,7 +45,7 @@ function FaqCard({
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
-            open ? 'text-landing-cta rotate-180' : 'text-white/40'
+            open ? 'text-landing-accent rotate-180' : 'text-white/60'
           }`}
           aria-hidden
         />

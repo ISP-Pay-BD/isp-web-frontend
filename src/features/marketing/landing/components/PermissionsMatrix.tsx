@@ -7,7 +7,7 @@ import type { PermissionMatrixRow } from '../types';
 
 function Cell({ on }: { on: boolean }) {
   return on ? (
-    <Check className="text-landing-cta mx-auto h-4 w-4" aria-label="Allowed" />
+    <Check className="text-landing-accent mx-auto h-4 w-4" aria-label="Allowed" />
   ) : (
     <Lock className="mx-auto h-3.5 w-3.5 text-white/25" aria-label="Denied" />
   );
@@ -31,7 +31,7 @@ export function PermissionsTable({ matrix }: { matrix: PermissionMatrixRow[] }) 
       <div className="mt-6 overflow-x-auto border-y border-white/10">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-white/10 text-xs text-white/45">
+            <tr className="border-b border-white/10 text-xs text-white/60">
               <th scope="col" className="py-3 pr-4 font-medium">
                 {k('moduleCol')}
               </th>
@@ -71,7 +71,7 @@ export function PermissionsTable({ matrix }: { matrix: PermissionMatrixRow[] }) 
         </table>
       </div>
 
-      <p className="mt-4 text-xs text-white/45">{k('footnote')}</p>
+      <p className="mt-4 text-xs text-white/60">{k('footnote')}</p>
     </div>
   );
 }

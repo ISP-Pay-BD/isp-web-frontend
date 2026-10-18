@@ -44,7 +44,7 @@ export function PluginsPage() {
     <div className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <Reveal className="max-w-2xl">
-          <p className="text-landing-cta text-xs font-medium tracking-[0.08em]">
+          <p className="text-landing-accent text-xs font-medium tracking-[0.08em]">
             {t('marketing.pages.plugins.badge')}
           </p>
           <h1 className="font-landing-display mt-3 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
@@ -79,7 +79,7 @@ export function PluginsPage() {
             ))}
           </div>
           <div className="relative min-w-[220px]">
-            <Search className="absolute top-2.5 left-3 h-4 w-4 text-white/40" aria-hidden />
+            <Search className="absolute top-2.5 left-3 h-4 w-4 text-white/60" aria-hidden />
             <input
               type="search"
               placeholder="Search plugins..."
@@ -139,12 +139,12 @@ export function PluginsPage() {
                       <h2 className="font-landing-display text-base font-semibold text-white">
                         <Link
                           href={`/plugins/${encodeURIComponent(plugin.slug)}`}
-                          className="transition-colors duration-200 hover:text-landing-cta"
+                          className="transition-colors duration-200 hover:text-landing-accent"
                         >
                           {plugin.name}
                         </Link>
                       </h2>
-                      <span className="text-[11px] text-white/40">{plugin.category}</span>
+                      <span className="text-[11px] text-white/60">{plugin.category}</span>
                     </div>
                     {plugin.description ? (
                       <p className="mt-1 line-clamp-2 text-sm text-white/55">{plugin.description}</p>
@@ -152,7 +152,7 @@ export function PluginsPage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-mono text-sm text-white/80 tabular-nums">
-                      {pluginPriceLabel(plugin)}
+                      {pluginPriceLabel(t, plugin)}
                     </span>
                     <Link href={`/plugins/${encodeURIComponent(plugin.slug)}`}>
                       <Button

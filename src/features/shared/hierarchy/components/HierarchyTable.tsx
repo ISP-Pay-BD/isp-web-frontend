@@ -4,14 +4,10 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { HierarchyNode, HierarchyRole } from '../types';
-
-const roleBadge: Record<HierarchyRole, string> = {
-  super_admin: 'Super Admin',
-  admin: 'Admin',
-  reseller: 'Reseller',
-  customer: 'Customer',
-};
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+import type { HierarchyNode } from '../types';
+import { hierarchyRoleLabel, hierarchyStatusLabel } from '../lib/labels';
 
 function Row({
   node,
@@ -24,6 +20,7 @@ function Row({
   expanded: Set<string>;
   onToggle: (id: string) => void;
 }) {
+  const t = useTranslations();
   const hasChildren = node.children.length > 0;
   const isOpen = expanded.has(node.id);
 
@@ -37,7 +34,7 @@ function Row({
                 type="button"
                 onClick={() => onToggle(node.id)}
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={isOpen ? 'Collapse' : 'Expand'}
+                aria-label={isOpen ? t('shared.hierarchy.collapse', 'Collapse') : t('shared.hierarchy.expand', 'Expand')}
               >
                 {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
@@ -48,16 +45,16 @@ function Row({
           </div>
         </td>
         <td className="px-3 py-2.5">
-          <Badge variant="secondary" className="text-[10px]">
-            {roleBadge[node.role]}
+          <Badge variant="secondary" className="text-xs">
+            {hierarchyRoleLabel(t, node.role)}
           </Badge>
         </td>
         <td className="px-3 py-2.5 text-xs text-muted-foreground">{node.meta ?? '—'}</td>
         <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
-          {node.childCount}
+          {formatCount(node.childCount)}
         </td>
         <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
-          {node.descendantCount}
+          {formatCount(node.descendantCount)}
         </td>
         <td className="px-3 py-2.5">
           <span
@@ -67,7 +64,7 @@ function Row({
               node.status === 'expired' && 'text-rose-600 dark:text-rose-400',
             )}
           >
-            {node.status ?? '—'}
+            {node.status ? hierarchyStatusLabel(t, node.status) : '—'}
           </span>
         </td>
       </tr>
@@ -95,6 +92,7 @@ function collectExpandableIds(node: HierarchyNode, acc: string[] = []): string[]
 }
 
 export function HierarchyTable({ root }: { root: HierarchyNode }) {
+  const t = useTranslations();
   const defaultExpanded = useMemo(() => {
     // Expand first two levels by default
     const ids = [root.id, ...root.children.map((c) => c.id)];
@@ -123,7 +121,7 @@ export function HierarchyTable({ root }: { root: HierarchyNode }) {
           onClick={expandAll}
           className="text-xs font-medium text-primary hover:underline"
         >
-          Expand all
+          {t('shared.hierarchy.expandAll', 'Expand all')}
         </button>
         <span className="text-muted-foreground">·</span>
         <button
@@ -131,19 +129,19 @@ export function HierarchyTable({ root }: { root: HierarchyNode }) {
           onClick={collapseAll}
           className="text-xs font-medium text-primary hover:underline"
         >
-          Collapse
+          {t('shared.hierarchy.collapse', 'Collapse')}
         </button>
       </div>
       <div className="overflow-x-auto rounded-xl border border-border/60">
         <table className="w-full min-w-[720px] text-left">
-          <thead className="bg-muted/40 text-[11px] tracking-wide text-muted-foreground">
+          <thead className="bg-muted/40 text-xs tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-3 py-2.5 font-medium">Name</th>
-              <th className="px-3 py-2.5 font-medium">Role</th>
-              <th className="px-3 py-2.5 font-medium">Detail</th>
-              <th className="px-3 py-2.5 text-right font-medium">Children</th>
-              <th className="px-3 py-2.5 text-right font-medium">Below</th>
-              <th className="px-3 py-2.5 font-medium">Status</th>
+              <th className="px-3 py-2.5 font-medium">{t('shared.hierarchy.colName', 'Name')}</th>
+              <th className="px-3 py-2.5 font-medium">{t('shared.hierarchy.colRole', 'Role')}</th>
+              <th className="px-3 py-2.5 font-medium">{t('shared.hierarchy.colDetail', 'Detail')}</th>
+              <th className="px-3 py-2.5 text-right font-medium">{t('shared.hierarchy.colChildren', 'Children')}</th>
+              <th className="px-3 py-2.5 text-right font-medium">{t('shared.hierarchy.colBelow', 'Below')}</th>
+              <th className="px-3 py-2.5 font-medium">{t('common.status', 'Status')}</th>
             </tr>
           </thead>
           <tbody>

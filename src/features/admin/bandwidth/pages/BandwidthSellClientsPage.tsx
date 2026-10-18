@@ -11,14 +11,17 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/i18n/locale-context';
 import { useBandwidthClients, useDeleteBandwidthClient } from '../hooks/useBandwidthSell';
 import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
 import type { ActiveStatus, BandwidthSellClient } from '../types';
 import { ClientFormDialog } from '../components/ClientFormDialog';
 import { OptionSelect } from '../components/OptionSelect';
 import { RefreshState } from '../components/RefreshState';
+import { activeLabel, dayText } from '../utils';
 
 export function BandwidthSellClientsPage() {
+  const { t } = useLocale();
   const table = useServerTable();
   const [popStatus, setPopStatus] = useState<'' | ActiveStatus>('');
   const { data, isLoading, isError, error, refetch, isFetching } = useBandwidthClients({
@@ -38,7 +41,7 @@ export function BandwidthSellClientsPage() {
 
   const confirmDelete = () => {
     if (!toDelete) return;
-    remove.mutate(toDelete.id, { onSuccess: () => toast.success('Client deleted') });
+    remove.mutate(toDelete.id, { onSuccess: () => toast.success(t('admin.bandwidth.clients.deleted', 'Client deleted')) });
     setToDelete(null);
   };
 
@@ -46,7 +49,7 @@ export function BandwidthSellClientsPage() {
     () => [
       {
         accessorKey: 'customerName',
-        header: 'Customer',
+        header: t('admin.bandwidth.clients.colCustomer', 'Customer'),
         enableHiding: false,
         size: 240,
         cell: ({ row }) => (
@@ -56,7 +59,7 @@ export function BandwidthSellClientsPage() {
             </div>
             <div>
               <div className="font-bold text-sm text-foreground">{row.original.customerName}</div>
-              <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
                 {row.original.customerCode ? <span className="font-mono">{row.original.customerCode}</span> : null}
                 {row.original.popName ? (
                   <>
@@ -71,12 +74,12 @@ export function BandwidthSellClientsPage() {
       },
       {
         accessorKey: 'contactPerson',
-        header: 'Contact & Mobile',
+        header: t('admin.bandwidth.clients.colContact', 'Contact & Mobile'),
         size: 190,
         cell: ({ row }) => (
           <div className="space-y-0.5">
             <div className="font-semibold text-xs text-foreground">{row.original.contactPerson || '—'}</div>
-            <div className="font-mono text-[11px] text-muted-foreground flex items-center gap-1">
+            <div className="font-mono text-xs text-muted-foreground flex items-center gap-1">
               <Phone className="h-3 w-3 text-muted-foreground" /> {row.original.mobileNumber || '—'}
             </div>
           </div>
@@ -84,7 +87,7 @@ export function BandwidthSellClientsPage() {
       },
       {
         accessorKey: 'email',
-        header: 'Email',
+        header: t('admin.bandwidth.shared.email', 'Email'),
         size: 180,
         cell: ({ row }) =>
           row.original.email ? (
@@ -97,21 +100,21 @@ export function BandwidthSellClientsPage() {
       },
       {
         accessorKey: 'activationDate',
-        header: 'Activated',
+        header: t('admin.bandwidth.clients.colActivated', 'Activated'),
         size: 120,
-        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.activationDate || '—'}</span>,
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{dayText(row.original.activationDate)}</span>,
       },
       {
         accessorKey: 'username',
-        header: 'Username',
+        header: t('admin.bandwidth.clientForm.username', 'Username'),
         size: 130,
         cell: ({ row }) => <span className="font-mono text-xs text-foreground">{row.original.username || '—'}</span>,
       },
       {
         accessorKey: 'popStatus',
-        header: 'Status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 110,
-        cell: ({ row }) => <StatusBadge status={row.original.popStatus === 'active' ? 'active' : 'suspended'} label={row.original.popStatus} />,
+        cell: ({ row }) => <StatusBadge status={row.original.popStatus === 'active' ? 'active' : 'suspended'} label={activeLabel(t, row.original.popStatus === 'active')} />,
       },
       {
         id: 'actions',
@@ -119,24 +122,24 @@ export function BandwidthSellClientsPage() {
         size: 90,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setForm({ client: row.original })}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label={t('common.edit', 'Edit')} onClick={() => setForm({ client: row.original })}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete(row.original)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label={t('common.delete', 'Delete')} onClick={() => setToDelete(row.original)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError && !data) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load sell clients" description="Could not fetch bandwidth sell clients." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState variant="error" title={t('admin.bandwidth.clients.loadFailed', 'Failed to load sell clients')} description={t('admin.bandwidth.clients.loadFailedHint', 'Could not fetch bandwidth sell clients.')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
       </div>
     );
   }
@@ -144,16 +147,16 @@ export function BandwidthSellClientsPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Sell Clients"
-        subtitle="POP and corporate clients that bandwidth is sold and invoiced to"
+        title={t('admin.bandwidth.clients.title', 'Bandwidth Sell Clients')}
+        subtitle={t('admin.bandwidth.clients.subtitle', 'POP and corporate clients that bandwidth is sold and invoiced to')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Bandwidth Sell', url: '/admin/bandwidth/sell' },
-          { label: 'Clients' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.bandwidth-sell', 'Bandwidth Sell'), url: '/admin/bandwidth/sell' },
+          { label: t('nav.bw-sell-clients', 'Clients') },
         ]}
         actions={
           <Button size="sm" onClick={() => setForm({ client: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> Add Client
+            <Plus className="h-3.5 w-3.5" /> {t('admin.bandwidth.clients.add', 'Add Client')}
           </Button>
         }
       />
@@ -161,12 +164,12 @@ export function BandwidthSellClientsPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{total}</span>{' '}
-          <span className="text-muted-foreground">{filtered ? 'matching clients' : 'clients'}</span>
+          <span className="text-muted-foreground">{filtered ? t('admin.bandwidth.clients.statMatching', 'matching clients') : t('admin.bandwidth.clients.stat', 'clients')}</span>
         </p>
         {active.data ? (
           <p>
             <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{active.data.meta.total}</span>{' '}
-            <span className="text-muted-foreground">active POPs</span>
+            <span className="text-muted-foreground">{t('admin.bandwidth.clients.statActive', 'active POPs')}</span>
           </p>
         ) : null}
         <RefreshState fetching={isFetching} error={isError ? error : null} onRetry={() => refetch()} />
@@ -180,23 +183,23 @@ export function BandwidthSellClientsPage() {
               setPopStatus(v === 'active' || v === 'inactive' ? v : '');
               table.resetPage();
             }}
-            emptyLabel="All statuses"
+            emptyLabel={t('admin.bandwidth.shared.allStatuses', 'All statuses')}
             options={[
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
+              { value: 'active', label: activeLabel(t, true) },
+              { value: 'inactive', label: activeLabel(t, false) },
             ]}
           />
         </div>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={clients}
         getRowId={(row) => String(row.id)}
-        searchPlaceholder="Search by name, code, contact, mobile, POP, username..."
+        searchPlaceholder={t('admin.bandwidth.clients.search', 'Search by name, code, contact, mobile, POP, username...')}
         server={table.server(total)}
-        emptyTitle={filtered ? 'No clients match these filters' : 'No sell clients yet'}
-        emptyDescription={filtered ? undefined : 'Add a POP or corporate client to start invoicing.'}
+        emptyTitle={filtered ? t('admin.bandwidth.clients.emptyFiltered', 'No clients match these filters') : t('admin.bandwidth.clients.emptyNone', 'No sell clients yet')}
+        emptyDescription={filtered ? undefined : t('admin.bandwidth.clients.emptyHint', 'Add a POP or corporate client to start invoicing.')}
       />
 
       <ClientFormDialog open={form !== null} client={form?.client ?? null} onOpenChange={(open) => !open && setForm(null)} />
@@ -204,9 +207,9 @@ export function BandwidthSellClientsPage() {
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={`Delete "${toDelete?.customerName ?? ''}"?`}
-        description="A client that still has sales invoices cannot be deleted."
-        confirmLabel="Delete"
+        title={t('admin.bandwidth.clients.deleteTitle', 'Delete "{name}"?', { name: toDelete?.customerName ?? '' })}
+        description={t('admin.bandwidth.clients.deleteDesc', 'A client that still has sales invoices cannot be deleted.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={confirmDelete}
       />

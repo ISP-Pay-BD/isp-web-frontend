@@ -16,6 +16,7 @@ import { onuHealth, parseBackendDate, rxBand, type OltOnu, type OnuHealth } from
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { formatDateTime } from '@/lib/format/date';
 import { cn } from '@/lib/utils';
+import { useLocale } from '@/i18n/locale-context';
 import {
   Download,
   RefreshCw,
@@ -48,6 +49,7 @@ const RX_STYLE: Record<ReturnType<typeof rxBand>, { icon: string; chip: string }
 const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
 export function OltOnusPage() {
+  const { t } = useLocale();
   const params = useParams<{ id: string }>();
   const oltId = params?.id ?? '';
   const table = useServerTable();
@@ -64,7 +66,9 @@ export function OltOnusPage() {
 
   const handleSync = () => {
     sync.mutate(oltId, {
-      onSuccess: (res) => toast.success(`Synchronized ${res?.synced ?? 0} ONUs from ${oltLabel}.`),
+      onSuccess: (res) => toast.success(
+          t('admin.ops.oltOnus.synced', 'Synchronized {n} ONUs from {olt}.', { n: res?.synced ?? 0, olt: oltLabel }),
+        ),
     });
   };
 
@@ -87,9 +91,9 @@ export function OltOnusPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(href);
-      toast.success(`${rows.length} ONUs exported to CSV`);
+      toast.success(t('admin.ops.oltOnus.exported', '{n} ONUs exported to CSV', { n: rows.length }));
     } catch (err) {
-      toast.error(errorMessage(err, 'Export failed.'));
+      toast.error(errorMessage(err, t('admin.ops.oltOnus.exportFailed', 'Export failed.')));
     } finally {
       setExporting(false);
     }
@@ -99,7 +103,7 @@ export function OltOnusPage() {
     () => [
       {
         accessorKey: 'onuId',
-        header: 'ONU (PON : Index)',
+        header: t('admin.ops.oltOnus.colOnu', 'ONU (PON : Index)'),
         enableHiding: false,
         size: 210,
         cell: ({ row }) => (
@@ -111,14 +115,14 @@ export function OltOnusPage() {
               <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
                 {row.original.onuId}
               </span>
-              <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{row.original.mac ?? '—'}</div>
+              <div className="mt-0.5 font-mono text-xs text-muted-foreground">{row.original.mac ?? '—'}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'customerName',
-        header: 'Subscriber / Client',
+        header: t('admin.ops.oltOnus.colSubscriber', 'Subscriber / Client'),
         size: 220,
         cell: ({ row }) => {
           const r = row.original;
@@ -127,9 +131,9 @@ export function OltOnusPage() {
               <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <div className="min-w-0">
                 <span className="font-medium text-foreground text-sm">
-                  {r.customerName ?? r.description ?? <span className="italic text-muted-foreground">Unassigned</span>}
+                  {r.customerName ?? r.description ?? <span className="italic text-muted-foreground">{t('admin.ops.oltOnus.unassigned', 'Unassigned')}</span>}
                 </span>
-                {r.pppoeId && <div className="font-mono text-[10px] text-muted-foreground">{r.pppoeId}</div>}
+                {r.pppoeId && <div className="font-mono text-xs text-muted-foreground">{r.pppoeId}</div>}
               </div>
             </div>
           );
@@ -137,7 +141,7 @@ export function OltOnusPage() {
       },
       {
         accessorKey: 'rxPower',
-        header: 'Rx Power (dBm)',
+        header: t('admin.ops.oltOnus.colRx', 'Rx Power (dBm)'),
         size: 150,
         cell: ({ row }) => {
           const rx = row.original.rxPower;
@@ -152,7 +156,7 @@ export function OltOnusPage() {
       },
       {
         accessorKey: 'txPower',
-        header: 'Tx Power (dBm)',
+        header: t('admin.ops.oltOnus.colTx', 'Tx Power (dBm)'),
         size: 120,
         cell: ({ row }) => (
           <span className="tabular-nums font-mono text-xs text-muted-foreground">
@@ -162,7 +166,7 @@ export function OltOnusPage() {
       },
       {
         accessorKey: 'distance',
-        header: 'Distance',
+        header: t('admin.ops.oltOnus.colDistance', 'Distance'),
         size: 100,
         cell: ({ row }) => (
           <span className="tabular-nums font-mono text-xs text-muted-foreground">
@@ -172,78 +176,89 @@ export function OltOnusPage() {
       },
       {
         accessorKey: 'status',
-        header: 'Optical Link',
+        header: t('admin.ops.oltOnus.colLink', 'Optical Link'),
         size: 140,
         cell: ({ row }) => {
           const health = onuHealth(row.original);
           return (
             <div>
               {health === 'online' ? (
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Online</Badge>
+                <Badge variant="outline" tone="success">{t('status.online', 'Online')}</Badge>
               ) : health === 'wire_down' ? (
-                <Badge variant="outline" className="bg-rose-500/10 text-rose-500 border-rose-500/30">LOS / Wire down</Badge>
+                <Badge variant="outline" tone="danger">{t('admin.ops.oltOnus.losWireDown', 'LOS / Wire down')}</Badge>
               ) : (
-                <Badge variant="outline" className="bg-muted text-muted-foreground">Offline</Badge>
+                <Badge variant="outline" className="bg-muted text-muted-foreground">{t('status.offline', 'Offline')}</Badge>
               )}
-              {row.original.reason && <div className="mt-0.5 text-[10px] text-muted-foreground">{row.original.reason}</div>}
+              {row.original.reason && <div className="mt-0.5 text-xs text-muted-foreground">{row.original.reason}</div>}
             </div>
           );
         },
       },
       {
         accessorKey: 'splitter',
-        header: 'Splitter',
+        header: t('admin.ops.oltOnus.colSplitter', 'Splitter'),
         size: 130,
         cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.splitter ?? '—'}</span>,
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" />;
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load ONUs"
-        description={errorMessage(error, 'Could not load the ONUs of this OLT.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.ops.oltOnus.loadFailed', 'Failed to load ONUs')}
+        description={errorMessage(error, t('admin.ops.oltOnus.loadFailedDesc', 'Could not load the ONUs of this OLT.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
   }
 
   const chips: { key: 'all' | OnuHealth; label: string; count: number }[] = [
-    { key: 'all', label: 'All ONUs', count: summary?.total ?? 0 },
-    { key: 'online', label: 'Online', count: summary?.online ?? 0 },
-    { key: 'wire_down', label: 'Wire Down / LOS', count: summary?.wireDown ?? 0 },
-    { key: 'power_off', label: 'Power Off', count: summary?.powerOff ?? 0 },
+    { key: 'all', label: t('admin.ops.oltOnus.chipAll', 'All ONUs'), count: summary?.total ?? 0 },
+    { key: 'online', label: t('status.online', 'Online'), count: summary?.online ?? 0 },
+    { key: 'wire_down', label: t('admin.ops.oltOnus.wireDownLos', 'Wire Down / LOS'), count: summary?.wireDown ?? 0 },
+    { key: 'power_off', label: t('admin.ops.oltOnus.chipPowerOff', 'Power Off'), count: summary?.powerOff ?? 0 },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ONU Optical Power & Telemetry"
-        subtitle={`Synchronized ONUs of ${oltLabel} — ${syncedAt ? `last sync ${formatDateTime(syncedAt)}` : 'never synchronized'}.`}
+        title={t('admin.ops.oltOnus.title', 'ONU Optical Power & Telemetry')}
+        subtitle={t('admin.ops.oltOnus.subtitle', 'Synchronized ONUs of {olt} — {sync}.', {
+          olt: oltLabel,
+          sync: syncedAt
+            ? t('admin.ops.oltOnus.lastSync', 'last sync {time}', { time: formatDateTime(syncedAt) })
+            : t('admin.ops.oltOnus.neverSynced', 'never synchronized'),
+        })}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
           { label: 'OLT', href: '/admin/olt' },
-          { label: `ONUs (${oltLabel})` },
+          { label: t('admin.ops.oltOnus.crumb', 'ONUs ({olt})', { olt: oltLabel }) },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting || !summary?.total} className="h-9">
               {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Export CSV
+              {t('admin.ops.oltOnus.exportCsv', 'Export CSV')}
             </Button>
             <Button
               size="sm"
               onClick={handleSync}
               disabled={sync.isPending || !olt?.syncSupported}
-              title={olt?.syncSupported ? 'Read every ONU from the OLT now' : `No sync driver on this server for ${olt?.brand || 'this brand'}`}
+              title={
+                olt?.syncSupported
+                  ? t('admin.ops.oltOnus.syncHint', 'Read every ONU from the OLT now')
+                  : t('admin.ops.oltOnus.noDriver', 'No sync driver on this server for {brand}', {
+                      brand: olt?.brand || t('admin.ops.oltOnus.thisBrand', 'this brand'),
+                    })
+              }
               className="h-9"
             >
               <RefreshCw className={cn('mr-2 h-4 w-4', sync.isPending && 'animate-spin')} />
-              {sync.isPending ? 'Syncing… (up to a minute)' : 'Sync from OLT'}
+              {sync.isPending ? t('admin.ops.oltOnus.syncing', 'Syncing… (up to a minute)') : t('admin.ops.oltOnus.sync', 'Sync from OLT')}
             </Button>
           </div>
         }
@@ -253,46 +268,48 @@ export function OltOnusPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total Mapped ONUs</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltOnus.kpiTotal', 'Total Mapped ONUs')}</span>
             <Router className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {summary?.total ?? 0}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{data.ponPorts.length} PON ports on this OLT</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('admin.ops.oltOnus.kpiPorts', '{n} PON ports on this OLT', { n: data.ponPorts.length })}
+          </p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Online</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('status.online', 'Online')}</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
             {summary?.online ?? 0}
           </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">Registered at last sync</p>
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('admin.ops.oltOnus.kpiOnlineHint', 'Registered at last sync')}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Wire Down / LOS</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltOnus.wireDownLos', 'Wire Down / LOS')}</span>
             <AlertTriangle className="h-4 w-4 text-amber-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
             {summary?.wireDown ?? 0}
           </div>
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">Fiber fault reported</p>
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">{t('admin.ops.oltOnus.kpiWireHint', 'Fiber fault reported')}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Power Off / Offline</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.ops.oltOnus.kpiOff', 'Power Off / Offline')}</span>
             <PowerOff className="h-4 w-4 text-rose-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
             {summary?.powerOff ?? 0}
           </div>
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">Offline without fiber fault</p>
+          <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">{t('admin.ops.oltOnus.kpiOffHint', 'Offline without fiber fault')}</p>
         </div>
       </div>
 
@@ -320,15 +337,23 @@ export function OltOnusPage() {
       </div>
 
       {/* Main Data Table */}
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data.items}
         isLoading={isFetching && !data.items.length}
         getRowId={(row) => row.id ?? row.onuId}
-        searchPlaceholder="Search MAC, customer, PPPoE ID, port or splitter..."
+        searchPlaceholder={t('admin.ops.oltOnus.search', 'Search MAC, customer, PPPoE ID, port or splitter...')}
         server={table.server(data.meta.total)}
-        emptyTitle={summary?.total ? 'No ONUs match the current filter' : 'No ONUs synchronized yet'}
-        emptyDescription={summary?.total ? 'Try a different search or status.' : 'Run “Sync from OLT” to read the ONUs of this OLT.'}
+        emptyTitle={
+          summary?.total
+            ? t('admin.ops.oltOnus.emptyFiltered', 'No ONUs match the current filter')
+            : t('admin.ops.oltOnus.emptyNone', 'No ONUs synchronized yet')
+        }
+        emptyDescription={
+          summary?.total
+            ? t('admin.ops.oltOnus.emptyFilteredDesc', 'Try a different search or status.')
+            : t('admin.ops.oltOnus.emptyNoneDesc', 'Run “Sync from OLT” to read the ONUs of this OLT.')
+        }
       />
     </div>
   );

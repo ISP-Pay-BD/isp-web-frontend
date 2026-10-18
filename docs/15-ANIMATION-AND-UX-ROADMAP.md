@@ -5,14 +5,27 @@
 
 ---
 
+> **Status (2026-10-18): reviewed against the code and the design briefs.** Where this roadmap conflicts with a `DESIGN_BRIEF.md` (landing, portal motion, customer, admin…), **the brief wins**. The item-by-item review is in [`uiux-update/07-MOTION.md`](uiux-update/07-MOTION.md). Summary:
+>
+> | Verdict | Items |
+> |---|---|
+> | ✅ Built | Circular theme switch, KPI count-up (`NumberFlow`), 3D tilt / magnetic CTAs / `FiberScene`, payment journey + matched card, integrations orbit, shimmer skeletons, field shake, command palette, **customer validity ring**, collapsible sidebar groups |
+> | ❌ Dropped (contradict the briefs or invent data) | Floating currency coins, invented ticker numbers, hero-badge border beam, partner logo marquee, staggered table rows, infinite ping rings on router/OLT rows, scratch-card rewards |
+> | ⏸ Blocked | WebSocket live feed (no realtime channel in the app), speed-test sweep (no feature) |
+> | ⚠️ Only with real state | Router reboot countdown (poll the router, show "back online"), FTTH fault pulses (also mark faults with a label/dash) |
+>
+> **Rule corrections:** only `transform` and `opacity` are cheap — `filter: blur()` is not (the hero headline blur is limited to ≥768px); portal motion timing comes from the tokens in `globals.css` (`--dur-press` 160ms, `--dur-ui` 200ms).
+
+---
+
 ## 1. Core Principles & Performance Rules
 
 To ensure animations delight the user **without slowing down their workflow**, all implementations must adhere to these strict rules:
 
 | Rule | Directive | Technical Constraint |
 | :--- | :--- | :--- |
-| **GPU Acceleration Only** | Never animate layout properties (`width`, `height`, `top`, `left`, `margin`, `padding`). | Animate **strictly** with `transform`, `opacity`, `filter`, and `clip-path`. |
-| **Snappy Durations** | Administrative actions must feel instant, not cinematic. | **Portals:** `150ms – 250ms` (cubic-bezier `0.2, 0, 0, 1`).<br>**Marketing / Landing:** `400ms – 700ms` (spring / ease-out). |
+| **GPU Acceleration Only** | Never animate layout properties (`width`, `height`, `top`, `left`, `margin`, `padding`). | Animate with `transform` and `opacity` (and `clip-path` for reveals). `filter: blur()` only on large screens. A progress bar may transition `width` inside a fixed track. |
+| **Snappy Durations** | Administrative actions must feel instant, not cinematic. | **Portals:** `150ms – 250ms` (`--ease-out-ui`; page enter = `--dur-ui` 200ms).<br>**Marketing / Landing:** `400ms – 700ms` (spring / ease-out). |
 | **Separation of Concerns** | Heavy libraries must stay on the landing page. | **Marketing:** Framer Motion + Three.js (`FiberScene`).<br>**Portals:** CSS-only transitions & keyframes (`globals.css`) for instant data interactions. |
 | **Accessibility Gate** | Respect user motion preferences automatically. | Wrap with `prefers-reduced-motion: reduce` (`@media (prefers-reduced-motion: reduce)` in CSS or `useMotionSafe` in JS). |
 | **Zero Layout Shift (CLS)** | Never cause page elements to jump during entrance. | Pre-reserve DOM heights and sizes using CSS aspect-ratios or fixed skeletons. |
@@ -151,23 +164,23 @@ Phase 1: Foundation & Global Motion (COMPLETED)
 ├── [x] Global View Transition CSS rules in globals.css
 └── [x] Command Palette & Theme Studio integration
 
-Phase 2: Admin Dashboard & Metrics (NEXT)
-├── [ ] Odometer / Ticker count-up component for KPI cards
-├── [ ] Live dual-ring ping pulse for RouterOS / OLT status
-├── [ ] Stroke-draw animation on MRTG traffic charts
-└── [ ] Staggered table row entrance helper
+Phase 2: Admin Dashboard & Metrics
+├── [x] Odometer / Ticker count-up component for KPI cards   (NumberFlow, lakh format)
+├── [-] Live dual-ring ping pulse for RouterOS / OLT status   (dropped: static dot + text instead)
+├── [ ] Stroke-draw animation on MRTG traffic charts          (optional; once per load, never on refetch)
+└── [-] Staggered table row entrance helper                   (dropped: forbidden by the portal brief)
 
 Phase 3: Customer Portal Delight
-├── [ ] Circular validity days progress ring
-├── [ ] Router reboot cooldown timer animation
-├── [ ] Payment gateway card radio transition
-└── [ ] Elastic floating navigation pill for mobile
+├── [x] Circular validity days progress ring
+├── [-] Router reboot cooldown timer animation                (replaced by a confirmation dialog; needs real router status for a countdown)
+├── [x] Payment gateway card radio transition                 (one-tap online pay as the primary action)
+└── [ ] Elastic floating navigation pill for mobile           (optional)
 
 Phase 4: Marketing Hero & Visual Polish
-├── [ ] Interactive 3D tilt on console & phone mockups
-├── [ ] Live simulated payment beam flow
-├── [ ] Infinite partner logo marquee
-└── [ ] SVG circuit path draw for payment journey
+├── [x] Interactive 3D tilt on console & phone mockups
+├── [x] Live simulated payment beam flow                      (PaymentMatchedCard + journey)
+├── [-] Infinite partner logo marquee                         (off until real, permissioned logos exist)
+└── [x] SVG circuit path draw for payment journey
 ```
 
 ---

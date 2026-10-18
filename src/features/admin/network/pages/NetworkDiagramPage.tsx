@@ -16,6 +16,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Network, RefreshCw, ZoomIn, ZoomOut, Zap, Cpu, SignalHigh, ChevronRight, DownloadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDateTime } from '@/lib/format/date';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 const NO_SPLITTER = 'No splitter assigned';
 
@@ -40,6 +42,9 @@ const RX_BAR: Record<ReturnType<typeof rxBand>, string> = {
 const portKey = (oltId: string, ponPort: string) => `${oltId}|${ponPort}`;
 
 export function NetworkDiagramPage() {
+  const t = useTranslations();
+  const splitterLabel = (name: string) => (name === NO_SPLITTER ? t('admin.network.diagram.noSplitter', 'No splitter assigned') : name);
+  const statusText = (status: string) => t(`status.${status.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, status);
   const [selectedOltId, setSelectedOltId] = useState<string>('all');
   const [selectedPonPort, setSelectedPonPort] = useState<string>('all');
   const [selectedNode, setSelectedNode] = useState<TopologyOnu | null>(null);
@@ -86,7 +91,8 @@ export function NetworkDiagramPage() {
   const handleSync = () => {
     if (!selectedOlt) return;
     sync.mutate(selectedOlt.id, {
-      onSuccess: (res) => toast.success(`Synchronized ${res?.synced ?? 0} ONUs from ${selectedOlt.name}.`),
+      onSuccess: (res) =>
+        toast.success(t('admin.network.diagram.synced', 'Synchronized {n} ONUs from {olt}.', { n: formatCount(res?.synced ?? 0), olt: selectedOlt.name })),
     });
   };
 
@@ -101,18 +107,18 @@ export function NetworkDiagramPage() {
   if (topoQuery.isError || oltQuery.isError) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load network diagram"
-          description="Could not fetch OLT topology."
-          actionLabel="Retry"
+        <EmptyState variant="error"
+          title={t('admin.network.diagram.loadFailed', 'Failed to load network diagram')}
+          description={t('admin.network.diagram.loadFailedDesc', 'Could not fetch OLT topology.')}
+          actionLabel={t('common.retry', 'Retry')}
           onAction={handleRefresh}
         />
       </div>
     );
   }
 
-  const oltItems = [{ value: 'all', label: 'All OLT Headends' }, ...olts.map((o) => ({ value: o.id, label: `${o.name} (${o.brand})` }))];
-  const portItems = [{ value: 'all', label: 'All PON Ports' }, ...portNames.map((p) => ({ value: p, label: p }))];
+  const oltItems = [{ value: 'all', label: t('admin.network.diagram.allOlts', 'All OLT Headends') }, ...olts.map((o) => ({ value: o.id, label: `${o.name} (${o.brand})` }))];
+  const portItems = [{ value: 'all', label: t('admin.network.diagram.allPorts', 'All PON Ports') }, ...portNames.map((p) => ({ value: p, label: p }))];
   const selectedLastSeen = parseBackendDate(selectedNode?.lastSeen ?? null);
 
   return (
@@ -122,12 +128,12 @@ export function NetworkDiagramPage() {
       {/* Header */}
       <div>
         <PageHeader
-          title="Network Diagram & Optical Topology"
-          subtitle="OLT → PON Port → Splitter → ONU, from the last synchronization of each OLT"
+          title={t('admin.network.diagram.title', 'Network Diagram & Optical Topology')}
+          subtitle={t('admin.network.diagram.subtitle', 'OLT → PON Port → Splitter → ONU, from the last synchronization of each OLT')}
           breadcrumb={[
             { label: 'Dashboard', href: '/admin/dashboard' },
             { label: 'Network' },
-            { label: 'Diagram' },
+            { label: t('admin.network.diagram.crumb', 'Diagram') },
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -137,11 +143,15 @@ export function NetworkDiagramPage() {
                   size="sm"
                   onClick={handleSync}
                   disabled={sync.isPending || !selectedOlt.syncSupported}
-                  title={selectedOlt.syncSupported ? `Read every ONU from ${selectedOlt.name} now` : `No sync driver on this server for ${selectedOlt.brand}`}
+                  title={
+                    selectedOlt.syncSupported
+                      ? t('admin.network.diagram.syncTitle', 'Read every ONU from {olt} now', { olt: selectedOlt.name })
+                      : t('admin.network.diagram.syncUnsupported', 'No sync driver on this server for {brand}', { brand: selectedOlt.brand })
+                  }
                   className="gap-1.5 font-semibold shadow-sm"
                 >
                   <DownloadCloud className={`h-4 w-4 ${sync.isPending ? 'animate-pulse' : ''}`} />
-                  {sync.isPending ? 'Syncing… (up to a minute)' : 'Sync OLT'}
+                  {sync.isPending ? t('admin.network.diagram.syncing', 'Syncing… (up to a minute)') : t('admin.network.diagram.syncOlt', 'Sync OLT')}
                 </Button>
               )}
               <Button
@@ -152,7 +162,7 @@ export function NetworkDiagramPage() {
                 className="gap-1.5 font-semibold shadow-sm"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                {t('admin.network.diagram.refresh', 'Refresh')}
               </Button>
             </div>
           }
@@ -162,20 +172,20 @@ export function NetworkDiagramPage() {
       {/* KPI Stats Band */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
-          <span className="font-semibold tabular-nums">{oltQuery.data?.total ?? olts.length}</span>{' '}
-          <span className="text-muted-foreground">total olts</span>
+          <span className="font-semibold tabular-nums">{formatCount(oltQuery.data?.total ?? olts.length)}</span>{' '}
+          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOlts', 'total olts')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{totalOnus}</span>{' '}
-          <span className="text-muted-foreground">onus in view</span>
+          <span className="font-semibold tabular-nums">{formatCount(totalOnus)}</span>{' '}
+          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOnus', 'onus in view')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{onlineOnus}</span>{' '}
-          <span className="text-muted-foreground">online onus</span>
+          <span className="font-semibold tabular-nums">{formatCount(onlineOnus)}</span>{' '}
+          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOnline', 'online onus')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{offlineOnus}</span>{' '}
-          <span className="text-muted-foreground">offline onus / alarm</span>
+          <span className="font-semibold tabular-nums">{formatCount(offlineOnus)}</span>{' '}
+          <span className="text-muted-foreground">{t('admin.network.diagram.kpiOffline', 'offline onus / alarm')}</span>
         </p>
       </div>
 
@@ -184,7 +194,7 @@ export function NetworkDiagramPage() {
         <Card className="border-border/60 shadow-sm ring-1 ring-border/60 overflow-hidden">
           <CardContent className="pt-5 pb-5 px-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="w-52">
+              <div className="min-w-52">
                 <Select
                   items={oltItems}
                   value={selectedOltId}
@@ -195,7 +205,7 @@ export function NetworkDiagramPage() {
                   }}
                 >
                   <SelectTrigger className="shadow-sm">
-                    <SelectValue placeholder="All OLT Nodes" />
+                    <SelectValue placeholder={t('admin.network.diagram.allOltNodes', 'All OLT Nodes')} />
                   </SelectTrigger>
                   <SelectContent>
                     {oltItems.map((o) => (
@@ -207,10 +217,10 @@ export function NetworkDiagramPage() {
                 </Select>
               </div>
 
-              <div className="w-44">
+              <div className="min-w-44">
                 <Select items={portItems} value={selectedPonPort} onValueChange={(v) => v && setSelectedPonPort(String(v))}>
                   <SelectTrigger className="shadow-sm">
-                    <SelectValue placeholder="All PON Ports" />
+                    <SelectValue placeholder={t('admin.network.diagram.allPorts', 'All PON Ports')} />
                   </SelectTrigger>
                   <SelectContent>
                     {portItems.map((p) => (
@@ -230,7 +240,7 @@ export function NetworkDiagramPage() {
               <div>
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="icon" aria-label={t('admin.network.diagram.zoomOut', 'Zoom out')}
                   className="h-8 w-8 shadow-sm"
                   onClick={() => setZoomLevel((z) => Math.max(0.7, z - 0.1))}
                 >
@@ -240,7 +250,7 @@ export function NetworkDiagramPage() {
               <div>
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="icon" aria-label={t('admin.network.diagram.zoomIn', 'Zoom in')}
                   className="h-8 w-8 shadow-sm"
                   onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.1))}
                 >
@@ -254,7 +264,7 @@ export function NetworkDiagramPage() {
                   className="text-xs font-medium"
                   onClick={() => setZoomLevel(1)}
                 >
-                  Reset
+                  {t('admin.network.diagram.reset', 'Reset')}
                 </Button>
               </div>
             </div>
@@ -270,23 +280,26 @@ export function NetworkDiagramPage() {
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                 <Cpu className="h-4 w-4 text-primary" />
               </span>
-              Optical Distribution Network (ODN) Tree
+              {t('admin.network.diagram.odnTitle', 'Optical Distribution Network (ODN) Tree')}
             </CardTitle>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block ring-2 ring-emerald-500/20" />
-                Online
+                {t('status.online', 'Online')}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-red-500 inline-block ring-2 ring-red-500/20" />
-                Offline / LOS
+                {t('admin.network.diagram.offlineLos', 'Offline / LOS')}
               </span>
             </div>
           </CardHeader>
           <CardContent className="min-h-[480px] overflow-x-auto bg-muted/20 p-6">
             {topoQuery.data?.truncated && (
               <p className="mb-4 text-xs text-muted-foreground">
-                Showing {leaves.length} of {topoQuery.data.total} ONUs — pick a PON port (or “Show all” on a port) to load every ONU on it.
+                {t('admin.network.diagram.truncated', 'Showing {shown} of {total} ONUs — pick a PON port (or “Show all” on a port) to load every ONU on it.', {
+                  shown: formatCount(leaves.length),
+                  total: formatCount(topoQuery.data.total),
+                })}
               </p>
             )}
             <div
@@ -314,11 +327,12 @@ export function NetworkDiagramPage() {
                         <div className="flex items-center gap-2">
                           {loaded < port.total && !isFocused && (
                             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => focusPort(port)}>
-                              Show all
+                              {t('admin.network.diagram.showAll', 'Show all')}
                             </Button>
                           )}
                           <span className="text-xs text-muted-foreground font-mono bg-muted/30 px-2 py-0.5 rounded-md">
-                            {port.online}/{port.total} online{loaded < port.total ? ` · ${loaded} shown` : ''}
+                            {t('admin.network.diagram.portOnline', '{online}/{total} online', { online: formatCount(port.online), total: formatCount(port.total) })}
+                            {loaded < port.total ? ` · ${t('admin.network.diagram.portShown', '{n} shown', { n: formatCount(loaded) })}` : ''}
                           </span>
                         </div>
                       </div>
@@ -336,10 +350,10 @@ export function NetworkDiagramPage() {
                                   <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10">
                                     <Zap className="h-3.5 w-3.5 text-amber-500" />
                                   </span>
-                                  {splitterName}
+                                  {splitterLabel(splitterName)}
                                 </span>
-                                <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5">
-                                  {onus.length} drops
+                                <Badge variant="outline" className="text-xs font-mono px-2 py-0.5">
+                                  {t('admin.network.diagram.drops', '{n} drops', { n: formatCount(onus.length) })}
                                 </Badge>
                               </div>
 
@@ -360,9 +374,9 @@ export function NetworkDiagramPage() {
                                     >
                                       <div className="min-w-0 pr-3">
                                         <div className="font-semibold text-foreground truncate group-hover/onu:text-primary transition-colors">
-                                          {onu.customerName ?? <span className="italic text-muted-foreground">Unassigned</span>}
+                                          {onu.customerName ?? <span className="italic text-muted-foreground">{t('admin.network.diagram.unassigned', 'Unassigned')}</span>}
                                         </div>
-                                        <div className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
+                                        <div className="text-xs font-mono text-muted-foreground mt-0.5 truncate">
                                           {onu.onuId}
                                           {(onu.zone ?? onu.mac) ? ` • ${onu.zone ?? onu.mac}` : ''}
                                         </div>
@@ -371,15 +385,15 @@ export function NetworkDiagramPage() {
                                       <div className="flex items-center gap-2.5 flex-shrink-0">
                                         <div className="text-right">
                                           <div
-                                            className={`font-mono font-bold text-[11px] ${
+                                            className={`font-mono font-bold text-xs ${
                                               isNormal ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
                                             }`}
                                           >
                                             {onu.rxPowerDbm !== null ? `${onu.rxPowerDbm} dBm` : '— dBm'}
                                           </div>
                                           {onu.txPowerDbm !== null && (
-                                            <div className="text-[10px] text-muted-foreground font-mono">
-                                              Tx: {onu.txPowerDbm} dBm
+                                            <div className="text-xs text-muted-foreground font-mono">
+                                              {t('admin.network.diagram.tx', 'Tx: {value} dBm', { value: onu.txPowerDbm })}
                                             </div>
                                           )}
                                         </div>
@@ -400,7 +414,7 @@ export function NetworkDiagramPage() {
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          {port.total} ONUs on this port are not loaded in this view.
+                          {t('admin.network.diagram.notLoaded', '{n} ONUs on this port are not loaded in this view.', { n: formatCount(port.total) })}
                         </p>
                       )}
                     </div>
@@ -411,13 +425,13 @@ export function NetworkDiagramPage() {
                   className="text-center py-16 text-muted-foreground"
                 >
                   <Network className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-medium">No synchronized ONUs for the current filter</p>
+                  <p className="text-sm font-medium">{t('admin.network.diagram.emptyTitle', 'No synchronized ONUs for the current filter')}</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
                     {olts.length === 0
-                      ? 'Onboard an OLT first, then synchronize it.'
+                      ? t('admin.network.diagram.emptyNoOlt', 'Onboard an OLT first, then synchronize it.')
                       : selectedOlt
-                        ? 'Use “Sync OLT” to read its ONUs.'
-                        : 'Select an OLT and synchronize it to build the tree.'}
+                        ? t('admin.network.diagram.emptySync', 'Use “Sync OLT” to read its ONUs.')
+                        : t('admin.network.diagram.emptySelect', 'Select an OLT and synchronize it to build the tree.')}
                   </p>
                 </div>
               )}
@@ -441,17 +455,19 @@ export function NetworkDiagramPage() {
                       <SignalHigh className="h-5 w-5 text-primary" />
                     </span>
                     <div>
-                      <div className="font-bold">ONU Optical Diagnostic</div>
-                      <div className="text-[11px] font-normal text-muted-foreground mt-0.5">
-                        {selectedLastSeen ? `As of ${formatDateTime(selectedLastSeen)}` : 'From the last synchronization'}
+                      <div className="font-bold">{t('admin.network.diagram.diagTitle', 'ONU Optical Diagnostic')}</div>
+                      <div className="text-xs font-normal text-muted-foreground mt-0.5">
+                        {selectedLastSeen
+                          ? t('admin.network.diagram.asOf', 'As of {date}', { date: formatDateTime(selectedLastSeen) })
+                          : t('admin.network.diagram.lastSync', 'From the last synchronization')}
                       </div>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
 
                 {/* Connection Path Breadcrumb */}
-                <div className="relative z-10 mt-4 flex items-center gap-1 text-[11px] font-mono bg-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 shadow-xs">
-                  {[selectedNode.oltName, selectedNode.ponPort, selectedNode.splitter ?? NO_SPLITTER, selectedNode.onuId].map(
+                <div className="relative z-10 mt-4 flex items-center gap-1 text-xs font-mono bg-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/50 shadow-xs">
+                  {[selectedNode.oltName, selectedNode.ponPort, splitterLabel(selectedNode.splitter ?? NO_SPLITTER), selectedNode.onuId].map(
                     (part, i, arr) => (
                       <span key={i} className="flex items-center gap-1 min-w-0">
                         <span className={`truncate ${i === arr.length - 1 ? 'font-bold text-primary' : 'text-muted-foreground'}`}>
@@ -474,20 +490,20 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-primary/10 flex items-center justify-center">
                       <svg className="h-3 w-3 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
-                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Customer</span>
+                    <span className="text-xs font-bold tracking-wide text-muted-foreground">{t('admin.network.diagram.customer', 'Customer')}</span>
                   </div>
                   <div className="divide-y divide-border/30">
                     {[
-                      { label: 'Name', value: selectedNode.customerName ?? 'Unassigned', bold: true },
+                      { label: t('admin.network.diagram.name', 'Name'), value: selectedNode.customerName ?? t('admin.network.diagram.unassigned', 'Unassigned'), bold: true },
                       { label: 'PPPoE ID', value: selectedNode.pppoeId ?? '—', mono: true },
                       { label: 'ONU ID', value: selectedNode.onuId, mono: true },
-                      { label: 'MAC Address', value: selectedNode.mac ?? '—', code: true },
-                      { label: 'Address', value: selectedNode.zone ?? '—' },
+                      { label: t('admin.network.diagram.mac', 'MAC Address'), value: selectedNode.mac ?? '—', code: true },
+                      { label: t('admin.network.diagram.address', 'Address'), value: selectedNode.zone ?? '—' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5 hover:bg-muted/20 transition-colors">
                         <span className="text-xs text-muted-foreground truncate">{item.label}</span>
                         {item.code ? (
-                          <code className="font-mono text-[11px] bg-muted/40 px-2 py-0.5 rounded-md border border-border/40 truncate min-w-0">{item.value}</code>
+                          <code className="font-mono text-xs bg-muted/40 px-2 py-0.5 rounded-md border border-border/40 truncate min-w-0">{item.value}</code>
                         ) : (
                           <span className={`text-xs truncate min-w-0 ${item.bold ? 'font-bold text-foreground' : item.mono ? 'font-mono font-semibold' : 'font-medium text-foreground'}`}>
                             {item.value}
@@ -504,14 +520,14 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-blue-500/10 flex items-center justify-center">
                       <Network className="h-3 w-3 text-blue-500" />
                     </div>
-                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Network</span>
+                    <span className="text-xs font-bold tracking-wide text-muted-foreground">{t('admin.network.diagram.network', 'Network')}</span>
                   </div>
                   <div className="divide-y divide-border/30">
                     {[
-                      { label: 'Headend OLT', value: selectedNode.oltName },
+                      { label: t('admin.network.diagram.headend', 'Headend OLT'), value: selectedNode.oltName },
                       { label: 'PON Port', value: selectedNode.ponPort },
-                      { label: 'Splitter', value: selectedNode.splitter ?? '—' },
-                      { label: 'Distance', value: selectedNode.distance !== null ? String(selectedNode.distance) : '—' },
+                      { label: t('admin.network.diagram.splitter', 'Splitter'), value: selectedNode.splitter ?? '—' },
+                      { label: t('admin.network.diagram.distance', 'Distance'), value: selectedNode.distance !== null ? String(selectedNode.distance) : '—' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5 hover:bg-muted/20 transition-colors">
                         <span className="text-xs text-muted-foreground truncate">{item.label}</span>
@@ -519,17 +535,17 @@ export function NetworkDiagramPage() {
                       </div>
                     ))}
                     <div className="flex items-center justify-between gap-3 min-w-0 px-4 py-2.5">
-                      <span className="text-xs text-muted-foreground truncate">Link State</span>
+                      <span className="text-xs text-muted-foreground truncate">{t('admin.network.diagram.linkState', 'Link State')}</span>
                       <div className="text-right">
                         <Badge
                           variant={selectedNode.status === 'online' ? 'default' : 'destructive'}
-                          className="text-[10px] font-bold gap-1.5 capitalize px-2.5 py-1 shadow-sm"
+                          className="text-xs font-bold gap-1.5 capitalize px-2.5 py-1 shadow-sm"
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${selectedNode.status === 'online' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-red-500 shadow-sm shadow-red-500/50'}`} />
-                          {selectedNode.status}
+                          {statusText(selectedNode.status)}
                         </Badge>
                         {selectedNode.reason && (
-                          <div className="mt-1 text-[10px] text-muted-foreground">{selectedNode.reason}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{selectedNode.reason}</div>
                         )}
                       </div>
                     </div>
@@ -542,17 +558,17 @@ export function NetworkDiagramPage() {
                     <div className="h-5 w-5 rounded-md bg-emerald-500/10 flex items-center justify-center">
                       <Zap className="h-3 w-3 text-emerald-500" />
                     </div>
-                    <span className="text-[11px] font-bold tracking-wide text-muted-foreground">Optical Levels</span>
+                    <span className="text-xs font-bold tracking-wide text-muted-foreground">{t('admin.network.diagram.optical', 'Optical Levels')}</span>
                   </div>
                   <div className="p-4 space-y-5">
                     {/* Rx Power */}
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between gap-3 min-w-0">
                         <div>
-                          <span className="text-xs font-semibold text-foreground">Rx Optical Power</span>
+                          <span className="text-xs font-semibold text-foreground">{t('admin.network.diagram.rxPower', 'Rx Optical Power')}</span>
                         </div>
                         <span className={`font-mono font-bold text-sm shrink-0 ${RX_TEXT[rxBand(selectedNode.rxPowerDbm)]}`}>
-                          {selectedNode.rxPowerDbm ?? '—'} <span className="text-[10px] font-bold opacity-70">dBm</span>
+                          {selectedNode.rxPowerDbm ?? '—'} <span className="text-xs font-bold opacity-70">dBm</span>
                         </span>
                       </div>
                       {selectedNode.rxPowerDbm !== null && (
@@ -563,13 +579,13 @@ export function NetworkDiagramPage() {
                               style={{ width: `${rxPct(selectedNode.rxPowerDbm)}%` }}
                             />
                             {/* Threshold markers */}
-                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-28)}%` }} title="-28 dBm LOS" />
-                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-27)}%` }} title="-27 dBm Weak" />
-                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-25)}%` }} title="-25 dBm Good" />
+                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-28)}%` }} title={t('admin.network.diagram.markerLos', '-28 dBm LOS')} />
+                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-27)}%` }} title={t('admin.network.diagram.markerWeak', '-27 dBm Weak')} />
+                            <div className="absolute inset-y-0 w-px bg-foreground/20" style={{ left: `${rxPct(-25)}%` }} title={t('admin.network.diagram.markerGood', '-25 dBm Good')} />
                           </div>
-                          <div className="flex justify-between text-[9px] text-muted-foreground/50 font-mono">
+                          <div className="flex justify-between text-xs text-muted-foreground/50 font-mono">
                             <span>{RX_MIN} dBm (LOS)</span>
-                            <span>{RX_MAX} dBm (Max)</span>
+                            <span>{t('admin.network.diagram.maxLabel', '{value} dBm (Max)', { value: RX_MAX })}</span>
                           </div>
                         </>
                       )}
@@ -577,26 +593,26 @@ export function NetworkDiagramPage() {
 
                     {/* Tx Power */}
                     <div className="flex items-center justify-between gap-3 min-w-0">
-                      <span className="text-xs font-semibold text-foreground">Tx Optical Power</span>
+                      <span className="text-xs font-semibold text-foreground">{t('admin.network.diagram.txPower', 'Tx Optical Power')}</span>
                       <span className="font-mono font-bold text-sm text-blue-500 shrink-0">
-                        {selectedNode.txPowerDbm ?? '—'} <span className="text-[10px] font-bold opacity-70">dBm</span>
+                        {selectedNode.txPowerDbm ?? '—'} <span className="text-xs font-bold opacity-70">dBm</span>
                       </span>
                     </div>
 
                     {/* Threshold Legend */}
                     <div className="pt-3 border-t border-border/30">
-                      <div className="flex items-center gap-4 text-[10px]">
+                      <div className="flex items-center gap-4 text-xs">
                         <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                           <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/30" />
-                          Good (&gt;-25)
+                          {t('admin.network.diagram.legendGood', 'Good (>-25)')}
                         </span>
                         <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
                           <span className="h-2 w-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/30" />
-                          Weak (-25 to -27)
+                          {t('admin.network.diagram.legendWeak', 'Weak (-25 to -27)')}
                         </span>
                         <span className="flex items-center gap-1.5 text-red-500">
                           <span className="h-2 w-2 rounded-full bg-red-500 shadow-sm shadow-red-500/30" />
-                          Critical (&lt;-27)
+                          {t('admin.network.diagram.legendCritical', 'Critical (<-27)')}
                         </span>
                       </div>
                     </div>

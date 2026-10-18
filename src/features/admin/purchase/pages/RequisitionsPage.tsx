@@ -42,9 +42,12 @@ import { PurchaseDocEditor } from '../components/PurchaseDocEditor';
 import { PurchaseDocDetailDialog } from '../components/PurchaseDocDetailDialog';
 import { DateRangeFilter } from '../components/DateRangeFilter';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const MENU = 'inventory_purchess';
 
 export function RequisitionsPage() {
+  const t = useTranslations();
   const table = useServerTable();
   const [range, setRange] = useState({ from: '', to: '' });
   const query = useRequisitions({ page: table.page, pageSize: table.pageSize, search: table.search, ...range });
@@ -87,9 +90,9 @@ export function RequisitionsPage() {
           r.status,
         ]),
       );
-      toast.success(`Exported ${rows.length} requisitions`);
+      toast.success(t('admin.purchase.requisitions.exported', 'Exported {n} requisitions', { n: rows.length }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+      toast.error(e instanceof Error ? e.message : t('admin.purchase.requisitions.exportFailed', 'Export failed'));
     } finally {
       setExporting(false);
     }
@@ -99,7 +102,7 @@ export function RequisitionsPage() {
     () => [
       {
         accessorKey: 'requisitionId',
-        header: 'Req ID',
+        header: t('admin.purchase.requisitions.colId', 'Req ID'),
         enableHiding: false,
         size: 130,
         cell: ({ row }) => (
@@ -110,7 +113,7 @@ export function RequisitionsPage() {
       },
       {
         accessorKey: 'itemNames',
-        header: 'Items',
+        header: t('admin.purchase.requisitions.colItems', 'Items'),
         enableHiding: false,
         size: 260,
         cell: ({ row }) => {
@@ -124,10 +127,12 @@ export function RequisitionsPage() {
               <div className="min-w-0">
                 <span className="font-medium text-foreground text-sm line-clamp-1">
                   {names || '—'}
-                  {r.itemNames.length > 2 ? ` +${r.itemNames.length - 2} more` : ''}
+                  {r.itemNames.length > 2 ? ` ${t('admin.purchase.requisitions.more', '+{n} more', { n: r.itemNames.length - 2 })}` : ''}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {r.itemCount} {r.itemCount === 1 ? 'line' : 'lines'}
+                  {r.itemCount === 1
+                    ? t('admin.purchase.requisitions.lineOne', '{n} line', { n: r.itemCount })
+                    : t('admin.purchase.requisitions.lineMany', '{n} lines', { n: r.itemCount })}
                 </span>
               </div>
             </div>
@@ -136,7 +141,7 @@ export function RequisitionsPage() {
       },
       {
         accessorKey: 'vendors',
-        header: 'Vendors',
+        header: t('admin.purchase.requisitions.colVendors', 'Vendors'),
         size: 180,
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground line-clamp-2">{row.original.vendors.join(', ') || '—'}</span>
@@ -144,7 +149,7 @@ export function RequisitionsPage() {
       },
       {
         accessorKey: 'total',
-        header: 'Est. Total',
+        header: t('admin.purchase.requisitions.colTotal', 'Est. Total'),
         size: 130,
         cell: ({ row }) => (
           <span className="font-semibold text-sm tabular-nums text-foreground">{formatBdtWithSymbol(row.original.total)}</span>
@@ -152,13 +157,13 @@ export function RequisitionsPage() {
       },
       {
         accessorKey: 'requisitionDate',
-        header: 'Date',
+        header: t('admin.purchase.requisitions.colDate', 'Date'),
         size: 110,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.requisitionDate || '—'}</span>,
       },
       {
         accessorKey: 'requisitionBy',
-        header: 'Requested By',
+        header: t('admin.purchase.requisitions.colRequestedBy', 'Requested By'),
         size: 160,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
@@ -169,17 +174,17 @@ export function RequisitionsPage() {
       },
       {
         accessorKey: 'deadline',
-        header: 'Deadline',
+        header: t('admin.purchase.requisitions.colDeadline', 'Deadline'),
         size: 110,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.deadline || '—'}</span>,
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 110,
         cell: () => (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
-            Pending
+          <Badge variant="outline" tone="warning">
+            {t('status.pending', 'Pending')}
           </Badge>
         ),
       },
@@ -191,30 +196,30 @@ export function RequisitionsPage() {
           const req = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger aria-label={t('common.actions', 'Actions')} className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Requisition Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('admin.purchase.requisitions.actionsLabel', 'Requisition Actions')}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setViewing(req.requisitionId)}>
                   <Eye className="h-3.5 w-3.5 mr-2" />
-                  View Details
+                  {t('admin.purchase.requisitions.viewDetails', 'View Details')}
                 </DropdownMenuItem>
                 <Can menu={MENU} action="update">
                   <DropdownMenuItem onClick={() => setEditor({ docId: req.requisitionId })}>
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Requisition
+                    {t('admin.purchase.requisitions.edit', 'Edit Requisition')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setApproving(req)}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                    Approve → Purchase Bill
+                    {t('admin.purchase.requisitions.approve', 'Approve → Purchase Bill')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="delete">
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setRejecting(req)}>
                     <XCircle className="h-3.5 w-3.5 mr-2" />
-                    Reject Requisition
+                    {t('admin.purchase.requisitions.reject', 'Reject Requisition')}
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
@@ -223,29 +228,29 @@ export function RequisitionsPage() {
         },
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Purchase Requisitions"
-        subtitle="Pending procurement requests. Approving a requisition turns it into a purchase bill."
+        title={t('admin.purchase.requisitions.title', 'Purchase Requisitions')}
+        subtitle={t('admin.purchase.requisitions.subtitle', 'Pending procurement requests. Approving a requisition turns it into a purchase bill.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Purchase', href: '/admin/purchase/bills' },
-          { label: 'Requisitions' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.purchase', 'Purchase'), href: '/admin/purchase/bills' },
+          { label: t('admin.purchase.requisitions.crumb', 'Requisitions') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              {exporting ? 'Exporting…' : 'Export CSV'}
+              {exporting ? t('admin.customers.list.exporting', 'Exporting…') : t('admin.purchase.requisitions.exportCsv', 'Export CSV')}
             </Button>
             <Can menu={MENU} action="create">
               <Button size="sm" onClick={() => setEditor({ docId: null })} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                New Requisition
+                {t('admin.purchase.requisitions.new', 'New Requisition')}
               </Button>
             </Can>
           </div>
@@ -255,30 +260,30 @@ export function RequisitionsPage() {
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <KpiTile
-          label="Pending Review"
+          label={t('admin.purchase.requisitions.kpiPending', 'Pending Review')}
           icon={<Clock className="h-4 w-4 text-amber-500" />}
-          value={page ? page.meta.total.toLocaleString() : '—'}
+          value={page ? formatCount(page.meta.total) : '—'}
           valueClassName="text-amber-600 dark:text-amber-400"
-          hint={filtered ? 'Matching current filters' : 'Awaiting approval'}
+          hint={filtered ? t('admin.purchase.requisitions.kpiMatching', 'Matching current filters') : t('admin.purchase.requisitions.kpiAwaiting', 'Awaiting approval')}
           hintClassName="text-amber-600 dark:text-amber-400 font-medium"
         />
         <KpiTile
-          label="Pending Value"
+          label={t('admin.purchase.requisitions.kpiValue', 'Pending Value')}
           icon={<Coins className="h-4 w-4 text-primary" />}
           value={totals ? formatBdtWithSymbol(totals.all) : '—'}
-          hint="All pending requisitions"
+          hint={t('admin.purchase.requisitions.kpiValueHint', 'All pending requisitions')}
         />
         <KpiTile
-          label="Requested Today"
+          label={t('admin.purchase.requisitions.kpiToday', 'Requested Today')}
           icon={<CalendarDays className="h-4 w-4 text-primary" />}
           value={totals ? formatBdtWithSymbol(totals.today) : '—'}
-          hint={`Value dated ${todayYmd()}`}
+          hint={t('admin.purchase.requisitions.kpiTodayHint', 'Value dated {date}', { date: todayYmd() })}
         />
         <KpiTile
-          label="Filtered Value"
+          label={t('admin.purchase.requisitions.kpiFiltered', 'Filtered Value')}
           icon={<Filter className="h-4 w-4 text-primary" />}
           value={totals ? formatBdtWithSymbol(totals.filtered) : '—'}
-          hint="Search / date range total"
+          hint={t('admin.purchase.requisitions.kpiFilteredHint', 'Search / date range total')}
         />
       </div>
 
@@ -288,17 +293,17 @@ export function RequisitionsPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         isEmpty={!filtered && page?.meta.total === 0}
-        errorTitle="Failed to load requisitions"
-        emptyTitle="No pending requisitions"
-        emptyDescription="Create a requisition to request items for purchase."
+        errorTitle={t('admin.purchase.requisitions.loadFailed', 'Failed to load requisitions')}
+        emptyTitle={t('admin.purchase.requisitions.emptyTitle', 'No pending requisitions')}
+        emptyDescription={t('admin.purchase.requisitions.emptyDesc', 'Create a requisition to request items for purchase.')}
         icon={<ClipboardList className="h-5 w-5" />}
       >
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={page?.items ?? []}
           getRowId={(r) => r.requisitionId || r.id}
-          searchPlaceholder="Search by requisition ID, item or requester..."
-          emptyTitle="No requisitions match your filters"
+          searchPlaceholder={t('admin.purchase.requisitions.search', 'Search by requisition ID, item or requester...')}
+          emptyTitle={t('admin.purchase.requisitions.emptyFiltered', 'No requisitions match your filters')}
           server={{
             page: table.page,
             pageSize: table.pageSize,
@@ -333,18 +338,21 @@ export function RequisitionsPage() {
       <ConfirmDialog
         open={approving !== null}
         onOpenChange={(o) => !o && setApproving(null)}
-        title="Approve requisition?"
+        title={t('admin.purchase.requisitions.approveTitle', 'Approve requisition?')}
         description={
           approving
-            ? `${approving.requisitionId} (${formatBdtWithSymbol(approving.total)}) will be approved and moved to purchase bills.`
+            ? t('admin.purchase.requisitions.approveDesc', '{id} ({amount}) will be approved and moved to purchase bills.', {
+                id: approving.requisitionId,
+                amount: formatBdtWithSymbol(approving.total),
+              })
             : undefined
         }
-        confirmLabel="Approve"
+        confirmLabel={t('admin.purchase.requisitions.approveConfirm', 'Approve')}
         onConfirm={() => {
           if (!approving) return;
           const target = approving;
           approve.mutate(target.requisitionId, {
-            onSuccess: () => toast.success(`${target.requisitionId} approved and moved to purchase bills`),
+            onSuccess: () => toast.success(t('admin.purchase.requisitions.approved', '{id} approved and moved to purchase bills', { id: target.requisitionId })),
           });
           setApproving(null);
         }}
@@ -353,14 +361,20 @@ export function RequisitionsPage() {
       <ConfirmDialog
         open={rejecting !== null}
         onOpenChange={(o) => !o && setRejecting(null)}
-        title="Reject requisition?"
-        description={rejecting ? `${rejecting.requisitionId} will be discarded. This cannot be undone.` : undefined}
-        confirmLabel="Reject"
+        title={t('admin.purchase.requisitions.rejectTitle', 'Reject requisition?')}
+        description={
+          rejecting
+            ? t('admin.purchase.requisitions.rejectDesc', '{id} will be discarded. This cannot be undone.', { id: rejecting.requisitionId })
+            : undefined
+        }
+        confirmLabel={t('admin.purchase.requisitions.rejectConfirm', 'Reject')}
         destructive
         onConfirm={() => {
           if (!rejecting) return;
           const target = rejecting;
-          reject.mutate(target.requisitionId, { onSuccess: () => toast.success(`${target.requisitionId} rejected`) });
+          reject.mutate(target.requisitionId, {
+            onSuccess: () => toast.success(t('admin.purchase.requisitions.rejected', '{id} rejected', { id: target.requisitionId })),
+          });
           setRejecting(null);
         }}
       />

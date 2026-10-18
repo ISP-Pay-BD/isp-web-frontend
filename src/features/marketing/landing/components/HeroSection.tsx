@@ -67,7 +67,7 @@ export function HeroSection({ stats, stage }: HeroSectionProps) {
             </span>
           ))}
           <span
-            className="lp-rise-word text-landing-cta"
+            className="lp-rise-word text-landing-accent"
             style={delay(80 + leadWords.length * 70 + 60)}
           >
             {k('titleAccent')}
@@ -142,12 +142,12 @@ export function HeroSection({ stats, stage }: HeroSectionProps) {
           <div className="bg-grid-ambient absolute inset-0" aria-hidden />
 
           <p className="bg-landing-bg/80 absolute top-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-xs font-medium whitespace-nowrap text-white/80 backdrop-blur sm:top-5 sm:text-sm">
-            <Monitor className="text-landing-cta size-4" aria-hidden />
+            <Monitor className="text-landing-accent size-4" aria-hidden />
             {k('stageConsole')}
-            <span className="text-white/30">·</span>
-            <Smartphone className="text-landing-cta size-4" aria-hidden />
+            <span className="text-white/60">·</span>
+            <Smartphone className="text-landing-accent size-4" aria-hidden />
             {k('stageApp')}
-            <span className="hidden text-white/40 sm:inline">· {k('sample')}</span>
+            <span className="hidden text-white/60 sm:inline">· {k('sample')}</span>
           </p>
 
           {/* Layers move at different speeds as the stage scrolls: console, phone, then the card. */}

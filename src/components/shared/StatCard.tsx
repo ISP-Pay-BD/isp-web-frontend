@@ -39,7 +39,7 @@ export function StatCard({
       <div className="flex h-full flex-col justify-between p-5">
         <div>
           <div className="flex items-start justify-between gap-3">
-            <p className="text-muted-foreground text-[11px] font-medium tracking-wide">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide">
               {title}
             </p>
             {Icon ? (
@@ -68,7 +68,7 @@ export function StatCard({
         </div>
 
         {(href || ctaText) && (
-          <div className="text-primary mt-4 flex items-center gap-1 text-[11px] font-medium opacity-80 transition-opacity group-hover:opacity-100">
+          <div className="text-primary mt-4 flex items-center gap-1 text-xs font-medium opacity-80 transition-opacity group-hover:opacity-100">
             <span>{ctaText || 'View details'}</span>
             <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
           </div>

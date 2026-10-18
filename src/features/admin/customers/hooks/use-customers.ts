@@ -1,7 +1,9 @@
 'use client';
 
+import { useCallback } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { customersApi, optionsApi } from '../api/customers.api';
 import type { CustomerListFilters, CustomerListParams } from '../types';
 
@@ -43,6 +45,20 @@ export function useCustomer(id: string, options: { compact?: boolean } = {}) {
     queryFn: () => customersApi.detail(id, compact),
     enabled: Boolean(id),
   });
+}
+
+/** Warms the cache for a customer's detail screen, e.g. when the pointer rests on their name in the list. */
+export function usePrefetchCustomer() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (id: string) =>
+      queryClient.prefetchQuery({
+        queryKey: customerKeys.detail(id, false),
+        queryFn: () => customersApi.detail(id, false),
+        staleTime: 30_000,
+      }),
+    [queryClient],
+  );
 }
 
 /** Live PPPoE session — refreshed every 60s while the tab is visible, stops when the router is offline. */
@@ -146,6 +162,7 @@ function useInvalidateCustomers() {
 }
 
 export function useCreateCustomer() {
+  const t = useTranslations();
   const invalidate = useInvalidateCustomers();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => customersApi.create(body),
@@ -153,36 +170,39 @@ export function useCreateCustomer() {
     meta: { silent: true },
     onSuccess: () => {
       invalidate();
-      toast.success('Customer created');
+      toast.success(t('admin.customers.toast.created', 'Customer created'));
     },
   });
 }
 
 export function useUpdateCustomer(id: string) {
+  const t = useTranslations();
   const invalidate = useInvalidateCustomers();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => customersApi.update(id, body),
     meta: { silent: true },
     onSuccess: () => {
       invalidate(id);
-      toast.success('Customer updated');
+      toast.success(t('admin.customers.toast.updated', 'Customer updated'));
     },
   });
 }
 
 export function useDeleteCustomer() {
+  const t = useTranslations();
   const invalidate = useInvalidateCustomers();
   return useMutation({
     mutationFn: (id: string) => customersApi.remove(id),
     onSuccess: () => {
       invalidate();
-      toast.success('Customer deleted');
+      toast.success(t('admin.customers.toast.deleted', 'Customer deleted'));
     },
   });
 }
 
 /** Bulk + single-customer actions; each toasts the backend's own result message. */
 export function useCustomerActions() {
+  const t = useTranslations();
   const invalidate = useInvalidateCustomers();
   const qc = useQueryClient();
   const done = (fallback: string, id?: string) => (res: unknown) => {
@@ -191,13 +211,18 @@ export function useCustomerActions() {
   };
 
   return {
-    bulkDelete: useMutation({ mutationFn: customersApi.bulkDelete, onSuccess: done('Customers deleted') }),
+    bulkDelete: useMutation({ mutationFn: customersApi.bulkDelete, onSuccess: done(t('admin.customers.toast.bulkDeleted', 'Customers deleted')) }),
     bulkRecharge: useMutation({
       mutationFn: (v: { ids: string[]; willExpire: string; packageId?: string }) => customersApi.bulkRecharge(v.ids, v.willExpire, v.packageId),
       onSuccess: (res) => {
         invalidate();
         const payload = (res as { payload?: { success_count?: number; failed_count?: number } })?.payload;
-        toast.success(`Recharged ${payload?.success_count ?? 0} customer(s)${payload?.failed_count ? `, ${payload.failed_count} failed` : ''}`);
+        const n = payload?.success_count ?? 0;
+        toast.success(
+          payload?.failed_count
+            ? t('admin.customers.toast.rechargedFailed', 'Recharged {n} customer(s), {failed} failed', { n, failed: payload.failed_count })
+            : t('admin.customers.toast.recharged', 'Recharged {n} customer(s)', { n }),
+        );
       },
     }),
     bulkUpdateRouter: useMutation({
@@ -205,41 +230,59 @@ export function useCustomerActions() {
       onSuccess: (res) => {
         invalidate();
         const r = res as { updated_count?: number; failed_count?: number };
-        toast.success(`Router changed for ${r?.updated_count ?? 0} customer(s)${r?.failed_count ? `, ${r.failed_count} failed` : ''}`);
+        const n = r?.updated_count ?? 0;
+        toast.success(
+          r?.failed_count
+            ? t('admin.customers.toast.routerChangedFailed', 'Router changed for {n} customer(s), {failed} failed', { n, failed: r.failed_count })
+            : t('admin.customers.toast.routerChanged', 'Router changed for {n} customer(s)', { n }),
+        );
       },
     }),
     bulkChangePackage: useMutation({
       mutationFn: (v: { ids: string[]; packageId: string }) => customersApi.bulkChangePackage(v.ids, v.packageId),
-      onSuccess: done('Package updated'),
+      onSuccess: done(t('admin.customers.toast.packageUpdated', 'Package updated')),
     }),
     bulkConnStatus: useMutation({
       mutationFn: (v: { ids: string[]; status: 'conn' | 'disconn' }) => customersApi.bulkConnStatus(v.ids, v.status),
-      onSuccess: done('Account status updated'),
+      onSuccess: done(t('admin.customers.toast.accountStatusUpdated', 'Account status updated')),
     }),
     syncPppoe: useMutation({
       mutationFn: (customerId?: string) => customersApi.syncPppoe(customerId),
       onSuccess: (res, customerId) => {
         invalidate(customerId);
         const p = (res as { payload?: { updated?: number; skipped?: number; errors?: unknown[] } })?.payload;
-        toast.success(`PPPoE sync finished: ${p?.updated ?? 0} updated, ${p?.skipped ?? 0} unchanged, ${p?.errors?.length ?? 0} failed`);
+        toast.success(
+          t('admin.customers.toast.pppoeSync', 'PPPoE sync finished: {updated} updated, {skipped} unchanged, {failed} failed', {
+            updated: p?.updated ?? 0,
+            skipped: p?.skipped ?? 0,
+            failed: p?.errors?.length ?? 0,
+          }),
+        );
       },
     }),
     sendSms: useMutation({
       mutationFn: (v: { ids: string[]; content: string }) => customersApi.sendSms(v.ids, v.content),
-      onSuccess: (res) => toast.success(messageOf(res, 'SMS sent')),
+      onSuccess: (res) => toast.success(messageOf(res, t('admin.customers.toast.smsSent', 'SMS sent'))),
     }),
     kick: useMutation({
       mutationFn: customersApi.kick,
       onSuccess: (res, id) => {
         qc.invalidateQueries({ queryKey: customerKeys.session(id) });
-        toast.success(messageOf(res, 'Session refreshed'));
+        toast.success(messageOf(res, t('admin.customers.toast.sessionRefreshed', 'Session refreshed')));
       },
     }),
     ping: useMutation({
       mutationFn: customersApi.ping,
       onSuccess: (res) => {
         const r = res as { average_latency?: string; packets?: { sent?: number; received?: number; loss?: string } };
-        toast.success(`Ping: ${r?.average_latency ?? 'N/A'} average, ${r?.packets?.received ?? 0}/${r?.packets?.sent ?? 0} received (${r?.packets?.loss ?? '—'} loss)`);
+        toast.success(
+          t('admin.customers.toast.ping', 'Ping: {avg} average, {received}/{sent} received ({loss} loss)', {
+            avg: r?.average_latency ?? 'N/A',
+            received: r?.packets?.received ?? 0,
+            sent: r?.packets?.sent ?? 0,
+            loss: r?.packets?.loss ?? '—',
+          }),
+        );
       },
     }),
     refreshOnu: useMutation({
@@ -247,30 +290,35 @@ export function useCustomerActions() {
       onSuccess: (res, id) => {
         qc.invalidateQueries({ queryKey: ['admin', 'customers', 'detail', id] });
         const r = res as { found?: boolean; rx?: string | null; hint?: string };
-        if (r?.found) toast.success(`ONU found${r.rx ? `: RX ${r.rx}` : ''}`);
-        else toast.info(r?.hint || 'No ONU matched on the OLTs');
+        if (r?.found) {
+          toast.success(
+            r.rx
+              ? t('admin.customers.toast.onuFoundRx', 'ONU found: RX {rx}', { rx: r.rx })
+              : t('admin.customers.toast.onuFound', 'ONU found'),
+          );
+        } else toast.info(r?.hint || t('admin.customers.toast.onuNotFound', 'No ONU matched on the OLTs'));
       },
     }),
     setConnStatus: useMutation({
       mutationFn: (v: { id: string; status: 'conn' | 'disconn' }) => customersApi.bulkConnStatus([v.id], v.status),
-      onSuccess: (res, v) => done('Account status updated', v.id)(res),
+      onSuccess: (res, v) => done(t('admin.customers.toast.accountStatusUpdated', 'Account status updated'), v.id)(res),
     }),
     macBind: useMutation({
       mutationFn: customersApi.macBind,
       onSuccess: (res, id) => {
         qc.invalidateQueries({ queryKey: customerKeys.macStatus(id) });
-        done('MAC bound', id)(res);
+        done(t('admin.customers.toast.macBound', 'MAC bound'), id)(res);
       },
     }),
     macUnbind: useMutation({
       mutationFn: customersApi.macUnbind,
       onSuccess: (res, id) => {
         qc.invalidateQueries({ queryKey: customerKeys.macStatus(id) });
-        done('MAC unbound', id)(res);
+        done(t('admin.customers.toast.macUnbound', 'MAC unbound'), id)(res);
       },
     }),
-    approveFreeRequest: useMutation({ mutationFn: customersApi.approveFreeRequest, onSuccess: done('Request approved') }),
-    rejectFreeRequest: useMutation({ mutationFn: customersApi.rejectFreeRequest, onSuccess: done('Request rejected') }),
+    approveFreeRequest: useMutation({ mutationFn: customersApi.approveFreeRequest, onSuccess: done(t('admin.customers.toast.requestApproved', 'Request approved')) }),
+    rejectFreeRequest: useMutation({ mutationFn: customersApi.rejectFreeRequest, onSuccess: done(t('admin.customers.toast.requestRejected', 'Request rejected')) }),
   };
 }
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
-import { useTranslations } from '../context/LocaleContext';
+import { useTranslations } from '@/i18n/locale-context';
 import { ShieldCheck, Phone, Mail, MapPin, Sparkles, ArrowUpRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
@@ -81,15 +81,15 @@ export function MarketingFooter() {
             {/* Quick Contact Badges */}
             <div className="space-y-2 pt-1 font-mono text-xs text-white/60">
               <div className="flex items-center gap-2.5">
-                <Phone className="text-landing-cta h-3.5 w-3.5 shrink-0" />
+                <Phone className="text-landing-accent h-3.5 w-3.5 shrink-0" />
                 <span>+880 1781-808231 (Support &amp; Sales)</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Mail className="text-landing-cta h-3.5 w-3.5 shrink-0" />
+                <Mail className="text-landing-accent h-3.5 w-3.5 shrink-0" />
                 <span>support@isppaybd.com</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <MapPin className="text-landing-cta h-3.5 w-3.5 shrink-0" />
+                <MapPin className="text-landing-accent h-3.5 w-3.5 shrink-0" />
                 <span>Dhaka, Bangladesh</span>
               </div>
             </div>
@@ -157,7 +157,7 @@ export function MarketingFooter() {
             <div className="mt-6 border-t border-white/10 pt-5">
               <Link
                 href="/register"
-                className="bg-landing-cta/15 border-landing-cta/30 text-landing-cta hover:bg-landing-cta inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors hover:text-white"
+                className="bg-landing-cta/15 border-landing-cta/30 text-landing-accent hover:bg-landing-cta inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors hover:text-white"
               >
                 <Sparkles className="h-3 w-3" />
                 Start Free Trial

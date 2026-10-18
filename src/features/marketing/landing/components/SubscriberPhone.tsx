@@ -36,7 +36,7 @@ export function SubscriberPhone({
               <p className="font-landing-display truncate text-sm font-semibold text-white">
                 {k('isp')}
               </p>
-              <p className="text-[11px] text-white/45">
+              <p className="text-[11px] text-white/60">
                 {k('greeting').replace('{name}', subscriber.name)}
               </p>
             </div>
@@ -47,11 +47,11 @@ export function SubscriberPhone({
           </div>
 
           <div className="mt-5 rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/10">
-            <p className="text-[11px] text-white/45">{k('due')}</p>
+            <p className="text-[11px] text-white/60">{k('due')}</p>
             <p className="font-landing-display mt-1 text-3xl font-semibold text-white tabular-nums">
               {formatBdtWithSymbol(subscriber.dueBdt)}
             </p>
-            <p className="mt-1 text-[11px] text-white/40">
+            <p className="mt-1 text-[11px] text-white/60">
               {k('dueOn')} · {subscriber.packageName}
             </p>
             <div className="bg-landing-cta mt-4 flex h-10 items-center justify-center rounded-full text-xs font-semibold text-white">
@@ -59,7 +59,7 @@ export function SubscriberPhone({
             </div>
           </div>
 
-          <p className="mt-5 text-[11px] font-medium text-white/45">{k('invoices')}</p>
+          <p className="mt-5 text-[11px] font-medium text-white/60">{k('invoices')}</p>
           <ul className="mt-2 divide-y divide-white/10 text-xs">
             {subscriber.invoices.map((invoice) => (
               <li key={invoice.month} className="flex justify-between py-2.5 text-white/70">
