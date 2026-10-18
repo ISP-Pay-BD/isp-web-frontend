@@ -21,6 +21,13 @@ import {
   Send,
   RefreshCw,
   AlertCircle,
+  CheckCircle2,
+  TrendingUp,
+  TrendingDown,
+  Smartphone,
+  Banknote,
+  Landmark,
+  CreditCard,
 } from 'lucide-react';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -97,6 +104,57 @@ export function AdminDashboardPage() {
     null,
   );
   const quota = stats.customerQuota;
+  const offlineUsers = stats.routers.reduce((sum, r) => sum + r.inactiveUsers, 0);
+  const attention: { key: string; href: string; label: string; tone: string }[] = [
+    stats.expiredCustomers > 0 && {
+      key: 'expired',
+      href: '/admin/customers?status=expired',
+      label: t('admin.dashboard.attention.expired', '{count} expired customers', { count: stats.expiredCustomers }),
+      tone: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
+    },
+    stats.customersPaymentPending > 0 && {
+      key: 'pending',
+      href: '/admin/customer-payments',
+      label: t('admin.dashboard.attention.pending', '{amount} pending (last 32 days)', { amount: formatBdtWithSymbol(stats.customersPaymentPending) }),
+      tone: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    },
+    offlineUsers > 0 && {
+      key: 'offline',
+      href: '/admin/routers',
+      label: t('admin.dashboard.attention.offline', '{count} users offline on routers', { count: offlineUsers }),
+      tone: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    },
+    stats.ticketStats.open > 0 && {
+      key: 'tickets',
+      href: '/admin/support',
+      label: t('admin.dashboard.attention.tickets', '{count} open tickets', { count: stats.ticketStats.open }),
+      tone: 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400',
+    },
+  ].filter(Boolean) as { key: string; href: string; label: string; tone: string }[];
+
+  // Month-over-month delta for "Received This Month", derived from the same series the trend chart uses.
+  const sortedTrend = stats.monthlyTrend;
+  const thisMonthCollected = sortedTrend.at(-1)?.collected ?? null;
+  const lastMonthCollected = sortedTrend.at(-2)?.collected ?? null;
+  const collectedDeltaPct =
+    thisMonthCollected !== null && lastMonthCollected
+      ? ((thisMonthCollected - lastMonthCollected) / lastMonthCollected) * 100
+      : null;
+
+  const quotaTone = !quota || quota.isUnlimited
+    ? ''
+    : quota.percent >= 90
+      ? 'text-rose-600 dark:text-rose-400'
+      : quota.percent >= 70
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-muted-foreground';
+  const quotaBarTone = !quota || quota.isUnlimited
+    ? ''
+    : quota.percent >= 90
+      ? '[&_[data-slot=progress-indicator]]:bg-rose-500'
+      : quota.percent >= 70
+        ? '[&_[data-slot=progress-indicator]]:bg-amber-500'
+        : '[&_[data-slot=progress-indicator]]:bg-primary/60';
 
   return (
     <div className="w-full space-y-6 pb-12">
@@ -113,12 +171,12 @@ export function AdminDashboardPage() {
           breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'Dashboard' }]}
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" className="ui-press text-xs" onClick={() => refetch()} disabled={isFetching}>
+              <Button size="sm" variant="ghost" className="ui-press text-xs text-muted-foreground" onClick={() => refetch()} disabled={isFetching}>
                 <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isFetching ? 'animate-spin' : ''}`} />
                 {t('admin.dashboard.refresh', 'Refresh')}
               </Button>
               <Can menu="sms_message" action="read">
-                <Button size="sm" variant="outline" className="ui-press text-xs" render={<Link href="/admin/sms" />}>
+                <Button size="sm" variant="ghost" className="ui-press text-xs text-muted-foreground" render={<Link href="/admin/sms" />}>
                     <Send className="mr-1.5 h-3.5 w-3.5" /> {t('admin.dashboard.dueSms', 'Due SMS')}
                   </Button>
               </Can>
@@ -136,6 +194,23 @@ export function AdminDashboardPage() {
           }
         />
       </div>
+
+      {/* Needs attention: only what requires action; hidden when all clear */}
+      {attention.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" role="region" aria-label={t('admin.dashboard.attention.title', 'Needs attention')}>
+          <span className="text-foreground mr-1 text-sm font-semibold">{t('admin.dashboard.attention.title', 'Needs attention')}</span>
+          {attention.map((a) => (
+            <Link
+              key={a.key}
+              href={a.href}
+              className={`group inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium no-underline transition-colors duration-200 ease-out hover:brightness-110 ${a.tone}`}
+            >
+              {a.label}
+              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Primary KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -175,14 +250,24 @@ export function AdminDashboardPage() {
               <span className="text-muted-foreground text-xs font-normal">({stats.customersPaymentReceivedCount})</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              <span>{t('admin.dashboard.kpi.today', 'Today: {amount}', { amount: formatBdtWithSymbol(stats.todayCollectionBdt) })}</span>
+              <span className="flex items-center gap-1.5">
+                {t('admin.dashboard.kpi.today', 'Today: {amount}', { amount: formatBdtWithSymbol(stats.todayCollectionBdt) })}
+                {collectedDeltaPct !== null && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[10px] tabular-nums ${collectedDeltaPct >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}
+                  >
+                    {collectedDeltaPct >= 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                    {Math.abs(collectedDeltaPct).toFixed(0)}%
+                  </span>
+                )}
+              </span>
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </div>
           </SpotlightCard>
         </Link>
 
         <Link href="/admin/customers?status=expired" className="group block no-underline">
-          <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-amber-500/50">
+          <SpotlightCard className="h-full border border-amber-500/40 p-4 transition hover:border-amber-500/70">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.paymentDue', 'Payment Due')}</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
@@ -206,8 +291,10 @@ export function AdminDashboardPage() {
           <SpotlightCard className="h-full border border-border/70 p-4 transition hover:border-rose-500/50">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-xs font-medium tracking-wide">{t('admin.dashboard.kpi.openTickets', 'Open Tickets')}</span>
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500">
-                <AlertCircle className="h-4 w-4" />
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-lg ${stats.ticketStats.open > 0 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}
+              >
+                {stats.ticketStats.open > 0 ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
               </span>
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
@@ -238,11 +325,14 @@ export function AdminDashboardPage() {
             {quota ? (
               <>
                 <div className="mt-2 flex items-baseline gap-1.5">
-                  <p className="font-mono text-2xl font-bold text-foreground">{quota.used}</p>
+                  <p className={`font-mono text-2xl font-bold ${quotaTone || 'text-foreground'}`}>{quota.used}</p>
                   <span className="text-muted-foreground text-xs font-normal">/ {quota.isUnlimited ? '∞' : quota.limit}</span>
+                  {!quota.isUnlimited && quota.percent >= 70 && (
+                    <span className={`text-xs font-medium ${quotaTone}`}>{quota.percent >= 90 ? t('admin.dashboard.kpi.quotaCritical', 'Almost full') : t('admin.dashboard.kpi.quotaWarning', 'Filling up')}</span>
+                  )}
                 </div>
                 <div className="mt-2">
-                  <Progress value={quota.isUnlimited ? 0 : quota.percent} className="h-1.5" />
+                  <Progress value={quota.isUnlimited ? 0 : quota.percent} className={`h-1.5 ${quotaBarTone}`} />
                 </div>
               </>
             ) : (
@@ -280,7 +370,7 @@ export function AdminDashboardPage() {
           <MetricRow label={t('admin.dashboard.network.activeRouters', 'Active routers')} value={stats.routerActive} accent="text-emerald-600 dark:text-emerald-400" />
           <MetricRow label={t('admin.dashboard.network.inactiveRouters', 'Inactive routers')} value={stats.routerInactive} />
           <MetricRow label={t('admin.dashboard.network.popResellers', 'POP resellers')} value={stats.allResellers} />
-          <MetricRow label={t('admin.dashboard.network.connectedCustomers', 'Connected customers')} value={stats.connectedCustomers} divider />
+          <MetricRow label={t('admin.dashboard.network.connectedCustomers', 'Online on routers')} value={stats.connectedCustomers} divider />
         </MetricCard>
       </div>
 
@@ -333,6 +423,15 @@ export function AdminDashboardPage() {
                       <div className="font-mono text-xs font-bold text-muted-foreground">{router.inactiveUsers}</div>
                     </div>
                   </div>
+                  {router.totalUsers > 0 && (
+                    <div
+                      className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                      role="img"
+                      aria-label={`${router.activeUsers} / ${router.totalUsers}`}
+                    >
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(router.activeUsers / router.totalUsers) * 100}%` }} />
+                    </div>
+                  )}
                   <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
                       {router.lastUpdated
@@ -402,15 +501,15 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Distribution, methods, support */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+        <Card className="flex h-full flex-col border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <PieIcon className="h-4 w-4 text-primary" /> {t('admin.dashboard.packages.title', 'Package Distribution')}
             </CardTitle>
             <CardDescription className="text-xs">{t('admin.dashboard.packages.subtitle', 'Customers by package')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="flex-1 space-y-3">
             {stats.packageDistribution.length ? (
               <>
                 <div className="h-44 w-full flex items-center justify-center">
@@ -437,7 +536,7 @@ export function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
+        <Card className="flex h-full flex-col border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -449,7 +548,7 @@ export function AdminDashboardPage() {
               {t('admin.dashboard.methods.ledger', 'Ledger')} <ChevronRight className="h-3 w-3" />
             </Link>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 space-y-4">
             {stats.paymentMethods.length ? (
               stats.paymentMethods.map((method) => (
                 <div key={method.name} className="space-y-1.5 p-2 rounded-lg">
@@ -472,7 +571,7 @@ export function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
+        <Card className="flex h-full flex-col border border-border/70 bg-card/90 shadow-[var(--shadow-xs)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold flex items-center justify-between">
               <span>{t('admin.dashboard.tickets.title', 'Support Tickets')}</span>
@@ -484,14 +583,14 @@ export function AdminDashboardPage() {
             </CardTitle>
             <CardDescription className="text-xs">{t('admin.dashboard.tickets.subtitle', 'Tickets raised by your customers and staff')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-1 flex-col space-y-4">
             <div className="grid grid-cols-2 gap-3 pt-2">
               <TicketTile label={t('admin.dashboard.tickets.open', 'Open')} value={stats.ticketStats.open} tone="text-amber-600 dark:text-amber-400" />
               <TicketTile label={t('admin.dashboard.tickets.ongoing', 'Ongoing')} value={stats.ticketStats.ongoing} tone="text-blue-600 dark:text-blue-400" />
               <TicketTile label={t('admin.dashboard.tickets.solved', 'Solved')} value={stats.ticketStats.solved} tone="text-emerald-600 dark:text-emerald-400" />
               <TicketTile label={t('admin.dashboard.tickets.closed', 'Closed')} value={stats.ticketStats.closed} tone="text-muted-foreground" />
             </div>
-            <Button size="sm" variant="outline" className="w-full text-xs" render={<Link href="/admin/support" />}>
+            <Button size="sm" variant="outline" className="mt-auto w-full text-xs" render={<Link href="/admin/support" />}>
                 {t('admin.dashboard.tickets.openDesk', 'Open Support Desk')} <ChevronRight className="ml-1 h-3 w-3" />
               </Button>
           </CardContent>
@@ -568,7 +667,7 @@ export function AdminDashboardPage() {
                   className="flex items-start gap-3 rounded-lg bg-muted/20 p-2.5 text-xs border border-border/30 hover:bg-muted/40 no-underline"
                 >
                   <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
-                    <Receipt className="h-3 w-3" />
+                    <PaymentMethodIcon method={act.method} className="h-3 w-3" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate">
@@ -606,13 +705,13 @@ function MetricCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="border border-border/70 bg-card/80 shadow-[var(--shadow-xs)]">
+    <Card className="border border-border/70 bg-muted/20 shadow-[var(--shadow-xs)]">
       <CardHeader className="pb-2.5 pt-3.5 px-4 flex flex-row items-center justify-between">
         <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
           {icon} {title}
         </span>
-        <Link href={href} className="text-xs text-primary hover:underline">
-          {linkLabel}
+        <Link href={href} className="text-primary hover:bg-primary/10 -mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors">
+          {linkLabel} <ArrowRight className="h-3 w-3" />
         </Link>
       </CardHeader>
       <CardContent className="px-4 pb-3.5 space-y-2">{children}</CardContent>
@@ -624,7 +723,7 @@ function MetricRow({ label, value, accent, divider }: { label: string; value: st
   return (
     <div className={`flex items-center justify-between gap-2 text-xs ${divider ? 'pt-1 border-t border-border/50' : ''}`}>
       <span className="text-muted-foreground">{label}:</span>
-      <span className={`font-mono font-semibold text-right truncate ${accent ?? 'text-foreground'}`}>{value}</span>
+      <span className={`font-semibold text-right truncate ${typeof value === 'number' || /^[+৳\d]/.test(value) ? 'font-mono tabular-nums' : ''} ${accent ?? 'text-foreground'}`}>{value}</span>
     </div>
   );
 }
@@ -636,6 +735,17 @@ function Summary({ label, value, muted, accent }: { label: string; value: string
       <div className={`text-sm font-bold font-mono ${accent ? 'text-emerald-500' : muted ? 'text-muted-foreground' : 'text-foreground'}`}>{value}</div>
     </div>
   );
+}
+
+const MOBILE_BANKING = new Set(['bkash', 'nagad', 'rocket']);
+
+function PaymentMethodIcon({ method, className }: { method: string; className?: string }) {
+  const key = method.toLowerCase().trim();
+  if (MOBILE_BANKING.has(key)) return <Smartphone className={className} />;
+  if (key === 'cash') return <Banknote className={className} />;
+  if (key === 'bank') return <Landmark className={className} />;
+  if (key) return <CreditCard className={className} />;
+  return <Receipt className={className} />;
 }
 
 function TicketTile({ label, value, tone }: { label: string; value: number; tone: string }) {

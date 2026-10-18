@@ -6,7 +6,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Receipt, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Receipt, Loader2, User, Wifi, Wallet, CalendarClock, ChevronRight } from 'lucide-react';
 import { paymentSchema, type PaymentFormValues } from '../schemas/payment.schema';
 import { useCreateCustomerPayment } from '../hooks/use-customer-payments';
 import { CustomerPicker } from '../components/CustomerPicker';
@@ -19,11 +19,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { formatBdtWithSymbol, formatRelativeDays } from '@/lib/format';
 
 /** Billing month names in the backend's `month` format (PHP date('F')). */
 const MONTHS = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString('en', { month: 'long' }));
 
 const METHOD_VALUES = ['Cash', 'bKash', 'Nagad', 'Rocket', 'Bank', 'Card'] as const;
+
+const STATUS_TONE: Record<string, string> = {
+  active: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  expired: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+  suspended: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+};
 
 const FIELD_MAP: Record<string, keyof PaymentFormValues> = {
   customer: 'customerId',
@@ -43,6 +51,9 @@ export function NewCustomerPaymentPage() {
   // "Collect payment" on a customer row links here with ?customerId=…: start with that customer selected.
   const presetId = useSearchParams().get('customerId') ?? '';
   const preset = useCustomer(presetId, { compact: true });
+  // Selected customer's billing status, fetched live for the context rail (not fabricated).
+  // Reuses the react-query cache entry already warmed by `preset` when the ids match.
+  const selected = useCustomer(customer?.id ?? '', { compact: true });
 
   const {
     register,
@@ -134,8 +145,11 @@ export function NewCustomerPaymentPage() {
     }
   };
 
+  const liveCustomer = selected.data;
+  const dueBdt = liveCustomer ? Math.max(0, liveCustomer.balanceBdt) : 0;
+
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <PageHero className="flex items-center gap-3">
         <Button variant="ghost" size="icon" aria-label={presetId ? t('admin.customerPayments.form.backToCustomer', 'Back to customer') : t('admin.customerPayments.form.backToPayments', 'Back to payments')} render={<Link href={presetId ? `/admin/customers/${presetId}` : '/admin/customer-payments'} />}><ArrowLeft className="h-4 w-4" /></Button>
         <div>
@@ -143,9 +157,9 @@ export function NewCustomerPaymentPage() {
           <p className="text-muted-foreground text-sm">{t('admin.customerPayments.form.subtitle', 'Log a customer collection — cash, mobile wallet or bank.')}</p>
         </div>
       </PageHero>
-      <PageContent className="space-y-6">
+      <PageContent>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -153,7 +167,7 @@ export function NewCustomerPaymentPage() {
             </CardTitle>
             <CardDescription>{t('admin.customerPayments.form.detailsHint', "The payment is recorded against the selected customer's billing month.")}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div className="space-y-1.5">
               <Label>{t('admin.customerPayments.form.customer', 'Customer')} *</Label>
               <CustomerPicker value={customer} onChange={pickCustomer} invalid={Boolean(errors.customerId)} />
@@ -163,7 +177,7 @@ export function NewCustomerPaymentPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="amountBdt">{t('admin.customerPayments.form.amount', 'Amount (৳)')} *</Label>
-                <Input id="amountBdt" type="number" step="0.01" min="0" {...register('amountBdt')} />
+                <Input id="amountBdt" type="number" step="0.01" min="0" className="font-mono tabular-nums" {...register('amountBdt')} />
                 {errors.amountBdt && <p className="text-xs text-destructive">{te(errors.amountBdt.message ?? '')}</p>}
               </div>
               <div className="space-y-1.5">
@@ -180,46 +194,52 @@ export function NewCustomerPaymentPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="receivedVia">{t('admin.customerPayments.form.receivedVia', 'Received via')} *</Label>
-                <Select value={watch('method')} onValueChange={(v) => v && setValue('method', v, { shouldValidate: true })} items={methodItems}>
-                  <SelectTrigger id="receivedVia"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {methods.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.method && <p className="text-xs text-destructive">{te(errors.method.message ?? '')}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="status">{t('admin.customerPayments.form.status', 'Status')}</Label>
-                <Select
-                  value={watch('status')}
-                  onValueChange={(v) => v && setValue('status', v as PaymentFormValues['status'])}
-                  items={statusItems}
-                >
-                  <SelectTrigger id="status"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="successful">{statusItems.successful}</SelectItem>
-                    <SelectItem value="pending">{statusItems.pending}</SelectItem>
-                    <SelectItem value="failed">{statusItems.failed}</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-4 border-t border-border/50 pt-4">
+              <p className="text-xs font-medium text-muted-foreground">{t('admin.customerPayments.form.sectionReceipt', 'How it was received')}</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="receivedVia">{t('admin.customerPayments.form.receivedVia', 'Received via')} *</Label>
+                  <Select value={watch('method')} onValueChange={(v) => v && setValue('method', v, { shouldValidate: true })} items={methodItems}>
+                    <SelectTrigger id="receivedVia"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {methods.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.method && <p className="text-xs text-destructive">{te(errors.method.message ?? '')}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="status">{t('admin.customerPayments.form.status', 'Status')}</Label>
+                  <Select
+                    value={watch('status')}
+                    onValueChange={(v) => v && setValue('status', v as PaymentFormValues['status'])}
+                    items={statusItems}
+                  >
+                    <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="successful">{statusItems.successful}</SelectItem>
+                      <SelectItem value="pending">{statusItems.pending}</SelectItem>
+                      <SelectItem value="failed">{statusItems.failed}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="trxId">{t('admin.customerPayments.form.trxId', 'TrxID / reference')}</Label>
-                <Input id="trxId" {...register('trxId')} placeholder={t('admin.customerPayments.form.trxIdPlaceholder', 'Gateway TrxID or receipt reference')} />
-                {errors.trxId && <p className="text-xs text-destructive">{te(errors.trxId.message ?? '')}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="note">{t('admin.customerPayments.form.note', 'Note')}</Label>
-                <Input id="note" {...register('note')} placeholder={t('admin.customerPayments.form.notePlaceholder', 'Optional note')} />
-                {errors.note && <p className="text-xs text-destructive">{te(errors.note.message ?? '')}</p>}
+            <div className="space-y-4 border-t border-border/50 pt-4">
+              <p className="text-xs font-medium text-muted-foreground">{t('admin.customerPayments.form.sectionReference', 'Reference (optional)')}</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="trxId">{t('admin.customerPayments.form.trxId', 'TrxID / reference')}</Label>
+                  <Input id="trxId" {...register('trxId')} placeholder={t('admin.customerPayments.form.trxIdPlaceholder', 'Gateway TrxID or receipt reference')} />
+                  {errors.trxId && <p className="text-xs text-destructive">{te(errors.trxId.message ?? '')}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="note">{t('admin.customerPayments.form.note', 'Note')}</Label>
+                  <Input id="note" {...register('note')} placeholder={t('admin.customerPayments.form.notePlaceholder', 'Optional note')} />
+                  {errors.note && <p className="text-xs text-destructive">{te(errors.note.message ?? '')}</p>}
+                </div>
               </div>
             </div>
 
@@ -230,6 +250,71 @@ export function NewCustomerPaymentPage() {
               </Button>
               <Button type="button" variant="outline" render={<Link href="/admin/customer-payments" />}>{t('admin.customerPayments.form.cancel', 'Cancel')}</Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Context rail: the customer's real billing state, so the operator can sanity-check the amount without leaving the page. */}
+        <Card className="bg-muted/20 lg:sticky lg:top-20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <User className="h-3.5 w-3.5 text-primary" /> {t('admin.customerPayments.form.summary.title', 'Customer status')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!customer ? (
+              <p className="text-xs text-muted-foreground">{t('admin.customerPayments.form.summary.empty', 'Pick a customer to see their billing status.')}</p>
+            ) : selected.isLoading ? (
+              <div className="space-y-2.5">
+                <div className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <Link href={`/admin/customers/${customer.id}`} className="block truncate font-semibold text-foreground hover:text-primary">
+                      {customer.name}
+                    </Link>
+                    <span className="font-mono text-muted-foreground">{customer.mobile}</span>
+                  </div>
+                  {liveCustomer && (
+                    <Badge variant="outline" className={`shrink-0 capitalize ${STATUS_TONE[liveCustomer.status] ?? ''}`}>
+                      {t(`status.${liveCustomer.status}`, liveCustomer.status)}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="space-y-2 border-t border-border/50 pt-3">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Wifi className="h-3 w-3" /> {t('admin.customerPayments.form.summary.package', 'Package')}</span>
+                    <span className="font-medium text-foreground truncate max-w-[55%] text-right">{customer.packageName || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><Wallet className="h-3 w-3" /> {t('admin.customerPayments.form.summary.price', 'Package price')}</span>
+                    <span className="font-mono font-semibold text-foreground">{customer.packagePrice ? formatBdtWithSymbol(customer.packagePrice) : '—'}</span>
+                  </div>
+                  {liveCustomer?.expiryDate && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-muted-foreground"><CalendarClock className="h-3 w-3" /> {t('admin.customerPayments.form.summary.expiry', 'Expires')}</span>
+                      <span className={`font-medium ${liveCustomer.status === 'expired' ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'}`}>
+                        {formatRelativeDays(liveCustomer.expiryDate)}
+                      </span>
+                    </div>
+                  )}
+                  {dueBdt > 0 && (
+                    <div className="flex items-center justify-between rounded-md bg-amber-500/10 px-2 py-1.5 -mx-2">
+                      <span className="font-medium text-amber-600 dark:text-amber-400">{t('admin.customerPayments.form.summary.due', 'Outstanding due')}</span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(dueBdt)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <Link href={`/admin/customers/${customer.id}`} className="flex items-center justify-between text-primary hover:underline font-medium pt-1">
+                  {t('admin.customerPayments.form.summary.viewProfile', 'View full profile')} <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </form>

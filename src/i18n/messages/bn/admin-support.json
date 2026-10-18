@@ -15,6 +15,13 @@
       "addCustomer": "কাস্টমার যোগ করুন",
       "collected": "সংগৃহীত",
       "pending": "অপেক্ষমাণ",
+      "attention": {
+        "title": "মনোযোগ দরকার",
+        "expired": "{count} জন কাস্টমারের মেয়াদ শেষ",
+        "pending": "{amount} অপেক্ষমাণ (গত 32 দিন)",
+        "offline": "রাউটারে {count} জন অফলাইন",
+        "tickets": "{count}টি খোলা টিকেট"
+      },
       "kpi": {
         "activeCustomers": "সক্রিয় কাস্টমার",
         "viewDetails": "বিস্তারিত দেখুন",
@@ -26,7 +33,9 @@
         "resolved": "{rate}% সমাধান হয়েছে",
         "helpdesk": "হেল্পডেস্ক",
         "customerQuota": "কাস্টমার কোটা",
-        "quotaUnavailable": "এই অ্যাকাউন্টের জন্য প্রযোজ্য নয়"
+        "quotaUnavailable": "এই অ্যাকাউন্টের জন্য প্রযোজ্য নয়",
+        "quotaWarning": "ভরে যাচ্ছে",
+        "quotaCritical": "প্রায় পূর্ণ"
       },
       "customerMetrics": {
         "title": "কাস্টমার মেট্রিক্স",
@@ -59,7 +68,7 @@
         "activeRouters": "সক্রিয় রাউটার",
         "inactiveRouters": "নিষ্ক্রিয় রাউটার",
         "popResellers": "POP রিসেলার",
-        "connectedCustomers": "সংযুক্ত কাস্টমার"
+        "connectedCustomers": "রাউটারে অনলাইন"
       },
       "routers": {
         "title": "সক্রিয় রাউটার",
