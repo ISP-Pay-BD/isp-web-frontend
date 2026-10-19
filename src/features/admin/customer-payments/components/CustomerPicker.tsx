@@ -5,6 +5,7 @@ import { Loader2, Search, X } from 'lucide-react';
 import { useCustomerLookup } from '../hooks/use-customer-payments';
 import type { CustomerOption } from '../types';
 import { Input } from '@/components/ui/input';
+import { useTranslations } from '@/i18n/locale-context';
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,13 +21,14 @@ export function CustomerPicker({
   onChange: (customer: CustomerOption | null) => void;
   invalid?: boolean;
 }) {
+  const t = useTranslations();
   const [term, setTerm] = useState('');
   const [debounced, setDebounced] = useState('');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(term.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(term.trim()), 300);
+    return () => clearTimeout(timer);
   }, [term]);
 
   const { data = [], isFetching, isError } = useCustomerLookup(debounced);
@@ -37,7 +39,7 @@ export function CustomerPicker({
         <div className="min-w-0">
           <div className="font-semibold text-foreground truncate">{value.name || `#${value.id}`}</div>
           <div className="text-xs text-muted-foreground font-mono">
-            ID {value.id}
+            {t('admin.customerPayments.picker.id', 'ID')} {value.id}
             {value.mobile ? ` · ${value.mobile}` : ''}
             {value.packageName ? ` · ${value.packageName}` : ''}
           </div>
@@ -46,7 +48,7 @@ export function CustomerPicker({
           type="button"
           onClick={() => onChange(null)}
           className="text-muted-foreground hover:text-foreground"
-          aria-label="Change customer"
+          aria-label={t('admin.customerPayments.picker.change', 'Change customer')}
         >
           <X className="h-4 w-4" />
         </button>
@@ -64,7 +66,7 @@ export function CustomerPicker({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Search by name, mobile, customer ID or PPPoE ID"
+        placeholder={t('admin.customerPayments.picker.placeholder', 'Search by name, mobile, customer ID or PPPoE ID')}
         className={cn('pl-9', invalid && 'border-destructive')}
         aria-invalid={invalid}
       />
@@ -72,9 +74,9 @@ export function CustomerPicker({
       {open ? (
         <div className="absolute z-20 mt-1 w-full max-h-72 overflow-auto rounded-lg border border-border/70 bg-popover shadow-md">
           {isError ? (
-            <p className="px-3 py-3 text-xs text-destructive">Could not search customers. Try again.</p>
+            <p className="px-3 py-3 text-xs text-destructive">{t('admin.customerPayments.picker.searchFailed', 'Could not search customers. Try again.')}</p>
           ) : data.length === 0 && !isFetching ? (
-            <p className="px-3 py-3 text-xs text-muted-foreground">No customers match “{debounced}”.</p>
+            <p className="px-3 py-3 text-xs text-muted-foreground">{t('admin.customerPayments.picker.noMatch', 'No customers match “{term}”.', { term: debounced })}</p>
           ) : (
             data.map((c) => (
               <button
@@ -90,7 +92,7 @@ export function CustomerPicker({
                 <span className="min-w-0">
                   <span className="block font-medium text-foreground truncate">{c.name || `#${c.id}`}</span>
                   <span className="block text-xs text-muted-foreground font-mono">
-                    ID {c.id}
+                    {t('admin.customerPayments.picker.id', 'ID')} {c.id}
                     {c.mobile ? ` · ${c.mobile}` : ''}
                     {c.packageName ? ` · ${c.packageName}` : ''}
                   </span>

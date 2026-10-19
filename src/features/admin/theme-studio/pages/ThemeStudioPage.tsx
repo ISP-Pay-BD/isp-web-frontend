@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Check, Palette, RotateCcw, Download, Upload, Copy, Info, Sliders, Eye, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 import { generateColorRamp } from '@/lib/theme/generate-color-ramp';
 import { useTheme } from 'next-themes';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
@@ -35,15 +36,16 @@ function fromPreset(preset: ThemePreset): TenantTheme {
 }
 
 export function ThemeStudioPage() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useTenantTheme();
 
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (isError) {
     return (
-      <EmptyState
-        title="Failed to load your theme"
+      <EmptyState variant="error"
+        title={t('admin.themeStudio.loadFailed', 'Failed to load your theme')}
         description={errorMessage(error)}
-        actionLabel="Retry"
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -53,11 +55,12 @@ export function ThemeStudioPage() {
 }
 
 function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
+  const t = useTranslations();
   const { theme: colorMode, setTheme: setColorMode } = useTheme();
   const { tableLayout, setTableLayout } = useThemeCustomizerStore();
   const save = useSaveTenantTheme();
   const brand = useSoftwareSettings();
-  const brandName = brand.data?.appName || 'Your ISP';
+  const brandName = brand.data?.appName || t('admin.themeStudio.brandFallback', 'Your ISP');
 
   const [draft, setDraft] = useState<TenantTheme>(saved ?? fromPreset(DEFAULT_PRESET));
   const set = <K extends keyof TenantTheme>(key: K, value: TenantTheme[K]) =>
@@ -74,15 +77,15 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
 
   const handleSave = () => {
     if (!valid) {
-      toast.error('Colours must be #RRGGBB hex values');
+      toast.error(t('admin.themeStudio.hexInvalid', 'Colours must be #RRGGBB hex values'));
       return;
     }
-    save.mutate(draft, { onSuccess: () => toast.success('Theme saved for your whole team') });
+    save.mutate(draft, { onSuccess: () => toast.success(t('admin.themeStudio.saved', 'Theme saved for your whole team')) });
   };
 
   const handleReset = () => {
     setDraft(fromPreset(DEFAULT_PRESET));
-    toast.info('Default theme loaded — save to apply it');
+    toast.info(t('admin.themeStudio.resetDone', 'Default theme loaded — save to apply it'));
   };
 
   const handleExport = () => {
@@ -96,7 +99,7 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
   };
 
   const handleCopyJson = () => {
-    void navigator.clipboard.writeText(JSON.stringify(draft, null, 2)).then(() => toast.success('Theme JSON copied to clipboard'));
+    void navigator.clipboard.writeText(JSON.stringify(draft, null, 2)).then(() => toast.success(t('admin.themeStudio.copied', 'Theme JSON copied to clipboard')));
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,9 +120,9 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
           fontScale: parsed.fontScale === 'sm' || parsed.fontScale === 'lg' ? parsed.fontScale : 'md',
           reduceMotion: parsed.reduceMotion === true,
         });
-        toast.success('Theme imported — save to apply it');
+        toast.success(t('admin.themeStudio.imported', 'Theme imported — save to apply it'));
       } catch {
-        toast.error('Invalid theme JSON file');
+        toast.error(t('admin.themeStudio.importInvalid', 'Invalid theme JSON file'));
       }
     };
     reader.readAsText(file);
@@ -128,17 +131,17 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Theme Studio"
-        subtitle="Brand colours, radius, density and text size — saved for everyone on your team"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Theme Studio' }]}
+        title={t('nav.theme-studio', 'Theme Studio')}
+        subtitle={t('admin.themeStudio.subtitle', 'Brand colours, radius, density and text size — saved for everyone on your team')}
+        breadcrumb={[{ label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' }, { label: t('nav.theme-studio', 'Theme Studio') }]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset Default
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t('admin.themeStudio.reset', 'Reset Default')}
             </Button>
             <Can menu="software_settings" action="update">
               <Button size="sm" onClick={handleSave} disabled={!dirty || save.isPending} className="text-xs font-semibold">
-                <Check className="mr-1.5 h-3.5 w-3.5" /> {save.isPending ? 'Saving…' : 'Save & apply'}
+                <Check className="mr-1.5 h-3.5 w-3.5" /> {save.isPending ? t('admin.themeStudio.saving', 'Saving…') : t('admin.themeStudio.saveApply', 'Save & apply')}
               </Button>
             </Can>
           </div>
@@ -148,7 +151,7 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
       {!saved && (
         <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
           <Info className="h-4 w-4 text-primary shrink-0" />
-          No custom theme saved yet — your team sees the default theme.
+          {t('admin.themeStudio.noneSaved', 'No custom theme saved yet — your team sees the default theme.')}
         </div>
       )}
 
@@ -156,9 +159,11 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
         <Card className="lg:col-span-6 border-border/70 shadow-2xs">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Palette className="h-4 w-4 text-primary" /> Brand Colours & Geometry
+              <Palette className="h-4 w-4 text-primary" /> {t('admin.themeStudio.brandTitle', 'Brand Colours & Geometry')}
             </CardTitle>
-            <CardDescription className="text-xs">Pick a primary and a secondary colour — a 10-step ramp is generated for preview.</CardDescription>
+            <CardDescription className="text-xs">
+              {t('admin.themeStudio.brandDesc', 'Pick a primary and a secondary colour — a 10-step ramp is generated for preview.')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {(['primary', 'secondary'] as const).map((key) => {
@@ -166,8 +171,12 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
               return (
                 <div key={key} className="space-y-2">
                   <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                    <span>{key === 'primary' ? 'Primary colour (actions & highlights)' : 'Secondary colour (sidebar & deep panels)'}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{draft[key]}</span>
+                    <span>
+                      {key === 'primary'
+                        ? t('admin.themeStudio.primaryLabel', 'Primary colour (actions & highlights)')
+                        : t('admin.themeStudio.secondaryLabel', 'Secondary colour (sidebar & deep panels)')}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">{draft[key]}</span>
                   </label>
                   <div className="flex items-center gap-2.5">
                     <input
@@ -175,7 +184,7 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
                       value={HEX.test(draft[key]) ? draft[key] : '#000000'}
                       onChange={(e) => set(key, e.target.value)}
                       className="h-9 w-12 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
-                      aria-label={`${key} colour picker`}
+                      aria-label={key === 'primary' ? t('admin.themeStudio.primaryPicker', 'Primary colour picker') : t('admin.themeStudio.secondaryPicker', 'Secondary colour picker')}
                     />
                     <Input value={draft[key]} onChange={(e) => set(key, e.target.value)} className="font-mono text-xs h-9 uppercase" />
                   </div>
@@ -189,13 +198,13 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
             })}
 
             <div className="space-y-2 pt-1">
-              <label className="text-xs font-semibold text-foreground">Corner radius</label>
+              <label className="text-xs font-semibold text-foreground">{t('admin.themeStudio.radius', 'Corner radius')}</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { label: 'Sharp', val: 4 },
-                  { label: 'Soft', val: 8 },
-                  { label: 'Rounded', val: 12 },
-                  { label: 'Pill', val: 20 },
+                  { label: t('admin.themeStudio.radiusSharp', 'Sharp'), val: 4 },
+                  { label: t('admin.themeStudio.radiusSoft', 'Soft'), val: 8 },
+                  { label: t('admin.themeStudio.radiusRounded', 'Rounded'), val: 12 },
+                  { label: t('admin.themeStudio.radiusPill', 'Pill'), val: 20 },
                 ].map((item) => (
                   <Button
                     key={item.val}
@@ -212,9 +221,9 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/50 text-[11px] text-muted-foreground">
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/50 text-xs text-muted-foreground">
               <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-              <span>Success, warning and error colours stay fixed — red always means overdue or trouble.</span>
+              <span>{t('admin.themeStudio.fixedColours', 'Success, warning and error colours stay fixed — red always means overdue or trouble.')}</span>
             </div>
           </CardContent>
         </Card>
@@ -222,53 +231,53 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
         <Card className="lg:col-span-6 border-border/70 shadow-2xs">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Eye className="h-4 w-4 text-primary" /> Live Preview
+              <Eye className="h-4 w-4 text-primary" /> {t('admin.themeStudio.previewTitle', 'Live Preview')}
             </CardTitle>
-            <CardDescription className="text-xs">How buttons, badges and panels look with these colours.</CardDescription>
+            <CardDescription className="text-xs">{t('admin.themeStudio.previewDesc', 'How buttons, badges and panels look with these colours.')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-xl border border-border/70 overflow-hidden flex flex-col sm:flex-row min-h-[200px]" style={{ borderRadius: `${draft.radius}px` }}>
               <div className="w-full sm:w-44 p-3.5 text-white flex flex-col gap-3 shrink-0" style={{ backgroundColor: draft.secondary }}>
                 <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 rounded bg-white/20 flex items-center justify-center font-bold text-[10px]">
+                  <div className="h-5 w-5 rounded bg-white/20 flex items-center justify-center font-bold text-xs">
                     {brandName.slice(0, 2).toUpperCase()}
                   </div>
                   <span className="font-bold text-xs tracking-tight truncate">{brandName}</span>
                 </div>
-                <div className="space-y-1 text-[11px]">
+                <div className="space-y-1 text-xs">
                   <div className="px-2 py-1 rounded font-semibold text-white" style={{ backgroundColor: draft.primary }}>
-                    Dashboard
+                    {t('nav.dashboard', 'Dashboard')}
                   </div>
-                  <div className="px-2 py-1 opacity-70">Customers</div>
-                  <div className="px-2 py-1 opacity-70">Billing</div>
-                  <div className="px-2 py-1 opacity-70">Routers</div>
+                  <div className="px-2 py-1 opacity-70">{t('nav.customers', 'Customers')}</div>
+                  <div className="px-2 py-1 opacity-70">{t('nav.billing', 'Billing')}</div>
+                  <div className="px-2 py-1 opacity-70">{t('nav.routers', 'Routers')}</div>
                 </div>
               </div>
               <div className="flex-1 bg-card p-4 space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="px-3 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: draft.primary, borderRadius: `${draft.radius}px` }}>
-                    Primary Action
+                    {t('admin.themeStudio.primaryAction', 'Primary Action')}
                   </span>
                   <span className="px-3 py-1.5 text-xs font-medium text-white" style={{ backgroundColor: draft.secondary, borderRadius: `${draft.radius}px` }}>
-                    Secondary
+                    {t('admin.themeStudio.secondary', 'Secondary')}
                   </span>
                   <span className="px-3 py-1.5 text-xs font-medium border border-border/80" style={{ borderRadius: `${draft.radius}px` }}>
-                    Outline
+                    {t('admin.themeStudio.outline', 'Outline')}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="px-2 py-0.5 text-[11px] font-semibold text-white rounded-full" style={{ backgroundColor: draft.primary }}>
-                    Brand Badge
+                  <span className="px-2 py-0.5 text-xs font-semibold text-white rounded-full" style={{ backgroundColor: draft.primary }}>
+                    {t('admin.themeStudio.brandBadge', 'Brand Badge')}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Online
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {t('status.online', 'Online')}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Payment Due
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {t('admin.themeStudio.paymentDue', 'Payment Due')}
                   </span>
                 </div>
                 <div className="p-3 border border-border/60 bg-muted/20" style={{ borderRadius: `${draft.radius}px` }}>
-                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Stat card</div>
+                  <div className="text-xs uppercase font-bold text-muted-foreground">{t('admin.themeStudio.statCard', 'Stat card')}</div>
                   <div className="mt-1 h-2 w-24 rounded-full" style={{ backgroundColor: draft.primary }} />
                 </div>
               </div>
@@ -280,42 +289,46 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            <Sliders className="h-4 w-4 text-primary" /> Display Preferences
+            <Sliders className="h-4 w-4 text-primary" /> {t('admin.themeStudio.displayTitle', 'Display Preferences')}
           </CardTitle>
           <CardDescription className="text-xs">
-            Density, text size and motion are saved with the team theme; colour mode and table layout are kept on this browser.
+            {t('admin.themeStudio.displayDesc', 'Density, text size and motion are saved with the team theme; colour mode and table layout are kept on this browser.')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">UI density</label>
+              <label className="text-xs font-semibold text-foreground">{t('admin.themeStudio.density', 'UI density')}</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['comfortable', 'compact'] as const).map((d) => (
-                  <Button key={d} type="button" size="sm" variant={draft.density === d ? 'default' : 'outline'} onClick={() => set('density', d)} className="text-xs capitalize">
-                    {d}
+                  <Button key={d} type="button" size="sm" variant={draft.density === d ? 'default' : 'outline'} onClick={() => set('density', d)} className="text-xs">
+                    {d === 'comfortable' ? t('admin.themeStudio.densityComfortable', 'Comfortable') : t('admin.themeStudio.densityCompact', 'Compact')}
                   </Button>
                 ))}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">Text size</label>
+              <label className="text-xs font-semibold text-foreground">{t('admin.themeStudio.textSize', 'Text size')}</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['sm', 'md', 'lg'] as const).map((scale) => (
                   <Button key={scale} type="button" size="sm" variant={draft.fontScale === scale ? 'default' : 'outline'} onClick={() => set('fontScale', scale)} className="text-xs">
-                    {scale === 'sm' ? 'Small' : scale === 'md' ? 'Default' : 'Large'}
+                    {scale === 'sm'
+                      ? t('admin.themeStudio.sizeSmall', 'Small')
+                      : scale === 'md'
+                        ? t('admin.themeStudio.sizeDefault', 'Default')
+                        : t('admin.themeStudio.sizeLarge', 'Large')}
                   </Button>
                 ))}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-foreground">Default table layout (this browser)</label>
+              <label className="text-xs font-semibold text-foreground">{t('admin.themeStudio.tableLayout', 'Default table layout (this browser)')}</label>
               <div className="grid grid-cols-2 gap-2">
                 <Button type="button" size="sm" variant={tableLayout !== 'centered' ? 'default' : 'outline'} onClick={() => setTableLayout('full')} className="text-xs">
-                  Full Width
+                  {t('admin.themeStudio.layoutFull', 'Full Width')}
                 </Button>
                 <Button type="button" size="sm" variant={tableLayout === 'centered' ? 'default' : 'outline'} onClick={() => setTableLayout('centered')} className="text-xs">
-                  Centered
+                  {t('admin.themeStudio.layoutCentered', 'Centered')}
                 </Button>
               </div>
             </div>
@@ -330,8 +343,8 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
                 className="h-4 w-4 rounded border-border text-primary cursor-pointer"
               />
               <div className="text-xs">
-                <div className="font-semibold text-foreground">Dark mode</div>
-                <div className="text-[10px] text-muted-foreground">This browser only</div>
+                <div className="font-semibold text-foreground">{t('admin.themeStudio.darkMode', 'Dark mode')}</div>
+                <div className="text-xs text-muted-foreground">{t('admin.themeStudio.thisBrowser', 'This browser only')}</div>
               </div>
             </label>
             <label className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card hover:border-primary/30 cursor-pointer transition-colors">
@@ -342,8 +355,8 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
                 className="h-4 w-4 rounded border-border text-primary cursor-pointer"
               />
               <div className="text-xs">
-                <div className="font-semibold text-foreground">Reduce motion</div>
-                <div className="text-[10px] text-muted-foreground">Disable page transitions</div>
+                <div className="font-semibold text-foreground">{t('admin.themeStudio.reduceMotion', 'Reduce motion')}</div>
+                <div className="text-xs text-muted-foreground">{t('admin.themeStudio.reduceMotionDesc', 'Disable page transitions')}</div>
               </div>
             </label>
           </div>
@@ -353,9 +366,9 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            <Layers className="h-4 w-4 text-primary" /> Theme Templates
+            <Layers className="h-4 w-4 text-primary" /> {t('admin.themeStudio.templatesTitle', 'Theme Templates')}
           </CardTitle>
-          <CardDescription className="text-xs">Paired presets — pick one, then save to apply it.</CardDescription>
+          <CardDescription className="text-xs">{t('admin.themeStudio.templatesDesc', 'Paired presets — pick one, then save to apply it.')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -384,14 +397,16 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
                   </div>
                   <div className="p-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{preset.name}</span>
+                      <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                        {t(`admin.themeStudio.preset.${preset.id}.name`, preset.name)}
+                      </span>
                       {isSaved && (
-                        <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                          Saved
+                        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                          {t('admin.themeStudio.savedBadge', 'Saved')}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">{preset.description}</p>
+                    <p className="text-xs text-muted-foreground leading-snug line-clamp-2">{t(`admin.themeStudio.preset.${preset.id}.desc`, preset.description)}</p>
                   </div>
                 </button>
               );
@@ -403,23 +418,23 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
       <Card className="border-border/70 shadow-2xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-bold flex items-center gap-2">
-            <Download className="h-4 w-4 text-primary" /> Export & Import
+            <Download className="h-4 w-4 text-primary" /> {t('admin.themeStudio.exportTitle', 'Export & Import')}
           </CardTitle>
-          <CardDescription className="text-xs">Download the current draft as JSON or load one from another account.</CardDescription>
+          <CardDescription className="text-xs">{t('admin.themeStudio.exportDesc', 'Download the current draft as JSON or load one from another account.')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-center gap-3">
             <Button size="sm" onClick={handleExport} className="text-xs">
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Export JSON
+              <Download className="mr-1.5 h-3.5 w-3.5" /> {t('admin.themeStudio.exportJson', 'Export JSON')}
             </Button>
             <label className="cursor-pointer">
               <input type="file" accept="application/json,.json" onChange={handleImportFile} className="hidden" />
               <Button size="sm" variant="outline" type="button" className="text-xs pointer-events-none">
-                <Upload className="mr-1.5 h-3.5 w-3.5" /> Import JSON
+                <Upload className="mr-1.5 h-3.5 w-3.5" /> {t('admin.themeStudio.importJson', 'Import JSON')}
               </Button>
             </label>
             <Button size="sm" variant="outline" onClick={handleCopyJson} className="text-xs">
-              <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy JSON
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> {t('admin.themeStudio.copyJson', 'Copy JSON')}
             </Button>
           </div>
         </CardContent>

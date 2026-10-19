@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatBdtWithSymbol } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { useBandwidthItems, useBandwidthProviderOptions } from '../hooks/useBandwidthCatalog';
 import { useCreateBandwidthBill, useUpdateBandwidthBill, type BillInput } from '../hooks/useBandwidthBills';
 import { PURCHASE_PAYMENT_METHODS, type BandwidthPurchaseBill } from '../types';
-import { fieldErrorsOf, isoDay } from '../utils';
+import { fieldErrorsOf, isoDay, paidDueLabel, paymentMethodLabel } from '../utils';
 import { LineItemsEditor, lineTotal, newLine, type LineDraft } from './LineItemsEditor';
 import { FieldError, OptionSelect } from './OptionSelect';
 
@@ -37,6 +38,7 @@ export function BillFormDialog({ open, bill, onOpenChange }: BillFormDialogProps
 type HeaderState = Omit<BillInput, 'lines'>;
 
 function BillForm({ bill, onDone }: { bill: BandwidthPurchaseBill | null; onDone: () => void }) {
+  const t = useTranslations();
   const providers = useBandwidthProviderOptions();
   const catalog = useBandwidthItems();
   const create = useCreateBandwidthBill();
@@ -86,14 +88,14 @@ function BillForm({ bill, onDone }: { bill: BandwidthPurchaseBill | null; onDone
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!header.providerId) {
-      setErrors({ provider_id: 'Select a provider' });
+      setErrors({ provider_id: t('admin.bandwidth.billForm.selectProviderError', 'Select a provider') });
       return;
     }
     setErrors({});
     const input: BillInput = { ...header, lines };
     const callbacks = {
       onSuccess: () => {
-        toast.success(bill ? 'Bill updated' : 'Bill saved');
+        toast.success(bill ? t('admin.bandwidth.billForm.updated', 'Bill updated') : t('admin.bandwidth.billForm.saved', 'Bill saved'));
         onDone();
       },
       onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
@@ -106,33 +108,33 @@ function BillForm({ bill, onDone }: { bill: BandwidthPurchaseBill | null; onDone
     <>
       <DialogHeader>
         <DialogTitle className="text-base font-bold flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" /> {bill ? `Edit bill ${bill.invoiceNumber}` : 'Record purchase bill'}
+          <FileText className="h-4 w-4 text-primary" /> {bill ? t('admin.bandwidth.billForm.editTitle', 'Edit bill {no}', { no: bill.invoiceNumber }) : t('admin.bandwidth.billForm.newTitle', 'Record purchase bill')}
         </DialogTitle>
         <DialogDescription className="text-xs">
-          Bill total = Σ qty × rate + line VAT. Leave the invoice number blank to auto-generate it.
+          {t('admin.bandwidth.billForm.desc', 'Bill total = Σ qty × rate + line VAT. Leave the invoice number blank to auto-generate it.')}
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="space-y-4 pt-2">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs font-semibold">Provider *</Label>
+            <Label className="text-xs font-semibold">{t('admin.bandwidth.billForm.provider', 'Provider *')}</Label>
             <OptionSelect
               value={header.providerId}
               onChange={(v) => set({ providerId: v })}
               options={providerOptions}
-              placeholder={providers.isLoading ? 'Loading providers…' : 'Select provider'}
+              placeholder={providers.isLoading ? t('admin.bandwidth.billForm.loadingProviders', 'Loading providers…') : t('admin.bandwidth.billForm.selectProvider', 'Select provider')}
               invalid={Boolean(errors.provider_id)}
             />
             <FieldError message={errors.provider_id} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bill-no" className="text-xs font-semibold">Invoice #</Label>
-            <Input id="bill-no" value={header.invoiceNumber} onChange={(e) => set({ invoiceNumber: e.target.value })} className="text-xs h-9 font-mono" placeholder="Auto" />
+            <Label htmlFor="bill-no" className="text-xs font-semibold">{t('admin.bandwidth.shared.invoiceNo', 'Invoice #')}</Label>
+            <Input id="bill-no" value={header.invoiceNumber} onChange={(e) => set({ invoiceNumber: e.target.value })} className="text-xs h-9 font-mono" placeholder={t('admin.bandwidth.billForm.auto', 'Auto')} />
             <FieldError message={errors.invoice_number} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bill-date" className="text-xs font-semibold">Billing date</Label>
+            <Label htmlFor="bill-date" className="text-xs font-semibold">{t('admin.bandwidth.billForm.billingDate', 'Billing date')}</Label>
             <Input id="bill-date" type="date" value={header.billingDate} onChange={(e) => set({ billingDate: e.target.value })} className="text-xs h-9" />
             <FieldError message={errors.billing_date} />
           </div>
@@ -142,65 +144,65 @@ function BillForm({ bill, onDone }: { bill: BandwidthPurchaseBill | null; onDone
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Payment status *</Label>
+            <Label className="text-xs font-semibold">{t('admin.bandwidth.billForm.paymentStatus', 'Payment status *')}</Label>
             <OptionSelect
               value={header.paymentStatus}
               onChange={(v) => set({ paymentStatus: v === 'Paid' ? 'Paid' : 'Due' })}
               options={[
-                { value: 'Due', label: 'Due' },
-                { value: 'Paid', label: 'Paid' },
+                { value: 'Due', label: paidDueLabel(t, false) },
+                { value: 'Paid', label: paidDueLabel(t, true) },
               ]}
             />
             <FieldError message={errors.payment_status} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bill-paid" className="text-xs font-semibold">Paid amount</Label>
+            <Label htmlFor="bill-paid" className="text-xs font-semibold">{t('admin.bandwidth.billForm.paidAmount', 'Paid amount')}</Label>
             <Input id="bill-paid" type="number" min="0" step="any" value={header.paidNumber} onChange={(e) => set({ paidNumber: e.target.value })} className="text-xs h-9 font-mono" />
             <FieldError message={errors.paid_number} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="bill-discount" className="text-xs font-semibold">Discount</Label>
+            <Label htmlFor="bill-discount" className="text-xs font-semibold">{t('admin.bandwidth.shared.discount', 'Discount')}</Label>
             <Input id="bill-discount" type="number" min="0" step="any" value={header.discount} onChange={(e) => set({ discount: e.target.value })} className="text-xs h-9 font-mono" />
             <FieldError message={errors.discount} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Payment method</Label>
+            <Label className="text-xs font-semibold">{t('admin.bandwidth.shared.paymentMethod', 'Payment method')}</Label>
             <OptionSelect
               value={header.paymentMethod}
               onChange={(v) => set({ paymentMethod: v })}
               emptyLabel="—"
-              options={PURCHASE_PAYMENT_METHODS.map((m) => ({ value: m, label: m }))}
+              options={PURCHASE_PAYMENT_METHODS.map((m) => ({ value: m, label: paymentMethodLabel(t, m) }))}
             />
             <FieldError message={errors.payment_method} />
           </div>
           <div className="col-span-2 space-y-1.5">
-            <Label htmlFor="bill-paid-by" className="text-xs font-semibold">Paid by</Label>
+            <Label htmlFor="bill-paid-by" className="text-xs font-semibold">{t('admin.bandwidth.shared.paidBy', 'Paid by')}</Label>
             <Input id="bill-paid-by" value={header.paidBy} onChange={(e) => set({ paidBy: e.target.value })} className="text-xs h-9" />
             <FieldError message={errors.paid_by} />
           </div>
           <div className="col-span-2 space-y-1.5">
-            <Label htmlFor="bill-recv-by" className="text-xs font-semibold">Received by</Label>
+            <Label htmlFor="bill-recv-by" className="text-xs font-semibold">{t('admin.bandwidth.shared.receivedBy', 'Received by')}</Label>
             <Input id="bill-recv-by" value={header.receivedBy} onChange={(e) => set({ receivedBy: e.target.value })} className="text-xs h-9" />
           </div>
           <div className="col-span-2 sm:col-span-4 space-y-1.5">
-            <Label htmlFor="bill-remarks" className="text-xs font-semibold">Remarks</Label>
+            <Label htmlFor="bill-remarks" className="text-xs font-semibold">{t('admin.bandwidth.shared.remarks', 'Remarks')}</Label>
             <Textarea id="bill-remarks" rows={2} value={header.remarks} onChange={(e) => set({ remarks: e.target.value })} className="text-xs" />
           </div>
         </div>
 
         <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 p-3 rounded-xl bg-muted/20 border border-border/50 text-xs">
           <span className="text-muted-foreground">
-            Bill total <span className="font-mono font-bold text-foreground">{formatBdtWithSymbol(grand)}</span>
+            {t('admin.bandwidth.billForm.billTotal', 'Bill total')} <span className="font-mono font-bold text-foreground">{formatBdtWithSymbol(grand)}</span>
           </span>
           <span className="text-muted-foreground">
-            Due <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(due)}</span>
+            {t('admin.bandwidth.shared.due', 'Due')} <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(due)}</span>
           </span>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">{t('common.cancel', 'Cancel')}</Button>
           <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
-            {pending ? 'Saving…' : bill ? 'Save bill' : 'Submit bill'}
+            {pending ? t('admin.bandwidth.shared.saving', 'Saving…') : bill ? t('admin.bandwidth.billForm.save', 'Save bill') : t('admin.bandwidth.billForm.submit', 'Submit bill')}
           </Button>
         </DialogFooter>
       </form>

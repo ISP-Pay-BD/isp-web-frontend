@@ -75,8 +75,9 @@ export function PointerGlow({ children, className }: { children: ReactNode; clas
     const node = ref.current;
     if (!node || event.pointerType !== 'mouse') return;
     const rect = node.getBoundingClientRect();
-    node.style.setProperty('--gx', `${((event.clientX - rect.left) / rect.width) * 100}%`);
-    node.style.setProperty('--gy', `${((event.clientY - rect.top) / rect.height) * 100}%`);
+    // offsets from the glow's resting spot (50% / 70% of the block), applied with `translate`, not left/top
+    node.style.setProperty('--dx', `${event.clientX - rect.left - rect.width * 0.5}px`);
+    node.style.setProperty('--dy', `${event.clientY - rect.top - rect.height * 0.7}px`);
   }
 
   return (
@@ -84,8 +85,8 @@ export function PointerGlow({ children, className }: { children: ReactNode; clas
       ref={ref}
       onPointerMove={onPointerMove}
       onPointerLeave={() => {
-        ref.current?.style.removeProperty('--gx');
-        ref.current?.style.removeProperty('--gy');
+        ref.current?.style.removeProperty('--dx');
+        ref.current?.style.removeProperty('--dy');
       }}
       className={cn('relative isolate overflow-hidden', className)}
     >

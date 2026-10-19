@@ -29,7 +29,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { formatDateTime } from '@/lib/format';
+import { dateLocale, formatDateTime } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+import { waStatusLabel } from '../components/wa-labels';
 import {
   useSendWhatsApp,
   useWhatsAppConversation,
@@ -40,9 +42,10 @@ import {
 type ThreadFilter = 'all' | 'customers' | 'leads' | 'escalated';
 
 const timeOf = (iso: string) =>
-  iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  iso ? new Date(iso).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' }) : '';
 
 export function WhatsAppInboxPage() {
+  const t = useTranslations();
   const conversations = useWhatsAppConversations();
   const settings = useWhatsAppSettings();
   const sendMessage = useSendWhatsApp();
@@ -77,18 +80,39 @@ export function WhatsAppInboxPage() {
   }, [settings.data]);
   const provider = providerChoice && providers.includes(providerChoice) ? providerChoice : (providers[0] ?? null);
 
+  const filterLabels: Record<ThreadFilter, string> = {
+    all: t('admin.whatsapp.inbox.filterAll', 'All Threads'),
+    customers: t('admin.whatsapp.inbox.filterCustomers', 'Customers'),
+    leads: t('admin.whatsapp.inbox.filterLeads', 'Leads'),
+    escalated: t('admin.whatsapp.inbox.filterEscalated', 'Escalated'),
+  };
+  const senderLabel = (sender: string) =>
+    sender === 'AI assistant'
+      ? t('admin.whatsapp.inbox.senderAi', 'AI assistant')
+      : sender === 'Customer'
+        ? t('admin.whatsapp.inbox.senderCustomer', 'Customer')
+        : sender === 'Agent'
+          ? t('admin.whatsapp.inbox.senderAgent', 'Agent')
+          : sender;
+  const displayName = (name: string) =>
+    name === 'New lead'
+      ? t('admin.whatsapp.inbox.newLead', 'New lead')
+      : name === 'Customer'
+        ? t('admin.whatsapp.inbox.senderCustomer', 'Customer')
+        : name;
+
   const handleSendReply = () => {
     const text = reply.trim();
     if (!text || !active) return;
     if (!provider) {
-      toast.error('No active WhatsApp provider — configure Meta or WAHA in Settings');
+      toast.error(t('admin.whatsapp.inbox.noProvider', 'No active WhatsApp provider — configure Meta or WAHA in Settings'));
       return;
     }
     sendMessage.mutate(
       { to: thread.data?.phone || active.phone, text, provider },
       {
         onSuccess: () => {
-          toast.success(`Message sent to ${active.name} via ${provider.toUpperCase()}`);
+          toast.success(t('admin.whatsapp.inbox.sent', 'Message sent to {name} via {provider}', { name: displayName(active.name), provider: provider.toUpperCase() }));
           setReply('');
         },
       },
@@ -98,10 +122,10 @@ export function WhatsAppInboxPage() {
   if (conversations.isLoading) return <PageSkeleton variant="table" />;
   if (conversations.isError) {
     return (
-      <EmptyState
-        title="Failed to load inbox"
-        description={errorMessage(conversations.error, 'Could not fetch WhatsApp conversations.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.whatsapp.inbox.loadFailed', 'Failed to load inbox')}
+        description={errorMessage(conversations.error, t('admin.whatsapp.inbox.loadFailedHint', 'Could not fetch WhatsApp conversations.'))}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => conversations.refetch()}
       />
     );
@@ -113,12 +137,12 @@ export function WhatsAppInboxPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="WhatsApp Business Inbox"
-        subtitle="Conversations handled by the AI assistant over Meta Cloud API and the WAHA bridge"
+        title={t('admin.whatsapp.inbox.title', 'WhatsApp Business Inbox')}
+        subtitle={t('admin.whatsapp.inbox.subtitle', 'Conversations handled by the AI assistant over Meta Cloud API and the WAHA bridge')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
           { label: 'WhatsApp' },
-          { label: 'Inbox' },
+          { label: t('nav.wa-inbox', 'Inbox') },
         ]}
         actions={
           <Button
@@ -132,7 +156,7 @@ export function WhatsAppInboxPage() {
             }}
           >
             <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', conversations.isFetching && 'animate-spin')} />
-            Sync
+            {t('admin.whatsapp.inbox.sync', 'Sync')}
           </Button>
         }
       />
@@ -141,11 +165,21 @@ export function WhatsAppInboxPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Conversations', value: list.length },
-          { label: 'Escalated (AI paused)', value: list.filter((c) => c.escalated).length },
-          { label: 'Leads', value: list.filter((c) => c.isLead).length },
-          { label: 'WAHA Session', value: waha ? `${waha.sessionStatus}${waha.isActive ? '' : ' (inactive)'}` : 'Not configured' },
-          { label: 'Meta Cloud API', value: meta ? (meta.isActive ? 'Active' : 'Inactive') : 'Not configured' },
+          { label: t('admin.whatsapp.inbox.kpiConversations', 'Conversations'), value: list.length },
+          { label: t('admin.whatsapp.inbox.kpiEscalated', 'Escalated (AI paused)'), value: list.filter((c) => c.escalated).length },
+          { label: t('admin.whatsapp.inbox.kpiLeads', 'Leads'), value: list.filter((c) => c.isLead).length },
+          {
+            label: t('admin.whatsapp.inbox.kpiWaha', 'WAHA Session'),
+            value: waha
+              ? waha.isActive
+                ? waStatusLabel(t, waha.sessionStatus)
+                : t('admin.whatsapp.inbox.wahaInactive', '{status} (inactive)', { status: waStatusLabel(t, waha.sessionStatus) })
+              : t('admin.whatsapp.inbox.notConfigured', 'Not configured'),
+          },
+          {
+            label: 'Meta Cloud API',
+            value: meta ? (meta.isActive ? t('status.active', 'Active') : t('status.inactive', 'Inactive')) : t('admin.whatsapp.inbox.notConfigured', 'Not configured'),
+          },
         ]}
       />
 
@@ -155,7 +189,8 @@ export function WhatsAppInboxPage() {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or phone..."
+                placeholder={t('admin.whatsapp.inbox.searchPlaceholder', 'Search by name or phone...')}
+                aria-label={t('admin.whatsapp.inbox.searchPlaceholder', 'Search by name or phone...')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 h-9 text-xs bg-muted/20"
@@ -167,13 +202,13 @@ export function WhatsAppInboxPage() {
                   key={p}
                   type="button"
                   onClick={() => setFilter(p)}
-                  className={`text-[11px] px-2.5 py-1 rounded-md font-medium capitalize transition-colors ${
+                  className={`text-xs px-2.5 py-1 rounded-md font-medium transition-colors ${
                     filter === p
                       ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                       : 'bg-muted/40 hover:bg-muted text-muted-foreground'
                   }`}
                 >
-                  {p === 'all' ? 'All Threads' : p}
+                  {filterLabels[p]}
                 </button>
               ))}
             </div>
@@ -182,9 +217,13 @@ export function WhatsAppInboxPage() {
             {filtered.length === 0 ? (
               <div className="p-6 text-center">
                 <EmptyState
-                  title={list.length === 0 ? 'No conversations yet' : 'No conversations found'}
-                  description={list.length === 0 ? 'Customer WhatsApp chats appear here once they message you.' : 'Try adjusting your search or filter.'}
-                  actionLabel={list.length === 0 ? undefined : 'Reset Filter'}
+                  title={list.length === 0 ? t('admin.whatsapp.inbox.emptyNone', 'No conversations yet') : t('admin.whatsapp.inbox.emptyFiltered', 'No conversations found')}
+                  description={
+                    list.length === 0
+                      ? t('admin.whatsapp.inbox.emptyNoneHint', 'Customer WhatsApp chats appear here once they message you.')
+                      : t('admin.whatsapp.inbox.emptyFilteredHint', 'Try adjusting your search or filter.')
+                  }
+                  actionLabel={list.length === 0 ? undefined : t('admin.whatsapp.inbox.resetFilter', 'Reset Filter')}
                   onAction={
                     list.length === 0
                       ? undefined
@@ -211,23 +250,23 @@ export function WhatsAppInboxPage() {
                     <div className="flex justify-between items-start gap-2">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                          {conv.name.charAt(0)}
+                          {displayName(conv.name).charAt(0)}
                         </div>
                         <div className="truncate">
-                          <span className="font-semibold text-xs text-foreground block truncate">{conv.name}</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">{conv.phone}</span>
+                          <span className="font-semibold text-xs text-foreground block truncate">{displayName(conv.name)}</span>
+                          <span className="text-xs text-muted-foreground font-mono">{conv.phone}</span>
                         </div>
                       </div>
                       {conv.escalated ? (
-                        <Badge className="h-5 px-1.5 text-[9px] bg-amber-500 text-white">Escalated</Badge>
+                        <Badge tone="warning" className="h-5 px-1.5 text-xs text-white">{filterLabels.escalated}</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[9px] uppercase font-mono px-1 py-0">
-                          {conv.isLead ? 'lead' : 'customer'}
+                        <Badge variant="outline" className="text-xs font-mono px-1 py-0">
+                          {conv.isLead ? t('admin.whatsapp.inbox.badgeLead', 'lead') : t('admin.whatsapp.inbox.badgeCustomer', 'customer')}
                         </Badge>
                       )}
                     </div>
-                    <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground font-mono">
-                      <span>{conv.totalMessages} messages</span>
+                    <div className="flex justify-between mt-1.5 text-xs text-muted-foreground font-mono">
+                      <span>{t('admin.whatsapp.inbox.messageCount', '{n} messages', { n: conv.totalMessages })}</span>
                       <span>{conv.updatedAt ? formatDateTime(conv.updatedAt) : ''}</span>
                     </div>
                   </button>
@@ -244,17 +283,17 @@ export function WhatsAppInboxPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="h-9 w-9 rounded-full bg-primary/15 border border-primary/30 text-primary flex items-center justify-center font-bold text-sm">
-                      {active.name.charAt(0)}
+                      {displayName(active.name).charAt(0)}
                     </div>
                     <div>
                       <CardTitle className="text-sm flex items-center gap-2 font-semibold">
                         <MessageCircle className="h-4 w-4 text-emerald-500" />
-                        {active.name}
+                        {displayName(active.name)}
                       </CardTitle>
-                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                         <span>{thread.data?.phone || active.phone}</span>
                         <span>·</span>
-                        <span className="font-sans">{active.escalated ? 'AI paused — staff handling' : 'AI assistant active'}</span>
+                        <span className="font-sans">{active.escalated ? t('admin.whatsapp.inbox.aiPaused', 'AI paused — staff handling') : t('admin.whatsapp.inbox.aiActive', 'AI assistant active')}</span>
                       </div>
                     </div>
                   </div>
@@ -264,7 +303,7 @@ export function WhatsAppInboxPage() {
                       className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'h-8 text-xs gap-1')}
                     >
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="hidden sm:inline">Customer Profile</span>
+                      <span className="hidden sm:inline">{t('admin.whatsapp.inbox.customerProfile', 'Customer Profile')}</span>
                     </Link>
                   )}
                 </div>
@@ -272,16 +311,16 @@ export function WhatsAppInboxPage() {
 
               <CardContent className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-background/50">
                 {thread.isLoading ? (
-                  <p className="text-xs text-muted-foreground text-center">Loading conversation…</p>
+                  <p className="text-xs text-muted-foreground text-center">{t('admin.whatsapp.inbox.threadLoading', 'Loading conversation…')}</p>
                 ) : thread.isError ? (
-                  <EmptyState
-                    title="Could not load this conversation"
+                  <EmptyState variant="error"
+                    title={t('admin.whatsapp.inbox.threadFailed', 'Could not load this conversation')}
                     description={errorMessage(thread.error)}
-                    actionLabel="Retry"
+                    actionLabel={t('common.retry', 'Retry')}
                     onAction={() => thread.refetch()}
                   />
                 ) : (thread.data?.messages ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center">No messages in this conversation.</p>
+                  <p className="text-xs text-muted-foreground text-center">{t('admin.whatsapp.inbox.threadEmpty', 'No messages in this conversation.')}</p>
                 ) : (
                   (thread.data?.messages ?? []).map((msg) => (
                     <div
@@ -294,15 +333,15 @@ export function WhatsAppInboxPage() {
                       )}
                     >
                       {!msg.fromCustomer && (
-                        <p className="text-[10px] font-semibold opacity-80 flex items-center gap-1">
+                        <p className="text-xs font-semibold opacity-80 flex items-center gap-1">
                           {msg.sender === 'AI assistant' && <Bot className="h-3 w-3" />}
-                          {msg.sender}
+                          {senderLabel(msg.sender)}
                         </p>
                       )}
                       <p className="leading-relaxed whitespace-pre-wrap font-sans text-xs">{msg.text}</p>
                       <div
                         className={cn(
-                          'flex items-center justify-end gap-1 text-[10px] font-mono',
+                          'flex items-center justify-end gap-1 text-xs font-mono',
                           msg.fromCustomer ? 'text-muted-foreground' : 'text-primary-foreground/80',
                         )}
                       >
@@ -315,8 +354,12 @@ export function WhatsAppInboxPage() {
 
               <div className="border-t border-border/50 p-3 bg-card flex items-center gap-2">
                 {providers.length > 1 && (
-                  <Select value={provider ?? undefined} onValueChange={(v) => v && setProviderChoice(v as 'meta' | 'waha')}>
-                    <SelectTrigger className="h-10 w-[100px] text-xs shrink-0">
+                  <Select
+                    value={provider ?? undefined}
+                    onValueChange={(v) => v && setProviderChoice(v as 'meta' | 'waha')}
+                    items={{ meta: 'META', waha: 'WAHA' }}
+                  >
+                    <SelectTrigger aria-label={t('admin.whatsapp.inbox.provider', 'Provider')} className="h-10 w-[100px] text-xs shrink-0">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -329,7 +372,12 @@ export function WhatsAppInboxPage() {
                   </Select>
                 )}
                 <Input
-                  placeholder={provider ? 'Type a reply and press Enter...' : 'No active WhatsApp provider configured'}
+                  placeholder={
+                    provider
+                      ? t('admin.whatsapp.inbox.replyPlaceholder', 'Type a reply and press Enter...')
+                      : t('admin.whatsapp.inbox.noProviderPlaceholder', 'No active WhatsApp provider configured')
+                  }
+                  aria-label={t('admin.whatsapp.inbox.replyLabel', 'Reply message')}
                   value={reply}
                   disabled={!provider}
                   onChange={(e) => setReply(e.target.value)}
@@ -337,7 +385,7 @@ export function WhatsAppInboxPage() {
                   className="h-10 text-xs bg-muted/20"
                 />
                 <Button
-                  size="icon"
+                  size="icon" aria-label={t('admin.whatsapp.inbox.sendReply', 'Send reply')}
                   onClick={handleSendReply}
                   disabled={!reply.trim() || !provider || sendMessage.isPending}
                   className="h-10 w-10 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -348,7 +396,10 @@ export function WhatsAppInboxPage() {
             </>
           ) : (
             <CardContent className="flex-1 flex items-center justify-center">
-              <EmptyState title="Select a conversation" description="Choose a thread from the left panel to read and reply." />
+              <EmptyState
+                title={t('admin.whatsapp.inbox.selectTitle', 'Select a conversation')}
+                description={t('admin.whatsapp.inbox.selectHint', 'Choose a thread from the left panel to read and reply.')}
+              />
             </CardContent>
           )}
         </Card>
@@ -358,15 +409,16 @@ export function WhatsAppInboxPage() {
 }
 
 export function WhatsAppNavLinks() {
+  const t = useTranslations();
   const pathname = usePathname();
 
   const links = [
-    { href: '/admin/whatsapp/inbox', label: 'Inbox', icon: MessageSquare },
-    { href: '/admin/whatsapp/templates', label: 'Templates', icon: FileText },
-    { href: '/admin/whatsapp/message-log', label: 'Message Log', icon: History },
-    { href: '/admin/whatsapp/opt-ins', label: 'Opt-ins', icon: UserCheck },
-    { href: '/admin/whatsapp/campaigns', label: 'Campaigns', icon: Megaphone },
-    { href: '/admin/whatsapp/settings', label: 'Settings', icon: Settings },
+    { href: '/admin/whatsapp/inbox', label: t('nav.wa-inbox', 'Inbox'), icon: MessageSquare },
+    { href: '/admin/whatsapp/templates', label: t('nav.wa-templates', 'Templates'), icon: FileText },
+    { href: '/admin/whatsapp/message-log', label: t('nav.wa-log', 'Message Log'), icon: History },
+    { href: '/admin/whatsapp/opt-ins', label: t('nav.wa-optins', 'Opt-ins'), icon: UserCheck },
+    { href: '/admin/whatsapp/campaigns', label: t('nav.wa-campaigns', 'Campaigns'), icon: Megaphone },
+    { href: '/admin/whatsapp/settings', label: t('nav.wa-settings', 'Settings'), icon: Settings },
   ];
 
   return (

@@ -1,4 +1,6 @@
-# 02 — Data tables (T1–T4)
+# 02 — Data tables (T1–T4) — ✅ implemented
+
+**Status (2026-10-18): T1–T3 are in `DataTable`; T4 moved every list-type table (the exceptions are listed below).** The numbers in this paragraph are from the audit before the work.
 
 **124 screens show a table.** 81 use the shared [`DataTable`](../../src/features/shared/data-table/components/DataTable.tsx), and **43 build their own `<table>`**. Only 3 have any phone layout. The rest scroll sideways on a phone. [`AllCustomersPage`](../../src/features/admin/customers/pages/AllCustomersPage.tsx#L728), the most-used screen, is a hand-built `<table className="min-w-[1300px]">`.
 
@@ -84,3 +86,20 @@ Do Customers first, because it is also [A3](04-ADMIN-PORTAL.md#a3--customers-mod
 Seven more screens mix both (DataTable plus a hand-built table): `/admin/bandwidth/buy/bills`, `/admin/bandwidth/sell/invoices`, `/admin/customer-payments`, `/admin/olt`, `/admin/payment`, `/admin/purchase/bills`, `/admin/purchase/requisitions`. Check whether the second table is a real list or just a small key/value block. Key/value blocks can stay.
 
 **Not every `<table>` must move.** Print layouts (invoice, POS slip, BTRC export) and small fixed key/value tables can stay hand-built, but must still meet S1 (text size) and must not scroll sideways at 390px.
+
+
+---
+
+## What was built
+
+- **`DataTable`** (`src/features/shared/data-table/`)
+  - **T1:** below 768px it renders `DataTableCards` — one card per row. Columns are placed by `meta.mobile` (`'title' | 'status' | 'actions' | 'hide'`, typed in `column-meta.ts`) with defaults (column id `actions` → footer, id containing "status" → badge(s), first other column → title, rest → label/value pairs). The Columns menu and the layout toggle are hidden on phones; the search box is full width.
+  - **T2:** `urlState` prop → `?q=&page=&size=&sort=&f_<column>=` via `lib/url-state.ts`; works in client mode and `server` mode (the URL values are handed to the page's own page/search callbacks once on mount). Enabled on 75 single-table list pages. Pages with their own filters (customers, expired customers) write `status`, `area`, `package`, `router`, `conn`, `expiry`, `resellerId`, `q`, `page`, `size` themselves.
+  - **T3:** sticky header (`md:max-h-[calc(100dvh-15rem)]` scroll container), `aria-sort` on sortable headers, header text at `text-xs`.
+  - New props: `rowSelection` / `onRowSelectionChange` (controlled selection that survives paging), `urlState`; `enableLayoutToggle={false}` now also ignores the saved centred layout.
+- **T4 results.** Converted to `DataTable`: customers list and expired list, cashbook, backup, deposits, billing-policy charges, reminders, credits (both views), developers (API keys + delivery log), ledger (expenses/incomes), journal entries, chart of accounts, wallet, POP funding/transactions/packages, packages, HR (employees, accounts, advance salary, attendance, salaries, employee-detail tabs), engines index, inactive customers, customer groups, IP logs, jobs, leads, collections map, usage report, free requests, netflow, BTRC and OTC reports, areas (sub-areas table), employee installations (as cards).
+  **Kept hand-built on purpose** (config tables or fixed formats, made phone-safe — stacked cards below `md` or scrolling inside their own container): billing-policy rules, tax settings, dunning steps, developer webhooks, accounting reports statement, voucher lines in the journal sheet, import-result grid, voucher/print layouts.
+- **Behaviour changes to know about**
+  - Whole-row click navigation is gone on converted tables; the name/id is a real link or button and the row action menu still works.
+  - Server-paginated tables cannot sort across pages, so those columns have sorting off; where a page had a server "sort" the control moved into the toolbar.
+  - Page size options are DataTable's (`10/20/50/100`); screens that used 25 now use 20.

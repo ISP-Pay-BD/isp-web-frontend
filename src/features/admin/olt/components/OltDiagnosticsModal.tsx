@@ -15,6 +15,7 @@ import { AlertTriangle, Cpu, Loader2, RefreshCw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { formatDateTime } from '@/lib/format/date';
+import { useLocale } from '@/i18n/locale-context';
 import { useOltDiagnostics } from '../hooks/useOltDiagnostics';
 import { onuHealth, parseBackendDate, rxBand, type OltOnu, type OnuHealth } from '../types';
 
@@ -41,6 +42,7 @@ export function OltDiagnosticsModal({
   oltId,
   oltName,
 }: OltDiagnosticsModalProps) {
+  const { t } = useLocale();
   const [statusFilter, setStatusFilter] = useState<'all' | OnuHealth>('all');
   const [search, setSearch] = useState('');
   const { data, isLoading, isFetching, isError, error, refetch } = useOltDiagnostics(oltId, open);
@@ -70,11 +72,13 @@ export function OltDiagnosticsModal({
                 <Cpu className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold">{oltName} Diagnostics</DialogTitle>
+                <DialogTitle className="text-lg font-bold">{t('admin.olt.diagnostics.title', '{name} Diagnostics', { name: oltName })}</DialogTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {data
-                    ? `${data.summary.total} ONUs — ${data.isCached ? 'last synchronized data' : 'read live from the OLT'}`
-                    : 'Live ONU status read from the OLT'}
+                    ? data.isCached
+                      ? t('admin.olt.diagnostics.subCached', '{n} ONUs — last synchronized data', { n: data.summary.total })
+                      : t('admin.olt.diagnostics.subLive', '{n} ONUs — read live from the OLT', { n: data.summary.total })
+                    : t('admin.olt.diagnostics.subLoading', 'Live ONU status read from the OLT')}
                 </p>
               </div>
             </div>
@@ -86,13 +90,13 @@ export function OltDiagnosticsModal({
           {isLoading ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Reading ONU status from the OLT — this can take up to a minute…
+              {t('admin.olt.diagnostics.reading', 'Reading ONU status from the OLT — this can take up to a minute…')}
             </div>
           ) : isError || !data ? (
             <EmptyState
-              title="Diagnostics unavailable"
-              description={errorMessage(error, 'The OLT could not be read.')}
-              actionLabel="Retry"
+              title={t('admin.olt.diagnostics.unavailable', 'Diagnostics unavailable')}
+              description={errorMessage(error, t('admin.olt.diagnostics.readFailed', 'The OLT could not be read.'))}
+              actionLabel={t('admin.customers.list.retry', 'Retry')}
               onAction={() => refetch()}
             />
           ) : (
@@ -101,8 +105,12 @@ export function OltDiagnosticsModal({
               <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>
-                  Live read failed{data.liveError ? `: ${data.liveError}` : ''}. Showing the last synchronized data
-                  {syncedAt ? ` from ${formatDateTime(syncedAt)}` : ''}.
+                  {data.liveError
+                    ? t('admin.olt.diagnostics.liveFailedWithError', 'Live read failed: {error}.', { error: data.liveError })
+                    : t('admin.olt.diagnostics.liveFailed', 'Live read failed.')}{' '}
+                  {syncedAt
+                    ? t('admin.olt.diagnostics.showingCachedFrom', 'Showing the last synchronized data from {time}.', { time: formatDateTime(syncedAt) })
+                    : t('admin.olt.diagnostics.showingCached', 'Showing the last synchronized data.')}
                 </span>
               </div>
             )}
@@ -110,21 +118,21 @@ export function OltDiagnosticsModal({
             <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
               <p>
                 <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{data.summary.online}</span>{' '}
-                <span className="text-muted-foreground">online</span>
+                <span className="text-muted-foreground">{t('admin.olt.diagnostics.statOnline', 'online')}</span>
               </p>
               <p>
                 <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{data.summary.wireDown}</span>{' '}
-                <span className="text-muted-foreground">wire down / LOS</span>
+                <span className="text-muted-foreground">{t('admin.olt.diagnostics.statWireDown', 'wire down / LOS')}</span>
               </p>
               <p>
                 <span className="font-semibold tabular-nums text-destructive">{data.summary.powerOff}</span>{' '}
-                <span className="text-muted-foreground">offline / power off</span>
+                <span className="text-muted-foreground">{t('admin.olt.diagnostics.statPowerOff', 'offline / power off')}</span>
               </p>
             </div>
 
             {/* PON Port grid */}
             <div className="space-y-3">
-              <h4 className="text-sm font-semibold text-foreground">PON Ports ({data.ponPorts.length})</h4>
+              <h4 className="text-sm font-semibold text-foreground">{t('admin.olt.diagnostics.ponPorts', 'PON Ports ({n})', { n: data.ponPorts.length })}</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {data.ponPorts.map((port) => (
                   <div
@@ -133,13 +141,13 @@ export function OltDiagnosticsModal({
                   >
                     <div className="flex items-center justify-between mb-2.5">
                       <span className="text-xs font-bold text-foreground">{port.port}</span>
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                      <Badge variant="outline" className="text-xs px-1.5 py-0 font-mono">
                         {port.online}/{port.total}
                       </Badge>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
+                        className="h-full rounded-full bg-emerald-500 transition-[width] duration-700 ease-out"
                         style={{ width: port.total > 0 ? `${(port.online / port.total) * 100}%` : '0%' }}
                       />
                     </div>
@@ -151,10 +159,10 @@ export function OltDiagnosticsModal({
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
               {[
-                { key: 'all', label: 'All ONUs', count: data.summary.total },
-                { key: 'online', label: 'Online', count: data.summary.online },
-                { key: 'wire_down', label: 'Wire Down', count: data.summary.wireDown },
-                { key: 'power_off', label: 'Power Off', count: data.summary.powerOff },
+                { key: 'all', label: t('admin.olt.diagnostics.filterAll', 'All ONUs'), count: data.summary.total },
+                { key: 'online', label: t('status.online', 'Online'), count: data.summary.online },
+                { key: 'wire_down', label: t('admin.olt.diagnostics.filterWireDown', 'Wire Down'), count: data.summary.wireDown },
+                { key: 'power_off', label: t('admin.olt.diagnostics.filterPowerOff', 'Power Off'), count: data.summary.powerOff },
               ].map((f) => (
                 <button
                   key={f.key}
@@ -177,7 +185,8 @@ export function OltDiagnosticsModal({
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Search customer, MAC, PPPoE ID or port..."
+                placeholder={t('admin.olt.diagnostics.search', 'Search customer, MAC, PPPoE ID or port...')}
+                aria-label={t('admin.olt.diagnostics.search', 'Search customer, MAC, PPPoE ID or port...')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-9 transition-shadow duration-200 focus:shadow-[0_0_0_2px] focus:shadow-primary/20"
@@ -190,13 +199,13 @@ export function OltDiagnosticsModal({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">ONU</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">PON Port</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Customer</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide hidden sm:table-cell">MAC Address</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Status</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">RX Power</th>
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wide">Vendor</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">ONU</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.olt.diagnostics.colPonPort', 'PON Port')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.olt.diagnostics.colCustomer', 'Customer')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide hidden sm:table-cell">{t('admin.olt.diagnostics.colMac', 'MAC Address')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.customers.list.statusLabel', 'Status')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.olt.diagnostics.colRx', 'RX Power')}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground tracking-wide">{t('admin.olt.page.colVendor', 'Vendor')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -210,23 +219,23 @@ export function OltDiagnosticsModal({
                           <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{onu.onuIndex || '—'}</td>
                           <td className="px-4 py-2.5 font-medium text-foreground">{onu.ponPort || '—'}</td>
                           <td className="px-4 py-2.5 font-medium text-foreground">
-                            {onu.customerName ?? onu.description ?? <span className="text-muted-foreground italic">Unassigned</span>}
+                            {onu.customerName ?? onu.description ?? <span className="text-muted-foreground italic">{t('admin.olt.diagnostics.unassigned', 'Unassigned')}</span>}
                             {onu.pppoeId && (
-                              <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{onu.pppoeId}</div>
+                              <div className="text-xs text-muted-foreground font-mono mt-0.5">{onu.pppoeId}</div>
                             )}
                           </td>
-                          <td className="px-4 py-2.5 font-mono text-[11px] text-muted-foreground hidden sm:table-cell">{onu.mac ?? '—'}</td>
+                          <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground hidden sm:table-cell">{onu.mac ?? '—'}</td>
                           <td className="px-4 py-2.5">
                             <span className={cn(
-                              'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium tracking-wide',
+                              'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium tracking-wide',
                               health === 'online' && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                               health === 'wire_down' && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
                               health === 'power_off' && 'bg-red-500/10 text-red-600 dark:text-red-400',
                             )}>
-                              {health === 'online' ? '● Online' : health === 'wire_down' ? '▲ Wire Down' : '○ Offline'}
+                              {health === 'online' ? `● ${t('status.online', 'Online')}` : health === 'wire_down' ? `▲ ${t('admin.olt.diagnostics.filterWireDown', 'Wire Down')}` : `○ ${t('status.offline', 'Offline')}`}
                             </span>
                             {onu.reason && (
-                              <div className="text-[9px] text-muted-foreground mt-0.5">{onu.reason}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5">{onu.reason}</div>
                             )}
                           </td>
                           <td className={cn('px-4 py-2.5 font-mono text-xs font-semibold tabular-nums', RX_CLASS[rxBand(onu.rxPower)])}>
@@ -239,7 +248,7 @@ export function OltDiagnosticsModal({
                     {filteredOnus.length === 0 && (
                       <tr>
                         <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">
-                          No ONUs match the current filter.
+                          {t('admin.olt.diagnostics.empty', 'No ONUs match the current filter.')}
                         </td>
                       </tr>
                     )}
@@ -251,7 +260,7 @@ export function OltDiagnosticsModal({
             {/* Footer */}
             <div className="flex items-center justify-between pt-2">
               <p className="text-xs text-muted-foreground">
-                Showing {Math.min(filteredOnus.length, MAX_ROWS)} of {filteredOnus.length} matching ({data.items.length} total)
+                {t('admin.olt.diagnostics.showing', 'Showing {shown} of {matching} matching ({total} total)', { shown: Math.min(filteredOnus.length, MAX_ROWS), matching: filteredOnus.length, total: data.items.length })}
               </p>
               <Button
                 variant="outline"
@@ -261,7 +270,7 @@ export function OltDiagnosticsModal({
                 className="gap-1.5 transition duration-150 hover:shadow-md"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-                {isFetching ? 'Reading…' : 'Refresh'}
+                {isFetching ? t('admin.olt.diagnostics.refreshing', 'Reading…') : t('admin.olt.diagnostics.refresh', 'Refresh')}
               </Button>
             </div>
           </div>

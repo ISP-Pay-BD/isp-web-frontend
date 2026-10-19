@@ -40,31 +40,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTranslations } from '@/i18n/locale-context';
 import { Plus, ShieldCheck, CheckCircle2, Globe, MoreHorizontal, Edit, Trash2, Ban, Power, ShieldX, Loader2 } from 'lucide-react';
 
 /** Mirrors the backend rule: host name / wildcard / IP, no spaces or punctuation. */
 const HOST_RE = /^[a-z0-9*][a-z0-9*.-]{0,252}$/;
 
-const ACTIONS = [
-  { value: 'allow', label: 'Allow' },
-  { value: 'deny', label: 'Deny' },
-] as const;
-
 type EditorState = { rule: WalledGardenRule | null } | null;
 
 export function WalledGardenPage() {
+  const t = useTranslations();
   const hs = useHotspotRouter();
   const [editor, setEditor] = useState<EditorState>(null);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot Walled Garden Rules"
-        subtitle="Hosts guests can reach before logging in to the hotspot of the selected router."
+        title={t('admin.ops.walledGarden.title', 'Hotspot Walled Garden Rules')}
+        subtitle={t('admin.ops.walledGarden.subtitle', 'Hosts guests can reach before logging in to the hotspot of the selected router.')}
         breadcrumb={[
           { label: 'Dashboard', href: '/admin/dashboard' },
           { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Walled Garden' },
+          { label: t('admin.ops.walledGarden.crumb', 'Walled Garden') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
@@ -72,7 +69,7 @@ export function WalledGardenPage() {
             {hs.router ? (
               <Button size="sm" onClick={() => setEditor({ rule: null })} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Host Rule
+                {t('admin.ops.walledGarden.addRule', 'Add Host Rule')}
               </Button>
             ) : null}
           </div>
@@ -104,6 +101,7 @@ function WalledGardenBody({
   editor: EditorState;
   onEditorChange: (next: EditorState) => void;
 }) {
+  const t = useTranslations();
   const table = useServerTable();
   const { page, pageSize, search } = table;
   const [deleteTarget, setDeleteTarget] = useState<WalledGardenRule | null>(null);
@@ -118,7 +116,7 @@ function WalledGardenBody({
     () => [
       {
         accessorKey: 'dstHost',
-        header: 'Destination Host',
+        header: t('admin.ops.walledGarden.colHost', 'Destination Host'),
         enableHiding: false,
         size: 260,
         cell: ({ row }) => (
@@ -130,50 +128,46 @@ function WalledGardenBody({
               <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border/70">
                 {row.original.dstHost || '—'}
               </span>
-              {row.original.dynamic ? <span className="mt-0.5 block text-xs text-muted-foreground">Added by the router</span> : null}
+              {row.original.dynamic ? <span className="mt-0.5 block text-xs text-muted-foreground">{t('admin.ops.walledGarden.byRouter', 'Added by the router')}</span> : null}
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'action',
-        header: 'Action',
+        header: t('admin.ops.walledGarden.colAction', 'Action'),
         size: 100,
         cell: ({ row }) => (
           <Badge
             variant="outline"
-            className={
-              row.original.action === 'allow'
-                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
-                : 'bg-rose-500/10 text-rose-500 border-rose-500/30'
-            }
+            tone={row.original.action === 'allow' ? 'success' : 'danger'}
           >
-            {row.original.action === 'allow' ? 'Allow' : 'Deny'}
+            {row.original.action === 'allow' ? t('admin.ops.walledGarden.allow', 'Allow') : t('admin.ops.walledGarden.deny', 'Deny')}
           </Badge>
         ),
       },
       {
         accessorKey: 'comment',
-        header: 'Comment',
+        header: t('admin.ops.walledGarden.colComment', 'Comment'),
         size: 280,
         cell: ({ row }) => <span className="text-sm text-foreground">{row.original.comment || '—'}</span>,
       },
       {
         accessorKey: 'hits',
-        header: 'Hits',
+        header: t('admin.ops.walledGarden.colHits', 'Hits'),
         size: 90,
         cell: ({ row }) => <span className="font-mono text-xs tabular-nums text-muted-foreground">{row.original.hits}</span>,
       },
       {
         accessorKey: 'enabled',
-        header: 'Status',
+        header: t('common.status', 'Status'),
         size: 110,
         cell: ({ row }) => (
           <Badge
             variant="outline"
-            className={row.original.enabled ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-muted text-muted-foreground'}
+            tone={row.original.enabled ? 'success' : 'neutral'}
           >
-            {row.original.enabled ? 'Enabled' : 'Disabled'}
+            {row.original.enabled ? t('admin.ops.walledGarden.enabled', 'Enabled') : t('admin.ops.walledGarden.disabled', 'Disabled')}
           </Badge>
         ),
       },
@@ -187,34 +181,34 @@ function WalledGardenBody({
           return (
             <DropdownMenu>
               <DropdownMenuTrigger
-                aria-label={`Actions for ${r.dstHost}`}
+                aria-label={t('admin.customers.list.actionsFor', 'Actions for {name}', { name: r.dstHost })}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>Rule Options</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('admin.ops.walledGarden.ruleOptions', 'Rule Options')}</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => onEditorChange({ rule: r })}>
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Rule
+                    {t('admin.ops.walledGarden.editRule', 'Edit Rule')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() =>
                       saveRule(
                         { id: r.id, enabled: !r.enabled },
-                        { onSuccess: () => toast.success(`${r.dstHost} ${r.enabled ? 'disabled' : 'enabled'}`) },
+                        { onSuccess: () => toast.success(r.enabled ? t('admin.ops.walledGarden.toastDisabled', '{host} disabled', { host: r.dstHost }) : t('admin.ops.walledGarden.toastEnabled', '{host} enabled', { host: r.dstHost })) },
                       )
                     }
                   >
                     {r.enabled ? <Ban className="h-3.5 w-3.5 mr-2" /> : <Power className="h-3.5 w-3.5 mr-2" />}
-                    {r.enabled ? 'Disable Rule' : 'Enable Rule'}
+                    {r.enabled ? t('admin.ops.walledGarden.disableRule', 'Disable Rule') : t('admin.ops.walledGarden.enableRule', 'Enable Rule')}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleteTarget(r)}>
                   <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Remove Rule
+                  {t('admin.ops.walledGarden.removeRule', 'Remove Rule')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -222,7 +216,7 @@ function WalledGardenBody({
         },
       },
     ],
-    [onEditorChange, saveRule],
+    [onEditorChange, saveRule, t],
   );
 
   if (rules.isError) {
@@ -230,7 +224,7 @@ function WalledGardenBody({
       <HotspotQueryError
         error={rules.error}
         routerName={routerName}
-        title="Failed to load walled garden rules"
+        title={t('admin.ops.walledGarden.loadFailed', 'Failed to load walled garden rules')}
         onRetry={() => void rules.refetch()}
       />
     );
@@ -240,39 +234,39 @@ function WalledGardenBody({
     <>
       <HotspotKpiRow>
         <HotspotKpi
-          label="Total Rules"
+          label={t('admin.ops.walledGarden.kpiTotal', 'Total Rules')}
           value={summary ? summary.total : '—'}
-          hint="Walled garden entries"
+          hint={t('admin.ops.walledGarden.kpiTotalHint', 'Walled garden entries')}
           icon={<ShieldCheck className="h-4 w-4 text-primary" />}
         />
         <HotspotKpi
-          label="Enabled"
+          label={t('admin.ops.walledGarden.enabled', 'Enabled')}
           value={summary ? summary.enabled : '—'}
-          hint="Applied before login"
+          hint={t('admin.ops.walledGarden.kpiEnabledHint', 'Applied before login')}
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
           positive
         />
         <HotspotKpi
-          label="Disabled"
+          label={t('admin.ops.walledGarden.disabled', 'Disabled')}
           value={summary ? summary.disabled : '—'}
-          hint="Kept but not applied"
+          hint={t('admin.ops.walledGarden.kpiDisabledHint', 'Kept but not applied')}
           icon={<Ban className="h-4 w-4 text-muted-foreground" />}
         />
         <HotspotKpi
-          label="Deny Rules"
+          label={t('admin.ops.walledGarden.kpiDeny', 'Deny Rules')}
           value={summary ? summary.deny : '—'}
-          hint={summary ? `${summary.allow} allow rules` : undefined}
+          hint={summary ? t('admin.ops.walledGarden.kpiAllowHint', '{n} allow rules', { n: summary.allow }) : undefined}
           icon={<ShieldX className="h-4 w-4 text-rose-500" />}
         />
       </HotspotKpiRow>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={rules.data?.items ?? []}
         isLoading={rules.isLoading}
-        emptyTitle={search ? 'No rules match' : 'No walled garden rules'}
-        emptyDescription="Add the hosts guests must reach before logging in, e.g. your payment gateway."
-        searchPlaceholder="Search host or comment..."
+        emptyTitle={search ? t('admin.ops.walledGarden.emptyFiltered', 'No rules match') : t('admin.ops.walledGarden.emptyNone', 'No walled garden rules')}
+        emptyDescription={t('admin.ops.walledGarden.emptyHint', 'Add the hosts guests must reach before logging in, e.g. your payment gateway.')}
+        searchPlaceholder={t('admin.ops.walledGarden.searchPlaceholder', 'Search host or comment...')}
         getRowId={(r) => r.id}
         server={table.server(rules.data?.meta.total ?? 0)}
       />
@@ -288,7 +282,7 @@ function WalledGardenBody({
               { id: editor.rule?.id, ...input },
               {
                 onSuccess: () => {
-                  toast.success(editor.rule ? `Rule ${input.dstHost} updated` : `${input.dstHost} added to the walled garden`);
+                  toast.success(editor.rule ? t('admin.ops.walledGarden.toastUpdated', 'Rule {host} updated', { host: input.dstHost }) : t('admin.ops.walledGarden.toastAdded', '{host} added to the walled garden', { host: input.dstHost }));
                   onEditorChange(null);
                 },
               },
@@ -302,15 +296,15 @@ function WalledGardenBody({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Remove this rule?"
-        description={deleteTarget ? `${deleteTarget.dstHost} is removed from the router's walled garden.` : undefined}
-        confirmLabel="Remove"
+        title={t('admin.ops.walledGarden.removeTitle', 'Remove this rule?')}
+        description={deleteTarget ? t('admin.ops.walledGarden.removeDesc', "{host} is removed from the router's walled garden.", { host: deleteTarget.dstHost }) : undefined}
+        confirmLabel={t('admin.ops.walledGarden.remove', 'Remove')}
         destructive
         onConfirm={() => {
           const target = deleteTarget;
           setDeleteTarget(null);
           if (!target) return;
-          remove.mutate(target.id, { onSuccess: () => toast.success(`${target.dstHost} removed`) });
+          remove.mutate(target.id, { onSuccess: () => toast.success(t('admin.ops.walledGarden.toastRemoved', '{host} removed', { host: target.dstHost })) });
         }}
       />
     </>
@@ -335,6 +329,11 @@ function RuleDialog({
   onClose: () => void;
   onSubmit: (input: RuleInput) => void;
 }) {
+  const t = useTranslations();
+  const actions = [
+    { value: 'allow', label: t('admin.ops.walledGarden.allow', 'Allow') },
+    { value: 'deny', label: t('admin.ops.walledGarden.deny', 'Deny') },
+  ];
   const [form, setForm] = useState<RuleInput>({
     dstHost: rule?.dstHost ?? '',
     action: rule?.action ?? 'allow',
@@ -343,8 +342,8 @@ function RuleDialog({
   });
   const set = (patch: Partial<RuleInput>) => setForm((f) => ({ ...f, ...patch }));
   const host = form.dstHost.trim().toLowerCase();
-  const hostError = host && (!HOST_RE.test(host) || !/[a-z0-9]/.test(host)) ? 'Use a host like *.bkash.com or an IP address' : '';
-  const commentError = form.comment.length > 120 ? 'At most 120 characters' : '';
+  const hostError = host && (!HOST_RE.test(host) || !/[a-z0-9]/.test(host)) ? t('admin.ops.walledGarden.hostError', 'Use a host like *.bkash.com or an IP address') : '';
+  const commentError = form.comment.length > 120 ? t('admin.ops.walledGarden.commentError', 'At most 120 characters') : '';
   const invalid = !host || Boolean(hostError || commentError);
 
   return (
@@ -364,17 +363,17 @@ function RuleDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5 text-primary" />
-              {rule ? 'Edit Walled Garden Rule' : 'Add Walled Garden Host'}
+              {rule ? t('admin.ops.walledGarden.editTitle', 'Edit Walled Garden Rule') : t('admin.ops.walledGarden.addTitle', 'Add Walled Garden Host')}
             </DialogTitle>
-            <DialogDescription>Guests can reach allowed hosts before logging in to the hotspot.</DialogDescription>
+            <DialogDescription>{t('admin.ops.walledGarden.dialogDesc', 'Guests can reach allowed hosts before logging in to the hotspot.')}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="space-y-1.5">
-              <Label htmlFor="wg-host">Destination Host *</Label>
+              <Label htmlFor="wg-host">{t('admin.ops.walledGarden.hostLabel', 'Destination Host *')}</Label>
               <Input
                 id="wg-host"
-                placeholder="e.g. *.bkash.com"
+                placeholder={t('admin.ops.walledGarden.hostPlaceholder', 'e.g. *.bkash.com')}
                 value={form.dstHost}
                 onChange={(e) => set({ dstHost: e.target.value })}
                 className="font-mono"
@@ -386,13 +385,13 @@ function RuleDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="wg-action">Action</Label>
-                <Select value={form.action} onValueChange={(v) => v && set({ action: v as RuleInput['action'] })} items={[...ACTIONS]}>
+                <Label htmlFor="wg-action">{t('admin.ops.walledGarden.colAction', 'Action')}</Label>
+                <Select value={form.action} onValueChange={(v) => v && set({ action: v as RuleInput['action'] })} items={actions}>
                   <SelectTrigger id="wg-action" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ACTIONS.map((a) => (
+                    {actions.map((a) => (
                       <SelectItem key={a.value} value={a.value}>
                         {a.label}
                       </SelectItem>
@@ -401,16 +400,16 @@ function RuleDialog({
                 </Select>
               </div>
               <label className="flex items-end justify-between gap-3 pb-1.5">
-                <span className="text-sm font-medium">Enabled</span>
+                <span className="text-sm font-medium">{t('admin.ops.walledGarden.enabled', 'Enabled')}</span>
                 <Switch checked={form.enabled} onCheckedChange={(checked) => set({ enabled: Boolean(checked) })} />
               </label>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="wg-desc">Comment</Label>
+              <Label htmlFor="wg-desc">{t('admin.ops.walledGarden.colComment', 'Comment')}</Label>
               <Input
                 id="wg-desc"
-                placeholder="Optional, e.g. payment gateway checkout"
+                placeholder={t('admin.ops.walledGarden.commentPlaceholder', 'Optional, e.g. payment gateway checkout')}
                 value={form.comment}
                 onChange={(e) => set({ comment: e.target.value })}
                 aria-invalid={Boolean(commentError)}
@@ -421,11 +420,11 @@ function RuleDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" disabled={invalid || pending}>
               {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {rule ? 'Save Rule' : 'Add Rule'}
+              {rule ? t('admin.ops.walledGarden.saveRule', 'Save Rule') : t('admin.ops.walledGarden.addRuleBtn', 'Add Rule')}
             </Button>
           </DialogFooter>
         </form>

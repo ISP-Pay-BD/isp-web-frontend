@@ -40,14 +40,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { handleApiError } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import { useDeleteCatalogItem, useMobilePlans, useSaveCatalogItem } from '../hooks/use-catalog';
 import type { MobilePlan } from '../catalog.types';
 
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const CARD_PAGE_SIZE = 12;
 
-const perGb = (p: MobilePlan) => (p.dataGb > 0 ? `৳${(p.price / p.dataGb).toFixed(2)}/GB` : 'Voice only');
+type Translate = ReturnType<typeof useTranslations>;
+
+const perGb = (t: Translate, p: MobilePlan) =>
+  p.dataGb > 0 ? `৳${(p.price / p.dataGb).toFixed(2)}/GB` : t('admin.ops.mobilePlans.voiceOnly', 'Voice only');
 
 interface PlanForm {
   name: string;
@@ -70,6 +75,7 @@ const toForm = (p?: MobilePlan | null): PlanForm => ({
 });
 
 function PlanFormDialog({ plan, open, onOpenChange }: { plan: MobilePlan | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useTranslations();
   const save = useSaveCatalogItem('mobile-plans');
   const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<PlanForm>({ defaultValues: toForm(plan) });
   useEffect(() => {
@@ -92,7 +98,7 @@ function PlanFormDialog({ plan, open, onOpenChange }: { plan: MobilePlan | null;
       },
       {
         onSuccess: () => {
-          toast.success(plan ? 'Plan updated' : `Plan "${v.name}" created`);
+          toast.success(plan ? t('admin.ops.mobilePlans.updated', 'Plan updated') : t('admin.ops.mobilePlans.created', 'Plan "{name}" created', { name: v.name }));
           onOpenChange(false);
         },
         onError: (err) => handleApiError(err, setError),
@@ -111,9 +117,9 @@ function PlanFormDialog({ plan, open, onOpenChange }: { plan: MobilePlan | null;
         min={0}
         step={step}
         className="h-9 text-xs font-mono"
-        {...register(name, required ? { required: `${label} is required` } : {})}
+        {...register(name, required ? { required: t('admin.ops.mobilePlans.fieldRequired', '{field} is required', { field: label }) } : {})}
       />
-      {errors[name] && <p className="text-[11px] text-destructive">{String(errors[name]?.message)}</p>}
+      {errors[name] && <p className="text-xs text-destructive">{String(errors[name]?.message)}</p>}
     </div>
   );
 
@@ -121,37 +127,37 @@ function PlanFormDialog({ plan, open, onOpenChange }: { plan: MobilePlan | null;
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary" /> {plan ? 'Edit Mobile Plan' : 'Create Mobile Plan'}</DialogTitle>
-          <DialogDescription className="text-xs">Operator bundle with data quota, voice minutes, validity and price.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2"><Plus className="h-5 w-5 text-primary" /> {plan ? t('admin.ops.mobilePlans.editTitle', 'Edit Mobile Plan') : t('admin.ops.mobilePlans.createTitle', 'Create Mobile Plan')}</DialogTitle>
+          <DialogDescription className="text-xs">{t('admin.ops.mobilePlans.formDesc', 'Operator bundle with data quota, voice minutes, validity and price.')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="plan-name" className="text-xs font-semibold text-muted-foreground">Plan Title *</Label>
-              <Input id="plan-name" className="h-9 text-xs" {...register('name', { required: 'Title is required' })} />
-              {errors.name && <p className="text-[11px] text-destructive">{errors.name.message}</p>}
+              <Label htmlFor="plan-name" className="text-xs font-semibold text-muted-foreground">{t('admin.ops.mobilePlans.fieldTitle', 'Plan Title *')}</Label>
+              <Input id="plan-name" className="h-9 text-xs" {...register('name', { required: t('admin.ops.mobilePlans.titleRequired', 'Title is required') })} />
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="plan-operator" className="text-xs font-semibold text-muted-foreground">Operator *</Label>
-              <Input id="plan-operator" className="h-9 text-xs" {...register('operator', { required: 'Operator is required' })} />
-              {errors.operator && <p className="text-[11px] text-destructive">{errors.operator.message}</p>}
+              <Label htmlFor="plan-operator" className="text-xs font-semibold text-muted-foreground">{t('admin.ops.mobilePlans.fieldOperator', 'Operator *')}</Label>
+              <Input id="plan-operator" className="h-9 text-xs" {...register('operator', { required: t('admin.ops.mobilePlans.operatorRequired', 'Operator is required') })} />
+              {errors.operator && <p className="text-xs text-destructive">{errors.operator.message}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {num('data_gb', 'Data (GB)', false, '0.01')}
-            {num('minutes', 'Voice Minutes')}
+            {num('data_gb', t('admin.ops.mobilePlans.fieldData', 'Data (GB)'), false, '0.01')}
+            {num('minutes', t('admin.ops.mobilePlans.fieldMinutes', 'Voice Minutes'))}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {num('validity_days', 'Validity (Days)', true)}
-            {num('price', 'Price (BDT)', true, '0.01')}
+            {num('validity_days', t('admin.ops.mobilePlans.fieldValidity', 'Validity (Days)'), true)}
+            {num('price', t('admin.ops.mobilePlans.fieldPrice', 'Price (BDT)'), true, '0.01')}
           </div>
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
             <input type="checkbox" className="rounded border-border text-primary focus:ring-primary" {...register('active')} />
-            Active — offered for sale
+            {t('admin.ops.mobilePlans.fieldActive', 'Active — offered for sale')}
           </label>
           <div className="flex justify-end gap-2 pt-4 border-t border-border/60">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="text-xs">Cancel</Button>
-            <Button type="submit" disabled={save.isPending} className="text-xs font-semibold">{plan ? 'Save Changes' : 'Create Mobile Plan'}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="text-xs">{t('common.cancel', 'Cancel')}</Button>
+            <Button type="submit" disabled={save.isPending} className="text-xs font-semibold">{plan ? t('admin.ops.mobilePlans.saveChanges', 'Save Changes') : t('admin.ops.mobilePlans.createTitle', 'Create Mobile Plan')}</Button>
           </div>
         </form>
       </DialogContent>
@@ -160,6 +166,7 @@ function PlanFormDialog({ plan, open, onOpenChange }: { plan: MobilePlan | null;
 }
 
 export function MobilePlansPage() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -168,11 +175,11 @@ export function MobilePlansPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearch(searchInput.trim());
       setPage(1);
     }, 300); // debounce server search
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [searchInput]);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useMobilePlans({
@@ -206,7 +213,11 @@ export function MobilePlansPage() {
       { id: p.id, body: { active: !p.active } },
       {
         onSuccess: () => {
-          toast.success(`Plan "${p.name}" ${p.active ? 'disabled' : 'activated'}`);
+          toast.success(
+            p.active
+              ? t('admin.ops.mobilePlans.disabledToast', 'Plan "{name}" disabled', { name: p.name })
+              : t('admin.ops.mobilePlans.activatedToast', 'Plan "{name}" activated', { name: p.name }),
+          );
           setSelectedPlan(null);
         },
         onError: (err) => handleApiError(err),
@@ -223,31 +234,31 @@ export function MobilePlansPage() {
 
   if (isLoading) return <CardGridSkeleton />;
   if (isError || !stats) {
-    return <EmptyState title="Failed to load mobile plans" description={error?.message} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.mobilePlans.loadFailed', 'Failed to load mobile plans')} description={error?.message} actionLabel={t('common.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   const kpis = [
-    { label: 'Total Plans', value: stats.total, icon: Smartphone, tone: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-    { label: 'Active Catalog', value: stats.active, icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-    { label: 'Max Data Cap', value: `${stats.maxDataGb} GB`, icon: Signal, tone: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-    { label: 'Avg. Tariff', value: `৳${Math.round(stats.avgPrice).toLocaleString()}`, icon: DollarSign, tone: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { label: t('admin.ops.mobilePlans.kpiTotal', 'Total Plans'), value: formatCount(stats.total), icon: Smartphone, tone: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+    { label: t('admin.ops.mobilePlans.kpiActive', 'Active Catalog'), value: formatCount(stats.active), icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { label: t('admin.ops.mobilePlans.kpiMaxData', 'Max Data Cap'), value: `${stats.maxDataGb} GB`, icon: Signal, tone: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    { label: t('admin.ops.mobilePlans.kpiAvg', 'Avg. Tariff'), value: `${formatBdtWithSymbol(Math.round(stats.avgPrice))}`, icon: DollarSign, tone: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   ];
 
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        title="Mobile Plans"
-        subtitle="Operator data and voice bundles you sell: quota, minutes, validity and price."
+        title={t('admin.ops.mobilePlans.title', 'Mobile Plans')}
+        subtitle={t('admin.ops.mobilePlans.subtitle', 'Operator data and voice bundles you sell: quota, minutes, validity and price.')}
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Mobile Plans' }]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => refetch()} className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5">
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Refresh
+              {t('admin.ops.mobilePlans.refresh', 'Refresh')}
             </Button>
             <Button size="sm" onClick={() => openForm(null)} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm text-xs h-9 gap-1.5">
               <Plus className="h-4 w-4" />
-              New Plan
+              {t('admin.ops.mobilePlans.newPlan', 'New Plan')}
             </Button>
           </div>
         }
@@ -261,7 +272,7 @@ export function MobilePlansPage() {
                 <k.icon className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{k.label}</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{k.label}</p>
                 <h3 className="text-xl font-bold font-mono text-foreground">{k.value}</h3>
               </div>
             </CardContent>
@@ -274,48 +285,48 @@ export function MobilePlansPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search plans by name or operator..."
+              placeholder={t('admin.ops.mobilePlans.search', 'Search plans by name or operator...')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-9 h-9 text-xs bg-background/80"
             />
             {searchInput && (
-              <button onClick={() => setSearchInput('')} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground" aria-label="Clear search">
+              <button onClick={() => setSearchInput('')} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground" aria-label={t('common.table.clearSearch', 'Clear search')}>
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Select value={operator} onValueChange={(v) => { setOperator(v ? String(v) : 'all'); setPage(1); }}>
-              <SelectTrigger className="w-[150px] h-9 text-xs bg-background/80 border-border/80">
-                <SelectValue>{(v: string | null) => (v && v !== 'all' ? v : 'All Operators')}</SelectValue>
+              <SelectTrigger aria-label={t('admin.ops.mobilePlans.filterOperator', 'Filter by operator')} className="min-w-[150px] h-9 text-xs bg-background/80 border-border/80">
+                <SelectValue>{(v: string | null) => (v && v !== 'all' ? v : t('admin.ops.mobilePlans.allOperators', 'All Operators'))}</SelectValue>
               </SelectTrigger>
               <SelectContent className="text-xs">
-                <SelectItem value="all">All Operators</SelectItem>
+                <SelectItem value="all">{t('admin.ops.mobilePlans.allOperators', 'All Operators')}</SelectItem>
                 {stats.operators.map((o) => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={validity} onValueChange={(v) => { setValidity(v ? String(v) : 'all'); setPage(1); }}>
-              <SelectTrigger className="w-[150px] h-9 text-xs bg-background/80 border-border/80">
-                <SelectValue>{(v: string | null) => (v && v !== 'all' ? `${v} Days` : 'All Validities')}</SelectValue>
+              <SelectTrigger aria-label={t('admin.ops.mobilePlans.filterValidity', 'Filter by validity')} className="min-w-[150px] h-9 text-xs bg-background/80 border-border/80">
+                <SelectValue>{(v: string | null) => (v && v !== 'all' ? t('admin.ops.mobilePlans.days', '{n} Days', { n: v }) : t('admin.ops.mobilePlans.allValidities', 'All Validities'))}</SelectValue>
               </SelectTrigger>
               <SelectContent className="text-xs">
-                <SelectItem value="all">All Validities</SelectItem>
+                <SelectItem value="all">{t('admin.ops.mobilePlans.allValidities', 'All Validities')}</SelectItem>
                 {stats.validities.map((d) => (
-                  <SelectItem key={d} value={String(d)}>{d} Days</SelectItem>
+                  <SelectItem key={d} value={String(d)}>{t('admin.ops.mobilePlans.days', '{n} Days', { n: d })}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter((v as StatusFilter) || 'all'); setPage(1); }}>
-              <SelectTrigger className="w-[140px] h-9 text-xs bg-background/80 border-border/80">
-                <SelectValue>{(v: string | null) => (v === 'active' ? 'Active Only' : v === 'inactive' ? 'Disabled Only' : 'All Status')}</SelectValue>
+              <SelectTrigger aria-label={t('admin.ops.mobilePlans.filterStatus', 'Filter by status')} className="min-w-[140px] h-9 text-xs bg-background/80 border-border/80">
+                <SelectValue>{(v: string | null) => (v === 'active' ? t('admin.ops.mobilePlans.activeOnly', 'Active Only') : v === 'inactive' ? t('admin.ops.mobilePlans.disabledOnly', 'Disabled Only') : t('admin.ops.mobilePlans.allStatus', 'All Status'))}</SelectValue>
               </SelectTrigger>
               <SelectContent className="text-xs">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active Only</SelectItem>
-                <SelectItem value="inactive">Disabled Only</SelectItem>
+                <SelectItem value="all">{t('admin.ops.mobilePlans.allStatus', 'All Status')}</SelectItem>
+                <SelectItem value="active">{t('admin.ops.mobilePlans.activeOnly', 'Active Only')}</SelectItem>
+                <SelectItem value="inactive">{t('admin.ops.mobilePlans.disabledOnly', 'Disabled Only')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -325,9 +336,9 @@ export function MobilePlansPage() {
       {plans.length === 0 ? (
         <EmptyState
           icon={<Smartphone className="h-10 w-10 text-muted-foreground" />}
-          title={search || operator !== 'all' || validity !== 'all' || statusFilter !== 'all' ? 'No mobile plans match' : 'No mobile plans yet'}
-          description="Create a plan, or reset the filters."
-          actionLabel="Reset Filters"
+          title={search || operator !== 'all' || validity !== 'all' || statusFilter !== 'all' ? t('admin.ops.mobilePlans.noMatch', 'No mobile plans match') : t('admin.ops.mobilePlans.empty', 'No mobile plans yet')}
+          description={t('admin.ops.mobilePlans.emptyDesc', 'Create a plan, or reset the filters.')}
+          actionLabel={t('admin.ops.mobilePlans.resetFilters', 'Reset Filters')}
           onAction={resetFilters}
         />
       ) : (
@@ -349,61 +360,58 @@ export function MobilePlansPage() {
                   <div className="flex items-center gap-1.5">
                     <Badge
                       variant="outline"
-                      className={cn(
-                        'text-[10px] font-semibold px-2 py-0.5',
-                        plan.active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border/60',
-                      )}
+                      tone={plan.active ? 'success' : 'neutral'} className="text-xs font-semibold px-2 py-0.5"
                     >
-                      {plan.active ? 'Active' : 'Disabled'}
+                      {plan.active ? t('status.active', 'Active') : t('status.disabled', 'Disabled')}
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         onClick={(e) => e.stopPropagation()}
                         className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-none"
-                        aria-label="Plan actions"
+                        aria-label={t('admin.ops.mobilePlans.planActions', 'Plan actions')}
                       >
                         <MoreVertical className="h-4 w-4" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="text-xs">
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedPlan(plan); }}>
-                          <Eye className="h-3.5 w-3.5 mr-2" /> Inspect Details
+                          <Eye className="h-3.5 w-3.5 mr-2" /> {t('admin.ops.mobilePlans.inspectDetails', 'Inspect Details')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openForm(plan); }}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> {t('common.edit', 'Edit')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleStatus(plan); }}>
-                          <Sliders className="h-3.5 w-3.5 mr-2" /> {plan.active ? 'Disable' : 'Activate'}
+                          <Sliders className="h-3.5 w-3.5 mr-2" /> {plan.active ? t('admin.ops.mobilePlans.disable', 'Disable') : t('admin.ops.mobilePlans.activate', 'Activate')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-rose-400" onClick={(e) => { e.stopPropagation(); setDeleting(plan); }}>
-                          <X className="h-3.5 w-3.5 mr-2" /> Delete
+                          <X className="h-3.5 w-3.5 mr-2" /> {t('common.delete', 'Delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 </div>
                 <div>
-                  <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">{plan.operator}</span>
+                  <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">{plan.operator}</span>
                   <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{plan.name}</h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/50 text-center">
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">Data</p>
+                    <p className="text-xs text-muted-foreground uppercase">{t('admin.ops.mobilePlans.cardData', 'Data')}</p>
                     <p className="text-sm font-bold font-mono text-primary">{plan.dataGb} GB</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">Minutes</p>
-                    <p className="text-sm font-bold font-mono text-foreground">{plan.minutes}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{t('admin.ops.mobilePlans.cardMinutes', 'Minutes')}</p>
+                    <p className="text-sm font-bold font-mono text-foreground">{formatCount(plan.minutes)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">Validity</p>
-                    <p className="text-sm font-bold font-mono text-foreground">{plan.validityDays}d</p>
+                    <p className="text-xs text-muted-foreground uppercase">{t('admin.ops.mobilePlans.cardValidity', 'Validity')}</p>
+                    <p className="text-sm font-bold font-mono text-foreground">{t('admin.ops.mobilePlans.daysShort', '{n}d', { n: formatCount(plan.validityDays) })}</p>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-border/50 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-muted-foreground">{perGb(plan)}</span>
-                    <p className="text-lg font-bold font-mono text-foreground">৳{plan.price.toLocaleString()}</p>
+                    <span className="text-xs text-muted-foreground">{perGb(t, plan)}</span>
+                    <p className="text-lg font-bold font-mono text-foreground">{formatBdtWithSymbol(plan.price)}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -414,7 +422,7 @@ export function MobilePlansPage() {
                       setSelectedPlan(plan);
                     }}
                   >
-                    Inspect <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                    {t('admin.ops.mobilePlans.inspect', 'Inspect')} <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </Button>
                 </div>
               </div>
@@ -439,24 +447,24 @@ export function MobilePlansPage() {
             <div className="space-y-6">
               <SheetHeader>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="font-mono text-[10px] bg-primary/10 text-primary border-primary/20">{selectedPlan.operator}</Badge>
+                  <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">{selectedPlan.operator}</Badge>
                   <Badge
                     variant="outline"
-                    className={cn('text-[10px]', selectedPlan.active ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-muted text-muted-foreground border-border/60')}
+                    tone={selectedPlan.active ? 'success' : 'neutral'} className="text-xs"
                   >
-                    {selectedPlan.active ? 'Active' : 'Disabled'}
+                    {selectedPlan.active ? t('status.active', 'Active') : t('status.disabled', 'Disabled')}
                   </Badge>
                 </div>
                 <SheetTitle className="text-xl font-bold text-foreground">{selectedPlan.name}</SheetTitle>
-                <SheetDescription className="text-xs text-muted-foreground">Plan #{selectedPlan.id}</SheetDescription>
+                <SheetDescription className="text-xs text-muted-foreground">{t('admin.ops.mobilePlans.planNo', 'Plan #{id}', { id: selectedPlan.id })}</SheetDescription>
               </SheetHeader>
               <Card className="border border-border/70 bg-muted/20 p-4 space-y-3">
                 {[
-                  ['Data Quota', `${selectedPlan.dataGb} GB`],
-                  ['Voice Minutes', String(selectedPlan.minutes)],
-                  ['Validity', `${selectedPlan.validityDays} days`],
-                  ['Price', `৳${selectedPlan.price.toLocaleString()}`],
-                  ['Effective Rate', perGb(selectedPlan)],
+                  [t('admin.ops.mobilePlans.detailQuota', 'Data Quota'), `${selectedPlan.dataGb} GB`],
+                  [t('admin.ops.mobilePlans.fieldMinutes', 'Voice Minutes'), formatCount(selectedPlan.minutes)],
+                  [t('admin.ops.mobilePlans.cardValidity', 'Validity'), t('admin.ops.mobilePlans.daysLower', '{n} days', { n: formatCount(selectedPlan.validityDays) })],
+                  [t('admin.ops.mobilePlans.detailPrice', 'Price'), `${formatBdtWithSymbol(selectedPlan.price)}`],
+                  [t('admin.ops.mobilePlans.detailRate', 'Effective Rate'), perGb(t, selectedPlan)],
                 ].map(([label, value]) => (
                   <div key={label} className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">{label}</span>
@@ -466,7 +474,7 @@ export function MobilePlansPage() {
               </Card>
               <div className="pt-4 flex gap-2">
                 <Button className="flex-1 font-semibold text-xs" disabled={save.isPending} onClick={() => toggleStatus(selectedPlan)}>
-                  {selectedPlan.active ? 'Disable Plan' : 'Activate Plan'}
+                  {selectedPlan.active ? t('admin.ops.mobilePlans.disablePlan', 'Disable Plan') : t('admin.ops.mobilePlans.activatePlan', 'Activate Plan')}
                 </Button>
                 <Button
                   variant="outline"
@@ -476,9 +484,9 @@ export function MobilePlansPage() {
                     setSelectedPlan(null);
                   }}
                 >
-                  Edit
+                  {t('common.edit', 'Edit')}
                 </Button>
-                <Button variant="outline" className="text-xs" onClick={() => setSelectedPlan(null)}>Close</Button>
+                <Button variant="outline" className="text-xs" onClick={() => setSelectedPlan(null)}>{t('common.close', 'Close')}</Button>
               </div>
             </div>
           )}
@@ -489,15 +497,15 @@ export function MobilePlansPage() {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title={`Delete ${deleting?.name ?? 'plan'}?`}
-        description="The plan is removed from the catalog."
-        confirmLabel="Delete"
+        title={t('admin.ops.mobilePlans.deleteTitle', 'Delete {name}?', { name: deleting?.name ?? t('admin.ops.mobilePlans.planFallback', 'plan') })}
+        description={t('admin.ops.mobilePlans.deleteDesc', 'The plan is removed from the catalog.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() =>
           deleting &&
           remove.mutate(deleting.id, {
             onSuccess: () => {
-              toast.success('Plan deleted');
+              toast.success(t('admin.ops.mobilePlans.deleted', 'Plan deleted'));
               setDeleting(null);
             },
           })

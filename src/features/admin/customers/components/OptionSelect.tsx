@@ -9,6 +9,7 @@ export interface OptionItem {
 }
 
 interface OptionSelectProps {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   options: OptionItem[];
@@ -23,11 +24,11 @@ interface OptionSelectProps {
  * Select over API-loaded options (ids as values). Passes `items` so the
  * trigger shows the option label, not the raw id.
  */
-export function OptionSelect({ value, onChange, options, placeholder, className, icon, disabled, invalid }: OptionSelectProps) {
+export function OptionSelect({ id, value, onChange, options, placeholder, className, icon, disabled, invalid }: OptionSelectProps) {
   const items = Object.fromEntries(options.map((o) => [o.value, o.label]));
   return (
     <Select value={value || null} onValueChange={(v) => onChange(v ? String(v) : '')} items={items} disabled={disabled}>
-      <SelectTrigger className={className} aria-invalid={invalid || undefined}>
+      <SelectTrigger id={id} className={className} aria-invalid={invalid || undefined}>
         {icon}
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 
@@ -137,11 +138,16 @@ export function useNocSummary() {
 
 export function useSaveNocIncident() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: async ({ id, body }: { id?: string; body: Record<string, unknown> }) =>
       mapIncident(id ? await http.put<unknown>(`/v1/network-ops/noc/incidents/${id}`, body) : await http.post<unknown>('/v1/network-ops/noc/incidents', body)),
     onSuccess: (i, { id }) => {
-      toast.success(id ? `${i.kind === 'maintenance' ? 'Maintenance' : 'Incident'} updated` : `${i.kind === 'maintenance' ? 'Maintenance window' : 'Incident'} created`);
+      if (i.kind === 'maintenance') {
+        toast.success(id ? t('admin.ops.noc.toast.maintenanceUpdated', 'Maintenance updated') : t('admin.ops.noc.toast.maintenanceCreated', 'Maintenance window created'));
+      } else {
+        toast.success(id ? t('admin.ops.noc.toast.incidentUpdated', 'Incident updated') : t('admin.ops.noc.toast.incidentCreated', 'Incident created'));
+      }
       qc.invalidateQueries({ queryKey: nocKeys.all });
     },
   });
@@ -149,10 +155,11 @@ export function useSaveNocIncident() {
 
 export function useDeleteNocIncident() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: (id: string) => http.delete<unknown>(`/v1/network-ops/noc/incidents/${id}`),
     onSuccess: () => {
-      toast.success('Deleted');
+      toast.success(t('admin.ops.noc.toast.deleted', 'Deleted'));
       qc.invalidateQueries({ queryKey: nocKeys.all });
     },
   });

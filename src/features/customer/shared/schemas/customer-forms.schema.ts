@@ -35,7 +35,7 @@ export const TICKET_PRIORITIES = ['low', 'medium', 'high'] as const;
 export const createTicketSchema = z.object({
   category: z.enum(TICKET_CATEGORIES, { message: 'Please select an issue category' }),
   priority: z.enum(TICKET_PRIORITIES),
-  subject: z.string().trim().min(5, 'Subject must be at least 5 characters').max(120),
+  subject: z.string().trim().min(5, 'Subject must be at least 5 characters').max(120, 'Subject can be at most 120 characters'),
   message: z.string().trim().min(10, 'Message body must be at least 10 characters'),
 });
 

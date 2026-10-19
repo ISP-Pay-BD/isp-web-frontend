@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { packagesApi } from '../api/packages.api';
 import type { PackageFormValues } from '../schemas/package.schema';
 
@@ -22,18 +23,19 @@ export function usePackageSummary() {
 /** Package writes; the form maps validation errors itself (meta.silent). */
 export function usePackageMutations() {
   const qc = useQueryClient();
+  const t = useTranslations();
   const refresh = (message: string) => () => {
     qc.invalidateQueries({ queryKey: PACKAGES });
     qc.invalidateQueries({ queryKey: ['admin', 'options', 'packages'] });
     toast.success(message);
   };
   return {
-    create: useMutation({ mutationFn: (v: PackageFormValues) => packagesApi.create(v), meta: { silent: true }, onSuccess: refresh('Package created') }),
+    create: useMutation({ mutationFn: (v: PackageFormValues) => packagesApi.create(v), meta: { silent: true }, onSuccess: refresh(t('admin.packages.toast.created', 'Package created')) }),
     update: useMutation({
       mutationFn: (v: { id: string; values: PackageFormValues }) => packagesApi.update(v.id, v.values),
       meta: { silent: true },
-      onSuccess: refresh('Package updated'),
+      onSuccess: refresh(t('admin.packages.toast.updated', 'Package updated')),
     }),
-    remove: useMutation({ mutationFn: (id: string) => packagesApi.remove(id), onSuccess: refresh('Package deleted') }),
+    remove: useMutation({ mutationFn: (id: string) => packagesApi.remove(id), onSuccess: refresh(t('admin.packages.toast.deleted', 'Package deleted')) }),
   };
 }

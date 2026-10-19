@@ -1,7 +1,10 @@
+'use client';
+
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 
 export interface BreadcrumbItem {
   label: string;
@@ -25,6 +28,11 @@ function crumbHref(item: BreadcrumbItem): string | undefined {
   return item.href ?? item.url;
 }
 
+/** `common.crumb.<slug>` holds the Bangla for the breadcrumb words shared by many pages; others stay as written. */
+function crumbSlug(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
 export function PageHeader({
   title,
   subtitle,
@@ -34,15 +42,17 @@ export function PageHeader({
   children,
   className,
 }: PageHeaderProps) {
+  const t = useTranslations();
   const crumbs = breadcrumb ?? breadcrumbs ?? [];
 
   return (
     <div className={cn('mb-7 space-y-2.5', className)}>
       {crumbs.length > 0 ? (
-        <nav aria-label="Breadcrumb" className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <nav aria-label={t('common.pageHeader.breadcrumb', 'Breadcrumb')} className="text-muted-foreground flex items-center gap-1.5 text-xs">
           {crumbs.map((item, idx) => {
             const href = crumbHref(item);
             const isLast = idx === crumbs.length - 1;
+            const label = t(`common.crumb.${crumbSlug(item.label)}`, item.label);
             return (
               <span key={`${item.label}-${idx}`} className="flex items-center gap-1.5">
                 {idx > 0 ? <ChevronRight className="h-3 w-3 opacity-60" /> : null}
@@ -51,11 +61,11 @@ export function PageHeader({
                     href={href}
                     className="hover:text-foreground transition-colors duration-200 ease-out"
                   >
-                    {item.label}
+                    {label}
                   </Link>
                 ) : (
                   <span className={isLast ? 'text-foreground font-medium' : undefined}>
-                    {item.label}
+                    {label}
                   </span>
                 )}
               </span>

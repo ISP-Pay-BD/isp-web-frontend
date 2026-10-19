@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { PageContent, PageHero } from '@/components/motion/PageHero';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface BreadcrumbItem {
   label: string;
@@ -21,17 +22,20 @@ interface CustomerPageShellProps {
 export function CustomerPageShell({
   title,
   subtitle,
-  breadcrumbs = [{ label: 'Customer', href: '/customer/dashboard' }],
+  breadcrumbs,
   actions,
   children,
 }: CustomerPageShellProps) {
+  const t = useTranslations();
+  const crumbs = breadcrumbs ?? [{ label: t('customer.common.crumb', 'Customer'), href: '/customer/dashboard' }];
+
   return (
     <div className="w-full flex flex-col gap-6 pb-16 md:pb-8">
       <PageHero className="border-border/40 flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-1.5">
-          {breadcrumbs.length > 0 && (
-            <nav aria-label="Breadcrumb" className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
-              {breadcrumbs.map((bc, idx) => (
+          {crumbs.length > 0 && (
+            <nav aria-label={t('customer.common.breadcrumb', 'Breadcrumb')} className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs">
+              {crumbs.map((bc, idx) => (
                 <span key={`${bc.label}-${idx}`} className="flex items-center gap-1.5">
                   {idx > 0 && <ChevronRight className="h-3 w-3 opacity-50" />}
                   {bc.href ? (

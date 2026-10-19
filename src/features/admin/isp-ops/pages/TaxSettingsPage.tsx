@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   fmtStamp,
   useSaveTaxConfig,
@@ -45,11 +46,6 @@ import {
   type TaxConfig,
   type TaxMode,
 } from '../hooks/use-billing-config';
-
-const MODE_ITEMS: Record<TaxMode, string> = {
-  exclusive: 'Exclusive — added on top of the price',
-  inclusive: 'Inclusive — already in the price',
-};
 
 interface FormState {
   enabled: boolean;
@@ -61,21 +57,30 @@ interface FormState {
   registrationNumber: string;
 }
 
-const toForm = (t: TaxConfig): FormState => ({
-  enabled: t.enabled,
-  label: t.label,
-  ratePercent: String(t.ratePercent),
-  mode: t.mode,
-  binNumber: t.binNumber ?? '',
-  tinNumber: t.tinNumber ?? '',
-  registrationNumber: t.registrationNumber ?? '',
+const toForm = (cfg: TaxConfig): FormState => ({
+  enabled: cfg.enabled,
+  label: cfg.label,
+  ratePercent: String(cfg.ratePercent),
+  mode: cfg.mode,
+  binNumber: cfg.binNumber ?? '',
+  tinNumber: cfg.tinNumber ?? '',
+  registrationNumber: cfg.registrationNumber ?? '',
 });
 
 export function TaxSettingsPage() {
+  const t = useTranslations();
   const { data: tax, isLoading, isError, error, refetch } = useTaxConfig();
   const save = useSaveTaxConfig();
   const [form, setForm] = useState<FormState | null>(null);
   const [calcBase, setCalcBase] = useState('');
+
+  const modeItems = useMemo<Record<TaxMode, string>>(
+    () => ({
+      exclusive: t('admin.ops.tax.modeExclusiveLong', 'Exclusive — added on top of the price'),
+      inclusive: t('admin.ops.tax.modeInclusiveLong', 'Inclusive — already in the price'),
+    }),
+    [t],
+  );
 
   const calc = useMemo(() => {
     const base = Number(calcBase) || 0;
@@ -92,7 +97,14 @@ export function TaxSettingsPage() {
     if (!tax) return;
     save.mutate(
       { ...toTaxInput(toForm(tax)), enabled: !tax.enabled },
-      { onSuccess: (t) => toast.success(`${t.label} ${t.enabled ? 'enabled' : 'disabled'}`) },
+      {
+        onSuccess: (saved) =>
+          toast.success(
+            saved.enabled
+              ? t('admin.ops.tax.toastEnabled', '{label} enabled', { label: saved.label })
+              : t('admin.ops.tax.toastDisabled', '{label} disabled', { label: saved.label }),
+          ),
+      },
     );
   };
 
@@ -101,7 +113,7 @@ export function TaxSettingsPage() {
     if (!form) return;
     save.mutate(toTaxInput(form), {
       onSuccess: () => {
-        toast.success('Tax settings saved');
+        toast.success(t('admin.ops.tax.saved', 'Tax settings saved'));
         setForm(null);
       },
     });
@@ -110,10 +122,10 @@ export function TaxSettingsPage() {
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError || !tax) {
     return (
-      <EmptyState
-        title="Failed to load tax settings"
-        description={errorMessage(error, 'Could not load the tax configuration.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.ops.tax.loadFailed', 'Failed to load tax settings')}
+        description={errorMessage(error, t('admin.ops.tax.loadFailedDesc', 'Could not load the tax configuration.'))}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -122,23 +134,23 @@ export function TaxSettingsPage() {
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
   const registration = tax.binNumber ?? tax.tinNumber ?? tax.registrationNumber;
   const rows: { label: string; value: React.ReactNode }[] = [
-    { label: 'Tax label', value: tax.label },
-    { label: 'Rate', value: `${tax.ratePercent}%` },
-    { label: 'Calculation', value: MODE_ITEMS[tax.mode] },
+    { label: t('admin.ops.tax.rowLabel', 'Tax label'), value: tax.label },
+    { label: t('admin.ops.tax.rowRate', 'Rate'), value: `${tax.ratePercent}%` },
+    { label: t('admin.ops.tax.rowCalculation', 'Calculation'), value: modeItems[tax.mode] },
     { label: 'BIN', value: tax.binNumber ?? '—' },
     { label: 'TIN', value: tax.tinNumber ?? '—' },
-    { label: 'Registration no.', value: tax.registrationNumber ?? '—' },
+    { label: t('admin.ops.tax.rowRegistration', 'Registration no.'), value: tax.registrationNumber ?? '—' },
   ];
 
   return (
     <div className="space-y-6 w-full pb-20">
       <PageHeader
-        title="Tax & VAT Settings"
-        subtitle="Your VAT rate, how it is applied to prices, and the registration numbers printed on invoices."
+        title={t('admin.ops.tax.title', 'Tax & VAT Settings')}
+        subtitle={t('admin.ops.tax.subtitle', 'Your VAT rate, how it is applied to prices, and the registration numbers printed on invoices.')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Billing' },
-          { label: 'Tax / VAT' },
+          { label: t('common.crumb.admin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.billing', 'Billing') },
+          { label: t('admin.ops.tax.crumb', 'Tax / VAT') },
         ]}
         actions={
           <Button
@@ -146,7 +158,7 @@ export function TaxSettingsPage() {
             onClick={() => setForm(toForm(tax))}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 gap-1.5 shadow-sm"
           >
-            <Sliders className="h-3.5 w-3.5" /> Edit Settings
+            <Sliders className="h-3.5 w-3.5" /> {t('admin.ops.tax.editSettings', 'Edit Settings')}
           </Button>
         }
       />
@@ -154,7 +166,7 @@ export function TaxSettingsPage() {
       {!tax.configured && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          Tax is not configured yet. Edit the settings to set your VAT rate and registration numbers.
+          {t('admin.ops.tax.notConfigured', 'Tax is not configured yet. Edit the settings to set your VAT rate and registration numbers.')}
         </div>
       )}
 
@@ -162,7 +174,7 @@ export function TaxSettingsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-primary/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.customers.list.statusLabel', 'Status')}</span>
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <ShieldCheck className="h-4 w-4" />
             </div>
@@ -180,15 +192,17 @@ export function TaxSettingsPage() {
               )}
             >
               {tax.enabled ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-              {tax.enabled ? 'Enabled' : 'Disabled'}
+              {tax.enabled ? t('status.enabled', 'Enabled') : t('status.disabled', 'Disabled')}
             </button>
           </div>
-          <div className="mt-2 text-[11px] text-muted-foreground">Click to {tax.enabled ? 'disable' : 'enable'}</div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            {tax.enabled ? t('admin.ops.tax.clickDisable', 'Click to disable') : t('admin.ops.tax.clickEnable', 'Click to enable')}
+          </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{tax.label} Rate</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.ops.tax.kpiRate', '{label} Rate', { label: tax.label })}</span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
               <Percent className="h-4 w-4" />
             </div>
@@ -202,31 +216,39 @@ export function TaxSettingsPage() {
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-sky-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Calculation</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.ops.tax.rowCalculation', 'Calculation')}</span>
             <div className="p-2 rounded-lg bg-sky-500/10 text-sky-500">
               <Building2 className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl font-bold tracking-tight text-sky-600 dark:text-sky-400 capitalize">{tax.mode}</span>
+            <span className="text-xl font-bold tracking-tight text-sky-600 dark:text-sky-400 capitalize">
+              {tax.mode === 'inclusive' ? t('admin.ops.tax.modeInclusive', 'Inclusive') : t('admin.ops.tax.modeExclusive', 'Exclusive')}
+            </span>
           </div>
-          <div className="mt-2 text-[11px] text-muted-foreground">
-            {tax.mode === 'inclusive' ? 'Already included in prices' : 'Added on top of prices'}
+          <div className="mt-2 text-xs text-muted-foreground">
+            {tax.mode === 'inclusive' ? t('admin.ops.tax.modeInclusiveHint', 'Already included in prices') : t('admin.ops.tax.modeExclusiveHint', 'Added on top of prices')}
           </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-amber-500/40 transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registration</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.ops.tax.kpiRegistration', 'Registration')}</span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
               <FileCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-sm font-bold tracking-tight text-foreground font-mono truncate">{registration ?? 'Not set'}</span>
+            <span className="text-sm font-bold tracking-tight text-foreground font-mono truncate">{registration ?? t('admin.ops.tax.notSet', 'Not set')}</span>
           </div>
-          <div className="mt-2 text-[11px] text-muted-foreground">
-            {tax.binNumber ? 'BIN' : tax.tinNumber ? 'TIN' : tax.registrationNumber ? 'Registration no.' : 'Add BIN / TIN in settings'}
+          <div className="mt-2 text-xs text-muted-foreground">
+            {tax.binNumber
+              ? 'BIN'
+              : tax.tinNumber
+                ? 'TIN'
+                : tax.registrationNumber
+                  ? t('admin.ops.tax.rowRegistration', 'Registration no.')
+                  : t('admin.ops.tax.addBin', 'Add BIN / TIN in settings')}
           </div>
         </Card>
       </div>
@@ -236,22 +258,22 @@ export function TaxSettingsPage() {
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Calculator className="h-4 w-4 text-primary" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{tax.label} Calculator</h3>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-border/80">
-              Uses your saved settings
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">{t('admin.ops.tax.calculator', '{label} Calculator', { label: tax.label })}</h3>
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 border-border/80">
+              {t('admin.ops.tax.usesSaved', 'Uses your saved settings')}
             </Badge>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
             <div>
-              <label htmlFor="tax-base" className="text-[11px] font-medium text-muted-foreground block mb-1">
-                {tax.mode === 'inclusive' ? 'Price incl. tax (BDT)' : 'Price before tax (BDT)'}
+              <label htmlFor="tax-base" className="text-xs font-medium text-muted-foreground block mb-1">
+                {tax.mode === 'inclusive' ? t('admin.ops.tax.priceIncl', 'Price incl. tax (BDT)') : t('admin.ops.tax.priceExcl', 'Price before tax (BDT)')}
               </label>
               <Input
                 id="tax-base"
                 type="number"
                 min={0}
-                placeholder="Enter an amount"
+                placeholder={t('admin.ops.tax.enterAmount', 'Enter an amount')}
                 value={calcBase}
                 onChange={(e) => setCalcBase(e.target.value)}
                 className="h-9 text-xs font-mono font-bold"
@@ -259,19 +281,19 @@ export function TaxSettingsPage() {
             </div>
 
             <div className="bg-muted/30 p-3 rounded-lg border border-border/60">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Net of tax</span>
+              <span className="text-xs text-muted-foreground uppercase font-semibold">{t('admin.ops.tax.netOfTax', 'Net of tax')}</span>
               <p className="text-lg font-bold text-foreground font-mono tabular-nums">{formatBdtWithSymbol(calc.net)}</p>
             </div>
 
             <div className="bg-muted/30 p-3 rounded-lg border border-border/60">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                {tax.label} {tax.enabled ? `(${tax.ratePercent}%)` : '(disabled)'}
+              <span className="text-xs text-muted-foreground uppercase font-semibold">
+                {tax.label} {tax.enabled ? `(${tax.ratePercent}%)` : `(${t('admin.ops.tax.disabledShort', 'disabled')})`}
               </span>
               <p className="text-lg font-bold text-foreground font-mono tabular-nums">{formatBdtWithSymbol(calc.vat)}</p>
             </div>
 
             <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
-              <span className="text-[10px] text-primary uppercase font-semibold">Customer pays</span>
+              <span className="text-xs text-primary uppercase font-semibold">{t('admin.ops.tax.customerPays', 'Customer pays')}</span>
               <p className="text-lg font-bold text-primary font-mono tabular-nums">{formatBdtWithSymbol(calc.gross)}</p>
             </div>
           </div>
@@ -283,17 +305,17 @@ export function TaxSettingsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                <th className="py-3 px-4">Setting</th>
-                <th className="py-3 px-3">Value</th>
-                <th className="py-3 px-3 text-right">Actions</th>
+              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold text-xs uppercase tracking-wider">
+                <th className="py-3 px-4">{t('admin.ops.tax.colSetting', 'Setting')}</th>
+                <th className="py-3 px-3">{t('admin.ops.tax.colValue', 'Value')}</th>
+                <th className="py-3 px-3 text-right">{t('common.actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {rows.map((row) => (
                 <tr key={row.label} className="hover:bg-muted/30 transition-colors">
                   <td className="py-3.5 px-4 font-bold text-foreground text-sm">{row.label}</td>
-                  <td className="py-3.5 px-3 font-mono text-foreground">{row.value}</td>
+                  <td className="py-3.5 px-3 font-mono text-foreground break-words">{row.value}</td>
                   <td className="py-3.5 px-3 text-right">
                     <Button
                       variant="ghost"
@@ -301,7 +323,7 @@ export function TaxSettingsPage() {
                       onClick={() => setForm(toForm(tax))}
                       className="h-8 px-2 text-xs font-medium text-primary hover:bg-primary/10 gap-1"
                     >
-                      <Sliders className="h-3.5 w-3.5" /> Edit
+                      <Sliders className="h-3.5 w-3.5" /> {t('common.edit', 'Edit')}
                     </Button>
                   </td>
                 </tr>
@@ -310,9 +332,10 @@ export function TaxSettingsPage() {
           </table>
         </div>
         {tax.updatedAt && (
-          <div className="border-t border-border/60 px-4 py-2.5 text-[11px] text-muted-foreground">
-            Last saved {fmtStamp(tax.updatedAt)}
-            {tax.updatedByName ? ` by ${tax.updatedByName}` : ''}
+          <div className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
+            {tax.updatedByName
+              ? t('admin.ops.tax.lastSavedBy', 'Last saved {when} by {name}', { when: fmtStamp(tax.updatedAt), name: tax.updatedByName })
+              : t('admin.ops.tax.lastSaved', 'Last saved {when}', { when: fmtStamp(tax.updatedAt) })}
           </div>
         )}
       </Card>
@@ -323,9 +346,9 @@ export function TaxSettingsPage() {
           {form && (
             <>
               <SheetHeader>
-                <SheetTitle className="text-xl font-bold text-foreground">Tax Settings</SheetTitle>
+                <SheetTitle className="text-xl font-bold text-foreground">{t('admin.ops.tax.sheetTitle', 'Tax Settings')}</SheetTitle>
                 <SheetDescription className="text-xs text-muted-foreground">
-                  One tax configuration for your whole account.
+                  {t('admin.ops.tax.sheetDesc', 'One tax configuration for your whole account.')}
                 </SheetDescription>
               </SheetHeader>
 
@@ -333,16 +356,16 @@ export function TaxSettingsPage() {
                 <Card className="p-4 border-border/80 bg-muted/20">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-foreground">Charge tax</p>
-                      <p className="text-[11px] text-muted-foreground">Apply this tax to customer bills</p>
+                      <p className="font-semibold text-foreground">{t('admin.ops.tax.chargeTax', 'Charge tax')}</p>
+                      <p className="text-xs text-muted-foreground">{t('admin.ops.tax.chargeTaxHint', 'Apply this tax to customer bills')}</p>
                     </div>
-                    <Switch checked={form.enabled} onCheckedChange={(v) => set('enabled', Boolean(v))} />
+                    <Switch aria-label={t('admin.ops.tax.chargeTax', 'Charge tax')} checked={form.enabled} onCheckedChange={(v) => set('enabled', Boolean(v))} />
                   </div>
                 </Card>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label htmlFor="tax-label" className="font-semibold text-foreground">Label</label>
+                    <label htmlFor="tax-label" className="font-semibold text-foreground">{t('admin.ops.tax.fieldLabel', 'Label')}</label>
                     <Input
                       id="tax-label"
                       required
@@ -353,7 +376,7 @@ export function TaxSettingsPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label htmlFor="tax-rate" className="font-semibold text-foreground">Rate (%)</label>
+                    <label htmlFor="tax-rate" className="font-semibold text-foreground">{t('admin.ops.tax.fieldRate', 'Rate (%)')}</label>
                     <Input
                       id="tax-rate"
                       type="number"
@@ -369,15 +392,15 @@ export function TaxSettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="tax-mode" className="font-semibold text-foreground">Calculation</label>
-                  <Select items={MODE_ITEMS} value={form.mode} onValueChange={(v) => v && set('mode', v as TaxMode)}>
+                  <label htmlFor="tax-mode" className="font-semibold text-foreground">{t('admin.ops.tax.rowCalculation', 'Calculation')}</label>
+                  <Select items={modeItems} value={form.mode} onValueChange={(v) => v && set('mode', v as TaxMode)}>
                     <SelectTrigger id="tax-mode" className="h-9 text-xs w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(MODE_ITEMS) as TaxMode[]).map((m) => (
+                      {(Object.keys(modeItems) as TaxMode[]).map((m) => (
                         <SelectItem key={m} value={m}>
-                          {MODE_ITEMS[m]}
+                          {modeItems[m]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -386,9 +409,9 @@ export function TaxSettingsPage() {
 
                 {(
                   [
-                    ['binNumber', 'BIN (VAT registration)'],
+                    ['binNumber', t('admin.ops.tax.fieldBin', 'BIN (VAT registration)')],
                     ['tinNumber', 'TIN'],
-                    ['registrationNumber', 'Other registration no.'],
+                    ['registrationNumber', t('admin.ops.tax.fieldOther', 'Other registration no.')],
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key} className="space-y-1">
@@ -409,7 +432,7 @@ export function TaxSettingsPage() {
                     disabled={save.isPending}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 font-semibold"
                   >
-                    {save.isPending ? 'Saving…' : 'Save Tax Settings'}
+                    {save.isPending ? t('admin.ops.tax.saving', 'Saving…') : t('admin.ops.tax.saveSettings', 'Save Tax Settings')}
                   </Button>
                   <Button
                     type="button"
@@ -417,7 +440,7 @@ export function TaxSettingsPage() {
                     onClick={() => setForm(null)}
                     className="w-full text-xs h-9 border-border/80 hover:bg-accent"
                   >
-                    Cancel
+                    {t('common.cancel', 'Cancel')}
                   </Button>
                 </div>
               </form>

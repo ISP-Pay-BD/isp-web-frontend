@@ -5,28 +5,16 @@ import { useMemo, useState } from 'react';
 import { CreditCard, Receipt } from 'lucide-react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { useCustomerPayments } from '../hooks/use-customer-payments';
-import type { CustomerPayment, CustomerPaymentStatus } from '@/lib/api/adapters/customer.adapter';
-import { formatBdtWithSymbol, formatDate } from '@/lib/format';
-
-const STATUS_LABEL: Record<CustomerPaymentStatus, string> = {
-  paid: 'Paid',
-  pending: 'Pending',
-  failed: 'Failed',
-  unknown: 'Unknown',
-};
-
-const STATUS_VARIANT: Record<CustomerPaymentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  paid: 'default',
-  pending: 'secondary',
-  failed: 'destructive',
-  unknown: 'outline',
-};
+import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
+import type { CustomerPayment } from '@/lib/api/adapters/customer.adapter';
+import { formatBdtWithSymbol, formatCount, formatDate } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 export function CustomerPaymentsPage() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const { data, isLoading, isError, error, refetch, isFetching } = useCustomerPayments({ page, perPage: pageSize });
@@ -35,7 +23,7 @@ export function CustomerPaymentsPage() {
     () => [
       {
         accessorKey: 'invoice',
-        header: 'Invoice No',
+        header: t('customer.payments.col.invoice', 'Invoice No'),
         size: 140,
         enableHiding: false,
         cell: ({ row }) => (
@@ -44,72 +32,80 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'paidAt',
-        header: 'Date',
+        header: t('customer.payments.col.date', 'Date'),
         size: 120,
-        cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.original.paidAt)}</span>,
+        cell: ({ row }) => <span className="text-muted-foreground max-md:text-foreground">{formatDate(row.original.paidAt)}</span>,
       },
       {
         accessorKey: 'amountBdt',
-        header: 'Amount',
+        header: t('customer.payments.col.amount', 'Amount'),
         size: 110,
-        cell: ({ row }) => <span className="font-bold">{formatBdtWithSymbol(row.original.amountBdt)}</span>,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <span className="font-bold tabular-nums max-md:text-lg">{formatBdtWithSymbol(row.original.amountBdt)}</span>
+        ),
       },
       {
         accessorKey: 'method',
-        header: 'Paid via',
+        header: t('customer.payments.col.method', 'Paid via'),
         size: 110,
         cell: ({ row }) =>
           row.original.method ? (
-            <span className="capitalize font-medium text-xs rounded-md bg-muted px-2 py-1">{row.original.method}</span>
+            <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium capitalize">{row.original.method}</span>
           ) : (
             <span className="text-muted-foreground">—</span>
           ),
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('customer.payments.col.status', 'Status'),
         size: 110,
-        cell: ({ row }) => (
-          <Badge variant={STATUS_VARIANT[row.original.status]} className="text-[11px]">
-            {STATUS_LABEL[row.original.status]}
-          </Badge>
-        ),
+        meta: { mobile: 'status' },
+        cell: ({ row }) => <PaymentStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'trxId',
-        header: 'TrxID',
+        header: t('customer.payments.col.trxId', 'TrxID'),
         size: 160,
         cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px] block">
+          <span className="font-mono text-xs break-all text-muted-foreground max-md:text-foreground md:block md:max-w-[200px] md:truncate">
             {row.original.trxId || '—'}
           </span>
         ),
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('customer.payments.col.actions', 'Actions')}</span>,
         size: 110,
         enableSorting: false,
         enableHiding: false,
+        meta: { mobile: 'actions' },
         cell: ({ row }) =>
           row.original.status === 'paid' ? (
-            <div className="flex justify-end">
-              <Link href={`/customer/payments/${row.original.id}/invoice`}>
-                <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
-                  <Receipt className="h-3.5 w-3.5" />
-                  Invoice
-                </Button>
-              </Link>
+            <div className="flex w-full justify-end">
+              <Button
+                variant="outline"
+                className="h-11 gap-2 max-md:w-full md:h-8"
+                aria-label={t('customer.payments.viewInvoice', 'View invoice {number}', {
+                  number: row.original.invoice || `#${row.original.id}`,
+                })}
+                render={<Link href={`/customer/payments/${row.original.id}/invoice`} />}
+              >
+                <Receipt className="h-4 w-4" />
+                {t('customer.payments.invoice', 'Invoice')}
+              </Button>
             </div>
           ) : null,
       },
     ],
-    [],
+    [t],
   );
+
+  const title = t('customer.payments.title', 'Payment history');
 
   if (isLoading) {
     return (
-      <CustomerPageShell title="My Payments" subtitle="Loading invoice and transaction history...">
+      <CustomerPageShell title={title} subtitle={t('customer.payments.loading', 'Loading your invoices and payment history…')}>
         <CustomerLoadingSkeleton variant="payments" />
       </CustomerPageShell>
     );
@@ -117,45 +113,55 @@ export function CustomerPaymentsPage() {
 
   if (isError || !data) {
     return (
-      <CustomerPageShell title="My Payments" subtitle="Billing & Invoice Center">
-        <CustomerErrorState message={error?.message || undefined} onRetry={() => refetch()} />
+      <CustomerPageShell title={title}>
+        <CustomerErrorState
+          message={
+            error?.message ||
+            t('customer.payments.loadError', 'Could not load your payment history. Check your connection and try again.')
+          }
+          onRetry={() => refetch()}
+        />
       </CustomerPageShell>
     );
   }
 
   return (
     <CustomerPageShell
-      title="Payment History"
-      subtitle="Your recharges, payment method TrxIDs, and invoices for settled payments."
+      title={title}
+      subtitle={t('customer.payments.subtitle', 'Your recharges, payment TrxIDs and invoices for settled payments.')}
       breadcrumbs={[
-        { label: 'Customer', href: '/customer/dashboard' },
-        { label: 'Payments' },
+        { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
+        { label: t('customer.nav.payments', 'Payments') },
       ]}
       actions={
-        <Link href="/customer/payments/pay">
-          <Button className="font-semibold shadow-sm gap-2">
-            <CreditCard className="h-4 w-4" />
-            Make a Payment
-          </Button>
-        </Link>
+        <Button className="h-11 w-full gap-2 font-semibold sm:h-9 sm:w-auto" render={<Link href="/customer/payments/pay" />}>
+          <CreditCard className="h-4 w-4" />
+          {t('customer.payments.makePayment', 'Pay bill')}
+        </Button>
       }
     >
       <div className="space-y-6">
         <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
           <p>
-            <span className="font-semibold tabular-nums">{data.meta.total}</span>{' '}
-            <span className="text-muted-foreground">payments on record</span>
+            <span className="text-muted-foreground">{t('customer.payments.countLabel', 'Payments on record')}</span>{' '}
+            <span className="font-semibold tabular-nums">{formatCount(data.meta.total)}</span>
           </p>
-          <p className="text-muted-foreground">Invoices are available once a payment is settled.</p>
+          <p className="text-muted-foreground">
+            {t('customer.payments.invoiceHint', 'Invoices are available once a payment is settled.')}
+          </p>
         </div>
 
         <DataTable
+          urlState
           columns={columns}
           data={data.items}
           isLoading={isFetching && data.items.length === 0}
           getRowId={(row) => row.id}
-          emptyTitle="No payments yet"
-          emptyDescription="Payments you make or submit for verification will appear here."
+          emptyTitle={t('customer.payments.emptyTitle', 'No payments yet')}
+          emptyDescription={t(
+            'customer.payments.emptyDescription',
+            'Payments you make or submit for verification will appear here.',
+          )}
           server={{
             page,
             pageSize,

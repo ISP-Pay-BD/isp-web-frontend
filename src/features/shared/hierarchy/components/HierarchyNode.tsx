@@ -6,34 +6,33 @@ import { Building2, ChevronDown, ChevronRight, Shield, Store, User } from 'lucid
 import { cn } from '@/lib/utils';
 import type { HierarchyFlowNodeData } from '../lib/layout';
 import type { HierarchyRole } from '../types';
+import { hierarchyRoleLabel } from '../lib/labels';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 const roleMeta: Record<
   HierarchyRole,
-  { label: string; icon: typeof Shield; tint: string; ring: string; bar: string }
+  { icon: typeof Shield; tint: string; ring: string; bar: string }
 > = {
   super_admin: {
-    label: 'Super Admin',
     icon: Shield,
     tint: 'bg-foreground/90 text-background dark:bg-foreground/20 dark:text-foreground',
     ring: 'border-foreground/25 dark:border-foreground/35',
     bar: 'bg-foreground dark:bg-foreground/80',
   },
   admin: {
-    label: 'Admin',
     icon: Building2,
     tint: 'bg-primary/15 text-primary',
     ring: 'border-primary/40 dark:border-primary/60',
     bar: 'bg-primary',
   },
   reseller: {
-    label: 'Reseller',
     icon: Store,
     tint: 'bg-muted text-foreground dark:bg-muted/80 dark:text-foreground',
     ring: 'border-border/80',
     bar: 'bg-muted-foreground/60',
   },
   customer: {
-    label: 'Customer',
     icon: User,
     tint: 'bg-muted text-muted-foreground',
     ring: 'border-border/70',
@@ -42,6 +41,7 @@ const roleMeta: Record<
 };
 
 function HierarchyNodeCard({ data }: NodeProps<Node<HierarchyFlowNodeData>>) {
+  const t = useTranslations();
   const meta = roleMeta[data.role];
   const Icon = meta.icon;
   const isLR = data.layout === 'LR';
@@ -75,8 +75,8 @@ function HierarchyNodeCard({ data }: NodeProps<Node<HierarchyFlowNodeData>>) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
-            <p className="text-muted-foreground text-[10px] font-medium tracking-wide">
-              {meta.label}
+            <p className="text-muted-foreground text-xs font-medium tracking-wide">
+              {hierarchyRoleLabel(t, data.role)}
             </p>
             {data.expandable ? (
               <span className="text-muted-foreground dark:text-zinc-400" aria-hidden>
@@ -90,12 +90,12 @@ function HierarchyNodeCard({ data }: NodeProps<Node<HierarchyFlowNodeData>>) {
           </div>
           <p className="text-foreground truncate text-sm font-semibold">{data.label}</p>
           {data.meta ? (
-            <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{data.meta}</p>
+            <p className="text-muted-foreground mt-0.5 truncate text-xs">{data.meta}</p>
           ) : null}
-          <div className="text-foreground/80 mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px]">
-            {data.childCount > 0 ? <span>{data.childCount} child</span> : null}
+          <div className="text-foreground/80 mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-xs">
+            {data.childCount > 0 ? <span>{t('shared.hierarchy.childCount', '{n} child', { n: formatCount(data.childCount) })}</span> : null}
             {data.descendantCount > 0 ? (
-              <span>{data.descendantCount.toLocaleString('en-BD')} below</span>
+              <span>{t('shared.hierarchy.belowCount', '{n} below', { n: formatCount(data.descendantCount) })}</span>
             ) : null}
           </div>
         </div>

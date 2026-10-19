@@ -10,6 +10,7 @@ export function applyServerErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>,
   keyMap: Record<string, string> = {},
+  fallbackMessage = 'Something went wrong. Please try again.',
 ): void {
   if (error instanceof ApiError && error.details && typeof error.details === 'object') {
     for (const [key, value] of Object.entries(error.details as Record<string, unknown>)) {
@@ -17,5 +18,5 @@ export function applyServerErrors<T extends FieldValues>(
       if (msg) setError((keyMap[key] ?? key) as Path<T>, { type: 'server', message: String(msg) });
     }
   }
-  toast.error(error instanceof Error && error.message ? error.message : 'Something went wrong. Please try again.');
+  toast.error(error instanceof Error && error.message ? error.message : fallbackMessage);
 }

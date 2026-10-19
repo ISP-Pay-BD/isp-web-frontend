@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth-store';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useDeployEngine,
   useEngineAction,
@@ -40,6 +42,7 @@ function statusVariant(status: EngineInstance['status'] | undefined): 'default' 
 }
 
 export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
+  const t = useTranslations();
   const router = useRouter();
   const { data: entry, isLoading, isError, error, refetch } = useEngineEntry(groupId);
 
@@ -53,25 +56,25 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
     return (
       <div className="space-y-5">
         <PageHeader
-          title="Engine"
+          title={t('admin.engines.hub.engine', 'Engine')}
           breadcrumb={[
-            { label: 'Dashboard', url: dashboard },
-            { label: 'Engines', url: enginesIndex },
+            { label: t('common.crumb.dashboard', 'Dashboard'), url: dashboard },
+            { label: t('common.crumb.engines', 'Engines'), url: enginesIndex },
             { label: groupId },
           ]}
         />
         {notFound ? (
           <EmptyState
-            title="This engine is not available"
+            title={t('admin.engines.hub.notAvailable', 'This engine is not available')}
             description={error?.message && error.message !== 'This engine is not available' ? error.message : undefined}
-            actionLabel="Back to engines"
+            actionLabel={t('admin.engines.hub.backToEngines', 'Back to engines')}
             onAction={() => router.push(enginesIndex)}
           />
         ) : (
-          <EmptyState
-            title="Failed to load engine"
+          <EmptyState variant="error"
+            title={t('admin.engines.hub.loadFailed', 'Failed to load engine')}
             description={error?.message}
-            actionLabel="Retry"
+            actionLabel={t('admin.customers.list.retry', 'Retry')}
             onAction={() => refetch()}
           />
         )}
@@ -85,8 +88,8 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
         title={entry.name}
         subtitle={entry.category}
         breadcrumb={[
-          { label: 'Dashboard', url: dashboard },
-          { label: 'Engines', url: enginesIndex },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: dashboard },
+          { label: t('common.crumb.engines', 'Engines'), url: enginesIndex },
           { label: entry.name },
         ]}
         actions={
@@ -94,7 +97,7 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
             href={enginesIndex}
             className="text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground"
           >
-            All engines
+            {t('admin.engines.hub.allEngines', 'All engines')}
           </Link>
         }
       />
@@ -102,36 +105,36 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
         <span>{entry.category}</span>
         <span className="text-border">·</span>
-        <span className="tabular-nums text-foreground">{enginePriceLabel(entry)}</span>
+        <span className="tabular-nums text-foreground">{enginePriceLabel(t, entry)}</span>
         {entry.priceType ? (
           <>
             <span className="text-border">·</span>
-            <span className="capitalize">{entry.priceType}</span>
+            <span className="capitalize">{t(`admin.engines.priceType.${entry.priceType.toLowerCase().replace(/[^a-z]+/g, '_')}`, entry.priceType)}</span>
           </>
         ) : null}
         <span className="text-border">·</span>
         {portal === 'platform' ? (
           <>
             <Badge variant={entry.published ? 'default' : 'outline'}>
-              {entry.published ? 'Published' : 'Unpublished'}
+              {entry.published ? t('admin.engines.index.statusPublished', 'Published') : t('admin.engines.index.statusUnpublished', 'Unpublished')}
             </Badge>
             {entry.instancesSummary ? (
               <>
                 <span className="text-border">·</span>
                 <span>
-                  <span className="font-semibold tabular-nums text-foreground">{entry.instancesSummary.enabled}</span>{' '}
-                  enabled
+                  <span className="font-semibold tabular-nums text-foreground">{formatCount(entry.instancesSummary.enabled)}</span>{' '}
+                  {t('admin.engines.index.enabled', 'enabled')}
                 </span>
                 <span className="text-border">·</span>
                 <span>
-                  <span className="font-semibold tabular-nums text-foreground">{entry.instancesSummary.disabled}</span>{' '}
-                  disabled
+                  <span className="font-semibold tabular-nums text-foreground">{formatCount(entry.instancesSummary.disabled)}</span>{' '}
+                  {t('admin.engines.hub.disabledCount', 'disabled')}
                 </span>
               </>
             ) : null}
           </>
         ) : (
-          <Badge variant={statusVariant(entry.instance?.status)}>{instanceStatusLabel(entry.instance)}</Badge>
+          <Badge variant={statusVariant(entry.instance?.status)}>{instanceStatusLabel(t, entry.instance)}</Badge>
         )}
       </div>
 
@@ -149,9 +152,9 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
           />
         ) : null}
         <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-tight">About this engine</h2>
+          <h2 className="text-base font-semibold tracking-tight">{t('admin.engines.hub.about', 'About this engine')}</h2>
           <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-            {entry.description || 'No description provided.'}
+            {entry.description || t('admin.engines.hub.noDescription', 'No description provided.')}
           </p>
         </div>
       </div>
@@ -164,6 +167,7 @@ export function EngineHubPage({ groupId, portal = 'admin' }: Props) {
 /* ---------------------------------------------------------------- admin portal */
 
 function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
+  const t = useTranslations();
   const role = useAuthStore((s) => s.user?.role);
   const canWrite = role === 'admin';
   const instance = entry.instance;
@@ -172,7 +176,7 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
   const busy = deploy.isPending || action.isPending;
 
   const enable = () => {
-    const done = () => toast.success(`${entry.name} enabled`);
+    const done = () => toast.success(t('admin.engines.hub.enabledToast', '{name} enabled', { name: entry.name }));
     if (!instance) deploy.mutate({ pluginId: entry.id }, { onSuccess: done });
     else action.mutate({ id: instance.id, action: 'enable' }, { onSuccess: done });
   };
@@ -181,7 +185,7 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
     if (!instance) return;
     action.mutate(
       { id: instance.id, action: 'disable' },
-      { onSuccess: () => toast.success(`${entry.name} disabled`) },
+      { onSuccess: () => toast.success(t('admin.engines.hub.disabledToast', '{name} disabled', { name: entry.name })) },
     );
   };
 
@@ -189,23 +193,23 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
     <div className="space-y-4 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold tracking-tight">Your ISP</h2>
+          <h2 className="text-base font-semibold tracking-tight">{t('admin.engines.hub.yourIsp', 'Your ISP')}</h2>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-muted-foreground">Status</dt>
+            <dt className="text-muted-foreground">{t('common.status', 'Status')}</dt>
             <dd>
-              <Badge variant={statusVariant(instance?.status)}>{instanceStatusLabel(instance)}</Badge>
+              <Badge variant={statusVariant(instance?.status)}>{instanceStatusLabel(t, instance)}</Badge>
             </dd>
             {instance ? (
               <>
-                <dt className="text-muted-foreground">Enabled at</dt>
+                <dt className="text-muted-foreground">{t('admin.engines.hub.enabledAt', 'Enabled at')}</dt>
                 <dd className="tabular-nums">{engineDate(instance.enabledAt)}</dd>
                 {instance.status === 'disabled' ? (
                   <>
-                    <dt className="text-muted-foreground">Disabled at</dt>
+                    <dt className="text-muted-foreground">{t('admin.engines.hub.disabledAt', 'Disabled at')}</dt>
                     <dd className="tabular-nums">{engineDate(instance.disabledAt)}</dd>
                   </>
                 ) : null}
-                <dt className="text-muted-foreground">Last updated</dt>
+                <dt className="text-muted-foreground">{t('admin.engines.hub.lastUpdated', 'Last updated')}</dt>
                 <dd className="tabular-nums">{engineDate(instance.updatedAt)}</dd>
               </>
             ) : null}
@@ -216,13 +220,13 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
           <div className="flex flex-wrap gap-2">
             {instance?.status === 'enabled' ? (
               <Button size="sm" variant="destructive" className="ui-press" disabled={busy} onClick={disable}>
-                {action.isPending && action.variables?.action === 'disable' ? 'Disabling…' : 'Disable'}
+                {action.isPending && action.variables?.action === 'disable' ? t('admin.engines.hub.disabling', 'Disabling…') : t('admin.engines.hub.disable', 'Disable')}
               </Button>
             ) : (
               <Button size="sm" className="ui-press" disabled={busy} onClick={enable}>
                 {deploy.isPending || (action.isPending && action.variables?.action === 'enable')
-                  ? 'Enabling…'
-                  : 'Enable'}
+                  ? t('admin.engines.hub.enabling', 'Enabling…')
+                  : t('admin.engines.hub.enable', 'Enable')}
               </Button>
             )}
           </div>
@@ -231,7 +235,7 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
 
       {!canWrite ? (
         <p className="text-xs text-muted-foreground">
-          Only the ISP admin account can enable, disable or configure engines.
+          {t('admin.engines.hub.adminOnly', 'Only the ISP admin account can enable, disable or configure engines.')}
         </p>
       ) : null}
 
@@ -245,20 +249,20 @@ function TenantInstancePanel({ entry }: { entry: EngineCatalogItem }) {
             onSave={(config) =>
               action.mutate(
                 { id: instance.id, action: 'configure', config },
-                { onSuccess: () => toast.success('Configuration saved') },
+                { onSuccess: () => toast.success(t('admin.engines.hub.configSaved', 'Configuration saved')) },
               )
             }
           />
         ) : (
           <div className="space-y-2">
-            <p className="text-sm font-medium">Configuration</p>
+            <p className="text-sm font-medium">{t('admin.engines.hub.configuration', 'Configuration')}</p>
             <pre className="max-h-64 overflow-auto rounded-lg border border-border/60 bg-muted/10 p-3 font-mono text-xs">
               {JSON.stringify(instance.config, null, 2)}
             </pre>
           </div>
         )
       ) : canWrite ? (
-        <p className="text-xs text-muted-foreground">Enable this engine to configure it.</p>
+        <p className="text-xs text-muted-foreground">{t('admin.engines.hub.enableToConfigure', 'Enable this engine to configure it.')}</p>
       ) : null}
     </div>
   );
@@ -275,6 +279,7 @@ function ConfigEditor({
   disabled: boolean;
   onSave: (config: Record<string, unknown>) => void;
 }) {
+  const t = useTranslations();
   const [text, setText] = useState(() => JSON.stringify(instance.config, null, 2));
   const [error, setError] = useState<string | null>(null);
 
@@ -283,15 +288,15 @@ function ConfigEditor({
     try {
       parsed = JSON.parse(text.trim() === '' ? '{}' : text);
     } catch {
-      setError('Configuration must be valid JSON.');
+      setError(t('admin.engines.hub.errJson', 'Configuration must be valid JSON.'));
       return;
     }
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      setError('Configuration must be a JSON object, e.g. { "key": "value" }.');
+      setError(t('admin.engines.hub.errObject', 'Configuration must be a JSON object, e.g. { "key": "value" }.'));
       return;
     }
     if (new Blob([JSON.stringify(parsed)]).size > CONFIG_MAX_BYTES) {
-      setError('Configuration must be 16 KB or smaller.');
+      setError(t('admin.engines.hub.errSize', 'Configuration must be 16 KB or smaller.'));
       return;
     }
     setError(null);
@@ -301,7 +306,7 @@ function ConfigEditor({
   return (
     <div className="space-y-2">
       <label htmlFor="engine-config" className="text-sm font-medium">
-        Configure
+        {t('admin.engines.hub.configure', 'Configure')}
       </label>
       <Textarea
         id="engine-config"
@@ -317,7 +322,7 @@ function ConfigEditor({
       />
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
       <Button size="sm" className="ui-press" disabled={disabled} onClick={save}>
-        {pending ? 'Saving…' : 'Save configuration'}
+        {pending ? t('admin.engines.hub.saving', 'Saving…') : t('admin.engines.hub.saveConfig', 'Save configuration')}
       </Button>
     </div>
   );
@@ -326,6 +331,7 @@ function ConfigEditor({
 /* ------------------------------------------------------------- platform portal */
 
 function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
+  const t = useTranslations();
   const role = useAuthStore((s) => s.user?.role);
   const canWrite = role === 'super_admin';
   const [page, setPage] = useState(1);
@@ -348,34 +354,34 @@ function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
   const columns: LegacyColumnDef<EngineInstance, unknown>[] = [
     {
       accessorKey: 'tenantName',
-      header: 'Tenant',
+      header: t('admin.engines.hub.colTenant', 'Tenant'),
       enableHiding: false,
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.tenantName || '—'}</div>
-          <div className="font-mono text-[11px] text-muted-foreground">#{row.original.tenantId}</div>
+          <div className="font-mono text-xs text-muted-foreground">#{row.original.tenantId}</div>
         </div>
       ),
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('common.status', 'Status'),
       cell: ({ row }) => (
         <Badge variant={statusVariant(row.original.status)} className="capitalize">
-          {row.original.status}
+          {instanceStatusLabel(t, row.original)}
         </Badge>
       ),
     },
     {
       accessorKey: 'enabledAt',
-      header: 'Enabled at',
+      header: t('admin.engines.hub.enabledAt', 'Enabled at'),
       cell: ({ row }) => (
         <span className="text-xs tabular-nums text-muted-foreground">{engineDate(row.original.enabledAt)}</span>
       ),
     },
     {
       accessorKey: 'updatedAt',
-      header: 'Updated',
+      header: t('admin.engines.hub.colUpdated', 'Updated'),
       cell: ({ row }) => (
         <span className="text-xs tabular-nums text-muted-foreground">{engineDate(row.original.updatedAt)}</span>
       ),
@@ -401,15 +407,22 @@ function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
               action.mutate(
                 { id: inst.id, action: next },
                 {
-                  onSuccess: () =>
+                  onSuccess: () => {
+                    const vars = {
+                      name: entry.name,
+                      tenant: inst.tenantName || t('admin.engines.hub.tenantNum', 'tenant #{id}', { id: inst.tenantId }),
+                    };
                     toast.success(
-                      `${entry.name} ${next === 'enable' ? 'enabled' : 'disabled'} for ${inst.tenantName || `tenant #${inst.tenantId}`}`,
-                    ),
+                      next === 'enable'
+                        ? t('admin.engines.hub.enabledFor', '{name} enabled for {tenant}', vars)
+                        : t('admin.engines.hub.disabledFor', '{name} disabled for {tenant}', vars),
+                    );
+                  },
                 },
               )
             }
           >
-            {rowPending ? 'Saving…' : next === 'enable' ? 'Enable' : 'Disable'}
+            {rowPending ? t('admin.engines.hub.saving', 'Saving…') : next === 'enable' ? t('admin.engines.hub.enable', 'Enable') : t('admin.engines.hub.disable', 'Disable')}
           </Button>
         );
       },
@@ -421,17 +434,17 @@ function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
       {canWrite ? <EnableForTenant entry={entry} /> : null}
 
       <div className="space-y-2">
-        <h2 className="text-base font-semibold tracking-tight">Tenant installs</h2>
+        <h2 className="text-base font-semibold tracking-tight">{t('admin.engines.hub.tenantInstalls', 'Tenant installs')}</h2>
         {isError ? (
-          <EmptyState title="Failed to load installs" actionLabel="Retry" onAction={() => refetch()} />
+          <EmptyState variant="error" title={t('admin.engines.hub.installsFailed', 'Failed to load installs')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
         ) : (
-          <DataTable
+          <DataTable urlState
             columns={columns}
             data={data?.items ?? []}
             isLoading={isLoading}
             getRowId={(row) => row.id}
-            emptyTitle={search ? 'No tenants match' : 'No tenant has enabled this engine yet'}
-            searchPlaceholder="Search tenants…"
+            emptyTitle={search ? t('admin.engines.hub.emptyFiltered', 'No tenants match') : t('admin.engines.hub.emptyNone', 'No tenant has enabled this engine yet')}
+            searchPlaceholder={t('admin.engines.hub.searchTenants', 'Search tenants…')}
             enableColumnVisibility={false}
             enableLayoutToggle={false}
             server={{
@@ -454,14 +467,15 @@ function PlatformInstancesPanel({ entry }: { entry: EngineCatalogItem }) {
 }
 
 function EnableForTenant({ entry }: { entry: EngineCatalogItem }) {
+  const t = useTranslations();
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [tenantId, setTenantId] = useState('');
   const deploy = useDeployEngine(entry.slug);
 
   useEffect(() => {
-    const t = setTimeout(() => setSearch(input.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setSearch(input.trim()), 300);
+    return () => clearTimeout(timer);
   }, [input]);
 
   const { data, isLoading, isError, isFetching, refetch } = useTenantAdminOptions(search);
@@ -474,7 +488,12 @@ function EnableForTenant({ entry }: { entry: EngineCatalogItem }) {
       { pluginId: entry.id, tenantId },
       {
         onSuccess: () => {
-          toast.success(`${entry.name} enabled for ${selected?.organizationName || selected?.name || `tenant #${tenantId}`}`);
+          toast.success(
+            t('admin.engines.hub.enabledFor', '{name} enabled for {tenant}', {
+              name: entry.name,
+              tenant: selected?.organizationName || selected?.name || t('admin.engines.hub.tenantNum', 'tenant #{id}', { id: tenantId }),
+            }),
+          );
           setTenantId('');
         },
       },
@@ -484,28 +503,28 @@ function EnableForTenant({ entry }: { entry: EngineCatalogItem }) {
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-card p-4 sm:p-5">
       <div>
-        <h2 className="text-base font-semibold tracking-tight">Enable for tenant</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Pick an ISP admin account to deploy this engine to.</p>
+        <h2 className="text-base font-semibold tracking-tight">{t('admin.engines.hub.enableForTenant', 'Enable for tenant')}</h2>
+        <p className="mt-1 text-xs text-muted-foreground">{t('admin.engines.hub.pickAdmin', 'Pick an ISP admin account to deploy this engine to.')}</p>
       </div>
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Search admins by name, email or phone…"
-          aria-label="Search tenant admins"
+          placeholder={t('admin.engines.hub.searchAdmins', 'Search admins by name, email or phone…')}
+          aria-label={t('admin.engines.hub.searchAdminsLabel', 'Search tenant admins')}
           className="h-8 text-xs md:max-w-xs"
         />
         <Select value={tenantId} onValueChange={(v) => setTenantId(v ?? '')}>
-          <SelectTrigger className="h-8 w-full text-xs md:w-72" disabled={isLoading || isError}>
+          <SelectTrigger aria-label={t('admin.engines.hub.colTenant', 'Tenant')} className="h-8 w-full text-xs md:w-72" disabled={isLoading || isError}>
             <SelectValue>
               {(v: string) =>
                 v
                   ? (selected?.organizationName || selected?.name || `#${v}`)
                   : isLoading || isFetching
-                    ? 'Loading admins…'
+                    ? t('admin.engines.hub.loadingAdmins', 'Loading admins…')
                     : options.length === 0
-                      ? 'No admins found'
-                      : 'Select tenant admin'
+                      ? t('admin.engines.hub.noAdmins', 'No admins found')
+                      : t('admin.engines.hub.selectAdmin', 'Select tenant admin')
               }
             </SelectValue>
           </SelectTrigger>
@@ -521,19 +540,19 @@ function EnableForTenant({ entry }: { entry: EngineCatalogItem }) {
           </SelectContent>
         </Select>
         <Button size="sm" className="ui-press" disabled={!tenantId || deploy.isPending} onClick={submit}>
-          {deploy.isPending ? 'Enabling…' : 'Enable for tenant'}
+          {deploy.isPending ? t('admin.engines.hub.enabling', 'Enabling…') : t('admin.engines.hub.enableForTenant', 'Enable for tenant')}
         </Button>
       </div>
       {isError ? (
         <p className="text-xs text-destructive">
-          Could not load tenant admins.{' '}
+          {t('admin.engines.hub.adminsFailed', 'Could not load tenant admins.')}{' '}
           <button type="button" className="underline" onClick={() => refetch()}>
-            Retry
+            {t('admin.customers.list.retry', 'Retry')}
           </button>
         </p>
       ) : data && data.total > options.length ? (
         <p className="text-xs text-muted-foreground">
-          Showing {options.length} of {data.total} — refine the search to find more.
+          {t('admin.engines.hub.showing', 'Showing {shown} of {total} — refine the search to find more.', { shown: formatCount(options.length), total: formatCount(data.total) })}
         </p>
       ) : null}
     </div>

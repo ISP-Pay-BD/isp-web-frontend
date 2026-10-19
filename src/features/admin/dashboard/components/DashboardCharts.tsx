@@ -21,10 +21,13 @@ import {
 import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import type { AdminDashboardResult } from '@/lib/api/adapters/admin.adapter';
 
-const bdt = (val: number) => `৳${val.toLocaleString()}`;
+import { formatBdtWithSymbol } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+const bdt = (val: number) => `${formatBdtWithSymbol(val)}`;
 const compactK = (v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : String(v));
 
 export function CollectionsTrendChart({ data }: { data: AdminDashboardResult['monthlyTrend'] }) {
+  const t = useTranslations();
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={data} margin={{ top: 20, right: 20, left: 10, bottom: 0 }}>
@@ -32,14 +35,15 @@ export function CollectionsTrendChart({ data }: { data: AdminDashboardResult['mo
         <XAxis dataKey="month" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} dy={10} />
         <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={compactK} tick={{ fill: 'hsl(var(--muted-foreground))' }} dx={-5} />
         <Tooltip content={<ChartTooltip formatter={(val: number) => bdt(val)} />} cursor={{ fill: 'rgba(56, 189, 248, 0.06)' }} />
-        <Bar dataKey="collected" name="Collected" fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={28} animationDuration={900} />
-        <Line type="monotone" dataKey="pending" name="Pending" stroke="#d97706" strokeWidth={2.5} dot={{ r: 4, fill: '#d97706', stroke: '#fff', strokeWidth: 2 }} />
+        <Bar dataKey="collected" name={t('admin.dashboard.collected', 'Collected')} fill="var(--primary)" radius={[4, 4, 0, 0]} barSize={28} animationDuration={900} />
+        <Line type="monotone" dataKey="pending" name={t('admin.dashboard.pending', 'Pending')} stroke="#d97706" strokeWidth={2.5} dot={{ r: 4, fill: '#d97706', stroke: '#fff', strokeWidth: 2 }} />
       </ComposedChart>
     </ResponsiveContainer>
   );
 }
 
 export function WeeklyCollectionsChart({ data }: { data: AdminDashboardResult['weeklyCollections'] }) {
+  const t = useTranslations();
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -53,13 +57,14 @@ export function WeeklyCollectionsChart({ data }: { data: AdminDashboardResult['w
         <XAxis dataKey="day" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: 'hsl(var(--muted-foreground))' }} dy={5} />
         <YAxis fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => `৳${compactK(v)}`} tick={{ fill: 'hsl(var(--muted-foreground))' }} dx={-5} />
         <Tooltip content={<ChartTooltip formatter={(val: number) => bdt(val)} />} cursor={{ fill: 'rgba(247, 88, 3, 0.08)' }} />
-        <Bar dataKey="amount" name="Collected" fill="url(#gradientBar)" radius={[6, 6, 0, 0]} animationDuration={900} maxBarSize={40} />
+        <Bar dataKey="amount" name={t('admin.dashboard.collected', 'Collected')} fill="url(#gradientBar)" radius={[6, 6, 0, 0]} animationDuration={900} maxBarSize={40} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
 export function PackageDonutChart({ data }: { data: AdminDashboardResult['packageDistribution'] }) {
+  const t = useTranslations();
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -68,7 +73,7 @@ export function PackageDonutChart({ data }: { data: AdminDashboardResult['packag
             <Cell key={entry.name} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip content={<ChartTooltip formatter={(val: number) => `${val} customers`} />} />
+        <Tooltip content={<ChartTooltip formatter={(val: number) => t('admin.dashboard.packages.customersCount', '{n} customers', { n: val })} />} />
       </PieChart>
     </ResponsiveContainer>
   );

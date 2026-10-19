@@ -1,4 +1,4 @@
-# 04 — Admin portal (A1–A6)
+# 04 — Admin portal (A1–A6) — ✅ implemented (A6 stays 'when touched')
 
 **145 screens**, used by tenant admins and resellers. The shared fixes (S1–S8) and the table work (T1–T4) cover most of this portal. This file covers what is specific to admin.
 
@@ -6,7 +6,7 @@ Module briefs exist for most modules (`src/features/admin/*/DESIGN_BRIEF.md`). W
 
 | ID | Fix | Effort |
 |---|---|---|
-| A1 | Sidebar: 65 items → 9 job groups, 2 duplicates removed (decision needed) | M |
+| A1 | Sidebar: 65 items → 9 job groups, collapsible | M |
 | A2 | Dashboard: KPI links, lakh format, error state | S |
 | A3 | Customers module goes first for T1/T2/T4 | M |
 | A4 | "Collect payment" pre-fills the customer | S |
@@ -19,7 +19,7 @@ Module briefs exist for most modules (`src/features/admin/*/DESIGN_BRIEF.md`). W
 
 **Today** ([`src/config/navigation/admin.ts`](../../src/config/navigation/admin.ts)): **65 top-level items** in 9 sections, and the sections can't be collapsed. Sidebar search and Pinned already exist and are good. Three problems:
 
-- **Two duplicates:** "Self Recharge" (Billing) and "Subscription" (System) both go to `/admin/subscription`. "My Payment" (Billing) and "Payment" (System) both go to `/admin/payment`.
+- **Two look-alike pairs:** "Self Recharge" / "Subscription" both go to `/admin/subscription`, and "My Payment" / "Payment" both go to `/admin/payment`. *(Correction found while implementing: they are not true duplicates — the "Self Recharge" and "My Payment" entries are `expiredOnly`, i.e. what an expired tenant sees instead of the normal entries. Both pairs were kept and now sit together in "Your Account".)*
 - **"System" holds 17 unrelated items**: plan and wallet, network (Movie Servers, Corporate Queues), security, and Profile.
 - **"Network" is both an item (under Operations) and a section.** "Billing" mixes packages with reseller bandwidth trading.
 
@@ -108,3 +108,16 @@ These page files are hard to change safely, and each mixes several jobs on one s
 | `accounting/chart-of-accounts/pages/ChartOfAccountsPage.tsx` | 631 |
 
 Forms: `DEFINITION-OF-DONE.md` §E asks for react-hook-form + Zod. About 43 files use it, and many screens still keep form fields in `useState`. Move a form to RHF + Zod when you touch that screen, not in one big sweep.
+
+
+---
+
+## What was built
+
+- **A1** `section` values in `src/config/navigation/admin.ts` regrouped into the nine groups of the table above (`adminSectionOrder` fixes their order); `PortalSidebar` folds groups (state remembered in `localStorage`, the group holding the current page is always open, everything opens while searching or when the rail is collapsed) and now highlights the **deepest** matching item (so `/admin/customers/12` marks "Customers", and `/admin/support/feedback` no longer marks both Support Tickets and Customer Feedback). Item ids, hrefs and permissions are unchanged. Labels and group names are translated (`nav.*`).
+- **A2** Dashboard: KPI links now land on filtered lists (`?status=active`, `?status=expired`), money uses lakh format (`৳48L`), failed load shows the error state, text ≥12px.
+- **A3** `AllCustomersPage` and `ExpiredCustomersPage` run on `DataTable` (phone cards, selection that survives paging, Columns menu), filters/search/page are in the URL, the name is a real link. New "Active" quick filter.
+- **A4** `NewCustomerPaymentPage` reads `?customerId=`, loads the customer and preselects it with the package fee; the back arrow returns to the customer.
+- **A5** `resellerId` filter in the customers API (`/v1/reseller/customers/{id}`) and a removable "Showing customers of reseller #…" chip.
+- **A6** Not a sweep. Pages that were converted (`ExpiredCustomersPage`, `AllCustomersPage`, HR, ledger…) shrank as a side effect; remaining large files are listed above.
+- **Extras:** keyboard shortcuts (`/` focuses search, `g` then `d/c/e/p/t/r` jumps, `?` lists them), "Live gateway" decoration and the always-on unread dot removed from the header (they were not backed by data), profile link fixed per portal.

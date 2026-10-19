@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { toast } from 'sonner';
 import {
@@ -56,12 +56,9 @@ import { OptionSelect } from '../shared/OptionSelect';
 import { FieldError, fieldError } from '../shared/form-utils';
 import { downloadCsv, fetchAllPages, todayYmd, useServerTable } from '../shared/table-utils';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const MENU = 'inventory_purchess';
-
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
-];
 
 type FormState =
   | { mode: 'create'; parentId?: string }
@@ -73,19 +70,20 @@ type DeleteState =
   | { kind: 'sub'; category: InventoryCategory; sub: InventorySubcategory };
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations();
   const active = status === 'active';
   return (
     <Badge
       variant="outline"
-      className={active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30' : 'bg-muted text-muted-foreground'}
+      tone={active ? 'success' : 'neutral'}
     >
-      {active ? 'Active' : 'Inactive'}
+      {active ? t('status.active', 'Active') : t('status.inactive', 'Inactive')}
     </Badge>
   );
 }
 
 export function InventoryCategoriesPage() {
-  const router = useRouter();
+  const t = useTranslations();
   const table = useServerTable();
   const query = useInventoryCategories({ page: table.page, pageSize: table.pageSize, search: table.search });
   const summary = useInventorySummary();
@@ -101,7 +99,7 @@ export function InventoryCategoriesPage() {
   // Keep the sub-category dialog in sync with refetched rows after edits.
   const subsCategory = subsSnapshot ? (page?.items.find((c) => c.id === subsSnapshot.id) ?? subsSnapshot) : null;
   const s = summary.data;
-  const kpi = (v: number | undefined) => (v === undefined ? '—' : v.toLocaleString());
+  const kpi = (v: number | undefined) => (v === undefined ? '—' : formatCount(v));
 
   const handleExportCsv = async () => {
     setExporting(true);
@@ -111,12 +109,18 @@ export function InventoryCategoriesPage() {
       );
       downloadCsv(
         `inventory_categories_${todayYmd()}.csv`,
-        ['Category', 'Status', 'Short Description', 'Items', 'Sub-categories'],
+        [
+          t('admin.inventory.categories.colCategory', 'Category'),
+          t('admin.inventory.categories.colStatus', 'Status'),
+          t('admin.inventory.categories.colDesc', 'Short Description'),
+          t('admin.inventory.categories.colItems', 'Items'),
+          t('admin.inventory.categories.colSubs', 'Sub-categories'),
+        ],
         rows.map((c) => [c.name, c.status, c.shortDescription, c.itemCount, c.subcategories.map((sc) => sc.name).join('; ')]),
       );
-      toast.success(`Exported ${rows.length} categories`);
+      toast.success(t('admin.inventory.categories.exported', 'Exported {n} categories', { n: rows.length }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+      toast.error(e instanceof Error ? e.message : t('admin.inventory.categories.exportFailed', 'Export failed'));
     } finally {
       setExporting(false);
     }
@@ -126,7 +130,7 @@ export function InventoryCategoriesPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Category',
+        header: t('admin.inventory.categories.colCategory', 'Category'),
         enableHiding: false,
         size: 240,
         cell: ({ row }) => (
@@ -140,7 +144,7 @@ export function InventoryCategoriesPage() {
       },
       {
         accessorKey: 'shortDescription',
-        header: 'Short Description',
+        header: t('admin.inventory.categories.colDesc', 'Short Description'),
         size: 260,
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground line-clamp-1">{row.original.shortDescription || '—'}</span>
@@ -148,23 +152,23 @@ export function InventoryCategoriesPage() {
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.inventory.categories.colStatus', 'Status'),
         size: 110,
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'itemCount',
-        header: 'Items',
+        header: t('admin.inventory.categories.colItems', 'Items'),
         size: 110,
         cell: ({ row }) => (
           <Badge variant="outline" className="bg-background font-mono tabular-nums font-semibold">
-            {row.original.itemCount} items
+            {t('admin.inventory.categories.itemsCount', '{n} items', { n: row.original.itemCount })}
           </Badge>
         ),
       },
       {
         id: 'subcategories',
-        header: 'Sub-categories',
+        header: t('admin.inventory.categories.colSubs', 'Sub-categories'),
         size: 140,
         cell: ({ row }) => {
           const count = row.original.subcategories.length;
@@ -188,29 +192,32 @@ export function InventoryCategoriesPage() {
           const cat = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger
+                aria-label={t('admin.inventory.common.rowActions', 'Row actions')}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel>Category Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => router.push(`/admin/inventory/items?category_id=${encodeURIComponent(cat.id)}`)}>
+                <DropdownMenuLabel>{t('admin.inventory.categories.actions', 'Category Actions')}</DropdownMenuLabel>
+                <DropdownMenuItem render={<Link href={`/admin/inventory/items?category_id=${encodeURIComponent(cat.id)}`} />}>
                   <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                  View Items
+                  {t('admin.inventory.categories.viewItems', 'View Items')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSubsSnapshot(cat)}>
                   <ListTree className="h-3.5 w-3.5 mr-2" />
-                  Sub-categories
+                  {t('admin.inventory.categories.colSubs', 'Sub-categories')}
                 </DropdownMenuItem>
                 <Can menu={MENU} action="create">
                   <DropdownMenuItem onClick={() => setForm({ mode: 'create', parentId: cat.id })}>
                     <Plus className="h-3.5 w-3.5 mr-2" />
-                    Add Sub-category
+                    {t('admin.inventory.categories.addSub', 'Add Sub-category')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="update">
                   <DropdownMenuItem onClick={() => setForm({ mode: 'edit', category: cat })}>
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Category
+                    {t('admin.inventory.categories.edit', 'Edit Category')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="delete">
@@ -220,7 +227,7 @@ export function InventoryCategoriesPage() {
                     onClick={() => setDeleting({ kind: 'category', category: cat })}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Category
+                    {t('admin.inventory.categories.delete', 'Delete Category')}
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
@@ -229,29 +236,29 @@ export function InventoryCategoriesPage() {
         },
       },
     ],
-    [router],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Inventory Categories"
-        subtitle="Classification groups and sub-categories for catalogue items."
+        title={t('admin.inventory.categories.title', 'Inventory Categories')}
+        subtitle={t('admin.inventory.categories.subtitle', 'Classification groups and sub-categories for catalogue items.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Inventory', href: '/admin/inventory/items' },
-          { label: 'Categories' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.inventory', 'Inventory'), href: '/admin/inventory/items' },
+          { label: t('admin.inventory.categories.crumb', 'Categories') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting} className="h-9">
               <Download className="mr-2 h-4 w-4" />
-              {exporting ? 'Exporting…' : 'Export CSV'}
+              {exporting ? t('admin.inventory.categories.exporting', 'Exporting…') : t('admin.inventory.categories.export', 'Export CSV')}
             </Button>
             <Can menu={MENU} action="create">
               <Button size="sm" onClick={() => setForm({ mode: 'create' })} className="h-9">
                 <Plus className="mr-2 h-4 w-4" />
-                Create Category
+                {t('admin.inventory.categories.create', 'Create Category')}
               </Button>
             </Can>
           </div>
@@ -260,18 +267,23 @@ export function InventoryCategoriesPage() {
 
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        <KpiTile label="Categories" icon={<Layers className="h-4 w-4 text-primary" />} value={kpi(s?.categoriesCount)} hint="Category groups defined" />
         <KpiTile
-          label="Sub-categories"
-          icon={<ListTree className="h-4 w-4 text-primary" />}
-          value={kpi(s?.subcategoriesCount)}
-          hint="Nested classifications"
+          label={t('admin.inventory.categories.kpiCategories', 'Categories')}
+          icon={<Layers className="h-4 w-4 text-primary" />}
+          value={kpi(s?.categoriesCount)}
+          hint={t('admin.inventory.categories.kpiCategoriesHint', 'Category groups defined')}
         />
         <KpiTile
-          label="Catalogue Items"
+          label={t('admin.inventory.categories.colSubs', 'Sub-categories')}
+          icon={<ListTree className="h-4 w-4 text-primary" />}
+          value={kpi(s?.subcategoriesCount)}
+          hint={t('admin.inventory.categories.kpiSubsHint', 'Nested classifications')}
+        />
+        <KpiTile
+          label={t('admin.inventory.categories.kpiItems', 'Catalogue Items')}
           icon={<Boxes className="h-4 w-4 text-emerald-500" />}
           value={kpi(s?.totalItems)}
-          hint="Items across all categories"
+          hint={t('admin.inventory.categories.kpiItemsHint', 'Items across all categories')}
           hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
         />
       </div>
@@ -282,18 +294,18 @@ export function InventoryCategoriesPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         isEmpty={!table.search && page?.meta.total === 0}
-        errorTitle="Failed to load categories"
-        emptyTitle="No categories yet"
-        emptyDescription="Create a category to start organising catalogue items."
+        errorTitle={t('admin.inventory.categories.loadFailed', 'Failed to load categories')}
+        emptyTitle={t('admin.inventory.categories.emptyNone', 'No categories yet')}
+        emptyDescription={t('admin.inventory.categories.emptyNoneHint', 'Create a category to start organising catalogue items.')}
         icon={<FolderTree className="h-5 w-5" />}
         rows={6}
       >
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={page?.items ?? []}
           getRowId={(r) => r.id}
-          searchPlaceholder="Search categories..."
-          emptyTitle="No categories match your search"
+          searchPlaceholder={t('admin.inventory.categories.search', 'Search categories...')}
+          emptyTitle={t('admin.inventory.categories.emptySearch', 'No categories match your search')}
           server={{
             page: table.page,
             pageSize: table.pageSize,
@@ -321,16 +333,19 @@ export function InventoryCategoriesPage() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <ListTree className="h-5 w-5 text-primary" />
-                  {subsCategory.name} — Sub-categories
+                  {t('admin.inventory.categories.subsOf', '{name} — Sub-categories', { name: subsCategory.name })}
                 </DialogTitle>
                 <DialogDescription>
-                  {subsCategory.subcategories.length} sub-categories · {subsCategory.itemCount} items in this category
+                  {t('admin.inventory.categories.subsSummary', '{subs} sub-categories · {items} items in this category', {
+                    subs: subsCategory.subcategories.length,
+                    items: subsCategory.itemCount,
+                  })}
                 </DialogDescription>
               </DialogHeader>
               <div className="max-h-[50vh] space-y-2 overflow-y-auto py-2">
                 {subsCategory.subcategories.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-border/70 px-4 py-6 text-center text-sm text-muted-foreground">
-                    No sub-categories yet.
+                    {t('admin.inventory.categories.noSubs', 'No sub-categories yet.')}
                   </p>
                 ) : (
                   subsCategory.subcategories.map((sub) => (
@@ -344,7 +359,8 @@ export function InventoryCategoriesPage() {
                           <StatusBadge status={sub.status} />
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-1">
-                          {sub.itemCount} items{sub.shortDescription ? ` · ${sub.shortDescription}` : ''}
+                          {t('admin.inventory.categories.itemsCount', '{n} items', { n: sub.itemCount })}
+                          {sub.shortDescription ? ` · ${sub.shortDescription}` : ''}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
@@ -354,7 +370,7 @@ export function InventoryCategoriesPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            aria-label={`Edit ${sub.name}`}
+                            aria-label={t('admin.inventory.categories.editSub', 'Edit {name}', { name: sub.name })}
                             onClick={() => {
                               setSubsSnapshot(null);
                               setForm({ mode: 'edit-sub', category: subsCategory, sub });
@@ -369,7 +385,7 @@ export function InventoryCategoriesPage() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 text-rose-500 hover:text-rose-500"
-                            aria-label={`Delete ${sub.name}`}
+                            aria-label={t('admin.inventory.categories.deleteSub', 'Delete {name}', { name: sub.name })}
                             onClick={() => {
                               setSubsSnapshot(null);
                               setDeleting({ kind: 'sub', category: subsCategory, sub });
@@ -385,7 +401,7 @@ export function InventoryCategoriesPage() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setSubsSnapshot(null)}>
-                  Close
+                  {t('common.close', 'Close')}
                 </Button>
                 <Can menu={MENU} action="create">
                   <Button
@@ -396,7 +412,7 @@ export function InventoryCategoriesPage() {
                     }}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Sub-category
+                    {t('admin.inventory.categories.addSub', 'Add Sub-category')}
                   </Button>
                 </Can>
               </DialogFooter>
@@ -408,15 +424,23 @@ export function InventoryCategoriesPage() {
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title={deleting?.kind === 'sub' ? 'Delete sub-category?' : 'Delete category?'}
+        title={deleting?.kind === 'sub' ? t('admin.inventory.categories.deleteSubTitle', 'Delete sub-category?') : t('admin.inventory.categories.deleteTitle', 'Delete category?')}
         description={
           deleting?.kind === 'sub'
-            ? `"${deleting.sub.name}" will be removed from ${deleting.category.name}. Sub-categories that still have items cannot be deleted.`
+            ? t(
+                'admin.inventory.categories.deleteSubDesc',
+                '"{name}" will be removed from {category}. Sub-categories that still have items cannot be deleted.',
+                { name: deleting.sub.name, category: deleting.category.name },
+              )
             : deleting
-              ? `"${deleting.category.name}" will be deleted. Categories that still have sub-categories cannot be deleted.`
+              ? t(
+                  'admin.inventory.categories.deleteDesc',
+                  '"{name}" will be deleted. Categories that still have sub-categories cannot be deleted.',
+                  { name: deleting.category.name },
+                )
               : undefined
         }
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleting) return;
@@ -424,11 +448,11 @@ export function InventoryCategoriesPage() {
           if (target.kind === 'sub') {
             deleteSub.mutate(
               { categoryId: target.category.id, index: target.sub.index },
-              { onSuccess: () => toast.success(`Sub-category "${target.sub.name}" deleted`) },
+              { onSuccess: () => toast.success(t('admin.inventory.categories.subDeleted', 'Sub-category "{name}" deleted', { name: target.sub.name })) },
             );
           } else {
             deleteCategory.mutate(target.category.id, {
-              onSuccess: () => toast.success(`Category "${target.category.name}" deleted`),
+              onSuccess: () => toast.success(t('admin.inventory.categories.deleted', 'Category "{name}" deleted', { name: target.category.name })),
             });
           }
           setDeleting(null);
@@ -439,6 +463,11 @@ export function InventoryCategoriesPage() {
 }
 
 function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void }) {
+  const t = useTranslations();
+  const statusOptions = [
+    { value: 'active', label: t('status.active', 'Active') },
+    { value: 'inactive', label: t('status.inactive', 'Inactive') },
+  ];
   const initial =
     state.mode === 'edit' ? state.category : state.mode === 'edit-sub' ? state.sub : null;
   const [name, setName] = useState(initial?.name ?? '');
@@ -458,17 +487,17 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
   const isSub = state.mode === 'edit-sub' || (state.mode === 'create' && parentId !== '');
   const title =
     state.mode === 'edit'
-      ? 'Edit Category'
+      ? t('admin.inventory.categories.edit', 'Edit Category')
       : state.mode === 'edit-sub'
-        ? 'Edit Sub-category'
+        ? t('admin.inventory.categories.editSubTitle', 'Edit Sub-category')
         : isSub
-          ? 'Create Sub-category'
-          : 'Create Inventory Category';
+          ? t('admin.inventory.categories.createSub', 'Create Sub-category')
+          : t('admin.inventory.categories.createTitle', 'Create Inventory Category');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 3) {
-      setLocalError('Name must be at least 3 characters');
+      setLocalError(t('admin.inventory.categories.nameMin', 'Name must be at least 3 characters'));
       return;
     }
     setLocalError(undefined);
@@ -484,14 +513,20 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
     if (state.mode === 'create') {
       create.mutate(
         { ...body, parent_id: idParam(parentId) },
-        { onSuccess: done(parentId ? `Sub-category "${body.name}" created` : `Category "${body.name}" created`) },
+        {
+          onSuccess: done(
+            parentId
+              ? t('admin.inventory.categories.subCreated', 'Sub-category "{name}" created', { name: body.name })
+              : t('admin.inventory.categories.created', 'Category "{name}" created', { name: body.name }),
+          ),
+        },
       );
     } else if (state.mode === 'edit') {
-      update.mutate({ id: state.category.id, body }, { onSuccess: done(`Category "${body.name}" updated`) });
+      update.mutate({ id: state.category.id, body }, { onSuccess: done(t('admin.inventory.categories.updated', 'Category "{name}" updated', { name: body.name })) });
     } else {
       updateSub.mutate(
         { categoryId: state.category.id, index: state.sub.index, body },
-        { onSuccess: done(`Sub-category "${body.name}" updated`) },
+        { onSuccess: done(t('admin.inventory.categories.subUpdated', 'Sub-category "{name}" updated', { name: body.name })) },
       );
     }
   };
@@ -505,21 +540,21 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
         </DialogTitle>
         <DialogDescription>
           {state.mode === 'edit-sub'
-            ? `Sub-category of ${state.category.name}.`
-            : 'Group catalogue items for filtering and reporting.'}
+            ? t('admin.inventory.categories.subOf', 'Sub-category of {name}.', { name: state.category.name })
+            : t('admin.inventory.categories.formDesc', 'Group catalogue items for filtering and reporting.')}
         </DialogDescription>
       </DialogHeader>
 
       <div className="grid gap-4 py-4">
         {state.mode === 'create' ? (
           <div className="space-y-1.5">
-            <Label htmlFor="cat-parent">Parent Category</Label>
+            <Label htmlFor="cat-parent">{t('admin.inventory.categories.parent', 'Parent Category')}</Label>
             <OptionSelect
               id="cat-parent"
               value={parentId}
               onChange={setParentId}
               options={parentOptions}
-              noneLabel="None — top-level category"
+              noneLabel={t('admin.inventory.categories.parentNone', 'None — top-level category')}
               disabled={allCategories.isLoading}
             />
             <FieldError message={fieldError(err, 'parent_id')} />
@@ -527,7 +562,7 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
         ) : null}
 
         <div className="space-y-1.5">
-          <Label htmlFor="cat-name">{isSub ? 'Sub-category Name *' : 'Category Name *'}</Label>
+          <Label htmlFor="cat-name">{isSub ? t('admin.inventory.categories.subName', 'Sub-category Name *') : t('admin.inventory.categories.name', 'Category Name *')}</Label>
           <Input
             id="cat-name"
             value={name}
@@ -539,13 +574,13 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cat-status">Status *</Label>
-          <OptionSelect id="cat-status" value={status} onChange={(v) => setStatus(v || 'active')} options={STATUS_OPTIONS} />
+          <Label htmlFor="cat-status">{t('admin.inventory.categories.statusRequired', 'Status *')}</Label>
+          <OptionSelect id="cat-status" value={status} onChange={(v) => setStatus(v || 'active')} options={statusOptions} />
           <FieldError message={fieldError(err, 'status')} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cat-desc">Short Description</Label>
+          <Label htmlFor="cat-desc">{t('admin.inventory.categories.colDesc', 'Short Description')}</Label>
           <Input id="cat-desc" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} />
           <FieldError message={fieldError(err, 'short_description')} />
         </div>
@@ -553,10 +588,14 @@ function CategoryForm({ state, onDone }: { state: FormState; onDone: () => void 
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={active.isPending}>
-          {active.isPending ? 'Saving…' : state.mode === 'create' ? 'Create' : 'Save Changes'}
+          {active.isPending
+            ? t('admin.inventory.common.saving', 'Saving…')
+            : state.mode === 'create'
+              ? t('common.create', 'Create')
+              : t('admin.inventory.common.saveChanges', 'Save Changes')}
         </Button>
       </DialogFooter>
     </form>

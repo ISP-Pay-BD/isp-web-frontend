@@ -6,6 +6,7 @@ import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { invalidatePlatformBilling } from '@/features/admin/payment/hooks/use-platform-checkout';
+import { useTranslations } from '@/i18n/locale-context';
 
 export interface WalletAddon {
   key: string;
@@ -127,6 +128,7 @@ export function useWalletTransactions(filters: WalletTxFilters) {
  * gateway checkout; the wallet is credited only after the gateway confirms.
  */
 export function useWalletTopup() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { amountBdt: number; method: string }) =>
@@ -135,40 +137,42 @@ export function useWalletTopup() {
       invalidatePlatformBilling(qc);
       const url = str(data?.redirect_url);
       if (url) {
-        toast.message('Top-up invoice created — redirecting to the payment gateway…');
+        toast.message(t('admin.wallet.toast.topupRedirect', 'Top-up invoice created — redirecting to the payment gateway…'));
         window.location.assign(url);
       } else {
-        toast.error('The gateway did not return a checkout page. The top-up invoice is saved as pending.');
+        toast.error(t('admin.wallet.toast.noCheckout', 'The gateway did not return a checkout page. The top-up invoice is saved as pending.'));
       }
     },
     onError: (err) => {
       // A pending invoice may exist even when the gateway refused to start.
       invalidatePlatformBilling(qc);
-      toast.error(errorMessage(err, 'Top-up could not be started'));
+      toast.error(errorMessage(err, t('admin.wallet.toast.topupFailed', 'Top-up could not be started')));
     },
   });
 }
 
 /** PUT /v1/wallet/addons {addons} */
 export function useWalletAddons() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (addons: string[]) => http.put<{ chosen_addons?: string[] }>('/v1/wallet/addons', { addons }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: walletKeys.summary });
-      toast.success('Add-ons updated. They apply from your next monthly charge.');
+      toast.success(t('admin.wallet.toast.addonsSaved', 'Add-ons updated. They apply from your next monthly charge.'));
     },
   });
 }
 
 /** POST /v1/wallet/switch-payg */
 export function useSwitchPayg() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => http.post<{ is_payg?: boolean; charged?: boolean | null }>('/v1/wallet/switch-payg'),
     onSuccess: () => {
       invalidatePlatformBilling(qc);
-      toast.success('You are now on Pay-As-You-Go.');
+      toast.success(t('admin.wallet.toast.paygOn', 'You are now on Pay-As-You-Go.'));
     },
   });
 }

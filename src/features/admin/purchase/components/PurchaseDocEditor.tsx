@@ -25,6 +25,7 @@ import { useSupplierOptions } from '@/features/admin/inventory/hooks/use-supplie
 import { OptionSelect } from '@/features/admin/inventory/shared/OptionSelect';
 import { FieldError, fieldError } from '@/features/admin/inventory/shared/form-utils';
 import { todayYmd } from '@/features/admin/inventory/shared/table-utils';
+import { useTranslations } from '@/i18n/locale-context';
 import type { PurchaseDoc, PurchaseDocKind, PurchaseDocPayload } from '../api';
 import { usePurchaseDoc, useSavePurchaseDoc } from '../hooks/use-purchase-docs';
 
@@ -58,7 +59,10 @@ const newLine = (): LineState => ({
   description: '',
 });
 
-const LABEL: Record<PurchaseDocKind, string> = { requisition: 'Requisition', bill: 'Purchase Bill' };
+type Translate = ReturnType<typeof useTranslations>;
+
+const kindLabel = (t: Translate, kind: PurchaseDocKind) =>
+  kind === 'bill' ? t('admin.purchase.editor.kindBill', 'Purchase Bill') : t('admin.purchase.editor.kindRequisition', 'Requisition');
 
 /** Multi-line requisition / purchase-bill editor (create + edit). */
 export function PurchaseDocEditor({ kind, open, onOpenChange, docId }: PurchaseDocEditorProps) {
@@ -72,6 +76,7 @@ export function PurchaseDocEditor({ kind, open, onOpenChange, docId }: PurchaseD
 }
 
 function EditorBody({ kind, docId, onDone }: { kind: PurchaseDocKind; docId: string | null; onDone: () => void }) {
+  const t = useTranslations();
   const detail = usePurchaseDoc(kind, docId);
   if (docId && detail.isLoading) {
     return (
@@ -82,10 +87,10 @@ function EditorBody({ kind, docId, onDone }: { kind: PurchaseDocKind; docId: str
   }
   if (docId && (detail.isError || !detail.data)) {
     return (
-      <EmptyState
-        title={`Failed to load ${LABEL[kind].toLowerCase()}`}
+      <EmptyState variant="error"
+        title={kind === 'bill' ? t('admin.purchase.editor.loadFailedBill', 'Failed to load purchase bill') : t('admin.purchase.editor.loadFailedRequisition', 'Failed to load requisition')}
         description={errorMessage(detail.error)}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => detail.refetch()}
       />
     );
@@ -94,6 +99,8 @@ function EditorBody({ kind, docId, onDone }: { kind: PurchaseDocKind; docId: str
 }
 
 function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDoc | null; onDone: () => void }) {
+  const t = useTranslations();
+  const label = kindLabel(t, kind);
   const isEdit = doc !== null;
   const [requisitionDate, setRequisitionDate] = useState(doc?.requisitionDate.slice(0, 10) || todayYmd());
   const [deadline, setDeadline] = useState(doc?.deadline.slice(0, 10) ?? '');
@@ -152,12 +159,12 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
     e.preventDefault();
     const errors: Record<string, string> = {};
     lines.forEach((l, i) => {
-      if (!l.itemId) errors[`items.${i}.item_id`] = 'Select an item';
-      if (!(num(l.qty) > 0)) errors[`items.${i}.qty`] = 'Qty must be > 0';
-      if (l.rate === '' || num(l.rate, -1) < 0) errors[`items.${i}.rate`] = 'Rate must be ≥ 0';
+      if (!l.itemId) errors[`items.${i}.item_id`] = t('admin.purchase.editor.selectItemError', 'Select an item');
+      if (!(num(l.qty) > 0)) errors[`items.${i}.qty`] = t('admin.purchase.editor.qtyError', 'Qty must be > 0');
+      if (l.rate === '' || num(l.rate, -1) < 0) errors[`items.${i}.rate`] = t('admin.purchase.editor.rateError', 'Rate must be ≥ 0');
     });
-    if (lines.length === 0) errors.items = 'Add at least one line';
-    if (deadline && requisitionDate && deadline < requisitionDate) errors.deadline = 'Deadline is before the date';
+    if (lines.length === 0) errors.items = t('admin.purchase.editor.linesError', 'Add at least one line');
+    if (deadline && requisitionDate && deadline < requisitionDate) errors.deadline = t('admin.purchase.editor.deadlineError', 'Deadline is before the date');
     setLocalError(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -180,7 +187,12 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
       {
         onSuccess: (saved) => {
           const ref = saved.requisitionId || doc?.requisitionId || '';
-          toast.success(`${LABEL[kind]} ${ref} ${isEdit ? 'updated' : 'created'}`.replace(/\s+/g, ' '));
+          toast.success(
+            (isEdit
+              ? t('admin.purchase.editor.updated', '{label} {ref} updated', { label, ref })
+              : t('admin.purchase.editor.created', '{label} {ref} created', { label, ref })
+            ).replace(/\s+/g, ' '),
+          );
           onDone();
         },
       },
@@ -194,19 +206,21 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-primary" />
-          {isEdit ? `Edit ${LABEL[kind]} ${doc.requisitionId}` : `New ${LABEL[kind]}`}
+          {isEdit
+            ? t('admin.purchase.editor.editTitle', 'Edit {label} {id}', { label, id: doc.requisitionId })
+            : t('admin.purchase.editor.newTitle', 'New {label}', { label })}
         </DialogTitle>
         <DialogDescription>
           {kind === 'bill'
-            ? 'Record an approved purchase from one or more vendors. Payments are recorded separately.'
-            : 'Request items for purchase. Approving the requisition moves it to purchase bills.'}
+            ? t('admin.purchase.editor.descBill', 'Record an approved purchase from one or more vendors. Payments are recorded separately.')
+            : t('admin.purchase.editor.descRequisition', 'Request items for purchase. Approving the requisition moves it to purchase bills.')}
         </DialogDescription>
       </DialogHeader>
 
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="doc-date">{kind === 'bill' ? 'Bill Date' : 'Requisition Date'}</Label>
+            <Label htmlFor="doc-date">{kind === 'bill' ? t('admin.purchase.editor.billDate', 'Bill Date') : t('admin.purchase.editor.requisitionDate', 'Requisition Date')}</Label>
             <Input
               id="doc-date"
               type="date"
@@ -217,7 +231,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
             <FieldError message={errorFor('requisition_date')} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="doc-deadline">Deadline</Label>
+            <Label htmlFor="doc-deadline">{t('admin.purchase.editor.deadline', 'Deadline')}</Label>
             <Input
               id="doc-deadline"
               type="date"
@@ -229,7 +243,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
             <FieldError message={errorFor('deadline')} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="doc-remarks">Remarks</Label>
+            <Label htmlFor="doc-remarks">{t('admin.purchase.editor.remarks', 'Remarks')}</Label>
             <Input id="doc-remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
             <FieldError message={errorFor('remarks')} />
           </div>
@@ -237,10 +251,10 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label>Line Items *</Label>
+            <Label>{t('admin.purchase.editor.lineItems', 'Line Items *')}</Label>
             <Button type="button" variant="outline" size="sm" className="h-8" onClick={() => setLines((prev) => [...prev, newLine()])}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Add Line
+              {t('admin.purchase.editor.addLine', 'Add Line')}
             </Button>
           </div>
           <FieldError message={errorFor('items')} />
@@ -254,7 +268,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       value={l.itemId}
                       onChange={(v) => selectItem(l.key, v)}
                       options={itemOptions}
-                      placeholder={itemsQuery.isLoading ? 'Loading items…' : 'Select item'}
+                      placeholder={itemsQuery.isLoading ? t('admin.purchase.editor.loadingItems', 'Loading items…') : t('admin.purchase.editor.selectItem', 'Select item')}
                       disabled={itemsQuery.isLoading}
                       invalid={Boolean(errorFor(`items.${i}.item_id`))}
                       className="h-9"
@@ -266,8 +280,8 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       type="number"
                       min={0}
                       step="any"
-                      aria-label="Quantity"
-                      placeholder="Qty"
+                      aria-label={t('admin.purchase.editor.quantity', 'Quantity')}
+                      placeholder={t('admin.purchase.editor.qty', 'Qty')}
                       value={l.qty}
                       onChange={(e) => updateLine(l.key, { qty: e.target.value })}
                       aria-invalid={Boolean(errorFor(`items.${i}.qty`)) || undefined}
@@ -280,8 +294,8 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       type="number"
                       min={0}
                       step="any"
-                      aria-label="Rate"
-                      placeholder="Rate"
+                      aria-label={t('admin.purchase.editor.rate', 'Rate')}
+                      placeholder={t('admin.purchase.editor.rate', 'Rate')}
                       value={l.rate}
                       onChange={(e) => updateLine(l.key, { rate: e.target.value })}
                       aria-invalid={Boolean(errorFor(`items.${i}.rate`)) || undefined}
@@ -298,7 +312,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-rose-500 hover:text-rose-500"
-                      aria-label="Remove line"
+                      aria-label={t('admin.purchase.editor.removeLine', 'Remove line')}
                       disabled={lines.length === 1}
                       onClick={() => setLines((prev) => prev.filter((x) => x.key !== l.key))}
                     >
@@ -312,7 +326,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       value={l.unitId}
                       onChange={(v) => updateLine(l.key, { unitId: v })}
                       options={unitOptions}
-                      noneLabel="No unit"
+                      noneLabel={t('admin.purchase.editor.noUnit', 'No unit')}
                       disabled={unitsQuery.isLoading}
                       className="h-9 text-xs"
                     />
@@ -323,7 +337,7 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                       value={l.vendorId}
                       onChange={(v) => updateLine(l.key, { vendorId: v })}
                       options={vendorOptions}
-                      noneLabel="No vendor"
+                      noneLabel={t('admin.purchase.editor.noVendor', 'No vendor')}
                       disabled={suppliersQuery.isLoading}
                       className="h-9 text-xs"
                     />
@@ -331,8 +345,8 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
                   </div>
                   <div className="col-span-12 space-y-1 sm:col-span-5">
                     <Input
-                      aria-label="Description"
-                      placeholder="Description (optional)"
+                      aria-label={t('admin.purchase.editor.description', 'Description')}
+                      placeholder={t('admin.purchase.editor.descriptionOptional', 'Description (optional)')}
                       value={l.description}
                       onChange={(e) => updateLine(l.key, { description: e.target.value })}
                       className="h-9 text-xs"
@@ -347,7 +361,9 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
 
         <div className="flex items-center justify-end gap-3 border-t border-border/60 pt-3">
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {lines.length} {lines.length === 1 ? 'line' : 'lines'} · Total
+            {lines.length === 1
+              ? t('admin.purchase.editor.lineTotalOne', '{n} line · Total', { n: lines.length })
+              : t('admin.purchase.editor.lineTotalMany', '{n} lines · Total', { n: lines.length })}
           </span>
           <span className="text-xl font-bold tabular-nums text-foreground">{formatBdtWithSymbol(total)}</span>
         </div>
@@ -355,10 +371,16 @@ function DocForm({ kind, doc, onDone }: { kind: PurchaseDocKind; doc: PurchaseDo
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : isEdit ? 'Save Changes' : kind === 'bill' ? 'Record Bill' : 'Submit Requisition'}
+          {save.isPending
+            ? t('admin.purchase.editor.saving', 'Saving…')
+            : isEdit
+              ? t('admin.purchase.editor.saveChanges', 'Save Changes')
+              : kind === 'bill'
+                ? t('admin.purchase.editor.recordBill', 'Record Bill')
+                : t('admin.purchase.editor.submitRequisition', 'Submit Requisition')}
         </Button>
       </DialogFooter>
     </form>

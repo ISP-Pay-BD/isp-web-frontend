@@ -16,12 +16,14 @@ import { http } from '@/lib/api/client';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { AuthBrandPanel } from '@/features/auth/login/components/AuthBrandPanel';
+import { useLocale } from '@/i18n/locale-context';
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
 } from '../schemas/forgot-password.schema';
 
 export function ForgotPasswordPage() {
+  const { t, te } = useLocale();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,15 +41,15 @@ export function ForgotPasswordPage() {
     try {
       await http.post('/common/forgot-password', { email: values.email });
       setSuccessMessage(
-        'If that email address is registered, a password reset link has been sent to it.',
+        t('auth.forgot.sent', 'If that email address is registered, a password reset link has been sent to it.'),
       );
-      toast.success('Reset link sent');
+      toast.success(t('auth.forgot.sentToast', 'Reset link sent'));
     } catch (err) {
       const apiMessage =
         err instanceof AxiosError
           ? (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message
           : undefined;
-      setError(apiMessage ?? 'Could not send reset link. Try again.');
+      setError(apiMessage ?? t('auth.forgot.failed', 'Could not send reset link. Try again.'));
     }
   };
 
@@ -62,12 +64,12 @@ export function ForgotPasswordPage() {
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to sign in
+            {t('auth.forgot.back', 'Back to sign in')}
           </Link>
 
           <div className="lg:hidden">
             <div className="mb-6 flex items-center gap-3">
-              <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
+              <Image src={brandAssets.logo} alt={t('common.sidebar.logoAlt', '{name} logo', { name: siteConfig.name })} width={36} height={36} />
               <span className="text-lg font-semibold">{siteConfig.name}</span>
             </div>
           </div>
@@ -78,11 +80,11 @@ export function ForgotPasswordPage() {
                 <Send className="h-5 w-5" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">Check your email</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">{t('auth.forgot.checkEmail', 'Check your email')}</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed">{successMessage}</p>
               </div>
               <Button render={<Link href="/login" />} className="w-full">
-                Back to sign in
+                {t('auth.forgot.back', 'Back to sign in')}
               </Button>
             </div>
           ) : (
@@ -92,9 +94,9 @@ export function ForgotPasswordPage() {
                   <Key className="text-primary h-5 w-5" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight">Reset your password</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight">{t('auth.forgot.title', 'Reset your password')}</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Enter your account email and we&apos;ll send you a secure reset link.
+                    {t('auth.forgot.intro', "Enter your account email and we'll send you a secure reset link.")}
                   </p>
                 </div>
               </div>
@@ -107,7 +109,7 @@ export function ForgotPasswordPage() {
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="forgot-email">Email address</Label>
+                  <Label htmlFor="forgot-email">{t('auth.forgot.emailLabel', 'Email address')}</Label>
                   <Input
                     id="forgot-email"
                     type="email"
@@ -116,7 +118,7 @@ export function ForgotPasswordPage() {
                     {...register('email')}
                   />
                   {errors.email ? (
-                    <p className="text-destructive text-sm">{errors.email.message}</p>
+                    <p className="text-destructive text-sm">{te(errors.email.message ?? '')}</p>
                   ) : null}
                 </div>
 
@@ -124,18 +126,18 @@ export function ForgotPasswordPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending…
+                      {t('auth.forgot.sending', 'Sending…')}
                     </>
                   ) : (
-                    'Send reset link'
+                    t('auth.forgot.submit', 'Send reset link')
                   )}
                 </Button>
               </form>
 
               <p className="text-muted-foreground text-center text-sm">
-                Remember your password?{' '}
+                {t('auth.forgot.remember', 'Remember your password?')}{' '}
                 <Link href="/login" className="text-primary font-medium hover:underline">
-                  Sign in
+                  {t('auth.forgot.signIn', 'Sign in')}
                 </Link>
               </p>
             </>

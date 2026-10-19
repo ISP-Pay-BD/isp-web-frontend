@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatBdtWithSymbol } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
 import {
   useBandwidthClientOptions,
   useBandwidthInvoice,
@@ -27,9 +28,9 @@ import { InvoiceFormDialog } from '../components/InvoiceFormDialog';
 import { PaymentDialog } from '../components/PaymentDialog';
 import { OptionSelect } from '../components/OptionSelect';
 import { RefreshState } from '../components/RefreshState';
-import { periodLabel } from '../utils';
+import { dayText, paidDueLabel, paymentMethodLabel, periodLabel, type Translate } from '../utils';
 
-const methodLabel = (v: string) => SELL_PAYMENT_METHODS.find((m) => m.value === v)?.label ?? v;
+const methodLabel = (t: Translate, v: string) => paymentMethodLabel(t, v, SELL_PAYMENT_METHODS.find((m) => m.value === v)?.label ?? v);
 
 const toPayable = (i: BandwidthInvoice): PayableInvoice => ({
   requisitionId: i.requisitionId,
@@ -44,6 +45,7 @@ const toPayable = (i: BandwidthInvoice): PayableInvoice => ({
 });
 
 export function BandwidthInvoicesPage() {
+  const { t } = useLocale();
   const table = useServerTable();
   const [clientId, setClientId] = useState('');
   const [status, setStatus] = useState<'' | 'paid' | 'due'>('');
@@ -77,7 +79,7 @@ export function BandwidthInvoicesPage() {
 
   const confirmDelete = () => {
     if (!toDelete) return;
-    remove.mutate(toDelete.requisitionId, { onSuccess: () => toast.success('Invoice deleted') });
+    remove.mutate(toDelete.requisitionId, { onSuccess: () => toast.success(t('admin.bandwidth.invoices.deleted', 'Invoice deleted')) });
     setToDelete(null);
   };
 
@@ -85,7 +87,7 @@ export function BandwidthInvoicesPage() {
     () => [
       {
         accessorKey: 'requisitionId',
-        header: 'Invoice #',
+        header: t('admin.bandwidth.shared.invoiceNo', 'Invoice #'),
         enableHiding: false,
         size: 180,
         cell: ({ row }) => (
@@ -97,37 +99,37 @@ export function BandwidthInvoicesPage() {
               <button type="button" className="font-mono font-bold text-xs text-foreground hover:text-primary transition-colors" onClick={() => setViewRid(row.original.requisitionId)}>
                 {row.original.requisitionId}
               </button>
-              <div className="text-[10px] text-muted-foreground font-mono">{row.original.requisitionDate}</div>
+              <div className="text-xs text-muted-foreground font-mono">{dayText(row.original.requisitionDate)}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'clientName',
-        header: 'Client',
+        header: t('admin.bandwidth.invoices.colClient', 'Client'),
         size: 200,
         cell: ({ row }) => (
           <div>
             <div className="font-bold text-xs text-foreground">{row.original.clientName || '—'}</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[190px]">{row.original.itemNames.join(', ')}</div>
+            <div className="text-xs text-muted-foreground truncate max-w-[190px]">{row.original.itemNames.join(', ')}</div>
           </div>
         ),
       },
       {
         accessorKey: 'total',
-        header: 'Total',
+        header: t('admin.bandwidth.shared.total', 'Total'),
         size: 130,
         cell: ({ row }) => <span className="font-mono text-sm font-bold text-foreground">{formatBdtWithSymbol(row.original.total)}</span>,
       },
       {
         accessorKey: 'receivedAmount',
-        header: 'Received',
+        header: t('admin.bandwidth.shared.received', 'Received'),
         size: 120,
         cell: ({ row }) => <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(row.original.receivedAmount)}</span>,
       },
       {
         accessorKey: 'due',
-        header: 'Due',
+        header: t('admin.bandwidth.shared.due', 'Due'),
         size: 120,
         cell: ({ row }) => (
           <span className={row.original.due > 0 ? 'font-mono text-xs font-bold text-amber-600 dark:text-amber-400' : 'font-mono text-xs text-muted-foreground'}>
@@ -137,9 +139,9 @@ export function BandwidthInvoicesPage() {
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 100,
-        cell: ({ row }) => <StatusBadge status={row.original.status === 'paid' ? 'paid' : 'pending'} label={row.original.status} />,
+        cell: ({ row }) => <StatusBadge status={row.original.status === 'paid' ? 'paid' : 'pending'} label={paidDueLabel(t, row.original.status === 'paid')} />,
       },
       {
         id: 'actions',
@@ -148,29 +150,29 @@ export function BandwidthInvoicesPage() {
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
             <Button variant="outline" size="sm" className="h-7 text-xs border-border/80" onClick={() => setViewRid(row.original.requisitionId)}>
-              View
+              {t('admin.bandwidth.shared.view', 'View')}
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-600" aria-label="Receive payment" onClick={() => setPaying(toPayable(row.original))}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-emerald-600" aria-label={t('admin.bandwidth.payment.title', 'Receive payment')} onClick={() => setPaying(toPayable(row.original))}>
               <Wallet className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setForm({ rid: row.original.requisitionId })}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" aria-label={t('common.edit', 'Edit')} onClick={() => setForm({ rid: row.original.requisitionId })}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete(row.original)}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label={t('common.delete', 'Delete')} onClick={() => setToDelete(row.original)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError && !data) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load invoices" description="Could not fetch bandwidth sales invoices." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState variant="error" title={t('admin.bandwidth.invoices.loadFailed', 'Failed to load invoices')} description={t('admin.bandwidth.invoices.loadFailedHint', 'Could not fetch bandwidth sales invoices.')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
       </div>
     );
   }
@@ -178,16 +180,16 @@ export function BandwidthInvoicesPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Sales Invoices"
-        subtitle="Invoices issued to bandwidth sell clients, with collections and dues"
+        title={t('admin.bandwidth.invoices.title', 'Bandwidth Sales Invoices')}
+        subtitle={t('admin.bandwidth.invoices.subtitle', 'Invoices issued to bandwidth sell clients, with collections and dues')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Bandwidth Sell', url: '/admin/bandwidth/sell' },
-          { label: 'Invoices' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.bandwidth-sell', 'Bandwidth Sell'), url: '/admin/bandwidth/sell' },
+          { label: t('nav.bw-sell-invoices', 'Invoices') },
         ]}
         actions={
           <Button size="sm" onClick={() => setForm({ rid: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> New Invoice
+            <Plus className="h-3.5 w-3.5" /> {t('admin.bandwidth.invoices.new', 'New Invoice')}
           </Button>
         }
       />
@@ -195,19 +197,21 @@ export function BandwidthInvoicesPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{totals?.count ?? 0}</span>{' '}
-          <span className="text-muted-foreground">{filtered ? 'matching invoices' : 'invoices'}</span>
+          <span className="text-muted-foreground">{filtered ? t('admin.bandwidth.invoices.statMatching', 'matching invoices') : t('admin.bandwidth.dailyBill.statInvoices', 'invoices')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-foreground">{formatBdtWithSymbol(totals?.filtered ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">invoiced{filtered ? '' : ` · ${formatBdtWithSymbol(totals?.today ?? 0)} today`}</span>
+          <span className="text-muted-foreground">{filtered
+              ? t('admin.bandwidth.invoices.statInvoiced', 'invoiced')
+              : t('admin.bandwidth.invoices.statInvoicedToday', 'invoiced · {today} today', { today: formatBdtWithSymbol(totals?.today ?? 0) })}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(totals?.received ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">received</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.dailyBill.statReceived', 'received')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(totals?.due ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">outstanding</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.invoices.statOutstanding', 'outstanding')}</span>
         </p>
         <RefreshState fetching={isFetching} error={isError ? error : null} onRetry={() => refetch()} />
       </div>
@@ -217,7 +221,7 @@ export function BandwidthInvoicesPage() {
           <OptionSelect
             value={clientId}
             onChange={filter(setClientId)}
-            emptyLabel="All clients"
+            emptyLabel={t('admin.bandwidth.invoices.allClients', 'All clients')}
             options={(clients.data ?? []).map((c) => ({ value: String(c.id), label: c.customerName }))}
           />
         </div>
@@ -225,15 +229,15 @@ export function BandwidthInvoicesPage() {
           <OptionSelect
             value={status}
             onChange={filter((v: string) => setStatus(v === 'paid' || v === 'due' ? v : ''))}
-            emptyLabel="All statuses"
+            emptyLabel={t('admin.bandwidth.shared.allStatuses', 'All statuses')}
             options={[
-              { value: 'due', label: 'Due' },
-              { value: 'paid', label: 'Paid' },
+              { value: 'due', label: paidDueLabel(t, false) },
+              { value: 'paid', label: paidDueLabel(t, true) },
             ]}
           />
         </div>
-        <Input type="date" aria-label="From date" value={from} onChange={(e) => filter(setFrom)(e.target.value)} className="h-9 w-40 text-xs" />
-        <Input type="date" aria-label="To date" value={to} onChange={(e) => filter(setTo)(e.target.value)} className="h-9 w-40 text-xs" />
+        <Input type="date" aria-label={t('admin.bandwidth.shared.fromDate', 'From date')} value={from} onChange={(e) => filter(setFrom)(e.target.value)} className="h-9 w-40 text-xs" />
+        <Input type="date" aria-label={t('admin.bandwidth.shared.toDate', 'To date')} value={to} onChange={(e) => filter(setTo)(e.target.value)} className="h-9 w-40 text-xs" />
         {hasFilters ? (
           <Button
             variant="ghost"
@@ -247,19 +251,19 @@ export function BandwidthInvoicesPage() {
               table.resetPage();
             }}
           >
-            <X className="h-3.5 w-3.5" /> Clear filters
+            <X className="h-3.5 w-3.5" /> {t('admin.bandwidth.shared.clearFilters', 'Clear filters')}
           </Button>
         ) : null}
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={invoices}
         getRowId={(row) => row.requisitionId}
-        searchPlaceholder="Search invoice #, client, or item..."
+        searchPlaceholder={t('admin.bandwidth.invoices.search', 'Search invoice #, client, or item...')}
         server={table.server(data?.meta.total ?? 0)}
-        emptyTitle={filtered ? 'No invoices match these filters' : 'No sales invoices'}
-        emptyDescription={filtered ? undefined : 'Create an invoice for a sell client to get started.'}
+        emptyTitle={filtered ? t('admin.bandwidth.invoices.emptyFiltered', 'No invoices match these filters') : t('admin.bandwidth.invoices.emptyNone', 'No sales invoices')}
+        emptyDescription={filtered ? undefined : t('admin.bandwidth.invoices.emptyHint', 'Create an invoice for a sell client to get started.')}
       />
 
       <Dialog open={viewRid !== null} onOpenChange={(open) => !open && setViewRid(null)}>
@@ -274,9 +278,9 @@ export function BandwidthInvoicesPage() {
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={`Delete invoice ${toDelete?.requisitionId ?? ''}?`}
-        description="Every line of the invoice and its recorded payment are removed."
-        confirmLabel="Delete"
+        title={t('admin.bandwidth.invoices.deleteTitle', 'Delete invoice {no}?', { no: toDelete?.requisitionId ?? '' })}
+        description={t('admin.bandwidth.invoices.deleteDesc', 'Every line of the invoice and its recorded payment are removed.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={confirmDelete}
       />
@@ -285,10 +289,11 @@ export function BandwidthInvoicesPage() {
 }
 
 function InvoiceDetail({ rid, onClose }: { rid: string; onClose: () => void }) {
+  const { t } = useLocale();
   const { data: inv, isLoading, isError, refetch } = useBandwidthInvoice(rid);
 
   if (isLoading) return <DetailSkeleton />;
-  if (isError || !inv) return <EmptyState title="Could not load the invoice" actionLabel="Retry" onAction={() => refetch()} />;
+  if (isError || !inv) return <EmptyState variant="error" title={t('admin.bandwidth.invoiceForm.loadFailed', 'Could not load the invoice')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />;
 
   return (
     <div className="space-y-5 pt-2">
@@ -296,31 +301,31 @@ function InvoiceDetail({ rid, onClose }: { rid: string; onClose: () => void }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <DialogTitle className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" /> {inv.clientName || 'Sales invoice'}
+              <Building2 className="h-5 w-5 text-primary" /> {inv.clientName || t('admin.bandwidth.invoices.salesInvoice', 'Sales invoice')}
             </DialogTitle>
-            <DialogDescription className="text-xs">Bandwidth sales invoice</DialogDescription>
+            <DialogDescription className="text-xs">{t('admin.bandwidth.invoices.detailDesc', 'Bandwidth sales invoice')}</DialogDescription>
           </div>
           <div className="text-right">
             <div className="font-mono font-bold text-sm text-primary">{inv.requisitionId}</div>
-            <div className="text-xs text-muted-foreground">Date: {inv.requisitionDate || '—'}</div>
+            <div className="text-xs text-muted-foreground">{t('admin.bandwidth.invoices.dateLabel', 'Date: {date}', { date: dayText(inv.requisitionDate) })}</div>
           </div>
         </div>
       </DialogHeader>
 
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-1">
-          <span className="font-bold text-muted-foreground uppercase text-[10px]">Billed to</span>
+          <span className="font-bold text-muted-foreground uppercase text-xs">{t('admin.bandwidth.invoices.billedTo', 'Billed to')}</span>
           <div className="font-bold text-sm text-foreground">{inv.clientName || '—'}</div>
           {inv.remarks ? <div className="text-muted-foreground">{inv.remarks}</div> : null}
-          {inv.requisitionBy ? <div className="text-muted-foreground">Created by {inv.requisitionBy}</div> : null}
+          {inv.requisitionBy ? <div className="text-muted-foreground">{t('admin.bandwidth.invoices.createdBy', 'Created by {name}', { name: inv.requisitionBy })}</div> : null}
         </div>
         <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-1.5">
-          <span className="font-bold text-muted-foreground uppercase text-[10px]">Payment</span>
-          <div className="flex justify-between"><span className="text-muted-foreground">Due date</span><span className="font-mono font-semibold">{inv.deadline || '—'}</span></div>
-          <div className="flex justify-between items-center"><span className="text-muted-foreground">Status</span><StatusBadge status={inv.status === 'paid' ? 'paid' : 'pending'} label={inv.status} /></div>
-          {inv.paymentDate ? <div className="flex justify-between"><span className="text-muted-foreground">Paid on</span><span className="font-mono">{inv.paymentDate}</span></div> : null}
-          {inv.paymentMethod ? <div className="flex justify-between"><span className="text-muted-foreground">Method</span><span>{methodLabel(inv.paymentMethod)}</span></div> : null}
-          {inv.receivedBy ? <div className="flex justify-between"><span className="text-muted-foreground">Received by</span><span>{inv.receivedBy}</span></div> : null}
+          <span className="font-bold text-muted-foreground uppercase text-xs">{t('admin.bandwidth.invoices.payment', 'Payment')}</span>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.dueDate', 'Due date')}</span><span className="font-mono font-semibold">{dayText(inv.deadline)}</span></div>
+          <div className="flex justify-between items-center"><span className="text-muted-foreground">{t('admin.customers.list.statusLabel', 'Status')}</span><StatusBadge status={inv.status === 'paid' ? 'paid' : 'pending'} label={paidDueLabel(t, inv.status === 'paid')} /></div>
+          {inv.paymentDate ? <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.invoices.paidOn', 'Paid on')}</span><span className="font-mono">{dayText(inv.paymentDate)}</span></div> : null}
+          {inv.paymentMethod ? <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.payment.method', 'Method')}</span><span>{methodLabel(t, inv.paymentMethod)}</span></div> : null}
+          {inv.receivedBy ? <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.receivedBy', 'Received by')}</span><span>{inv.receivedBy}</span></div> : null}
         </div>
       </div>
 
@@ -328,11 +333,11 @@ function InvoiceDetail({ rid, onClose }: { rid: string; onClose: () => void }) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead>Item</TableHead>
-              <TableHead>Period</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Rate</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>{t('admin.bandwidth.shared.item', 'Item')}</TableHead>
+              <TableHead>{t('admin.bandwidth.shared.period', 'Period')}</TableHead>
+              <TableHead className="text-right">{t('admin.bandwidth.shared.qty', 'Qty')}</TableHead>
+              <TableHead className="text-right">{t('admin.bandwidth.shared.rate', 'Rate')}</TableHead>
+              <TableHead className="text-right">{t('admin.bandwidth.invoices.amount', 'Amount')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -340,7 +345,7 @@ function InvoiceDetail({ rid, onClose }: { rid: string; onClose: () => void }) {
               <TableRow key={l.id}>
                 <TableCell className="text-xs">
                   <div className="font-semibold">{l.itemName || '—'}</div>
-                  {l.description ? <div className="text-[10px] text-muted-foreground">{l.description}</div> : null}
+                  {l.description ? <div className="text-xs text-muted-foreground">{l.description}</div> : null}
                 </TableCell>
                 <TableCell className="text-xs font-mono">{periodLabel(l.fromDate, l.toDate)}</TableCell>
                 <TableCell className="text-xs font-mono text-right">{l.qty}</TableCell>
@@ -354,20 +359,20 @@ function InvoiceDetail({ rid, onClose }: { rid: string; onClose: () => void }) {
 
       <div className="flex justify-end">
         <div className="w-72 space-y-1.5 text-xs p-3.5 rounded-xl bg-muted/20 border border-border/50">
-          <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono font-semibold">{formatBdtWithSymbol(inv.total)}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Received</span><span className="font-mono">{formatBdtWithSymbol(inv.receivedAmount)}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-mono">{formatBdtWithSymbol(inv.discount)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.total', 'Total')}</span><span className="font-mono font-semibold">{formatBdtWithSymbol(inv.total)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.received', 'Received')}</span><span className="font-mono">{formatBdtWithSymbol(inv.receivedAmount)}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.discount', 'Discount')}</span><span className="font-mono">{formatBdtWithSymbol(inv.discount)}</span></div>
           <div className="flex justify-between border-t border-border/60 pt-2 text-sm font-bold">
-            <span>Balance due</span>
+            <span>{t('admin.bandwidth.shared.balanceDue', 'Balance Due')}</span>
             <span className="font-mono text-primary text-base">{formatBdtWithSymbol(Math.max(0, inv.due))}</span>
           </div>
         </div>
       </div>
 
       <div className="flex justify-end gap-2 border-t pt-4">
-        <Button variant="outline" size="sm" onClick={onClose} className="text-xs">Close</Button>
+        <Button variant="outline" size="sm" onClick={onClose} className="text-xs">{t('common.close', 'Close')}</Button>
         <Button size="sm" onClick={() => window.print()} className="text-xs font-semibold gap-1.5">
-          <Printer className="h-4 w-4" /> Print
+          <Printer className="h-4 w-4" /> {t('admin.bandwidth.shared.print', 'Print')}
         </Button>
       </div>
     </div>

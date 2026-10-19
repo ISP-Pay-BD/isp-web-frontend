@@ -17,7 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
-import { formatBdt } from '@/lib/format';
+import { formatBdt, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { PlatformPageHeader, compactBdt, platformDate } from '@/features/platform/shared';
 import {
   ResponsiveContainer,
@@ -33,6 +34,14 @@ import { ChartTooltip } from '@/components/shared/charts/ChartTooltip';
 import { platformService } from '@/lib/api/services/platform.service';
 
 export function PlatformDashboardPage() {
+  const t = useTranslations();
+  const contactStatus: Record<string, string> = {
+    new: t('status.new', 'New'),
+    contacted: t('platform.dashboard.page.contacted', 'Contacted'),
+    qualified: t('platform.dashboard.page.qualified', 'Qualified'),
+    won: t('platform.dashboard.page.won', 'Won'),
+    lost: t('platform.dashboard.page.lost', 'Lost'),
+  };
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'dashboard'],
     queryFn: () => platformService.getDashboard(),
@@ -44,10 +53,10 @@ export function PlatformDashboardPage() {
 
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load platform dashboard"
-        description="Could not connect to the platform data service."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.dashboard.page.loadFailed', 'Failed to load platform dashboard')}
+        description={t('platform.dashboard.page.loadFailedHint', 'Could not connect to the platform data service.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -56,15 +65,13 @@ export function PlatformDashboardPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Platform overview"
-        subtitle="Tenant health, revenue, and support across the network"
+        title={t('platform.dashboard.page.title', 'Platform overview')}
+        subtitle={t('platform.dashboard.page.subtitle', 'Tenant health, revenue, and support across the network')}
         actions={
           <div className="flex items-center gap-2">
-            <Link href="/platform/tenants/new">
-              <Button>
-                <Plus className="mr-1.5 h-4 w-4" /> Create tenant
+            <Button render={<Link href="/platform/tenants/new" />}>
+                <Plus className="mr-1.5 h-4 w-4" /> {t('platform.dashboard.page.createTenant', 'Create tenant')}
               </Button>
-            </Link>
           </div>
         }
       />
@@ -73,27 +80,27 @@ export function PlatformDashboardPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums">{data.totalTenants}</span>{' '}
-          <span className="text-muted-foreground">ISP tenants</span>
+          <span className="text-muted-foreground">{t('platform.dashboard.page.kpiTenants', 'ISP tenants')}</span>
           <span className="text-muted-foreground">
             {' '}
-            · {data.activeTenants} active · {data.trialTenants} trial · {data.suspendedTenants} suspended
+            · {t('platform.dashboard.page.tenantBreakdown', '{active} active · {trial} trial · {suspended} suspended', { active: data.activeTenants, trial: data.trialTenants, suspended: data.suspendedTenants })}
           </span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{data.portalsTotal}</span>{' '}
-          <span className="text-muted-foreground">subdomain portals</span>
+          <span className="text-muted-foreground">{t('platform.dashboard.page.kpiPortals', 'subdomain portals')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">৳{formatBdt(data.monthRevenue)}</span>{' '}
-          <span className="text-muted-foreground">collected this month</span>
+          <span className="text-muted-foreground">{t('platform.dashboard.page.kpiMonth', 'collected this month')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{data.openTickets}</span>{' '}
-          <span className="text-muted-foreground">open tenant tickets</span>
+          <span className="text-muted-foreground">{t('platform.dashboard.page.kpiTickets', 'open tenant tickets')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums">{data.totalActiveEndUsers.toLocaleString()}</span>{' '}
-          <span className="text-muted-foreground">active subscribers</span>
+          <span className="font-semibold tabular-nums">{formatCount(data.totalActiveEndUsers)}</span>{' '}
+          <span className="text-muted-foreground">{t('platform.dashboard.page.kpiSubscribers', 'active subscribers')}</span>
         </p>
       </div>
 
@@ -104,20 +111,16 @@ export function PlatformDashboardPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold">Revenue trend</CardTitle>
-                <CardDescription>Tenant payments collected per month (last 6 months)</CardDescription>
+                <CardTitle className="text-base font-semibold">{t('platform.dashboard.page.trend', 'Revenue trend')}</CardTitle>
+                <CardDescription>{t('platform.dashboard.page.trendHint', 'Tenant payments collected per month (last 6 months)')}</CardDescription>
               </div>
               {data.growthPercentage !== null ? (
                 <Badge
                   variant="outline"
-                  className={
-                    data.growthPercentage >= 0
-                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                      : 'bg-red-500/10 text-red-600 border-red-500/20'
-                  }
+                  tone={data.growthPercentage >= 0 ? 'success' : 'danger'}
                 >
                   {data.growthPercentage >= 0 ? '+' : ''}
-                  {data.growthPercentage}% vs last month
+                  {t('platform.dashboard.page.vsLastMonth', '{pct}% vs last month', { pct: data.growthPercentage })}
                 </Badge>
               ) : null}
             </div>
@@ -184,8 +187,8 @@ export function PlatformDashboardPage() {
         {/* Quick Hub Navigation Cards */}
         <Card className="border-border/60 lg:col-span-3">
           <CardHeader>
-            <CardTitle className="text-base font-semibold">Super-Admin Operations</CardTitle>
-            <CardDescription>Quick administrative actions & system monitoring</CardDescription>
+            <CardTitle className="text-base font-semibold">{t('platform.dashboard.page.opsTitle', 'Super-Admin Operations')}</CardTitle>
+            <CardDescription>{t('platform.dashboard.page.opsHint', 'Quick administrative actions & system monitoring')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Link
@@ -197,8 +200,8 @@ export function PlatformDashboardPage() {
                   <Globe className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Manage Tenant Portals</div>
-                  <div className="text-xs text-muted-foreground">Subdomains, branding & status</div>
+                  <div className="text-sm font-medium">{t('platform.dashboard.page.opTenants', 'Manage Tenant Portals')}</div>
+                  <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.opTenantsHint', 'Subdomains, branding & status')}</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -213,8 +216,8 @@ export function PlatformDashboardPage() {
                   <Users className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Second Admins & Packages</div>
-                  <div className="text-xs text-muted-foreground">Tenant owners, pricing tiers</div>
+                  <div className="text-sm font-medium">{t('platform.dashboard.page.opAdmins', 'Second Admins & Packages')}</div>
+                  <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.opAdminsHint', 'Tenant owners, pricing tiers')}</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -229,8 +232,8 @@ export function PlatformDashboardPage() {
                   <Puzzle className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Plugins & Addons Marketplace</div>
-                  <div className="text-xs text-muted-foreground">Catalog, pricing & publishing</div>
+                  <div className="text-sm font-medium">{t('platform.dashboard.page.opPlugins', 'Plugins & Addons Marketplace')}</div>
+                  <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.opPluginsHint', 'Catalog, pricing & publishing')}</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -245,8 +248,8 @@ export function PlatformDashboardPage() {
                   <FolderTree className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Platform File Manager</div>
-                  <div className="text-xs text-muted-foreground">Browse uploaded files (read-only)</div>
+                  <div className="text-sm font-medium">{t('platform.dashboard.page.opFiles', 'Platform File Manager')}</div>
+                  <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.opFilesHint', 'Browse uploaded files (read-only)')}</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -261,8 +264,8 @@ export function PlatformDashboardPage() {
                   <Settings className="h-4 w-4" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Software Settings</div>
-                  <div className="text-xs text-muted-foreground">Branding, discounts & registration</div>
+                  <div className="text-sm font-medium">{t('platform.dashboard.page.opSettings', 'Software Settings')}</div>
+                  <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.opSettingsHint', 'Branding, discounts & registration')}</div>
                 </div>
               </div>
               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
@@ -277,56 +280,48 @@ export function PlatformDashboardPage() {
         <Card className="border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Top Tenants by Revenue</CardTitle>
-              <CardDescription>Highest platform payments over the last 6 months</CardDescription>
+              <CardTitle className="text-base font-semibold">{t('platform.dashboard.page.topTenants', 'Top Tenants by Revenue')}</CardTitle>
+              <CardDescription>{t('platform.dashboard.page.topTenantsHint', 'Highest platform payments over the last 6 months')}</CardDescription>
             </div>
-            <Link href="/platform/admins">
-              <Button variant="ghost" size="sm" className="text-xs">
-                View all <ChevronRight className="ml-1 h-3 w-3" />
+            <Button variant="ghost" size="sm" className="text-xs" render={<Link href="/platform/admins" />}>
+                {t('common.viewAll', 'View all')} <ChevronRight className="ml-1 h-3 w-3" />
               </Button>
-            </Link>
           </CardHeader>
           <CardContent>
             {data.topTenants.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No tenant payments in the last 6 months.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t('platform.dashboard.page.noTenantPayments', 'No tenant payments in the last 6 months.')}</p>
             ) : (
               <div className="space-y-3">
-                {data.topTenants.map((t) => (
+                {data.topTenants.map((tenant) => (
                   <div
-                    key={t.adminId}
+                    key={tenant.adminId}
                     className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         className="h-9 w-9 rounded-md flex items-center justify-center bg-primary text-primary-foreground font-bold text-xs"
-                        style={t.primaryColor ? { backgroundColor: t.primaryColor } : undefined}
+                        style={tenant.primaryColor ? { backgroundColor: tenant.primaryColor } : undefined}
                       >
-                        {t.name.slice(0, 2).toUpperCase()}
+                        {tenant.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
                         <Link
-                          href={t.tenantId ? `/platform/tenants/${t.tenantId}` : `/platform/admins/${t.adminId}/billing`}
+                          href={tenant.tenantId ? `/platform/tenants/${tenant.tenantId}` : `/platform/admins/${tenant.adminId}/billing`}
                           className="font-semibold text-sm hover:underline"
                         >
-                          {t.name}
+                          {tenant.name}
                         </Link>
-                        <div className="text-xs text-muted-foreground font-mono">{t.domain ?? t.ownerName}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{tenant.domain ?? tenant.ownerName}</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-sm text-foreground">৳{formatBdt(t.revenueBdt)}</div>
-                      <div className="text-[11px] text-muted-foreground">{t.customers.toLocaleString()} subs</div>
+                      <div className="font-bold text-sm text-foreground">৳{formatBdt(tenant.revenueBdt)}</div>
+                      <div className="text-xs text-muted-foreground">{t('platform.dashboard.page.subs', '{n} subs', { n: formatCount(tenant.customers) })}</div>
                       <Badge
                         variant="outline"
-                        className={
-                          t.status === 'active'
-                            ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs'
-                            : t.status === 'trial'
-                            ? 'border-amber-500/30 text-amber-600 bg-amber-500/10 text-xs'
-                            : 'border-red-500/30 text-red-600 bg-red-500/10 text-xs'
-                        }
+                        tone={tenant.status === 'active' ? 'success' : tenant.status === 'trial' ? 'warning' : 'danger'}
                       >
-                        {t.status}
+                        {t(`status.${tenant.status}`, tenant.status)}
                       </Badge>
                     </div>
                   </div>
@@ -340,18 +335,16 @@ export function PlatformDashboardPage() {
         <Card className="border-border/60">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Recent Inbound Contact Requests</CardTitle>
-              <CardDescription>Potential ISPs seeking platform onboarding</CardDescription>
+              <CardTitle className="text-base font-semibold">{t('platform.dashboard.page.contacts', 'Recent Inbound Contact Requests')}</CardTitle>
+              <CardDescription>{t('platform.dashboard.page.contactsHint', 'Potential ISPs seeking platform onboarding')}</CardDescription>
             </div>
-            <Link href="/platform/contacts">
-              <Button variant="ghost" size="sm" className="text-xs">
-                View all <ChevronRight className="ml-1 h-3 w-3" />
+            <Button variant="ghost" size="sm" className="text-xs" render={<Link href="/platform/contacts" />}>
+                {t('common.viewAll', 'View all')} <ChevronRight className="ml-1 h-3 w-3" />
               </Button>
-            </Link>
           </CardHeader>
           <CardContent>
             {data.recentContacts.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No contact requests yet.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t('platform.dashboard.page.noContacts', 'No contact requests yet.')}</p>
             ) : (
             <div className="space-y-3">
               {data.recentContacts.map((c) => (
@@ -373,9 +366,9 @@ export function PlatformDashboardPage() {
                   </div>
                   <div className="text-right">
                     <Badge variant="secondary" className="capitalize text-xs">
-                      {c.status}
+                      {contactStatus[c.status] ?? c.status}
                     </Badge>
-                    <div className="text-[11px] text-muted-foreground mt-1">{platformDate(c.createdAt)}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{platformDate(c.createdAt)}</div>
                   </div>
                 </div>
               ))}

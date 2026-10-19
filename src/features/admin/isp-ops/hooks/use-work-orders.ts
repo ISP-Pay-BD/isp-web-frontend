@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /**
  * Work orders = the staff support-ticket desk (GET/POST /v1/staff-tickets…),
@@ -108,10 +109,17 @@ export function useWorkOrder(id: string | null) {
 
 export function useSetWorkOrderStatus() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: WorkOrderStatus }) => http.post<unknown>(`/v1/staff-tickets/${id}/status`, { status }),
     onSuccess: (_d, { status }) => {
-      toast.success(`Work order marked ${status}`);
+      const label =
+        status === 'opened'
+          ? t('status.open', 'Open')
+          : status === 'processing'
+            ? t('status.in_progress', 'In Progress')
+            : t('status.done', 'Done');
+      toast.success(t('admin.ops.workOrders.marked', 'Work order marked {status}', { status: label }));
       qc.invalidateQueries({ queryKey: workOrderKeys.all });
     },
   });
@@ -120,11 +128,12 @@ export function useSetWorkOrderStatus() {
 /** Assign (transfer) work orders to employees of the tenant. */
 export function useAssignWorkOrder() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: ({ ids, employeeIds }: { ids: string[]; employeeIds: string[] }) =>
       http.post<unknown>('/v1/staff-tickets/transfer', { ticket_ids: ids.map(Number), employee_ids: employeeIds.map(Number) }),
     onSuccess: () => {
-      toast.success('Work order assigned');
+      toast.success(t('admin.ops.workOrders.assigned', 'Work order assigned'));
       qc.invalidateQueries({ queryKey: workOrderKeys.all });
     },
   });

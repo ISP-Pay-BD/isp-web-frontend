@@ -42,7 +42,7 @@ export function PaymentMatchedCard({
         <span
           className={cn(
             'flex size-9 shrink-0 items-center justify-center rounded-full transition-colors duration-300',
-            done ? 'bg-emerald-400/15 text-emerald-400' : 'bg-landing-cta/15 text-landing-cta',
+            done ? 'bg-emerald-400/15 text-emerald-400' : 'bg-landing-cta/15 text-landing-accent',
           )}
         >
           <Check className="size-4" aria-hidden />
@@ -61,7 +61,7 @@ export function PaymentMatchedCard({
         </div>
       </div>
 
-      <p className="mt-3 truncate font-mono text-[11px] text-white/40">
+      <p className="mt-3 truncate font-mono text-[11px] text-white/60">
         TrxID {payment.trxId} → {payment.customer}
       </p>
 
@@ -71,7 +71,7 @@ export function PaymentMatchedCard({
             key={key}
             className={cn(
               'flex flex-col gap-1.5 text-xs transition-colors duration-300',
-              i <= step ? 'text-white/80' : 'text-white/35',
+              i <= step ? 'text-white/80' : 'text-white/60',
             )}
           >
             <span

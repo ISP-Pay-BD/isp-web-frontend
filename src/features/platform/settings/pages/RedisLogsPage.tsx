@@ -8,6 +8,8 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 const LEVEL_STYLES: Record<string, string> = {
   info: 'border-blue-500/30 text-blue-600 bg-blue-500/10',
@@ -17,7 +19,9 @@ const LEVEL_STYLES: Record<string, string> = {
 };
 
 export function RedisLogsPage() {
+  const t = useTranslations();
   const [level, setLevel] = useState('all');
+  const levelLabel = (l: string) => t(`platform.settings.redis.level.${l}`, l);
   const [search, setSearch] = useState('');
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -28,10 +32,10 @@ export function RedisLogsPage() {
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load logs"
-        description={error instanceof Error ? error.message : 'Could not retrieve Redis and system logs.'}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.settings.redis.loadFailed', 'Failed to load logs')}
+        description={error instanceof Error ? error.message : t('platform.settings.redis.loadFailedHint', 'Could not retrieve Redis and system logs.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -47,27 +51,27 @@ export function RedisLogsPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Redis & System Logs"
-        subtitle="Redis cache telemetry (zeros when the cache is not Redis) and the latest application log entries"
+        title={t('platform.settings.redis.title', 'Redis & System Logs')}
+        subtitle={t('platform.settings.redis.subtitle', 'Redis cache telemetry (zeros when the cache is not Redis) and the latest application log entries')}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Settings', href: '/platform/settings' },
-          { label: 'Redis & Logs' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('common.crumb.settings', 'Settings'), href: '/platform/settings' },
+          { label: t('nav.platform-redis', 'Redis & Logs') },
         ]}
       />
 
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-primary">{`${data.stats.redisMemoryMb} MB`}</span>{' '}
-          <span className="text-muted-foreground">redis memory</span>
+          <span className="text-muted-foreground">{t('platform.settings.redis.kpiMemory', 'redis memory')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-foreground">{data.stats.redisKeysTotal.toLocaleString()}</span>{' '}
-          <span className="text-muted-foreground">active keys</span>
+          <span className="font-semibold tabular-nums text-foreground">{formatCount(data.stats.redisKeysTotal)}</span>{' '}
+          <span className="text-muted-foreground">{t('platform.settings.redis.kpiKeys', 'active keys')}</span>
         </p>
         <p>
-          <span className="font-semibold tabular-nums text-emerald-500">{`${data.stats.uptimeDays} days`}</span>{' '}
-          <span className="text-muted-foreground">redis uptime</span>
+          <span className="font-semibold tabular-nums text-emerald-500">{t('platform.settings.redis.days', '{n} days', { n: formatCount(data.stats.uptimeDays) })}</span>{' '}
+          <span className="text-muted-foreground">{t('platform.settings.redis.kpiUptime', 'redis uptime')}</span>
         </p>
       </div>
 
@@ -84,7 +88,7 @@ export function RedisLogsPage() {
                     level === l ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80 text-muted-foreground'
                   }`}
                 >
-                  {l}
+                  {levelLabel(l)}
                 </button>
               ))}
             </div>
@@ -92,7 +96,8 @@ export function RedisLogsPage() {
             <div className="max-w-xs w-full">
               <input
                 type="text"
-                placeholder="Filter logs by keyword..."
+                placeholder={t('platform.settings.redis.filterPlaceholder', 'Filter logs by keyword...')}
+                aria-label={t('platform.settings.redis.filterLabel', 'Filter logs by keyword')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full h-8 px-2.5 rounded-md border border-border/70 bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -102,16 +107,16 @@ export function RedisLogsPage() {
 
           <div className="space-y-1.5 font-mono text-xs max-h-[520px] overflow-y-auto">
             {filteredLogs.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">No logs found matching your filter criteria.</div>
+              <div className="text-center py-12 text-muted-foreground">{t('platform.settings.redis.empty', 'No logs found matching your filter criteria.')}</div>
             ) : (
               filteredLogs.map((log) => (
                 <div key={log.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2.5 rounded-md hover:bg-muted/40 border border-border/30 bg-muted/10 transition-colors">
-                  <span className="text-muted-foreground text-[11px] shrink-0 w-36">{log.timestamp}</span>
+                  <span className="text-muted-foreground text-xs shrink-0 w-36">{log.timestamp}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge variant="outline" className={`text-[10px] capitalize shrink-0 font-mono ${LEVEL_STYLES[log.level]}`}>
-                      {log.level}
+                    <Badge variant="outline" className={`text-xs capitalize shrink-0 font-mono ${LEVEL_STYLES[log.level]}`}>
+                      {levelLabel(log.level)}
                     </Badge>
-                    <Badge variant="secondary" className="text-[10px] shrink-0 font-mono">
+                    <Badge variant="secondary" className="text-xs shrink-0 font-mono">
                       {log.channel}
                     </Badge>
                   </div>

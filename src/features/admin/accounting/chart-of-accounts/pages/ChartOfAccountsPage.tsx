@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,7 @@ import {
   type ChartOfAccountItem,
 } from '../hooks/use-chart-of-accounts';
 import { PageSkeleton, EmptyState, Can } from '@/components/shared';
+import { DataTable } from '@/features/shared/data-table';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,14 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Sheet,
   SheetContent,
@@ -65,69 +59,58 @@ import {
 } from '@/components/ui/dialog';
 import { handleApiError } from '@/lib/api/utils/error-handler';
 import { cn } from '@/lib/utils';
+import type { Tone } from '@/components/shared/status-tones';
 import { KpiCard } from '../../shared/components';
 import { downloadCsv, todayYmd } from '../../shared/table-utils';
 import { humanize, money } from '../../shared/format';
+import { formatCount } from '@/lib/format';
+import { useLocale, useTranslations } from '@/i18n/locale-context';
 
 type AccountTypeFilter = 'all' | AccountType;
+
+type Translate = ReturnType<typeof useTranslations>;
 
 const typeConfig: Record<
   AccountType,
   {
-    label: string;
     icon: React.ComponentType<{ className?: string }>;
-    color: string;
-    bg: string;
-    border: string;
+    tone: Tone;
   }
 > = {
-  asset: {
-    label: 'Asset',
-    icon: Landmark,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-  },
-  liability: {
-    label: 'Liability',
-    icon: CreditCard,
-    color: 'text-amber-400',
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/20',
-  },
-  equity: {
-    label: 'Equity',
-    icon: Landmark,
-    color: 'text-purple-400',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
-  },
-  revenue: {
-    label: 'Revenue',
-    icon: TrendingUp,
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/20',
-  },
-  expense: {
-    label: 'Expense',
-    icon: TrendingDown,
-    color: 'text-rose-400',
-    bg: 'bg-rose-500/10',
-    border: 'border-rose-500/20',
-  },
+  asset: { icon: Landmark, tone: 'info' },
+  liability: { icon: CreditCard, tone: 'warning' },
+  equity: { icon: Landmark, tone: 'neutral' },
+  revenue: { icon: TrendingUp, tone: 'success' },
+  expense: { icon: TrendingDown, tone: 'danger' },
 };
 
-const FILTER_ITEMS: Record<AccountTypeFilter, string> = {
-  all: 'All Classifications',
-  asset: 'Assets',
-  liability: 'Liabilities',
-  equity: 'Equity',
-  revenue: 'Revenue',
-  expense: 'Expenses',
-};
+function typeLabel(t: Translate, type: string): string {
+  switch (type) {
+    case 'asset':
+      return t('admin.accounting.coa.type.asset', 'Asset');
+    case 'liability':
+      return t('admin.accounting.coa.type.liability', 'Liability');
+    case 'equity':
+      return t('admin.accounting.coa.type.equity', 'Equity');
+    case 'revenue':
+      return t('admin.accounting.coa.type.revenue', 'Revenue');
+    case 'expense':
+      return t('admin.accounting.coa.type.expense', 'Expense');
+    default:
+      return humanize(type);
+  }
+}
 
-const TYPE_ITEMS = Object.fromEntries(ACCOUNT_TYPES.map((t) => [t, typeConfig[t].label]));
+function filterItems(t: Translate): Record<AccountTypeFilter, string> {
+  return {
+    all: t('admin.accounting.coa.filter.all', 'All Classifications'),
+    asset: t('admin.accounting.coa.filter.asset', 'Assets'),
+    liability: t('admin.accounting.coa.filter.liability', 'Liabilities'),
+    equity: t('admin.accounting.coa.filter.equity', 'Equity'),
+    revenue: t('admin.accounting.coa.filter.revenue', 'Revenue'),
+    expense: t('admin.accounting.coa.filter.expense', 'Expenses'),
+  };
+}
 
 const newAccountSchema = z.object({
   code: z.string().trim().min(1, 'GL code is required'),
@@ -137,6 +120,8 @@ const newAccountSchema = z.object({
 type NewAccountValues = z.infer<typeof newAccountSchema>;
 
 function NewAccountDialog({ onClose }: { onClose: () => void }) {
+  const { t, te } = useLocale();
+  const typeItems = Object.fromEntries(ACCOUNT_TYPES.map((type) => [type, typeLabel(t, type)]));
   const form = useForm<NewAccountValues>({
     resolver: zodResolver(newAccountSchema),
     defaultValues: { code: '', name: '', type: 'asset' },
@@ -147,7 +132,12 @@ function NewAccountDialog({ onClose }: { onClose: () => void }) {
   const onSubmit = form.handleSubmit((values) =>
     create.mutate(values, {
       onSuccess: () => {
-        toast.success(`GL account ${values.code} — ${values.name} created`);
+        toast.success(
+          t('admin.accounting.coa.toast.created', 'GL account {code} — {name} created', {
+            code: values.code,
+            name: values.name,
+          }),
+        );
         onClose();
       },
     }),
@@ -157,30 +147,30 @@ function NewAccountDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create GL Account</DialogTitle>
-          <DialogDescription>Add a new account to the general ledger.</DialogDescription>
+          <DialogTitle>{t('admin.accounting.coa.dialog.title', 'Create GL Account')}</DialogTitle>
+          <DialogDescription>{t('admin.accounting.coa.dialog.desc', 'Add a new account to the general ledger.')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="coa-code" className="text-muted-foreground text-xs font-semibold">
-                GL Code *
+                {t('admin.accounting.coa.dialog.code', 'GL Code *')}
               </Label>
               <Input id="coa-code" className="h-9 font-mono text-xs" {...form.register('code')} />
-              {errors.code && <p className="text-destructive text-xs">{errors.code.message}</p>}
+              {errors.code && <p className="text-destructive text-xs">{te(errors.code.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="coa-type" className="text-muted-foreground text-xs font-semibold">
-                Classification *
+                {t('admin.accounting.coa.dialog.type', 'Classification *')}
               </Label>
               <Controller
                 control={form.control}
                 name="type"
                 render={({ field }) => (
                   <Select
-                    items={TYPE_ITEMS}
+                    items={typeItems}
                     value={field.value}
                     onValueChange={(v) => v && field.onChange(v)}
                   >
@@ -188,25 +178,25 @@ function NewAccountDialog({ onClose }: { onClose: () => void }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="text-xs">
-                      {ACCOUNT_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {typeConfig[t].label}
+                      {ACCOUNT_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {typeItems[type]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {errors.type && <p className="text-destructive text-xs">{errors.type.message}</p>}
+              {errors.type && <p className="text-destructive text-xs">{te(errors.type.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="coa-name" className="text-muted-foreground text-xs font-semibold">
-              Account Title *
+              {t('admin.accounting.coa.dialog.name', 'Account Title *')}
             </Label>
             <Input id="coa-name" className="h-9 text-xs" {...form.register('name')} />
-            {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+            {errors.name && <p className="text-destructive text-xs">{te(errors.name.message ?? '')}</p>}
           </div>
 
           <DialogFooter className="pt-2">
@@ -217,14 +207,14 @@ function NewAccountDialog({ onClose }: { onClose: () => void }) {
               disabled={create.isPending}
               className="text-xs"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               type="submit"
               disabled={create.isPending}
               className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold"
             >
-              {create.isPending ? 'Creating…' : 'Create GL Code'}
+              {create.isPending ? t('admin.accounting.coa.dialog.creating', 'Creating…') : t('admin.accounting.coa.dialog.create', 'Create GL Code')}
             </Button>
           </DialogFooter>
         </form>
@@ -234,7 +224,8 @@ function NewAccountDialog({ onClose }: { onClose: () => void }) {
 }
 
 export function ChartOfAccountsPage() {
-  const router = useRouter();
+  const t = useTranslations();
+  const typeFilterItems = filterItems(t);
   const { accounts, isLoading, isError, error, refetch, isFetching } = useChartOfAccounts();
 
   const [search, setSearch] = useState('');
@@ -266,6 +257,90 @@ export function ChartOfAccountsPage() {
     };
   }, [accounts]);
 
+  const columns = useMemo<LegacyColumnDef<ChartOfAccountItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'code',
+        header: t('admin.accounting.coa.colCode', 'GL Code'),
+        size: 120,
+        cell: ({ row }) => (
+          <span className="bg-primary/10 border-primary/20 text-primary rounded-md border px-2 py-1 font-mono text-xs font-bold">
+            {row.original.code}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'name',
+        header: t('admin.accounting.coa.colName', 'Account Title'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="text-foreground hover:text-primary text-left font-bold transition-colors"
+              onClick={() => setSelectedAccount(row.original)}
+            >
+              {row.original.name}
+            </button>
+            {row.original.isSystem && (
+              <Badge variant="outline" className="text-muted-foreground border-border/60 gap-1 text-xs">
+                <Lock className="h-2.5 w-2.5" />
+                {t('admin.accounting.coa.system', 'System')}
+              </Badge>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: t('admin.accounting.coa.colType', 'Classification'),
+        cell: ({ row }) => {
+          const type = row.original.type;
+          const cfg = typeConfig[type as AccountType];
+          const Icon = cfg?.icon ?? Landmark;
+          return (
+            <Badge variant="outline" tone={cfg?.tone ?? 'neutral'} className="gap-1.5 text-xs font-semibold">
+              <Icon className="h-3 w-3" />
+              {typeLabel(t, type)}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: 'balance',
+        header: t('admin.accounting.coa.colBalance', 'Current Balance (৳)'),
+        cell: ({ row }) => (
+          <span
+            className={cn(
+              'font-mono text-sm font-bold tabular-nums',
+              row.original.balance >= 0 ? 'text-emerald-400' : 'text-rose-400',
+            )}
+          >
+            {money(row.original.balance)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground h-7 w-7"
+            aria-label={t('admin.accounting.coa.viewAccount', 'View account {code}', { code: row.original.code })}
+            onClick={() => setSelectedAccount(row.original)}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+        ),
+      },
+    ],
+    [t],
+  );
+
   const handleExportCSV = () => {
     downloadCsv(
       `chart_of_accounts_${todayYmd()}.csv`,
@@ -279,17 +354,17 @@ export function ChartOfAccountsPage() {
         a.balance,
       ]),
     );
-    toast.success(`Exported ${filteredAccounts.length} accounts`);
+    toast.success(t('admin.accounting.coa.toast.exported', 'Exported {n} accounts', { n: formatCount(filteredAccounts.length) }));
   };
 
   if (isLoading) return <PageSkeleton variant="table" rows={8} />;
 
   if (isError) {
     return (
-      <EmptyState
-        title="Failed to load chart of accounts"
+      <EmptyState variant="error"
+        title={t('admin.accounting.coa.loadFailed', 'Failed to load chart of accounts')}
         description={error.message}
-        actionLabel="Retry"
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -299,12 +374,12 @@ export function ChartOfAccountsPage() {
     <div className="w-full space-y-6 pb-12">
       {/* Top Header */}
       <PageHeader
-        title="Chart of Accounts"
-        subtitle="General ledger accounts with their current balances. System accounts are maintained automatically."
+        title={t('nav.acc-coa', 'Chart of Accounts')}
+        subtitle={t('admin.accounting.coa.subtitle', 'General ledger accounts with their current balances. System accounts are maintained automatically.')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Accounting' },
-          { label: 'Chart of Accounts' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('nav.accounting', 'Accounting') },
+          { label: t('nav.acc-coa', 'Chart of Accounts') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -315,7 +390,7 @@ export function ChartOfAccountsPage() {
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Refresh
+              {t('admin.accounting.coa.refresh', 'Refresh')}
             </Button>
             <Button
               variant="outline"
@@ -325,7 +400,7 @@ export function ChartOfAccountsPage() {
               className="border-border/80 hover:bg-accent h-9 gap-1.5 text-xs"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-              Export COA
+              {t('admin.accounting.coa.export', 'Export COA')}
             </Button>
             <Can menu="accounting" action="create">
               <Button
@@ -334,7 +409,7 @@ export function ChartOfAccountsPage() {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 gap-1.5 text-xs font-semibold shadow-sm"
               >
                 <Plus className="h-4 w-4" />
-                New GL Account
+                {t('admin.accounting.coa.newAccount', 'New GL Account')}
               </Button>
             </Can>
           </div>
@@ -344,30 +419,30 @@ export function ChartOfAccountsPage() {
       {/* KPI Stats Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Total Assets"
+          label={t('admin.accounting.coa.kpiAssets', 'Total Assets')}
           value={money(stats.assets.total)}
-          hint={`${stats.assets.count} asset accounts`}
+          hint={t('admin.accounting.coa.assetAccounts', '{n} asset accounts', { n: formatCount(stats.assets.count) })}
           icon={Landmark}
           tone="blue"
         />
         <KpiCard
-          label="Liabilities"
+          label={t('admin.accounting.coa.kpiLiabilities', 'Liabilities')}
           value={money(stats.liabilities.total)}
-          hint={`${stats.liabilities.count} liability accounts`}
+          hint={t('admin.accounting.coa.liabilityAccounts', '{n} liability accounts', { n: formatCount(stats.liabilities.count) })}
           icon={CreditCard}
           tone="amber"
         />
         <KpiCard
-          label="Revenue"
+          label={t('admin.accounting.coa.kpiRevenue', 'Revenue')}
           value={money(stats.revenue.total)}
-          hint={`${stats.revenue.count} revenue accounts`}
+          hint={t('admin.accounting.coa.revenueAccounts', '{n} revenue accounts', { n: formatCount(stats.revenue.count) })}
           icon={TrendingUp}
           tone="emerald"
         />
         <KpiCard
-          label="Expenses"
+          label={t('admin.accounting.coa.kpiExpenses', 'Expenses')}
           value={money(stats.expenses.total)}
-          hint={`${stats.expenses.count} expense accounts`}
+          hint={t('admin.accounting.coa.expenseAccounts', '{n} expense accounts', { n: formatCount(stats.expenses.count) })}
           icon={TrendingDown}
           tone="rose"
         />
@@ -378,8 +453,8 @@ export function ChartOfAccountsPage() {
         <div className="relative max-w-md flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
-            placeholder="Search accounts by code or title..."
-            aria-label="Search accounts"
+            placeholder={t('admin.accounting.coa.searchPlaceholder', 'Search accounts by code or title...')}
+            aria-label={t('admin.accounting.coa.searchLabel', 'Search accounts')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-background/80 h-9 pl-9 text-xs"
@@ -387,7 +462,7 @@ export function ChartOfAccountsPage() {
           {search && (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={t('admin.accounting.shared.clearSearch', 'Clear search')}
               onClick={() => setSearch('')}
               className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
             >
@@ -397,20 +472,20 @@ export function ChartOfAccountsPage() {
         </div>
 
         <Select
-          items={FILTER_ITEMS}
+          items={typeFilterItems}
           value={typeFilter}
           onValueChange={(v) => v && setTypeFilter(v as AccountTypeFilter)}
         >
           <SelectTrigger
-            className="bg-background/80 h-9 w-[200px] text-xs"
-            aria-label="Account type"
+            className="bg-background/80 h-9 min-w-[200px] text-xs"
+            aria-label={t('admin.accounting.coa.accountType', 'Account type')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="text-xs">
-            {(Object.keys(FILTER_ITEMS) as AccountTypeFilter[]).map((t) => (
-              <SelectItem key={t} value={t}>
-                {FILTER_ITEMS[t]}
+            {(Object.keys(typeFilterItems) as AccountTypeFilter[]).map((type) => (
+              <SelectItem key={type} value={type}>
+                {typeFilterItems[type]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -421,14 +496,14 @@ export function ChartOfAccountsPage() {
       {filteredAccounts.length === 0 ? (
         accounts.length === 0 ? (
           <EmptyState
-            title="No accounts yet"
-            description="Create the first general ledger account to get started."
+            title={t('admin.accounting.coa.emptyNone', 'No accounts yet')}
+            description={t('admin.accounting.coa.emptyNoneHint', 'Create the first general ledger account to get started.')}
           />
         ) : (
           <EmptyState
-            title="No accounts match filter"
-            description="Try modifying search or classification filters."
-            actionLabel="Clear Filters"
+            title={t('admin.accounting.coa.emptyFiltered', 'No accounts match filter')}
+            description={t('admin.accounting.coa.emptyFilteredHint', 'Try modifying search or classification filters.')}
+            actionLabel={t('admin.accounting.coa.clearFilters', 'Clear Filters')}
             onAction={() => {
               setSearch('');
               setTypeFilter('all');
@@ -436,92 +511,12 @@ export function ChartOfAccountsPage() {
           />
         )
       ) : (
-        <div className="border-border/60 bg-card overflow-hidden rounded-xl border shadow-xs">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40 text-muted-foreground border-border/60 border-b font-medium">
-                  <TableHead className="w-[120px] text-xs font-semibold">GL Code</TableHead>
-                  <TableHead className="text-xs font-semibold">Account Title</TableHead>
-                  <TableHead className="text-xs font-semibold">Classification</TableHead>
-                  <TableHead className="text-right text-xs font-semibold">
-                    Current Balance (৳)
-                  </TableHead>
-                  <TableHead className="text-right text-xs font-semibold">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-border/40 divide-y">
-                {filteredAccounts.map((acc) => {
-                  const cfg = typeConfig[acc.type as AccountType];
-                  const Icon = cfg?.icon ?? Landmark;
-
-                  return (
-                    <TableRow
-                      key={acc.id}
-                      className="hover:bg-muted/30 group cursor-pointer transition-colors duration-150"
-                      onClick={() => setSelectedAccount(acc)}
-                    >
-                      <TableCell className="py-3">
-                        <span className="bg-primary/10 border-primary/20 text-primary rounded-md border px-2 py-1 font-mono text-xs font-bold">
-                          {acc.code}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-foreground group-hover:text-primary text-xs font-bold transition-colors">
-                            {acc.name}
-                          </span>
-                          {acc.isSystem && (
-                            <Badge
-                              variant="outline"
-                              className="text-muted-foreground border-border/60 gap-1 text-[9px]"
-                            >
-                              <Lock className="h-2.5 w-2.5" />
-                              System
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'gap-1.5 text-[10px] font-semibold',
-                            cfg ? [cfg.color, cfg.bg, cfg.border] : 'text-muted-foreground',
-                          )}
-                        >
-                          <Icon className="h-3 w-3" />
-                          {cfg?.label ?? humanize(acc.type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3 text-right">
-                        <span
-                          className={cn(
-                            'font-mono text-sm font-bold tabular-nums',
-                            acc.balance >= 0 ? 'text-emerald-400' : 'text-rose-400',
-                          )}
-                        >
-                          {money(acc.balance)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-foreground h-7 w-7"
-                          aria-label={`View account ${acc.code}`}
-                          onClick={() => setSelectedAccount(acc)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+        <DataTable
+          urlState
+          columns={columns}
+          data={filteredAccounts}
+          getRowId={(row) => row.id}
+        />
       )}
 
       {/* Inspector Sheet */}
@@ -533,23 +528,23 @@ export function ChartOfAccountsPage() {
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className="bg-primary/10 text-primary border-primary/20 font-mono text-[10px]"
+                    className="bg-primary/10 text-primary border-primary/20 font-mono text-xs"
                   >
                     GL #{selectedAccount.code}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="bg-muted/40 text-muted-foreground border-border/60 text-[10px] capitalize"
+                    className="bg-muted/40 text-muted-foreground border-border/60 text-xs capitalize"
                   >
-                    {selectedAccount.type}
+                    {typeLabel(t, selectedAccount.type)}
                   </Badge>
                   {selectedAccount.isSystem && (
                     <Badge
                       variant="outline"
-                      className="text-muted-foreground border-border/60 gap-1 text-[10px]"
+                      className="text-muted-foreground border-border/60 gap-1 text-xs"
                     >
                       <Lock className="h-2.5 w-2.5" />
-                      System
+                      {t('admin.accounting.coa.system', 'System')}
                     </Badge>
                   )}
                 </div>
@@ -557,18 +552,18 @@ export function ChartOfAccountsPage() {
                   {selectedAccount.name}
                 </SheetTitle>
                 <SheetDescription className="text-muted-foreground text-xs">
-                  General ledger account and its current balance.
+                  {t('admin.accounting.coa.sheetDesc', 'General ledger account and its current balance.')}
                 </SheetDescription>
               </SheetHeader>
 
               <div className="space-y-4">
                 <Card className="border-border/70 bg-muted/20 space-y-3 border p-4">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">GL Code</span>
+                    <span className="text-muted-foreground">{t('admin.accounting.coa.colCode', 'GL Code')}</span>
                     <span className="text-primary font-mono font-bold">{selectedAccount.code}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Current Balance</span>
+                    <span className="text-muted-foreground">{t('admin.accounting.coa.currentBalance', 'Current Balance')}</span>
                     <span
                       className={cn(
                         'font-mono text-base font-bold',
@@ -579,22 +574,22 @@ export function ChartOfAccountsPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Classification</span>
+                    <span className="text-muted-foreground">{t('admin.accounting.coa.colType', 'Classification')}</span>
                     <span className="text-foreground font-medium capitalize">
-                      {selectedAccount.type}
+                      {typeLabel(t, selectedAccount.type)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Maintained by</span>
+                    <span className="text-muted-foreground">{t('admin.accounting.coa.maintainedBy', 'Maintained by')}</span>
                     <span className="text-foreground font-medium">
-                      {selectedAccount.isSystem ? 'System' : 'User'}
+                      {selectedAccount.isSystem ? t('admin.accounting.coa.system', 'System') : t('admin.accounting.coa.user', 'User')}
                     </span>
                   </div>
                   {selectedAccount.status && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Status</span>
+                      <span className="text-muted-foreground">{t('common.status', 'Status')}</span>
                       <span className="text-foreground font-medium capitalize">
-                        {selectedAccount.status}
+                        {t(`status.${selectedAccount.status.toLowerCase()}`, selectedAccount.status)}
                       </span>
                     </div>
                   )}
@@ -603,20 +598,20 @@ export function ChartOfAccountsPage() {
                 <div className="flex gap-2 pt-4">
                   <Button
                     className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 text-xs font-semibold"
-                    onClick={() =>
-                      router.push(
-                        `/admin/accounting/journal-entries?account_id=${encodeURIComponent(selectedAccount.id)}`,
-                      )
+                    render={
+                      <Link
+                        href={`/admin/accounting/journal-entries?account_id=${encodeURIComponent(selectedAccount.id)}`}
+                      />
                     }
                   >
-                    View Ledger Transactions
+                    {t('admin.accounting.coa.viewLedger', 'View Ledger Transactions')}
                   </Button>
                   <Button
                     variant="outline"
                     className="border-border hover:bg-accent text-xs"
                     onClick={() => setSelectedAccount(null)}
                   >
-                    Close
+                    {t('common.close', 'Close')}
                   </Button>
                 </div>
               </div>

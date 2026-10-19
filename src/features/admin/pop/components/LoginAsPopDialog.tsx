@@ -15,6 +15,7 @@ import { setAuthCookie } from '@/lib/auth/session-cookie';
 import { parkImpersonatorSession } from '@/lib/auth/impersonation';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth-store';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface ImpersonationResult {
   access_token: string;
@@ -29,12 +30,13 @@ interface ImpersonationResult {
  */
 export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: string } | null; onClose: () => void }) {
   const router = useRouter();
+  const t = useTranslations();
   const [password, setPassword] = useState('');
 
   const login = useMutation({
     mutationFn: async () => {
       const original = useAuthStore.getState();
-      if (!original.user || !original.token) throw new Error('You are not signed in.');
+      if (!original.user || !original.token) throw new Error(t('admin.pop.loginAs.notSignedIn', 'You are not signed in.'));
       const result = await http.post<ImpersonationResult>(`/v1/pops/${pop?.id}/impersonate`, password ? { password } : {});
 
       let refreshToken: string | null = null;
@@ -65,7 +67,7 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
       return user;
     },
     onSuccess: (user) => {
-      toast.success(`Signed in as ${user.name}`);
+      toast.success(t('admin.pop.loginAs.signedIn', 'Signed in as {name}', { name: user.name }));
       setPassword('');
       onClose();
       router.replace('/admin/dashboard');
@@ -76,14 +78,16 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
     <Dialog open={!!pop} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log in as {pop?.name}</DialogTitle>
+          <DialogTitle>{t('admin.pop.loginAs.title', 'Log in as {name}', { name: pop?.name ?? '' })}</DialogTitle>
           <DialogDescription>
-            You will act inside this POP&apos;s portal with a short-lived session. Every login is recorded in the audit
-            log. Use “Return” in the banner to come back to your account.
+            {t(
+              'admin.pop.loginAs.desc',
+              "You will act inside this POP's portal with a short-lived session. Every login is recorded in the audit log. Use “Return” in the banner to come back to your account.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5 py-2">
-          <Label htmlFor="pop-imp-password">Your password</Label>
+          <Label htmlFor="pop-imp-password">{t('admin.pop.loginAs.password', 'Your password')}</Label>
           <Input
             id="pop-imp-password"
             type="password"
@@ -91,15 +95,17 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <p className="text-muted-foreground text-xs">Confirms it&apos;s you. Optional unless your platform requires it.</p>
+          <p className="text-muted-foreground text-xs">
+            {t('admin.pop.loginAs.passwordHint', "Confirms it's you. Optional unless your platform requires it.")}
+          </p>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button onClick={() => login.mutate()} disabled={login.isPending}>
             {login.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <LogIn className="mr-1.5 h-4 w-4" />}
-            Log in as POP
+            {t('admin.pop.loginAs.submit', 'Log in as POP')}
           </Button>
         </DialogFooter>
       </DialogContent>

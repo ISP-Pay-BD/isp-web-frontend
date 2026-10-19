@@ -9,13 +9,15 @@ import { Reveal, RevealItem } from '@/components/motion/Reveal';
 import { SectionTitle } from './SectionTitle';
 import { SpotlightCard } from './SpotlightCard';
 
+const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
 const demoCards = [
   {
     role: 'Admin Panel',
     icon: Shield,
     accent: 'from-orange-500/20 to-amber-500/10',
     borderGlow: 'hover:border-landing-cta/40',
-    iconBg: 'bg-landing-cta/10 text-landing-cta border-landing-cta/20',
+    iconBg: 'bg-landing-cta/10 text-landing-accent border-landing-cta/20',
     sub: 'Full ISP management dashboard',
     user: 'demo@isppaybd.com',
     pass: '12345678',
@@ -50,6 +52,8 @@ const demoCards = [
 
 export function TryItSection() {
   const t = useTranslations();
+  const label = (group: 'role' | 'sub' | 'chip', english: string) =>
+    t(`marketing.landing.tryIt.${group}.${slug(english)}`, english);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleCopy = (text: string, id: string) => {
@@ -90,17 +94,17 @@ export function TryItSection() {
                         >
                           <Icon className="h-6 w-6" />
                         </div>
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-white/50">
-                          <KeyRound className="h-3 w-3 text-white/40" />
-                          Demo Ready
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-medium text-white/50">
+                          <KeyRound className="h-3 w-3 text-white/60" />
+                          {t('marketing.landing.tryIt.demoReady', 'Demo Ready')}
                         </span>
                       </div>
 
                       <h3 className="font-landing-display mt-5 text-xl font-bold tracking-tight text-white">
-                        {card.role}
+                        {label('role', card.role)}
                       </h3>
                       <p className="mt-1.5 min-h-[32px] text-xs leading-relaxed text-white/60">
-                        {card.sub}
+                        {label('sub', card.sub)}
                       </p>
 
                       {/* Feature Chips */}
@@ -108,9 +112,9 @@ export function TryItSection() {
                         {card.chips.map((chip) => (
                           <span
                             key={chip}
-                            className="rounded-md border border-white/5 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/50"
+                            className="rounded-md border border-white/5 bg-white/[0.04] px-2 py-0.5 text-xs font-medium text-white/50"
                           >
-                            {chip}
+                            {label('chip', chip)}
                           </span>
                         ))}
                       </div>
@@ -120,51 +124,51 @@ export function TryItSection() {
                     <div className="mt-6 space-y-3 border-t border-white/10 pt-5">
                       <div className="space-y-2 rounded-xl border border-white/10 bg-black/40 p-3 font-mono text-xs">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold tracking-wider text-white/40 uppercase">
-                            User
+                          <span className="text-xs font-semibold tracking-wider text-white/60 uppercase">
+                            {t('marketing.sections.tryIt.userLabel', 'User:')}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCopy(card.user, userCopyId)}
                             className="group/btn flex items-center gap-1.5 rounded px-1.5 py-0.5 text-white/90 transition-colors hover:bg-white/10 hover:text-white"
-                            title="Click to copy"
+                            title={t('marketing.landing.tryIt.copy', 'Click to copy')}
                           >
                             <span className="max-w-[150px] truncate font-medium">{card.user}</span>
                             {copiedKey === userCopyId ? (
                               <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                             ) : (
-                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/40 group-hover/btn:text-white" />
+                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/60 group-hover/btn:text-white" />
                             )}
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-1">
-                          <span className="text-[11px] font-semibold tracking-wider text-white/40 uppercase">
-                            Pass
+                          <span className="text-xs font-semibold tracking-wider text-white/60 uppercase">
+                            {t('marketing.sections.tryIt.passLabel', 'Pass:')}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCopy(card.pass, passCopyId)}
                             className="group/btn flex items-center gap-1.5 rounded px-1.5 py-0.5 text-white/90 transition-colors hover:bg-white/10 hover:text-white"
-                            title="Click to copy"
+                            title={t('marketing.landing.tryIt.copy', 'Click to copy')}
                           >
                             <span className="font-medium">{card.pass}</span>
                             {copiedKey === passCopyId ? (
                               <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                             ) : (
-                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/40 group-hover/btn:text-white" />
+                              <Copy className="h-3.5 w-3.5 shrink-0 text-white/60 group-hover/btn:text-white" />
                             )}
                           </button>
                         </div>
                       </div>
 
                       {/* CTA Button */}
-                      <Link href={card.loginHref} className="block w-full">
-                        <Button className="bg-landing-cta hover:bg-landing-cta-hover shadow-landing-cta/20 group hover:shadow-landing-cta/30 h-10 w-full text-xs font-semibold text-white shadow-lg transition duration-300">
-                          <span>Explore {card.role}</span>
+                      <Button className="bg-landing-cta hover:bg-landing-cta-hover shadow-landing-cta/20 group hover:shadow-landing-cta/30 h-10 w-full text-xs font-semibold text-white shadow-lg transition duration-300" render={<Link href={card.loginHref} className="block w-full" />}>
+                          <span>
+                            {t('marketing.sections.tryIt.openPanel', 'Open {role}', { role: label('role', card.role) })}
+                          </span>
                           <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                         </Button>
-                      </Link>
                     </div>
                   </div>
                 </SpotlightCard>

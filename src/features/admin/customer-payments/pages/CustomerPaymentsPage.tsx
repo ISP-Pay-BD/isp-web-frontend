@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Receipt, Download, Copy, FileText, Printer, Send, Loader2 } from 'lucide-react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
@@ -14,6 +14,7 @@ import {
 import { PaymentReceiptA4 } from '../components/PaymentReceiptA4';
 import { MethodPill } from '../components/MethodPill';
 import { receiptSmsText } from '../lib/mappers';
+import { ledgerStatusLabel } from '../lib/labels';
 import type { CustomerPaymentRow, LedgerFilters } from '../types';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -28,25 +29,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatDateTime } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-
-const METHOD_FILTERS = [
-  { value: 'all', label: 'All methods' },
-  { value: 'cash', label: 'Cash' },
-  { value: 'bkash', label: 'bKash' },
-  { value: 'nagad', label: 'Nagad' },
-  { value: 'rocket', label: 'Rocket' },
-  { value: 'bank', label: 'Bank' },
-  { value: 'ssl', label: 'SSLCommerz' },
-];
-
-const STATUS_FILTERS = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'successful', label: 'Paid' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'failed', label: 'Failed' },
-] as const;
+import { useLocale, useTranslations } from '@/i18n/locale-context';
 
 export function CustomerPaymentsPage() {
+  const t = useTranslations();
+  const { locale } = useLocale();
+  const methodFilters = [
+    { value: 'all', label: t('admin.customerPayments.list.allMethods', 'All methods') },
+    { value: 'cash', label: t('admin.customerPayments.method.cash', 'Cash') },
+    { value: 'bkash', label: 'bKash' },
+    { value: 'nagad', label: 'Nagad' },
+    { value: 'rocket', label: 'Rocket' },
+    { value: 'bank', label: t('admin.customerPayments.method.bank', 'Bank') },
+    { value: 'ssl', label: 'SSLCommerz' },
+  ];
+  const statusFilters = [
+    { value: 'all', label: t('admin.customerPayments.list.allStatuses', 'All statuses') },
+    { value: 'successful', label: t('admin.customerPayments.status.paid', 'Paid') },
+    { value: 'pending', label: t('admin.customerPayments.status.pending', 'Pending') },
+    { value: 'failed', label: t('admin.customerPayments.status.failed', 'Failed') },
+  ];
+  const methodItems = Object.fromEntries(methodFilters.map((m) => [m.value, m.label]));
+  const statusItems = Object.fromEntries(statusFilters.map((s) => [s.value, s.label]));
   const [filters, setFilters] = useState<LedgerFilters>({
     page: 1,
     pageSize: 20,
@@ -66,18 +70,21 @@ export function CustomerPaymentsPage() {
   const summary = data?.summary;
   const items = data?.items ?? [];
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast.success(`${label} copied to clipboard`))
-      .catch(() => toast.error('Clipboard is not available'));
-  };
+  const handleCopy = useCallback(
+    (text: string, label: string) => {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => toast.success(t('admin.customerPayments.list.copied', '{label} copied to clipboard', { label })))
+        .catch(() => toast.error(t('admin.customerPayments.list.clipboardUnavailable', 'Clipboard is not available')));
+    },
+    [t],
+  );
 
   const handleExport = async () => {
     setExporting(true);
     try {
       await downloadLedgerCsv(filters);
-      toast.success('Ledger exported to CSV');
+      toast.success(t('admin.customerPayments.list.exported', 'Ledger exported to CSV'));
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -89,7 +96,7 @@ export function CustomerPaymentsPage() {
     () => [
       {
         accessorKey: 'invoiceNo',
-        header: 'Invoice #',
+        header: t('admin.customerPayments.list.colInvoice', 'Invoice #'),
         size: 230,
         enableHiding: false,
         cell: ({ row }) => {
@@ -110,14 +117,15 @@ export function CustomerPaymentsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleCopy(payment.invoiceNo, 'Invoice')}
+                    onClick={() => handleCopy(payment.invoiceNo, t('admin.customerPayments.list.invoice', 'Invoice'))}
                     className="hover:text-primary transition-colors text-muted-foreground"
-                    title="Copy invoice number"
+                    title={t('admin.customerPayments.list.copyInvoice', 'Copy invoice number')}
+                    aria-label={t('admin.customerPayments.list.copyInvoice', 'Copy invoice number')}
                   >
                     <Copy className="h-3 w-3" />
                   </button>
                 </div>
-                <div className="text-[11px] text-muted-foreground font-normal">
+                <div className="text-xs text-muted-foreground font-normal">
                   {payment.createdAt ? formatDateTime(payment.paidAt ?? payment.createdAt) : '—'}
                 </div>
               </div>
@@ -127,13 +135,13 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'customerName',
-        header: 'Customer',
+        header: t('admin.customerPayments.list.colCustomer', 'Customer'),
         size: 190,
         cell: ({ row }) => (
           <div>
             <div className="font-bold text-sm text-foreground">{row.original.customerName}</div>
-            <div className="text-[11px] text-muted-foreground font-mono">
-              ID: {row.original.customerId}
+            <div className="text-xs text-muted-foreground font-mono">
+              {t('admin.customerPayments.list.id', 'ID')}: {row.original.customerId}
               {row.original.customerMobile ? ` · ${row.original.customerMobile}` : ''}
             </div>
           </div>
@@ -141,7 +149,7 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'amountBdt',
-        header: 'Amount',
+        header: t('admin.customerPayments.list.colAmount', 'Amount'),
         size: 120,
         cell: ({ row }) => (
           <div className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
@@ -151,24 +159,24 @@ export function CustomerPaymentsPage() {
       },
       {
         accessorKey: 'method',
-        header: 'Method',
+        header: t('admin.customerPayments.list.colMethod', 'Method'),
         size: 140,
         cell: ({ row }) => <MethodPill method={row.original.method} methodRaw={row.original.methodRaw} />,
       },
       {
         accessorKey: 'status',
-        header: 'Status',
+        header: t('admin.customerPayments.list.colStatus', 'Status'),
         size: 110,
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => <StatusBadge status={row.original.status} label={ledgerStatusLabel(t, row.original.status)} />,
       },
       {
         accessorKey: 'trxId',
-        header: 'TrxID / Collector',
+        header: t('admin.customerPayments.list.colTrxCollector', 'TrxID / Collector'),
         size: 190,
         cell: ({ row }) => (
-          <div className="text-[11px]">
+          <div className="text-xs">
             <div className="font-mono text-muted-foreground truncate max-w-[200px]">{row.original.trxId || '—'}</div>
-            {row.original.collector ? <div className="text-muted-foreground">by {row.original.collector}</div> : null}
+            {row.original.collector ? <div className="text-muted-foreground">{t('admin.customerPayments.list.by', 'by {name}', { name: row.original.collector })}</div> : null}
           </div>
         ),
       },
@@ -185,22 +193,22 @@ export function CustomerPaymentsPage() {
               className="h-7 text-xs text-primary hover:bg-primary/10 gap-1"
             >
               <FileText className="h-3.5 w-3.5" />
-              Receipt
+              {t('admin.customerPayments.list.receipt', 'Receipt')}
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t, handleCopy],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError && !data) {
     return (
-      <EmptyState
-        title="Failed to load payments"
-        description="Could not fetch payment records from the ledger."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.customerPayments.list.loadFailed', 'Failed to load payments')}
+        description={t('admin.customerPayments.list.loadFailedHint', 'Could not fetch payment records from the ledger.')}
+        actionLabel={t('admin.customerPayments.common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -211,12 +219,12 @@ export function CustomerPaymentsPage() {
   return (
     <div className="w-full space-y-6 pb-12">
       <PageHeader
-        title="Customer Payments"
-        subtitle="Subscriber collection ledger — mobile wallets, cash handovers and bank deposits"
+        title={t('admin.customerPayments.list.title', 'Customer Payments')}
+        subtitle={t('admin.customerPayments.list.subtitle', 'Subscriber collection ledger — mobile wallets, cash handovers and bank deposits')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'POP Suite' },
-          { label: 'Customer Payments' },
+          { label: t('admin.customerPayments.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('admin.customerPayments.list.breadcrumbPop', 'POP Suite') },
+          { label: t('admin.customerPayments.list.title', 'Customer Payments') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -233,15 +241,13 @@ export function CustomerPaymentsPage() {
                 ) : (
                   <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                 )}
-                Export CSV
+                {t('admin.customerPayments.list.exportCsv', 'Export CSV')}
               </Button>
             </Can>
             <Can menu="customer_payment" action="create">
-              <Link href="/admin/customer-payments/new">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-                  <Plus className="h-3.5 w-3.5" /> Record Payment
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5" render={<Link href="/admin/customer-payments/new" />}>
+                  <Plus className="h-3.5 w-3.5" /> {t('admin.customerPayments.list.recordPayment', 'Record Payment')}
                 </Button>
-              </Link>
             </Can>
           </div>
         }
@@ -253,42 +259,44 @@ export function CustomerPaymentsPage() {
           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
             <CurrencyDisplay amount={summary?.collected ?? 0} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">collected ({summary?.paidCount ?? 0} receipts)</span>
+          <span className="text-muted-foreground">
+            {t('admin.customerPayments.list.collected', 'collected ({n} receipts)', { n: summary?.paidCount ?? 0 })}
+          </span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-foreground">
             <CurrencyDisplay amount={summary?.mfsCollected ?? 0} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">mobile wallets</span>
+          <span className="text-muted-foreground">{t('admin.customerPayments.list.mobileWallets', 'mobile wallets')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-blue-500">
             <CurrencyDisplay amount={summary?.bankCollected ?? 0} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">bank / card gateways</span>
+          <span className="text-muted-foreground">{t('admin.customerPayments.list.bankGateways', 'bank / card gateways')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-foreground">
             <CurrencyDisplay amount={summary?.cashCollected ?? 0} className="inline font-semibold" />
           </span>{' '}
-          <span className="text-muted-foreground">cash</span>
+          <span className="text-muted-foreground">{t('admin.customerPayments.list.cash', 'cash')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{summary?.pendingCount ?? 0}</span>{' '}
           <span className="text-muted-foreground">
-            pending (<CurrencyDisplay amount={summary?.pending ?? 0} className="inline" />)
+            {t('admin.customerPayments.list.pending', 'pending')} (<CurrencyDisplay amount={summary?.pending ?? 0} className="inline" />)
           </span>
         </p>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={items}
         isLoading={isFetching && !items.length}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search invoice, TrxID, customer name or mobile..."
-        emptyTitle="No payment records found"
-        emptyDescription="No payments match the current filters."
+        searchPlaceholder={t('admin.customerPayments.list.searchPlaceholder', 'Search invoice, TrxID, customer name or mobile...')}
+        emptyTitle={t('admin.customerPayments.list.emptyTitle', 'No payment records found')}
+        emptyDescription={t('admin.customerPayments.list.emptyHint', 'No payments match the current filters.')}
         server={{
           page: filters.page,
           pageSize: filters.pageSize,
@@ -300,24 +308,24 @@ export function CustomerPaymentsPage() {
         }}
         toolbarActions={
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={filters.status} onValueChange={(v) => patch({ status: (v ?? 'all') as LedgerFilters['status'] })}>
-              <SelectTrigger className="h-9 w-[130px] text-xs">
-                <SelectValue placeholder="Status" />
+            <Select value={filters.status} onValueChange={(v) => patch({ status: (v ?? 'all') as LedgerFilters['status'] })} items={statusItems}>
+              <SelectTrigger className="h-9 w-[130px] text-xs" aria-label={t('admin.customerPayments.list.filterStatus', 'Status')}>
+                <SelectValue placeholder={t('admin.customerPayments.list.filterStatus', 'Status')} />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_FILTERS.map((s) => (
+                {statusFilters.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filters.method} onValueChange={(v) => patch({ method: v ?? 'all' })}>
-              <SelectTrigger className="h-9 w-[140px] text-xs">
-                <SelectValue placeholder="Method" />
+            <Select value={filters.method} onValueChange={(v) => patch({ method: v ?? 'all' })} items={methodItems}>
+              <SelectTrigger className="h-9 w-[140px] text-xs" aria-label={t('admin.customerPayments.list.filterMethod', 'Method')}>
+                <SelectValue placeholder={t('admin.customerPayments.list.filterMethod', 'Method')} />
               </SelectTrigger>
               <SelectContent>
-                {METHOD_FILTERS.map((m) => (
+                {methodFilters.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
                     {m.label}
                   </SelectItem>
@@ -330,7 +338,7 @@ export function CustomerPaymentsPage() {
               max={filters.to || undefined}
               onChange={(e) => patch({ from: e.target.value })}
               className="h-9 w-[140px] text-xs"
-              aria-label="From date"
+              aria-label={t('admin.customerPayments.list.fromDate', 'From date')}
             />
             <Input
               type="date"
@@ -338,7 +346,7 @@ export function CustomerPaymentsPage() {
               min={filters.from || undefined}
               onChange={(e) => patch({ to: e.target.value })}
               className="h-9 w-[140px] text-xs"
-              aria-label="To date"
+              aria-label={t('admin.customerPayments.list.toDate', 'To date')}
             />
           </div>
         }
@@ -353,11 +361,11 @@ export function CustomerPaymentsPage() {
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold">Payment Receipt</DialogTitle>
+                  <DialogTitle className="text-base font-bold">{t('admin.customerPayments.list.receiptTitle', 'Payment Receipt')}</DialogTitle>
                   <DialogDescription className="text-xs font-mono text-muted-foreground">{r?.invoiceNo ?? '…'}</DialogDescription>
                 </div>
               </div>
-              {r && <StatusBadge status={r.status} />}
+              {r && <StatusBadge status={r.status} label={ledgerStatusLabel(t, r.status)} />}
             </div>
           </DialogHeader>
 
@@ -366,38 +374,38 @@ export function CustomerPaymentsPage() {
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : receipt.isError || !r ? (
-            <EmptyState
-              title="Could not load this receipt"
+            <EmptyState variant="error"
+              title={t('admin.customerPayments.list.receiptFailed', 'Could not load this receipt')}
               description={errorMessage(receipt.error)}
-              actionLabel="Retry"
+              actionLabel={t('admin.customerPayments.common.retry', 'Retry')}
               onAction={() => receipt.refetch()}
               className="py-8"
             />
           ) : (
             <div className="space-y-4 pt-2 text-xs">
               <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 space-y-2">
-                <Row label="Customer" value={r.customer?.name || '—'} bold />
-                <Row label="Customer ID" value={r.customer ? r.customer.code || r.customer.id : '—'} mono />
-                {r.customer?.packageName ? <Row label="Package" value={r.customer.packageName} /> : null}
-                <Row label="Date" value={formatDateTime(r.paidAt ?? r.createdAt ?? '')} />
-                <Row label="Method" value={r.methodRaw || '—'} />
-                {r.trxId ? <Row label="TrxID / Reference" value={r.trxId} mono /> : null}
-                {r.collector ? <Row label="Collected by" value={r.collector} /> : null}
+                <Row label={t('admin.customerPayments.list.rowCustomer', 'Customer')} value={r.customer?.name || '—'} bold />
+                <Row label={t('admin.customerPayments.list.rowCustomerId', 'Customer ID')} value={r.customer ? r.customer.code || r.customer.id : '—'} mono />
+                {r.customer?.packageName ? <Row label={t('admin.customerPayments.list.rowPackage', 'Package')} value={r.customer.packageName} /> : null}
+                <Row label={t('admin.customerPayments.list.rowDate', 'Date')} value={formatDateTime(r.paidAt ?? r.createdAt ?? '')} />
+                <Row label={t('admin.customerPayments.list.rowMethod', 'Method')} value={r.methodRaw || '—'} />
+                {r.trxId ? <Row label={t('admin.customerPayments.list.rowTrxRef', 'TrxID / Reference')} value={r.trxId} mono /> : null}
+                {r.collector ? <Row label={t('admin.customerPayments.list.rowCollectedBy', 'Collected by')} value={r.collector} /> : null}
               </div>
 
               <div className="flex justify-between items-center p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm font-bold">
-                <span className="text-foreground">{r.status === 'completed' ? 'Amount received' : 'Amount'}</span>
+                <span className="text-foreground">{r.status === 'completed'
+                    ? t('admin.customerPayments.list.amountReceived', 'Amount received')
+                    : t('admin.customerPayments.list.colAmount', 'Amount')}</span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400 text-base">
                   <CurrencyDisplay amount={r.amountBdt} />
                 </span>
               </div>
 
               <div className="flex flex-wrap justify-between items-center gap-2 pt-2 border-t">
-                <Link href={`/admin/customer-payments/${r.id}/pos`}>
-                  <Button size="sm" variant="ghost" className="text-xs gap-1.5 text-muted-foreground hover:text-foreground">
-                    <Receipt className="h-3.5 w-3.5" /> POS Slip
+                <Button size="sm" variant="ghost" className="text-xs gap-1.5 text-muted-foreground hover:text-foreground" render={<Link href={`/admin/customer-payments/${r.id}/pos`} />}>
+                    <Receipt className="h-3.5 w-3.5" /> {t('admin.customerPayments.list.posSlip', 'POS Slip')}
                   </Button>
-                </Link>
                 <div className="flex gap-2">
                   {r.customer ? (
                     <Can menu="sms_message" action="create">
@@ -405,15 +413,15 @@ export function CustomerPaymentsPage() {
                         size="sm"
                         variant="outline"
                         disabled={sendSms.isPending}
-                        onClick={() => sendSms.mutate({ customerId: r.customer!.id, content: receiptSmsText(r) })}
+                        onClick={() => sendSms.mutate({ customerId: r.customer!.id, content: receiptSmsText(r, locale) })}
                         className="text-xs gap-1.5"
                       >
-                        <Send className="h-3.5 w-3.5" /> SMS
+                        <Send className="h-3.5 w-3.5" /> {t('admin.customerPayments.list.sms', 'SMS')}
                       </Button>
                     </Can>
                   ) : null}
                   <Button size="sm" onClick={() => window.print()} className="text-xs gap-1.5 font-semibold">
-                    <Printer className="h-3.5 w-3.5" /> Print / Save PDF
+                    <Printer className="h-3.5 w-3.5" /> {t('admin.customerPayments.list.print', 'Print / Save PDF')}
                   </Button>
                 </div>
               </div>

@@ -17,9 +17,11 @@ import { getPostLoginRedirect } from '@/lib/auth/route-access';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { ApiError } from '@/lib/api/client';
+import { useLocale } from '@/i18n/locale-context';
 import { loginSchema, type LoginFormValues } from '../schemas/login.schema';
 
 export function LoginForm() {
+  const { t, te } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((s) => s.login);
@@ -40,7 +42,7 @@ export function LoginForm() {
     setError(null);
     try {
       const user = await login(values.email, values.password, needsOtp ? values.otp?.trim() : undefined);
-      toast.success(`Welcome back, ${user.name}`);
+      toast.success(t('auth.login.welcomeToast', 'Welcome back, {name}', { name: user.name }));
       const redirect = searchParams.get('redirect');
       const destination = getPostLoginRedirect(user.role, redirect);
       router.replace(destination);
@@ -48,7 +50,7 @@ export function LoginForm() {
       if (err instanceof ApiError && (err.code === 'TWO_FACTOR_REQUIRED' || err.code === 'TWO_FACTOR_INVALID')) {
         setNeedsOtp(true);
       }
-      setError(err instanceof Error && err.message ? err.message : 'Sign in failed. Please try again.');
+      setError(err instanceof Error && err.message ? err.message : t('auth.login.failed', 'Sign in failed. Please try again.'));
     }
   };
 
@@ -57,19 +59,19 @@ export function LoginForm() {
       <div className="mx-auto w-full max-w-md space-y-8">
         <div className="space-y-4 lg:hidden">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
+            <Image src={brandAssets.logo} alt={t('common.sidebar.logoAlt', '{name} logo', { name: siteConfig.name })} width={36} height={36} />
             <span className="text-lg font-semibold group-hover:text-primary transition-colors">{siteConfig.name}</span>
           </Link>
         </div>
 
         <div className="space-y-2">
-          <h2 className="font-landing-display text-2xl font-bold tracking-tight text-foreground">Welcome back</h2>
-          <p className="text-muted-foreground text-sm">Sign in to your ISP Pay BD operations dashboard</p>
+          <h2 className="font-landing-display text-2xl font-bold tracking-tight text-foreground">{t('auth.login.title', 'Welcome back')}</h2>
+          <p className="text-muted-foreground text-sm">{t('auth.login.subtitle', 'Sign in to your ISP Pay BD operations dashboard')}</p>
         </div>
 
         {!error && searchParams.get('expired') ? (
           <Alert className="rounded-xl text-xs">
-            <AlertDescription className="text-xs font-medium">Your session expired. Please sign in again.</AlertDescription>
+            <AlertDescription className="text-xs font-medium">{t('auth.login.sessionExpired', 'Your session expired. Please sign in again.')}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -81,7 +83,7 @@ export function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs font-semibold">Email or Operator ID</Label>
+            <Label htmlFor="email" className="text-xs font-semibold">{t('auth.login.emailLabel', 'Email or Operator ID')}</Label>
             <Input
               id="email"
               type="email"
@@ -91,15 +93,15 @@ export function LoginForm() {
               {...register('email')}
             />
             {errors.email ? (
-              <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
+              <p className="text-destructive text-xs mt-1">{te(errors.email.message ?? '')}</p>
             ) : null}
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-xs font-semibold">Password</Label>
+              <Label htmlFor="password" className="text-xs font-semibold">{t('auth.login.passwordLabel', 'Password')}</Label>
               <Link href="/forgot-password" className="text-primary text-xs font-medium hover:underline">
-                Forgot password?
+                {t('auth.login.forgot', 'Forgot password?')}
               </Link>
             </div>
             <div className="relative">
@@ -107,7 +109,7 @@ export function LoginForm() {
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                placeholder="Enter your password"
+                placeholder={t('auth.login.passwordPlaceholder', 'Enter your password')}
                 className="h-11 rounded-xl bg-background/80 pr-10 focus-visible:ring-primary/40 focus-visible:border-primary text-sm font-mono"
                 {...register('password')}
               />
@@ -117,26 +119,26 @@ export function LoginForm() {
                 size="icon"
                 className="absolute top-0 right-0 h-full px-3 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.login.hidePassword', 'Hide password') : t('auth.login.showPassword', 'Show password')}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
             </div>
             {errors.password ? (
-              <p className="text-destructive text-xs mt-1">{errors.password.message}</p>
+              <p className="text-destructive text-xs mt-1">{te(errors.password.message ?? '')}</p>
             ) : null}
           </div>
 
           {needsOtp ? (
             <div className="space-y-2">
-              <Label htmlFor="otp" className="text-xs font-semibold">Authentication code</Label>
+              <Label htmlFor="otp" className="text-xs font-semibold">{t('auth.login.otpLabel', 'Authentication code')}</Label>
               <Input
                 id="otp"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
                 autoFocus
-                placeholder="6-digit code from your authenticator app"
+                placeholder={t('auth.login.otpPlaceholder', '6-digit code from your authenticator app')}
                 className="h-11 rounded-xl bg-background/80 font-mono tracking-widest text-sm"
                 {...register('otp')}
               />
@@ -151,18 +153,18 @@ export function LoginForm() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in…
+                {t('auth.login.submitting', 'Signing in…')}
               </>
             ) : (
-              'Sign in to Dashboard'
+              t('auth.login.submit', 'Sign in to Dashboard')
             )}
           </Button>
         </form>
 
         <p className="text-muted-foreground text-center text-xs pt-2">
-          Don&apos;t have an account?{' '}
+          {t('auth.login.noAccount', "Don't have an account?")}{' '}
           <Link href="/register" className="text-primary font-semibold hover:underline">
-            Create free trial
+            {t('auth.login.createTrial', 'Create free trial')}
           </Link>
         </p>
       </div>

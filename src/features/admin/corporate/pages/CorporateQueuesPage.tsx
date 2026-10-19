@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { toast } from 'sonner';
@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { useRouterOptions } from '@/features/admin/routers/hooks/useRouters';
 import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
 import {
@@ -30,6 +32,7 @@ const selectClass =
   'h-9 w-full rounded-lg border border-border/70 bg-background/80 px-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary';
 
 export function CorporateQueuesPage() {
+  const t = useTranslations();
   const routers = useRouterOptions({ ownedOnly: true });
   const [routerId, setRouterId] = useState('');
   const [status, setStatus] = useState<QueueFilter>('all');
@@ -62,7 +65,7 @@ export function CorporateQueuesPage() {
   const submitImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!importRows || !packageId || !areaId) {
-      toast.error('Pick a package and an area for the new customers');
+      toast.error(t('admin.corporate.queues.toast.pickPackageArea', 'Pick a package and an area for the new customers'));
       return;
     }
     importer.mutate(
@@ -75,19 +78,34 @@ export function CorporateQueuesPage() {
       {
         onSuccess: (res) => {
           const failed = res?.failed?.length ?? 0;
-          if (failed > 0) toast.warning(`${res.imported} imported, ${failed} could not be imported`);
-          else toast.success(`${res?.imported ?? 0} corporate customer(s) imported`);
+          if (failed > 0) {
+            toast.warning(
+              t('admin.corporate.queues.toast.importedPartial', '{imported} imported, {failed} could not be imported', {
+                imported: formatCount(res.imported),
+                failed: formatCount(failed),
+              }),
+            );
+          } else {
+            toast.success(
+              t('admin.corporate.queues.toast.imported', '{n} corporate customer(s) imported', { n: formatCount(res?.imported ?? 0) }),
+            );
+          }
           setImportRows(null);
         },
       },
     );
   };
 
+  const filterLabel = useCallback(
+    (f: QueueFilter) => t(`admin.corporate.queues.filter.${f}`, f),
+    [t],
+  );
+
   const columns = useMemo<LegacyColumnDef<CorporateQueue, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Queue',
+        header: t('admin.corporate.queues.colQueue', 'Queue'),
         enableHiding: false,
         cell: ({ row }) => (
           <div className="space-y-0.5">
@@ -103,7 +121,7 @@ export function CorporateQueuesPage() {
       },
       {
         accessorKey: 'target',
-        header: 'Target',
+        header: t('admin.corporate.queues.colTarget', 'Target'),
         cell: ({ row }) => (
           <span className="font-mono text-xs px-2.5 py-1 rounded bg-muted/60 border border-border/60 text-foreground">
             {row.original.target || '—'}
@@ -112,24 +130,24 @@ export function CorporateQueuesPage() {
       },
       {
         accessorKey: 'maxLimit',
-        header: 'Max Limit (up/down)',
+        header: t('admin.corporate.queues.colMaxLimit', 'Max Limit (up/down)'),
         cell: ({ row }) => <span className="font-mono text-xs text-foreground">{row.original.maxLimit || '—'}</span>,
       },
       {
         accessorKey: 'customerName',
-        header: 'Billing Customer',
+        header: t('admin.corporate.queues.colCustomer', 'Billing Customer'),
         cell: ({ row }) =>
           row.original.linked ? (
             <Link href={`/admin/customers/${row.original.userId}`} className="text-sm font-medium text-primary hover:underline">
               {row.original.customerName || `#${row.original.userId}`}
             </Link>
           ) : (
-            <span className="text-xs text-muted-foreground">Not linked</span>
+            <span className="text-xs text-muted-foreground">{t('admin.corporate.queues.notLinked', 'Not linked')}</span>
           ),
       },
       {
         id: 'state',
-        header: 'State',
+        header: t('admin.corporate.queues.colState', 'State'),
         cell: ({ row }) => {
           const q = row.original;
           const tone = q.disabled
@@ -140,38 +158,46 @@ export function CorporateQueuesPage() {
           return (
             <Badge variant="outline" className={`capitalize font-medium text-xs px-2.5 py-0.5 ${tone}`}>
               {q.disabled ? <PauseCircle className="mr-1 h-3 w-3 inline" /> : q.linked ? <CheckCircle2 className="mr-1 h-3 w-3 inline" /> : <AlertTriangle className="mr-1 h-3 w-3 inline" />}
-              {q.disabled ? 'disabled' : q.linked ? 'linked' : 'unlinked'}
+              {filterLabel(q.disabled ? 'disabled' : q.linked ? 'linked' : 'unlinked')}
             </Badge>
           );
         },
       },
       {
         id: 'actions',
-        header: 'Action',
+        header: t('common.actions', 'Action'),
         cell: ({ row }) =>
           !row.original.linked && row.original.ipAddress ? (
             <div className="flex items-center gap-2 justify-end">
               <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => openImport([row.original])}>
                 <Download className="mr-1.5 h-3 w-3" />
-                Import
+                {t('admin.corporate.queues.import', 'Import')}
               </Button>
             </div>
           ) : null,
       },
     ],
-    [],
+    [t, filterLabel],
   );
 
   if (routers.isLoading) return <PageSkeleton variant="table" />;
   if (routers.isError) {
-    return <EmptyState title="Failed to load routers" description={routers.error?.message} actionLabel="Retry" onAction={() => routers.refetch()} />;
+    return (
+      <EmptyState
+        variant="error"
+        title={t('admin.corporate.queues.routersFailed', 'Failed to load routers')}
+        description={routers.error?.message}
+        actionLabel={t('common.retry', 'Retry')}
+        onAction={() => routers.refetch()}
+      />
+    );
   }
   if ((routers.data ?? []).length === 0) {
     return (
       <EmptyState
         icon={<Server className="h-5 w-5" />}
-        title="No active routers"
-        description="Corporate queues are read live from your MikroTik routers. Add a router first."
+        title={t('admin.corporate.queues.noRouters', 'No active routers')}
+        description={t('admin.corporate.queues.noRoutersHint', 'Corporate queues are read live from your MikroTik routers. Add a router first.')}
       />
     );
   }
@@ -179,12 +205,12 @@ export function CorporateQueuesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Corporate Queues & Bandwidth Sync"
-        subtitle="MikroTik simple queues for dedicated corporate links, matched to billing customers"
+        title={t('admin.corporate.queues.title', 'Corporate Queues & Bandwidth Sync')}
+        subtitle={t('admin.corporate.queues.subtitle', 'MikroTik simple queues for dedicated corporate links, matched to billing customers')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Corporate' },
-          { label: 'Bandwidth Queues' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('admin.corporate.queues.crumbCorporate', 'Corporate') },
+          { label: t('admin.corporate.queues.crumbQueues', 'Bandwidth Queues') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -196,7 +222,7 @@ export function CorporateQueuesPage() {
               className="border-border/70 hover:border-border hover:bg-card/80 text-xs"
             >
               <RotateCw className={`mr-1.5 h-3.5 w-3.5 ${queues.isFetching ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('admin.corporate.queues.refresh', 'Refresh')}
             </Button>
             <Button
               size="sm"
@@ -205,7 +231,7 @@ export function CorporateQueuesPage() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs shadow-sm shadow-primary/20"
             >
               <Link2 className="mr-1.5 h-3.5 w-3.5" />
-              Import unlinked ({unlinkedOnPage.length})
+              {t('admin.corporate.queues.importUnlinked', 'Import unlinked ({n})', { n: formatCount(unlinkedOnPage.length) })}
             </Button>
           </div>
         }
@@ -213,10 +239,10 @@ export function CorporateQueuesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Corporate Queues', value: summary?.total, hint: activeRouter?.name ?? '', icon: Network, tone: 'text-foreground', chip: 'bg-primary/10 text-primary border-primary/20' },
-          { label: 'Linked to Customers', value: summary?.linked, hint: 'Billed in the system', icon: CheckCircle2, tone: 'text-emerald-400', chip: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-          { label: 'Unlinked', value: summary?.unlinked, hint: 'Import to start billing', icon: AlertTriangle, tone: 'text-amber-400', chip: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-          { label: 'Disabled on Router', value: summary?.disabled, hint: 'Queue disabled in RouterOS', icon: PauseCircle, tone: 'text-slate-400', chip: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
+          { label: t('admin.corporate.queues.kpiTotal', 'Corporate Queues'), value: summary?.total, hint: activeRouter?.name ?? '', icon: Network, tone: 'text-foreground', chip: 'bg-primary/10 text-primary border-primary/20' },
+          { label: t('admin.corporate.queues.kpiLinked', 'Linked to Customers'), value: summary?.linked, hint: t('admin.corporate.queues.kpiLinkedHint', 'Billed in the system'), icon: CheckCircle2, tone: 'text-emerald-400', chip: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+          { label: t('admin.corporate.queues.kpiUnlinked', 'Unlinked'), value: summary?.unlinked, hint: t('admin.corporate.queues.kpiUnlinkedHint', 'Import to start billing'), icon: AlertTriangle, tone: 'text-amber-400', chip: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+          { label: t('admin.corporate.queues.kpiDisabled', 'Disabled on Router'), value: summary?.disabled, hint: t('admin.corporate.queues.kpiDisabledHint', 'Queue disabled in RouterOS'), icon: PauseCircle, tone: 'text-slate-400', chip: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
         ].map((card) => (
           <div key={card.label} className="rounded-xl border border-border/70 bg-card/60 p-4 backdrop-blur-md relative overflow-hidden">
             <div className="flex items-center justify-between">
@@ -225,7 +251,7 @@ export function CorporateQueuesPage() {
                 <card.icon className="h-4 w-4" />
               </div>
             </div>
-            <div className={`mt-3 text-2xl font-bold tracking-tight ${card.tone}`}>{card.value ?? '—'}</div>
+            <div className={`mt-3 text-2xl font-bold tracking-tight ${card.tone}`}>{card.value === undefined ? '—' : formatCount(card.value)}</div>
             <p className="mt-1 text-xs text-muted-foreground truncate">{card.hint}</p>
           </div>
         ))}
@@ -235,7 +261,7 @@ export function CorporateQueuesPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-border/50">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mr-1">
-              <Filter className="h-3.5 w-3.5" /> Status:
+              <Filter className="h-3.5 w-3.5" /> {t('admin.corporate.queues.statusLabel', 'Status:')}
             </span>
             {FILTERS.map((st) => (
               <Button
@@ -248,14 +274,15 @@ export function CorporateQueuesPage() {
                 }}
                 className={`h-7 text-xs capitalize ${status === st ? 'bg-primary text-primary-foreground font-medium' : 'border-border/60 hover:bg-muted/50'}`}
               >
-                {st}
+                {filterLabel(st)}
               </Button>
             ))}
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Router:</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t('admin.corporate.queues.routerLabel', 'Router:')}</span>
             <select
+              aria-label={t('admin.corporate.queues.routerSelect', 'Router')}
               value={activeRouterId}
               onChange={(e) => {
                 setRouterId(e.target.value);
@@ -277,19 +304,23 @@ export function CorporateQueuesPage() {
         ) : queues.isError ? (
           <EmptyState
             icon={offline ? <WifiOff className="h-5 w-5" /> : undefined}
-            title={offline ? 'Router offline' : 'Failed to load corporate queues'}
+            title={offline ? t('admin.corporate.queues.routerOffline', 'Router offline') : t('admin.corporate.queues.loadFailed', 'Failed to load corporate queues')}
             description={queues.error?.message}
-            actionLabel="Retry"
+            actionLabel={t('common.retry', 'Retry')}
             onAction={() => queues.refetch()}
           />
         ) : (
-          <DataTable
+          <DataTable urlState
             columns={columns}
             data={pageItems}
             getRowId={(row) => row.queueId}
-            searchPlaceholder="Search by queue, target IP, or customer..."
-            emptyTitle={search || status !== 'all' ? 'No queue matches' : 'No corporate queues on this router'}
-            emptyDescription="Only simple queues that target a single public IP (or carry an isp-core customer comment) are listed."
+            searchPlaceholder={t('admin.corporate.queues.searchPlaceholder', 'Search by queue, target IP, or customer...')}
+            emptyTitle={
+              search || status !== 'all'
+                ? t('admin.corporate.queues.emptyFiltered', 'No queue matches')
+                : t('admin.corporate.queues.emptyNone', 'No corporate queues on this router')
+            }
+            emptyDescription={t('admin.corporate.queues.emptyHint', 'Only simple queues that target a single public IP (or carry an isp-core customer comment) are listed.')}
             server={table.server(queues.data?.meta.total ?? 0)}
           />
         )}
@@ -298,23 +329,37 @@ export function CorporateQueuesPage() {
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && setImportRows(null)}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Import corporate customer{importRows && importRows.length > 1 ? 's' : ''}</DialogTitle>
+            <DialogTitle>
+              {importRows && importRows.length > 1
+                ? t('admin.corporate.queues.dialogTitleMany', 'Import corporate customers')
+                : t('admin.corporate.queues.dialogTitleOne', 'Import corporate customer')}
+            </DialogTitle>
             <DialogDescription>
-              {importRows?.length ?? 0} queue(s) on {activeRouter?.name ?? 'this router'} become static corporate customers; each
-              queue is tagged with its new customer id.
+              {t(
+                'admin.corporate.queues.dialogDesc',
+                '{n} queue(s) on {router} become static corporate customers; each queue is tagged with its new customer id.',
+                {
+                  n: formatCount(importRows?.length ?? 0),
+                  router: activeRouter?.name ?? t('admin.corporate.queues.thisRouter', 'this router'),
+                },
+              )}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submitImport} className="space-y-4 py-2">
             {importRows?.length === 1 ? (
               <div className="space-y-1.5">
-                <Label htmlFor="corpName">Customer name</Label>
+                <Label htmlFor="corpName">{t('admin.corporate.queues.fieldName', 'Customer name')}</Label>
                 <Input id="corpName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} maxLength={100} />
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label htmlFor="corpPackage">Package *</Label>
+              <Label htmlFor="corpPackage">{t('admin.corporate.queues.fieldPackage', 'Package *')}</Label>
               <select id="corpPackage" className={selectClass} value={packageId} onChange={(e) => setPackageId(e.target.value)} disabled={packages.isLoading}>
-                <option value="">{packages.isLoading ? 'Loading packages…' : packages.isError ? 'Could not load packages' : 'Select a package'}</option>
+                <option value="">{packages.isLoading
+                  ? t('admin.corporate.queues.packagesLoading', 'Loading packages…')
+                  : packages.isError
+                    ? t('admin.corporate.queues.packagesFailed', 'Could not load packages')
+                    : t('admin.corporate.queues.packagePlaceholder', 'Select a package')}</option>
                 {(packages.data ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -323,9 +368,13 @@ export function CorporateQueuesPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="corpArea">Area *</Label>
+              <Label htmlFor="corpArea">{t('admin.corporate.queues.fieldArea', 'Area *')}</Label>
               <select id="corpArea" className={selectClass} value={areaId} onChange={(e) => setAreaId(e.target.value)} disabled={areas.isLoading}>
-                <option value="">{areas.isLoading ? 'Loading areas…' : areas.isError ? 'Could not load areas' : 'Select an area'}</option>
+                <option value="">{areas.isLoading
+                  ? t('admin.corporate.queues.areasLoading', 'Loading areas…')
+                  : areas.isError
+                    ? t('admin.corporate.queues.areasFailed', 'Could not load areas')
+                    : t('admin.corporate.queues.areaPlaceholder', 'Select an area')}</option>
                 {(areas.data ?? []).map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
@@ -335,10 +384,10 @@ export function CorporateQueuesPage() {
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setImportRows(null)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button type="submit" disabled={importer.isPending || !packageId || !areaId}>
-                {importer.isPending ? 'Importing…' : 'Import'}
+                {importer.isPending ? t('admin.corporate.queues.importing', 'Importing…') : t('admin.corporate.queues.import', 'Import')}
               </Button>
             </DialogFooter>
           </form>

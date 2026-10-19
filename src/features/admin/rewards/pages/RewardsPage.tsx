@@ -36,14 +36,26 @@ import {
 import { REFERRAL_STATUSES, type ReferralRow, type ReferralStatus, type TopReferrer } from '../types';
 import { GrantPointsDialog } from '../components/GrantPointsDialog';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const statusBadge: Record<ReferralStatus, { variant: 'default' | 'destructive' | 'secondary'; className: string }> = {
-  verified: { variant: 'default', className: 'bg-emerald-600 hover:bg-emerald-600 text-white' },
+  verified: { variant: 'default', className: 'bg-emerald-700 hover:bg-emerald-800 text-white' },
   rejected: { variant: 'destructive', className: '' },
   pending: { variant: 'secondary', className: '' },
   flagged: { variant: 'secondary', className: 'text-amber-600 dark:text-amber-400' },
 };
 
 export function RewardsPage() {
+  const t = useTranslations();
+  const statusLabel = useCallback(
+    (s: ReferralStatus) => {
+      if (s === 'verified') return t('status.verified', 'Verified');
+      if (s === 'rejected') return t('status.rejected', 'Rejected');
+      if (s === 'flagged') return t('admin.rewards.status.flagged', 'Flagged');
+      return t('status.pending', 'Pending');
+    },
+    [t],
+  );
   const configQuery = useRewardsConfig();
   const reportQuery = useRewardsReport();
   const saveConfig = useSaveRewardsConfig();
@@ -88,7 +100,7 @@ export function RewardsPage() {
       {
         onSuccess: () => {
           setConfigModalOpen(false);
-          toast.success('Referral program rules saved');
+          toast.success(t('admin.rewards.toast.rulesSaved', 'Referral program rules saved'));
         },
       },
     );
@@ -97,7 +109,14 @@ export function RewardsPage() {
   const handleToggleProgram = (enabled: boolean) => {
     saveConfig.mutate(
       { referral_enabled: enabled ? 1 : 0 },
-      { onSuccess: () => toast.success(`Referral rewards ${enabled ? 'activated' : 'paused'}`) },
+      {
+        onSuccess: () =>
+          toast.success(
+            enabled
+              ? t('admin.rewards.toast.activated', 'Referral rewards activated')
+              : t('admin.rewards.toast.paused', 'Referral rewards paused'),
+          ),
+      },
     );
   };
 
@@ -105,7 +124,7 @@ export function RewardsPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Subscriber Advocate',
+        header: t('admin.rewards.colAdvocate', 'Subscriber Advocate'),
         size: 180,
         enableHiding: false,
         cell: ({ row }) => {
@@ -125,7 +144,7 @@ export function RewardsPage() {
               </div>
               <div>
                 <span className="font-semibold text-xs text-foreground block">{row.original.name || '—'}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">ID: {row.original.id}</span>
+                <span className="text-xs text-muted-foreground font-mono">{t('admin.rewards.idLabel', 'ID: {id}', { id: row.original.id })}</span>
               </div>
             </div>
           );
@@ -133,76 +152,76 @@ export function RewardsPage() {
       },
       {
         accessorKey: 'totalReferrals',
-        header: 'Invited',
+        header: t('admin.rewards.colInvited', 'Invited'),
         size: 90,
         cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.totalReferrals}</span>,
       },
       {
         accessorKey: 'verified',
-        header: 'Converted',
+        header: t('admin.rewards.colConverted', 'Converted'),
         size: 100,
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-emerald-500 border-emerald-300 font-mono text-[11px]">
-            {row.original.verified} verified
+          <Badge variant="outline" tone="success" className="font-mono text-xs">
+            {t('admin.rewards.verifiedCount', '{n} verified', { n: row.original.verified })}
           </Badge>
         ),
       },
       {
         accessorKey: 'points',
-        header: 'Points Earned',
+        header: t('admin.rewards.colEarned', 'Points Earned'),
         size: 120,
         cell: ({ row }) => (
-          <span className="font-mono text-xs font-bold text-primary">{row.original.points.toLocaleString()} pts</span>
+          <span className="font-mono text-xs font-bold text-primary">{t('admin.rewards.pts', '{n} pts', { n: formatCount(row.original.points) })}</span>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   const txColumns = useMemo<LegacyColumnDef<ReferralRow, unknown>[]>(
     () => [
       {
         accessorKey: 'referrerName',
-        header: 'Referrer (Advocate)',
+        header: t('admin.rewards.colReferrer', 'Referrer (Advocate)'),
         size: 160,
         enableHiding: false,
         cell: ({ row }) => (
           <div>
             <span className="font-semibold text-xs text-foreground block">{row.original.referrerName || '—'}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{row.original.packageName || 'No package selected'}</span>
+            <span className="text-xs text-muted-foreground font-mono">{row.original.packageName || t('admin.rewards.noPackage', 'No package selected')}</span>
           </div>
         ),
       },
       {
         accessorKey: 'refereeName',
-        header: 'New Subscriber (Referee)',
+        header: t('admin.rewards.colReferee', 'New Subscriber (Referee)'),
         size: 160,
         cell: ({ row }) => (
           <div>
             <span className="text-xs font-medium text-foreground block">{row.original.refereeName || '—'}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{row.original.refereeMobile}</span>
+            <span className="text-xs text-muted-foreground font-mono">{row.original.refereeMobile}</span>
           </div>
         ),
       },
       {
         accessorKey: 'pointsAwarded',
-        header: 'Reward Points',
+        header: t('admin.rewards.colReward', 'Reward Points'),
         size: 110,
         cell: ({ row }) => (
           <Badge variant="secondary" className="font-mono text-xs font-semibold text-primary">
-            +{row.original.pointsAwarded} pts
+            {t('admin.rewards.ptsPlus', '+{n} pts', { n: row.original.pointsAwarded })}
           </Badge>
         ),
       },
       {
         accessorKey: 'status',
-        header: 'Verification Status',
+        header: t('admin.rewards.colVerification', 'Verification Status'),
         size: 130,
         cell: ({ row }) => {
           const s = row.original.status;
           const style = statusBadge[s];
           return (
-            <Badge variant={style.variant} className={`text-[10px] font-mono capitalize gap-1 ${style.className}`}>
+            <Badge variant={style.variant} className={`text-xs font-mono capitalize gap-1 ${style.className}`}>
               {s === 'verified' ? (
                 <CheckCircle2 className="h-3 w-3" />
               ) : s === 'rejected' ? (
@@ -212,14 +231,14 @@ export function RewardsPage() {
               ) : (
                 <Clock className="h-3 w-3" />
               )}
-              {s}
+              {statusLabel(s)}
             </Badge>
           );
         },
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
         size: 110,
         enableSorting: false,
         enableHiding: false,
@@ -234,7 +253,8 @@ export function RewardsPage() {
                 className="h-7 w-7 text-emerald-500 hover:bg-emerald-50/10"
                 disabled={approving}
                 onClick={() => approve(row.original.id)}
-                title="Approve & Grant Points"
+                title={t('admin.rewards.approve', 'Approve & Grant Points')}
+                aria-label={t('admin.rewards.approve', 'Approve & Grant Points')}
               >
                 <CheckCircle2 className="h-4 w-4" />
               </Button>
@@ -244,7 +264,8 @@ export function RewardsPage() {
                 className="h-7 w-7 text-destructive hover:bg-destructive/10"
                 disabled={rejecting}
                 onClick={() => reject({ referralId: row.original.id, reason: 'Rejected from rewards console' })}
-                title="Reject Referral"
+                title={t('admin.rewards.reject', 'Reject Referral')}
+                aria-label={t('admin.rewards.reject', 'Reject Referral')}
               >
                 <XCircle className="h-4 w-4" />
               </Button>
@@ -253,16 +274,16 @@ export function RewardsPage() {
         },
       },
     ],
-    [approve, approving, reject, rejecting],
+    [approve, approving, reject, rejecting, statusLabel, t],
   );
 
   if (configQuery.isLoading || reportQuery.isLoading) return <PageSkeleton variant="table" />;
   if (configQuery.isError || reportQuery.isError || !config || !report) {
     return (
-      <EmptyState
-        title="Failed to load rewards"
-        description={(configQuery.error ?? reportQuery.error)?.message ?? 'Could not fetch the referral program.'}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.rewards.loadFailed', 'Failed to load rewards')}
+        description={(configQuery.error ?? reportQuery.error)?.message ?? t('admin.rewards.loadFailedDesc', 'Could not fetch the referral program.')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => {
           configQuery.refetch();
           reportQuery.refetch();
@@ -277,22 +298,22 @@ export function RewardsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Referral & Reward Center"
-        subtitle="Manage subscriber loyalty incentives, point-to-bill conversion policies, and referral transactions"
+        title={t('admin.rewards.title', 'Referral & Reward Center')}
+        subtitle={t('admin.rewards.subtitle', 'Manage subscriber loyalty incentives, point-to-bill conversion policies, and referral transactions')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Engagement' },
-          { label: 'Rewards' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.engagement', 'Engagement') },
+          { label: t('nav.rewards', 'Rewards') },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setGrantOpen(true)}>
               <Gift className="h-3.5 w-3.5 text-primary" />
-              Grant points
+              {t('admin.rewards.grantPoints', 'Grant points')}
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={openConfig}>
               <Sliders className="h-3.5 w-3.5 text-primary" />
-              Program Rules
+              {t('admin.rewards.programRules', 'Program Rules')}
             </Button>
           </div>
         }
@@ -301,11 +322,14 @@ export function RewardsPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Program Status', value: config.referralEnabled ? 'ACTIVE & REWARDING' : 'PAUSED' },
-          { label: 'Reward per Referral', value: `${config.pointsPerReferral} Loyalty Points` },
-          { label: 'Max. Redeem per Bill', value: `${config.maxRedeemPercent}%` },
-          { label: 'Point Conversion', value: `1 pt = ৳${config.pointValueBdt.toFixed(2)} BDT` },
-          { label: 'Total Points Issued', value: `${report.rewards.pointsIssued.toLocaleString()} pts` },
+          {
+            label: t('admin.rewards.kpiStatus', 'Program Status'),
+            value: config.referralEnabled ? t('admin.rewards.kpiActive', 'ACTIVE & REWARDING') : t('admin.rewards.kpiPaused', 'PAUSED'),
+          },
+          { label: t('admin.rewards.kpiReward', 'Reward per Referral'), value: t('admin.rewards.kpiLoyalty', '{n} Loyalty Points', { n: config.pointsPerReferral }) },
+          { label: t('admin.rewards.kpiMaxRedeem', 'Max. Redeem per Bill'), value: `${config.maxRedeemPercent}%` },
+          { label: t('admin.rewards.kpiConversion', 'Point Conversion'), value: t('admin.rewards.kpiRatio', '1 pt = ৳{value} BDT', { value: config.pointValueBdt.toFixed(2) }) },
+          { label: t('admin.rewards.kpiIssued', 'Total Points Issued'), value: t('admin.rewards.pts', '{n} pts', { n: formatCount(report.rewards.pointsIssued) }) },
         ]}
       />
 
@@ -314,24 +338,24 @@ export function RewardsPage() {
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
-              <CardDescription className="text-xs">Points per Referral</CardDescription>
+              <CardDescription className="text-xs">{t('admin.rewards.cardPerReferral', 'Points per Referral')}</CardDescription>
               <CardTitle className="text-2xl font-bold text-primary font-mono mt-0.5">
-                {config.pointsPerReferral} pts
+                {t('admin.rewards.pts', '{n} pts', { n: config.pointsPerReferral })}
               </CardTitle>
             </div>
             <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <Gift className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent className="text-[11px] text-muted-foreground pt-0">
-            Credited to the referrer when the referral is approved
+          <CardContent className="text-xs text-muted-foreground pt-0">
+            {t('admin.rewards.cardPerReferralHint', 'Credited to the referrer when the referral is approved')}
           </CardContent>
         </Card>
 
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
-              <CardDescription className="text-xs">Max Redeem per Bill</CardDescription>
+              <CardDescription className="text-xs">{t('admin.rewards.cardMaxRedeem', 'Max Redeem per Bill')}</CardDescription>
               <CardTitle className="text-2xl font-bold text-foreground font-mono mt-0.5">
                 {config.maxRedeemPercent}%
               </CardTitle>
@@ -340,25 +364,25 @@ export function RewardsPage() {
               <Award className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent className="text-[11px] text-muted-foreground pt-0">
-            Points can pay up to this share of a bill ·{' '}
+          <CardContent className="text-xs text-muted-foreground pt-0">
+            {t('admin.rewards.cardMaxRedeemHint', 'Points can pay up to this share of a bill ·')}{' '}
             <span className="font-semibold text-foreground font-mono">
-              {report.rewards.pointsRedeemed.toLocaleString()} pts
+              {t('admin.rewards.pts', '{n} pts', { n: formatCount(report.rewards.pointsRedeemed) })}
             </span>{' '}
-            redeemed so far
+            {t('admin.rewards.redeemedSoFar', 'redeemed so far')}
           </CardContent>
         </Card>
 
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
-              <CardDescription className="text-xs">Referral Program Switch</CardDescription>
+              <CardDescription className="text-xs">{t('admin.rewards.cardSwitch', 'Referral Program Switch')}</CardDescription>
               <div className="mt-1 flex items-center gap-2">
                 <Badge
                   variant={config.referralEnabled ? 'default' : 'secondary'}
-                  className={config.referralEnabled ? 'bg-emerald-600 hover:bg-emerald-600 text-white font-mono text-xs' : 'font-mono text-xs'}
+                  tone={config.referralEnabled ? 'success' : undefined}
                 >
-                  {config.referralEnabled ? 'Live & Accepting' : 'Paused'}
+                  {config.referralEnabled ? t('admin.rewards.live', 'Live & Accepting') : t('admin.rewards.paused', 'Paused')}
                 </Badge>
               </div>
             </div>
@@ -367,11 +391,14 @@ export function RewardsPage() {
                 checked={config.referralEnabled}
                 disabled={saveConfig.isPending}
                 onCheckedChange={handleToggleProgram}
+                aria-label={t('admin.rewards.cardSwitch', 'Referral Program Switch')}
               />
             </Can>
           </CardHeader>
-          <CardContent className="text-[11px] text-muted-foreground pt-0">
-            Approved referrals {config.referralEnabled ? 'earn points for the referrer' : 'are activated without awarding points'}
+          <CardContent className="text-xs text-muted-foreground pt-0">
+            {config.referralEnabled
+              ? t('admin.rewards.switchOn', 'Approved referrals earn points for the referrer')
+              : t('admin.rewards.switchOff', 'Approved referrals are activated without awarding points')}
           </CardContent>
         </Card>
       </div>
@@ -382,9 +409,9 @@ export function RewardsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Trophy className="h-4 w-4 text-primary" />
-              Top Subscriber Advocates
+              {t('admin.rewards.topTitle', 'Top Subscriber Advocates')}
             </CardTitle>
-            <CardDescription>Subscribers generating the most verified referrals</CardDescription>
+            <CardDescription>{t('admin.rewards.topDesc', 'Subscribers generating the most verified referrals')}</CardDescription>
           </CardHeader>
           <CardContent>
             <DataTable
@@ -392,8 +419,8 @@ export function RewardsPage() {
               data={report.topReferrers}
               getRowId={(row) => row.id}
               searchKey="name"
-              searchPlaceholder="Search advocate..."
-              emptyTitle="No referrers yet"
+              searchPlaceholder={t('admin.rewards.searchAdvocate', 'Search advocate...')}
+              emptyTitle={t('admin.rewards.noReferrers', 'No referrers yet')}
               enableColumnVisibility={false}
             />
           </CardContent>
@@ -403,16 +430,16 @@ export function RewardsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Gift className="h-4 w-4 text-primary" />
-              Referral Reward Transactions
+              {t('admin.rewards.txTitle', 'Referral Reward Transactions')}
             </CardTitle>
-            <CardDescription>Audit log of awarded and pending referral points</CardDescription>
+            <CardDescription>{t('admin.rewards.txDesc', 'Audit log of awarded and pending referral points')}</CardDescription>
           </CardHeader>
           <CardContent>
             {referralsQuery.isError ? (
-              <EmptyState
-                title="Failed to load referrals"
+              <EmptyState variant="error"
+                title={t('admin.rewards.referralsFailed', 'Failed to load referrals')}
                 description={referralsQuery.error?.message}
-                actionLabel="Retry"
+                actionLabel={t('admin.customers.list.retry', 'Retry')}
                 onAction={() => referralsQuery.refetch()}
               />
             ) : (
@@ -421,8 +448,8 @@ export function RewardsPage() {
                 data={referralsQuery.data?.items ?? []}
                 isLoading={referralsQuery.isLoading}
                 getRowId={(row) => row.id}
-                searchPlaceholder="Search referee, mobile, code or referrer..."
-                emptyTitle={search || status ? 'No referrals match your filters' : 'No referrals yet'}
+                searchPlaceholder={t('admin.rewards.searchReferrals', 'Search referee, mobile, code or referrer...')}
+                emptyTitle={search || status ? t('admin.rewards.emptyFiltered', 'No referrals match your filters') : t('admin.rewards.emptyNone', 'No referrals yet')}
                 enableColumnVisibility={false}
                 server={{
                   page,
@@ -443,15 +470,22 @@ export function RewardsPage() {
                       setStatus(v && v !== 'all' ? (v as ReferralStatus) : '');
                       setPage(1);
                     }}
+                    items={{
+                      all: t('admin.rewards.allStatuses', 'All statuses'),
+                      pending: statusLabel('pending'),
+                      verified: statusLabel('verified'),
+                      rejected: statusLabel('rejected'),
+                      flagged: statusLabel('flagged'),
+                    }}
                   >
-                    <SelectTrigger className="h-9 w-[140px] text-xs capitalize">
-                      <SelectValue>{(v: string | null) => (v && v !== 'all' ? v : 'All statuses')}</SelectValue>
+                    <SelectTrigger aria-label={t('admin.rewards.filterStatus', 'Filter by status')} className="h-9 min-w-[140px] text-xs">
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="all">{t('admin.rewards.allStatuses', 'All statuses')}</SelectItem>
                       {REFERRAL_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s} className="capitalize">
-                          {s}
+                        <SelectItem key={s} value={s}>
+                          {statusLabel(s)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -469,14 +503,14 @@ export function RewardsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sliders className="h-5 w-5 text-primary" />
-              Referral Program Rules
+              {t('admin.rewards.rulesTitle', 'Referral Program Rules')}
             </DialogTitle>
-            <DialogDescription>Adjust point rewards and redemption discount values.</DialogDescription>
+            <DialogDescription>{t('admin.rewards.rulesDesc', 'Adjust point rewards and redemption discount values.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Points per Successful Referral</Label>
-              <Input
+              <Label htmlFor="points-per-successful-referr" className="text-xs font-semibold">{t('admin.rewards.ruleReferral', 'Points per Successful Referral')}</Label>
+              <Input id="points-per-successful-referr"
                 type="number"
                 min={0}
                 value={draft.pointsPerReferral}
@@ -485,8 +519,8 @@ export function RewardsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Max Share of a Bill Payable with Points (%)</Label>
-              <Input
+              <Label htmlFor="max-share-of-a-bill-payable-" className="text-xs font-semibold">{t('admin.rewards.ruleMaxShare', 'Max Share of a Bill Payable with Points (%)')}</Label>
+              <Input id="max-share-of-a-bill-payable-"
                 type="number"
                 min={0}
                 max={100}
@@ -496,8 +530,8 @@ export function RewardsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Point to BDT Ratio (1 Pt = BDT)</Label>
-              <Input
+              <Label htmlFor="point-to-bdt-ratio-1-pt-bdt" className="text-xs font-semibold">{t('admin.rewards.ruleRatio', 'Point to BDT Ratio (1 Pt = BDT)')}</Label>
+              <Input id="point-to-bdt-ratio-1-pt-bdt"
                 type="number"
                 min={0}
                 step="0.05"
@@ -505,14 +539,14 @@ export function RewardsPage() {
                 onChange={(e) => setDraft({ ...draft, pointValueBdt: e.target.value })}
                 className="font-mono text-xs"
               />
-              <p className="text-[11px] text-muted-foreground">
-                One referral ({draftPoints} pts) = ৳{(draftPoints * draftRatio).toFixed(2)} BDT bill credit.
+              <p className="text-xs text-muted-foreground">
+                {t('admin.rewards.ruleExample', 'One referral ({pts} pts) = ৳{value} BDT bill credit.', { pts: draftPoints, value: (draftPoints * draftRatio).toFixed(2) })}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigModalOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               onClick={handleSaveConfig}
@@ -520,7 +554,7 @@ export function RewardsPage() {
               className="gap-1.5 bg-primary text-primary-foreground"
             >
               <CheckCircle2 className="h-4 w-4" />
-              Save Rules
+              {t('admin.rewards.saveRules', 'Save Rules')}
             </Button>
           </DialogFooter>
         </DialogContent>

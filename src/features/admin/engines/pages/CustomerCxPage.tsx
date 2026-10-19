@@ -16,7 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { customerService } from '@/lib/api/services/customer.service';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { formatDate } from '@/lib/format';
+import { formatCount, formatDate } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { cn } from '@/lib/utils';
 import {
   useCustomerFeedback,
@@ -32,25 +33,71 @@ import {
 const NOTIFICATIONS_KEY = ['customer', 'notifications'] as const;
 const COMMENT_MAX = 2000;
 
-const PREF_GROUPS: { title: string; items: { key: NotificationPrefKey; label: string; hint: string }[] }[] = [
-  {
-    title: 'Channels',
-    items: [
-      { key: 'sms', label: 'SMS', hint: 'Text messages to your mobile number' },
-      { key: 'whatsapp', label: 'WhatsApp', hint: 'Messages on WhatsApp' },
-      { key: 'email', label: 'Email', hint: 'Messages to your email address' },
-      { key: 'push', label: 'App notifications', hint: 'Alerts in the app and this portal' },
-    ],
-  },
-  {
-    title: 'Topics',
-    items: [
-      { key: 'billingReminders', label: 'Billing reminders', hint: 'Upcoming expiry and due-payment reminders' },
-      { key: 'outageAlerts', label: 'Outage alerts', hint: 'Service interruptions and maintenance' },
-      { key: 'promotions', label: 'Offers & promotions', hint: 'New packages and special offers' },
-    ],
-  },
-];
+type Translate = ReturnType<typeof useTranslations>;
+
+function prefGroups(t: Translate): { id: string; title: string; items: { key: NotificationPrefKey; label: string; hint: string }[] }[] {
+  return [
+    {
+      id: 'channels',
+      title: t('customer.experience.channels', 'Channels'),
+      items: [
+        { key: 'sms', label: 'SMS', hint: t('customer.experience.smsHint', 'Text messages to your mobile number') },
+        { key: 'whatsapp', label: 'WhatsApp', hint: t('customer.experience.whatsappHint', 'Messages on WhatsApp') },
+        {
+          key: 'email',
+          label: t('customer.experience.email', 'Email'),
+          hint: t('customer.experience.emailHint', 'Messages to your email address'),
+        },
+        {
+          key: 'push',
+          label: t('customer.experience.push', 'App notifications'),
+          hint: t('customer.experience.pushHint', 'Alerts in the app and this portal'),
+        },
+      ],
+    },
+    {
+      id: 'topics',
+      title: t('customer.experience.topics', 'Topics'),
+      items: [
+        {
+          key: 'billingReminders',
+          label: t('customer.experience.billing', 'Billing reminders'),
+          hint: t('customer.experience.billingHint', 'Upcoming expiry and due-payment reminders'),
+        },
+        {
+          key: 'outageAlerts',
+          label: t('customer.experience.outage', 'Outage alerts'),
+          hint: t('customer.experience.outageHint', 'Service interruptions and maintenance'),
+        },
+        {
+          key: 'promotions',
+          label: t('customer.experience.promotions', 'Offers & promotions'),
+          hint: t('customer.experience.promotionsHint', 'New packages and special offers'),
+        },
+      ],
+    },
+  ];
+}
+
+/** The feedback category in the active language; categories the server adds later keep the label it sends. */
+function feedbackCategoryLabel(t: Translate, category: { value: string; label: string }): string {
+  switch (category.value) {
+    case 'service':
+      return t('customer.experience.catService', 'Internet service');
+    case 'speed':
+      return t('customer.experience.catSpeed', 'Speed');
+    case 'billing':
+      return t('customer.experience.catBilling', 'Billing & payments');
+    case 'support':
+      return t('customer.experience.catSupport', 'Customer support');
+    case 'installation':
+      return t('customer.experience.catInstallation', 'Installation');
+    case 'other':
+      return t('customer.experience.catOther', 'Other');
+    default:
+      return category.label;
+  }
+}
 
 /**
  * Customer "My Experience": the in-app notification inbox
@@ -59,14 +106,16 @@ const PREF_GROUPS: { title: string; items: { key: NotificationPrefKey; label: st
  * CSAT feedback (GET/POST /v1/customer/feedback).
  */
 export function CustomerCxPage() {
+  const t = useTranslations();
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Experience"
-        subtitle="Notifications, alert preferences and feedback for your provider"
+        title={t('customer.experience.title', 'My Experience')}
+        subtitle={t('customer.experience.subtitle', 'Notifications, alert preferences and feedback for your provider')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/customer/dashboard' },
-          { label: 'Experience' },
+          { label: t('customer.experience.dashboard', 'Dashboard'), url: '/customer/dashboard' },
+          { label: t('customer.experience.crumb', 'Experience') },
         ]}
       />
       <NotificationInbox />
@@ -91,6 +140,7 @@ function CardLoading({ rows = 3 }: { rows?: number }) {
 /* ─── Inbox ─────────────────────────────────────────────────────────── */
 
 function NotificationInbox() {
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: NOTIFICATIONS_KEY,
@@ -101,32 +151,32 @@ function NotificationInbox() {
     mutationFn: (id?: number) => customerService.markNotificationsRead(id),
     onSuccess: (_res, id) => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
-      if (id === undefined) toast.success('All notifications marked as read');
+      if (id === undefined) toast.success(t('customer.experience.allRead', 'All notifications marked as read'));
     },
   });
 
   return (
     <Card className="border-border/60">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base">
-          Notifications
+      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          {t('customer.experience.notifications', 'Notifications')}
           {data && data.unreadCount > 0 && (
-            <Badge variant="secondary" className="ml-2 text-xs">
-              {data.unreadCount} unread
+            <Badge variant="secondary" className="text-xs">
+              {t('customer.experience.unread', '{n} unread', { n: formatCount(data.unreadCount) })}
             </Badge>
           )}
         </CardTitle>
         <div className="flex gap-2">
-          <Button size="sm" variant="ghost" disabled={isFetching} onClick={() => refetch()}>
-            Refresh
+          <Button variant="ghost" className="h-11 flex-1 sm:flex-none" disabled={isFetching} onClick={() => refetch()}>
+            {t('customer.experience.refresh', 'Refresh')}
           </Button>
           <Button
-            size="sm"
             variant="outline"
+            className="h-11 flex-1 sm:flex-none"
             disabled={!data || data.unreadCount === 0 || markRead.isPending}
             onClick={() => markRead.mutate(undefined)}
           >
-            Mark all read
+            {t('customer.experience.markAllRead', 'Mark all read')}
           </Button>
         </div>
       </CardHeader>
@@ -135,16 +185,17 @@ function NotificationInbox() {
           <CardLoading />
         ) : isError || !data ? (
           <EmptyState
-            title="Failed to load notifications"
+            variant="error"
+            title={t('customer.experience.loadFailed', 'Failed to load notifications')}
             description={error?.message}
-            actionLabel="Retry"
+            actionLabel={t('customer.common.retry', 'Retry')}
             onAction={() => refetch()}
           />
         ) : data.notifications.length === 0 ? (
           <EmptyState
-            title="No notifications yet"
-            description="Billing, reward and support alerts will appear here."
-            actionLabel="Refresh"
+            title={t('customer.experience.empty', 'No notifications yet')}
+            description={t('customer.experience.emptyHint', 'Billing, reward and support alerts will appear here.')}
+            actionLabel={t('customer.experience.refresh', 'Refresh')}
             onAction={() => refetch()}
           />
         ) : (
@@ -152,31 +203,30 @@ function NotificationInbox() {
             <div
               key={n.id}
               className={cn(
-                'flex items-start justify-between gap-3 rounded-lg border border-border/50 px-3 py-2 text-sm transition-colors duration-200 ease-out',
+                'border-border/50 flex flex-col gap-2 rounded-lg border px-3 py-3 text-sm transition-colors duration-200 ease-out sm:flex-row sm:items-start sm:justify-between sm:gap-3',
                 !n.read && 'bg-primary/5 border-primary/20',
               )}
             >
               <div className="min-w-0 space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{n.title || 'Notification'}</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{n.title || t('customer.experience.notification', 'Notification')}</span>
                   {n.type && (
-                    <Badge variant="outline" className="text-[10px] capitalize">
+                    <Badge variant="outline" className="text-xs capitalize">
                       {n.type}
                     </Badge>
                   )}
                 </div>
-                {n.message && <p className="text-muted-foreground text-xs">{n.message}</p>}
-                <p className="text-muted-foreground/70 font-mono text-[10px]">{formatDate(n.time)}</p>
+                {n.message && <p className="text-muted-foreground text-sm">{n.message}</p>}
+                <p className="text-muted-foreground/70 font-mono text-sm">{formatDate(n.time)}</p>
               </div>
               {!n.read && (
                 <Button
-                  size="sm"
                   variant="ghost"
-                  className="h-7 shrink-0 text-xs"
+                  className="h-11 shrink-0 self-start"
                   disabled={markRead.isPending}
                   onClick={() => markRead.mutate(n.id)}
                 >
-                  Mark read
+                  {t('customer.experience.markRead', 'Mark read')}
                 </Button>
               )}
             </div>
@@ -190,22 +240,28 @@ function NotificationInbox() {
 /* ─── Notification preferences ──────────────────────────────────────── */
 
 function NotificationPrefsCard() {
+  const t = useTranslations();
   const prefs = useNotificationPrefs();
 
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <CardTitle className="text-base">Notification preferences</CardTitle>
-        <CardDescription>Choose how and about what your provider contacts you.</CardDescription>
+        <CardTitle className="text-base">{t('customer.experience.prefsTitle', 'Notification preferences')}</CardTitle>
+        <CardDescription>
+          {t('customer.experience.prefsHint', 'Choose how and about what your provider contacts you.')}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {prefs.isLoading ? (
           <CardLoading rows={5} />
         ) : prefs.isError || !prefs.data ? (
           <EmptyState
-            title="Preferences unavailable"
-            description={errorMessage(prefs.error, 'Could not load your notification preferences.')}
-            actionLabel="Retry"
+            title={t('customer.experience.prefsUnavailable', 'Preferences unavailable')}
+            description={errorMessage(
+              prefs.error,
+              t('customer.experience.prefsFailed', 'Could not load your notification preferences.'),
+            )}
+            actionLabel={t('customer.common.retry', 'Retry')}
             onAction={() => prefs.refetch()}
           />
         ) : (
@@ -217,6 +273,7 @@ function NotificationPrefsCard() {
 }
 
 function NotificationPrefsForm({ prefs }: { prefs: NotificationPrefs }) {
+  const t = useTranslations();
   const save = useUpdateNotificationPrefs();
   // Unsaved toggles; null = show the stored preferences.
   const [draft, setDraft] = useState<NotificationPrefFlags | null>(null);
@@ -227,25 +284,26 @@ function NotificationPrefsForm({ prefs }: { prefs: NotificationPrefs }) {
     save.mutate(draft, {
       onSuccess: () => {
         setDraft(null);
-        toast.success('Notification preferences saved');
+        toast.success(t('customer.experience.prefsSaved', 'Notification preferences saved'));
       },
     });
   };
 
   return (
     <div className="space-y-5 text-sm">
-      {PREF_GROUPS.map((group) => (
-        <div key={group.title} className="space-y-2">
-          <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{group.title}</p>
-          <div className="divide-border/50 divide-y rounded-lg border border-border/50">
+      {prefGroups(t).map((group) => (
+        <div key={group.id} className="space-y-2">
+          <p className="text-muted-foreground text-sm font-semibold">{group.title}</p>
+          <div className="divide-border/50 border-border/50 divide-y rounded-lg border">
             {group.items.map((item) => (
-              <div key={item.key} className="flex items-center justify-between gap-4 px-3 py-2">
-                <div className="min-w-0">
-                  <Label htmlFor={`pref-${item.key}`} className="text-sm font-medium">
-                    {item.label}
-                  </Label>
-                  <p className="text-muted-foreground text-xs">{item.hint}</p>
-                </div>
+              <div key={item.key} className="flex items-center justify-between gap-4 px-3">
+                <Label
+                  htmlFor={`pref-${item.key}`}
+                  className="min-h-14 min-w-0 flex-1 cursor-pointer flex-col items-start justify-center gap-0.5 py-2 leading-snug"
+                >
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-muted-foreground text-sm font-normal">{item.hint}</span>
+                </Label>
                 <Switch
                   id={`pref-${item.key}`}
                   checked={value[item.key]}
@@ -257,18 +315,20 @@ function NotificationPrefsForm({ prefs }: { prefs: NotificationPrefs }) {
           </div>
         </div>
       ))}
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs">
-          {prefs.updatedAt ? `Last saved ${formatDate(prefs.updatedAt)}` : 'Using default preferences'}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-muted-foreground text-sm">
+          {prefs.updatedAt
+            ? t('customer.experience.lastSaved', 'Last saved {date}', { date: formatDate(prefs.updatedAt) })
+            : t('customer.experience.defaults', 'Using default preferences')}
         </span>
-        <div className="flex gap-2">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
           {draft !== null && (
-            <Button size="sm" variant="ghost" disabled={save.isPending} onClick={() => setDraft(null)}>
-              Discard
+            <Button variant="ghost" className="h-11 w-full sm:w-auto" disabled={save.isPending} onClick={() => setDraft(null)}>
+              {t('customer.experience.discard', 'Discard')}
             </Button>
           )}
-          <Button size="sm" disabled={draft === null || save.isPending} onClick={submit}>
-            {save.isPending ? 'Saving…' : 'Save preferences'}
+          <Button className="h-11 w-full sm:w-auto" disabled={draft === null || save.isPending} onClick={submit}>
+            {save.isPending ? t('customer.experience.saving', 'Saving…') : t('customer.experience.savePrefs', 'Save preferences')}
           </Button>
         </div>
       </div>
@@ -279,22 +339,25 @@ function NotificationPrefsForm({ prefs }: { prefs: NotificationPrefs }) {
 /* ─── Feedback (CSAT) ───────────────────────────────────────────────── */
 
 function FeedbackCard() {
+  const t = useTranslations();
   const feedback = useCustomerFeedback();
 
   return (
     <Card className="border-border/60">
       <CardHeader>
-        <CardTitle className="text-base">Rate your experience</CardTitle>
-        <CardDescription>Your rating and comments go straight to your provider.</CardDescription>
+        <CardTitle className="text-base">{t('customer.experience.rateTitle', 'Rate your experience')}</CardTitle>
+        <CardDescription>
+          {t('customer.experience.rateHint', 'Your rating and comments go straight to your provider.')}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {feedback.isLoading ? (
           <CardLoading rows={4} />
         ) : feedback.isError || !feedback.data ? (
           <EmptyState
-            title="Feedback unavailable"
-            description={errorMessage(feedback.error, 'Could not load the feedback form.')}
-            actionLabel="Retry"
+            title={t('customer.experience.feedbackUnavailable', 'Feedback unavailable')}
+            description={errorMessage(feedback.error, t('customer.experience.feedbackFailed', 'Could not load the feedback form.'))}
+            actionLabel={t('customer.common.retry', 'Retry')}
             onAction={() => feedback.refetch()}
           />
         ) : (
@@ -302,21 +365,19 @@ function FeedbackCard() {
             <FeedbackForm categories={feedback.data.categories} />
             {feedback.data.items.length > 0 && (
               <div className="space-y-2">
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                  Your recent feedback
+                <p className="text-muted-foreground text-sm font-semibold">
+                  {t('customer.experience.recent', 'Your recent feedback')}
                 </p>
                 {feedback.data.items.map((f) => (
-                  <div key={f.id} className="rounded-lg border border-border/50 px-3 py-2 text-sm">
+                  <div key={f.id} className="border-border/50 rounded-lg border px-3 py-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <Stars value={f.rating} />
-                      <Badge variant="outline" className="text-[10px]">
-                        {f.categoryLabel}
+                      <Badge variant="outline" className="text-xs">
+                        {feedbackCategoryLabel(t, { value: f.category, label: f.categoryLabel })}
                       </Badge>
                     </div>
-                    {f.comment && <p className="text-muted-foreground mt-1 text-xs">{f.comment}</p>}
-                    {f.createdAt && (
-                      <p className="text-muted-foreground/70 mt-1 font-mono text-[10px]">{formatDate(f.createdAt)}</p>
-                    )}
+                    {f.comment && <p className="text-muted-foreground mt-1 text-sm">{f.comment}</p>}
+                    {f.createdAt && <p className="text-muted-foreground/70 mt-1 font-mono text-sm">{formatDate(f.createdAt)}</p>}
                   </div>
                 ))}
               </div>
@@ -329,21 +390,24 @@ function FeedbackCard() {
 }
 
 function Stars({ value }: { value: number }) {
+  const t = useTranslations();
+
   return (
-    <span className="flex items-center gap-0.5" aria-label={`${value} out of 5`}>
+    <span className="flex items-center gap-0.5" role="img" aria-label={t('customer.experience.outOf5', '{n} out of 5', { n: formatCount(value) })}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Star key={n} className={cn('h-3.5 w-3.5', n <= value ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40')} />
+        <Star key={n} className={cn('h-4 w-4', n <= value ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40')} />
       ))}
     </span>
   );
 }
 
 function FeedbackForm({ categories }: { categories: FeedbackCategory[] }) {
+  const t = useTranslations();
   const submit = useSubmitFeedback();
   const [rating, setRating] = useState(0);
   const [category, setCategory] = useState('');
   const [comment, setComment] = useState('');
-  const categoryItems = Object.fromEntries(categories.map((c) => [c.value, c.label]));
+  const categoryItems = Object.fromEntries(categories.map((c) => [c.value, feedbackCategoryLabel(t, c)]));
   const canSubmit = rating >= 1 && rating <= 5 && Boolean(category) && comment.length <= COMMENT_MAX;
 
   const send = () =>
@@ -354,7 +418,7 @@ function FeedbackForm({ categories }: { categories: FeedbackCategory[] }) {
           setRating(0);
           setCategory('');
           setComment('');
-          toast.success('Thank you for your feedback');
+          toast.success(t('customer.experience.thanks', 'Thank you for your feedback'));
         },
       },
     );
@@ -368,34 +432,34 @@ function FeedbackForm({ categories }: { categories: FeedbackCategory[] }) {
       }}
     >
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Rating</Label>
-        <div className="flex items-center gap-1" role="radiogroup" aria-label="Rating">
+        <Label className="text-sm font-semibold">{t('customer.experience.rating', 'Rating')}</Label>
+        <div className="flex items-center gap-1" role="radiogroup" aria-label={t('customer.experience.rating', 'Rating')}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
               role="radio"
               aria-checked={rating === n}
-              aria-label={`${n} star${n > 1 ? 's' : ''}`}
+              aria-label={n === 1 ? t('customer.experience.starOne', '1 star') : t('customer.experience.starMany', '{n} stars', { n: formatCount(n) })}
               onClick={() => setRating(n)}
-              className="rounded-md p-1 transition-transform duration-150 ease-out hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="focus-visible:ring-ring/50 flex h-11 w-11 items-center justify-center rounded-md transition-transform duration-150 ease-out hover:scale-110 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Star className={cn('h-6 w-6', n <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50')} />
+              <Star className={cn('h-7 w-7', n <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50')} />
             </button>
           ))}
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Category</Label>
+        <Label htmlFor="category" className="text-sm font-semibold">{t('customer.experience.category', 'Category')}</Label>
         <Select value={category || null} items={categoryItems} onValueChange={(v) => setCategory(v ? String(v) : '')}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="What is your feedback about?" />
+          <SelectTrigger id="category" className="w-full data-[size=default]:h-11">
+            <SelectValue placeholder={t('customer.experience.categoryPlaceholder', 'What is your feedback about?')} />
           </SelectTrigger>
           <SelectContent>
             {categories.map((c) => (
-              <SelectItem key={c.value} value={c.value}>
-                {c.label}
+              <SelectItem key={c.value} value={c.value} className="min-h-11">
+                {feedbackCategoryLabel(t, c)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -403,22 +467,22 @@ function FeedbackForm({ categories }: { categories: FeedbackCategory[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="feedback-comment" className="text-xs font-semibold">
-          Comment (optional)
+        <Label htmlFor="feedback-comment" className="text-sm font-semibold">
+          {t('customer.experience.comment', 'Comment (optional)')}
         </Label>
         <Textarea
           id="feedback-comment"
           value={comment}
           maxLength={COMMENT_MAX}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Tell us what went well or what we can improve"
-          className="h-20 resize-y text-sm"
+          placeholder={t('customer.experience.commentPlaceholder', 'Tell us what went well or what we can improve')}
+          className="min-h-24 resize-y text-sm"
         />
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={!canSubmit || submit.isPending}>
-          {submit.isPending ? 'Sending…' : 'Send feedback'}
+        <Button type="submit" className="h-11 w-full sm:w-auto" disabled={!canSubmit || submit.isPending}>
+          {submit.isPending ? t('customer.experience.sending', 'Sending…') : t('customer.experience.send', 'Send feedback')}
         </Button>
       </div>
     </form>

@@ -11,8 +11,11 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { DataTable } from '@/features/shared/data-table';
 import { buttonVariants } from '@/components/ui/button';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 
+import { formatDateTime } from '@/lib/format';
 export function CustomerAuditPage({ customerId }: { customerId: string }) {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const customerQuery = useCustomer(customerId, { compact: true });
@@ -22,27 +25,27 @@ export function CustomerAuditPage({ customerId }: { customerId: string }) {
     () => [
       {
         accessorKey: 'createdAt',
-        header: 'When',
+        header: t('admin.customers.audit.colWhen', 'When'),
         cell: ({ row }) => (
           <span className="font-mono text-xs">
-            {row.original.createdAt ? new Date(row.original.createdAt.replace(' ', 'T')).toLocaleString() : '—'}
+            {row.original.createdAt ? formatDateTime(row.original.createdAt.replace(' ', 'T')) : '—'}
           </span>
         ),
       },
       {
         accessorKey: 'actor',
-        header: 'Actor',
+        header: t('admin.customers.audit.colActor', 'Actor'),
         cell: ({ row }) => <span className="text-sm">{row.original.actor || '—'}</span>,
       },
       {
         accessorKey: 'action',
-        header: 'Action',
+        header: t('admin.customers.audit.colAction', 'Action'),
         enableHiding: false,
         cell: ({ row }) => <span className="font-medium text-sm">{row.original.action || '—'}</span>,
       },
       {
         accessorKey: 'details',
-        header: 'Detail',
+        header: t('admin.customers.audit.colDetail', 'Detail'),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.details || row.original.entity || '—'}
@@ -52,20 +55,20 @@ export function CustomerAuditPage({ customerId }: { customerId: string }) {
       },
       {
         accessorKey: 'ipAddress',
-        header: 'IP',
+        header: t('admin.customers.audit.colIp', 'IP'),
         cell: ({ row }) => <span className="font-mono text-xs">{row.original.ipAddress || '—'}</span>,
       },
     ],
-    [],
+    [t],
   );
 
   if (customerQuery.isLoading || isLoading) return <PageSkeleton variant="table" />;
   if (isError || customerQuery.isError || !customerQuery.data) {
     return (
-      <EmptyState
-        title="Failed to load audit"
+      <EmptyState variant="error"
+        title={t('admin.customers.audit.loadFailed', 'Failed to load audit')}
         description={errorMessage(error ?? customerQuery.error)}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.audit.retry', 'Retry')}
         onAction={() => {
           customerQuery.refetch();
           refetch();
@@ -79,25 +82,25 @@ export function CustomerAuditPage({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customer Audit"
-        subtitle={`${customer.name} · change history`}
+        title={t('admin.customers.audit.title', 'Customer Audit')}
+        subtitle={`${customer.name} · ${t('admin.customers.audit.subtitle', 'change history')}`}
         breadcrumb={[
-          { label: 'Customers', url: '/admin/customers' },
+          { label: t('admin.customers.audit.breadcrumbCustomers', 'Customers'), url: '/admin/customers' },
           { label: customer.name, url: `/admin/customers/${customerId}` },
-          { label: 'Audit' },
+          { label: t('admin.customers.audit.breadcrumb', 'Audit') },
         ]}
         actions={
           <Link href={`/admin/customers/${customerId}`} className={buttonVariants({ variant: 'outline' })}>
-            Back
+            {t('admin.customers.audit.back', 'Back')}
           </Link>
         }
       />
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data?.items ?? []}
         isLoading={isFetching && !data}
-        emptyTitle="No audit events"
-        emptyDescription="Changes to this customer will appear here."
+        emptyTitle={t('admin.customers.audit.emptyTitle', 'No audit events')}
+        emptyDescription={t('admin.customers.audit.emptyHint', 'Changes to this customer will appear here.')}
         server={{
           page,
           pageSize,

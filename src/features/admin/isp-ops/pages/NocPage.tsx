@@ -29,7 +29,9 @@ import {
 import { useNetOpsOptions, type PickOption } from '../hooks/use-network-ops';
 import { useServerTable } from '../hooks/use-server-table';
 import { OptionSelect, fmtDateTime } from '../components/NetOpsControls';
+import { useTranslations } from '@/i18n/locale-context';
 
+import { formatCount } from '@/lib/format';
 const severityClass: Record<NocSeverity, string> = {
   minor: 'bg-sky-500/10 text-sky-600 border-sky-500/20 dark:text-sky-400',
   major: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400',
@@ -40,7 +42,46 @@ const stateClass: Record<string, string> = {
   offline: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
   unknown: 'bg-muted text-muted-foreground',
 };
-const label = (s: string) => s.replace(/_/g, ' ');
+
+function useNocLabels() {
+  const t = useTranslations();
+  return {
+    kind: (v: NocKind) =>
+      v === 'maintenance' ? t('admin.ops.noc.kind.maintenance', 'Maintenance') : t('admin.ops.noc.kind.incident', 'Incident'),
+    severity: (v: NocSeverity) => {
+      if (v === 'critical') return t('admin.ops.noc.severity.critical', 'Critical');
+      if (v === 'major') return t('admin.ops.noc.severity.major', 'Major');
+      return t('admin.ops.noc.severity.minor', 'Minor');
+    },
+    status: (v: string) => {
+      switch (v) {
+        case 'investigating':
+          return t('admin.ops.noc.status.investigating', 'Investigating');
+        case 'identified':
+          return t('admin.ops.noc.status.identified', 'Identified');
+        case 'monitoring':
+          return t('admin.ops.noc.status.monitoring', 'Monitoring');
+        case 'resolved':
+          return t('admin.ops.noc.status.resolved', 'Resolved');
+        case 'scheduled':
+          return t('admin.ops.noc.status.scheduled', 'Scheduled');
+        case 'in_progress':
+          return t('admin.ops.noc.status.inProgress', 'In progress');
+        case 'completed':
+          return t('admin.ops.noc.status.completed', 'Completed');
+        case 'cancelled':
+          return t('admin.ops.noc.status.cancelled', 'Cancelled');
+        default:
+          return v.replace(/_/g, ' ');
+      }
+    },
+    routerState: (v: string) => {
+      if (v === 'online') return t('status.online', 'Online');
+      if (v === 'offline') return t('status.offline', 'Offline');
+      return t('admin.ops.noc.state.unknown', 'Unknown');
+    },
+  };
+}
 /** "2026-10-11 09:30:00" ⇄ datetime-local "2026-10-11T09:30". */
 const toLocalInput = (v: string | null) => (v ? v.slice(0, 16).replace(' ', 'T') : '');
 
@@ -57,7 +98,8 @@ interface IncidentForm {
 }
 
 function ToggleChips({ options, value, onChange }: { options: PickOption[]; value: string[]; onChange: (v: string[]) => void }) {
-  if (options.length === 0) return <p className="text-xs text-muted-foreground">None available.</p>;
+  const t = useTranslations();
+  if (options.length === 0) return <p className="text-xs text-muted-foreground">{t('admin.ops.noc.noneAvailable', 'None available.')}</p>;
   return (
     <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
       {options.map((o) => {
@@ -81,6 +123,8 @@ function ToggleChips({ options, value, onChange }: { options: PickOption[]; valu
 }
 
 export function NocPage() {
+  const t = useTranslations();
+  const labels = useNocLabels();
   const table = useServerTable();
   const [statusFilter, setStatusFilter] = useState('open');
   const { data, isLoading, isError, error, refetch } = useNocIncidents({ page: table.page, pageSize: table.pageSize, search: table.search, status: statusFilter });
@@ -144,7 +188,7 @@ export function NocPage() {
   const columns: LegacyColumnDef<NocIncident, unknown>[] = [
     {
       accessorKey: 'title',
-      header: 'Incident / Window',
+      header: t('admin.ops.noc.colIncident', 'Incident / Window'),
       enableHiding: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -153,39 +197,39 @@ export function NocPage() {
           </div>
           <div>
             <p className="font-semibold text-sm text-foreground">{row.original.title}</p>
-            <p className="text-xs text-muted-foreground capitalize">{row.original.kind}</p>
+            <p className="text-xs text-muted-foreground capitalize">{labels.kind(row.original.kind)}</p>
           </div>
         </div>
       ),
     },
     {
       accessorKey: 'severity',
-      header: 'Severity',
+      header: t('admin.ops.noc.colSeverity', 'Severity'),
       cell: ({ row }) => (
         <Badge variant="outline" className={cn('capitalize text-xs', severityClass[row.original.severity])}>
-          {row.original.severity}
+          {labels.severity(row.original.severity)}
         </Badge>
       ),
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: t('admin.customers.list.statusLabel', 'Status'),
       cell: ({ row }) => (
-        <Badge variant="outline" className={cn('capitalize text-xs', !row.original.isOpen && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400')}>
-          {label(row.original.status)}
+        <Badge variant="outline" tone={row.original.isOpen ? undefined : 'success'} className="capitalize text-xs">
+          {labels.status(row.original.status)}
         </Badge>
       ),
     },
     {
       id: 'scope',
-      header: 'Affected',
+      header: t('admin.ops.noc.colAffected', 'Affected'),
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">{[...row.original.routers, ...row.original.areas].join(', ') || '—'}</span>
       ),
     },
     {
       accessorKey: 'startsAt',
-      header: 'Start → End',
+      header: t('admin.ops.noc.colWindow', 'Start → End'),
       cell: ({ row }) => (
         <span className="font-mono text-xs text-muted-foreground">
           {fmtDateTime(row.original.startsAt)} → {fmtDateTime(row.original.endsAt)}
@@ -194,20 +238,20 @@ export function NocPage() {
     },
     {
       id: 'actions',
-      header: () => <span className="sr-only">Actions</span>,
+      header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1.5">
           {row.original.isOpen && (
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1" disabled={save.isPending} onClick={() => closeOut(row.original)}>
-              <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {row.original.kind === 'maintenance' ? 'Complete' : 'Resolve'}
+              <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {row.original.kind === 'maintenance' ? t('admin.ops.noc.complete', 'Complete') : t('admin.ops.noc.resolve', 'Resolve')}
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(row.original)} title="Edit">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(row.original)} title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(row.original)} title="Delete">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(row.original)} title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -217,33 +261,50 @@ export function NocPage() {
 
   if (isLoading && !data) return <PageSkeleton variant="table" />;
   if (isError && !data) {
-    return <EmptyState title="Failed to load NOC incidents" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return (
+      <EmptyState
+        variant="error"
+        title={t('admin.ops.noc.loadFailed', 'Failed to load NOC incidents')}
+        description={errorMessage(error)}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
+        onAction={() => refetch()}
+      />
+    );
   }
 
   const s = summary.data;
   const kpis = [
-    { label: 'Routers Online', value: s ? `${s.routers.online} / ${s.routers.total}` : '—', hint: s ? `${s.routers.unknown} never polled` : 'Loading…', icon: Router, tone: 'text-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Unreachable', value: s?.routers.offline ?? '—', hint: 'Offline at the last poll', icon: ServerCrash, tone: 'text-rose-500', text: 'text-rose-600 dark:text-rose-400' },
-    { label: 'Active Sessions', value: s ? s.routers.activeSessions.toLocaleString() : '—', hint: 'From the last router poll', icon: Users, tone: 'text-blue-500', text: 'text-blue-600 dark:text-blue-400' },
-    { label: 'Open Incidents', value: s?.incidents.open ?? '—', hint: s ? `${s.incidents.bySeverity.critical} critical · ${s.maintenance.inProgress} maintenance live · ${s.maintenance.upcoming} upcoming` : 'Loading…', icon: AlertTriangle, tone: 'text-amber-500', text: 'text-foreground' },
+    { label: t('admin.ops.noc.kpiOnline', 'Routers Online'), value: s ? `${s.routers.online} / ${s.routers.total}` : '—', hint: s ? t('admin.ops.noc.neverPolledCount', '{n} never polled', { n: s.routers.unknown }) : t('common.loading', 'Loading…'), icon: Router, tone: 'text-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+    { label: t('admin.ops.noc.kpiUnreachable', 'Unreachable'), value: s?.routers.offline ?? '—', hint: t('admin.ops.noc.kpiUnreachableHint', 'Offline at the last poll'), icon: ServerCrash, tone: 'text-rose-500', text: 'text-rose-600 dark:text-rose-400' },
+    { label: t('admin.ops.noc.kpiSessions', 'Active Sessions'), value: s ? formatCount(s.routers.activeSessions) : '—', hint: t('admin.ops.noc.kpiSessionsHint', 'From the last router poll'), icon: Users, tone: 'text-blue-500', text: 'text-blue-600 dark:text-blue-400' },
+    {
+      label: t('admin.ops.noc.kpiOpen', 'Open Incidents'),
+      value: s?.incidents.open ?? '—',
+      hint: s
+        ? t('admin.ops.noc.kpiOpenHint', '{critical} critical · {live} maintenance live · {upcoming} upcoming', {
+            critical: s.incidents.bySeverity.critical,
+            live: s.maintenance.inProgress,
+            upcoming: s.maintenance.upcoming,
+          })
+        : t('common.loading', 'Loading…'), icon: AlertTriangle, tone: 'text-amber-500', text: 'text-foreground' },
   ];
-  const statusOptions = form ? NOC_STATUSES[form.kind].map((v) => ({ value: v, label: label(v) })) : [];
+  const statusOptions = form ? NOC_STATUSES[form.kind].map((v) => ({ value: v, label: labels.status(v) })) : [];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="NOC — Incidents & Maintenance"
-        subtitle="Track network incidents and maintenance windows against live router health"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Network' }, { label: 'NOC' }]}
+        title={t('admin.ops.noc.title', 'NOC — Incidents & Maintenance')}
+        subtitle={t('admin.ops.noc.subtitle', 'Track network incidents and maintenance windows against live router health')}
+        breadcrumb={[{ label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' }, { label: t('common.crumb.network', 'Network') }, { label: 'NOC' }]}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => openCreate('maintenance')}>
               <CalendarClock className="h-4 w-4 mr-1.5" />
-              Schedule Maintenance
+              {t('admin.ops.noc.scheduleMaintenance', 'Schedule Maintenance')}
             </Button>
             <Button size="sm" onClick={() => openCreate('incident')}>
               <Plus className="h-4 w-4 mr-1.5" />
-              Report Incident
+              {t('admin.ops.noc.reportIncident', 'Report Incident')}
             </Button>
           </div>
         }
@@ -265,33 +326,40 @@ export function NocPage() {
       </div>
 
       {summary.isError ? (
-        <EmptyState title="Router health unavailable" description={errorMessage(summary.error)} actionLabel="Retry" onAction={() => summary.refetch()} />
+        <EmptyState
+          title={t('admin.ops.noc.healthUnavailable', 'Router health unavailable')}
+          description={errorMessage(summary.error)}
+          actionLabel={t('admin.customers.list.retry', 'Retry')}
+          onAction={() => summary.refetch()}
+        />
       ) : s && s.routers.items.length > 0 ? (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {s.routers.items.map((r) => (
             <div key={r.id} className="rounded-lg border border-border/60 bg-card/60 p-3 text-xs">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-foreground truncate">{r.name}</span>
-                <Badge variant="outline" className={cn('capitalize text-[10px]', stateClass[r.state])}>
-                  {r.state}
+                <Badge variant="outline" className={cn('capitalize text-xs', stateClass[r.state])}>
+                  {labels.routerState(r.state)}
                 </Badge>
               </div>
               <p className="mt-1 text-muted-foreground">
-                {r.activeSessions === null ? 'Never polled' : `${r.activeSessions} / ${r.totalSessions ?? 0} sessions`}
-                {!r.enabled && ' · disabled'}
+                {r.activeSessions === null
+                  ? t('admin.ops.noc.neverPolled', 'Never polled')
+                  : t('admin.ops.noc.sessions', '{active} / {total} sessions', { active: r.activeSessions, total: r.totalSessions ?? 0 })}
+                {!r.enabled && ` · ${t('admin.ops.noc.disabled', 'disabled')}`}
               </p>
-              {r.lastPolledAt && <p className="text-[10px] text-muted-foreground font-mono">Polled {fmtDateTime(r.lastPolledAt)}</p>}
+              {r.lastPolledAt && <p className="text-xs text-muted-foreground font-mono">{t('admin.ops.noc.polled', 'Polled {time}', { time: fmtDateTime(r.lastPolledAt) })}</p>}
             </div>
           ))}
         </div>
       ) : null}
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data?.items ?? []}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search incidents..."
-        emptyTitle={statusFilter === 'open' ? 'No open incidents or maintenance' : 'Nothing recorded'}
+        searchPlaceholder={t('admin.ops.noc.searchPlaceholder', 'Search incidents...')}
+        emptyTitle={statusFilter === 'open' ? t('admin.ops.noc.emptyOpen', 'No open incidents or maintenance') : t('admin.ops.noc.emptyNone', 'Nothing recorded')}
         toolbarActions={
           <OptionSelect
             value={statusFilter}
@@ -300,11 +368,11 @@ export function NocPage() {
               table.setPage(1);
             }}
             options={[
-              { value: 'open', label: 'Open' },
-              { value: 'closed', label: 'Closed' },
+              { value: 'open', label: t('status.open', 'Open') },
+              { value: 'closed', label: t('status.closed', 'Closed') },
             ]}
-            placeholder="All"
-            noneLabel="All"
+            placeholder={t('admin.customers.list.pillAll', 'All')}
+            noneLabel={t('admin.customers.list.pillAll', 'All')}
             className="h-8 w-[120px] text-xs"
           />
         }
@@ -315,58 +383,65 @@ export function NocPage() {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>
-              {editing ? 'Edit' : form?.kind === 'maintenance' ? 'Schedule Maintenance Window' : 'Report Incident'}
+              {editing
+                ? t('common.edit', 'Edit')
+                : form?.kind === 'maintenance'
+                  ? t('admin.ops.noc.scheduleWindow', 'Schedule Maintenance Window')
+                  : t('admin.ops.noc.reportIncident', 'Report Incident')}
             </DialogTitle>
-            <DialogDescription>Affected routers and areas come from your network inventory.</DialogDescription>
+            <DialogDescription>{t('admin.ops.noc.formDesc', 'Affected routers and areas come from your network inventory.')}</DialogDescription>
           </DialogHeader>
           {form && (
             <form onSubmit={handleSave} className="space-y-4 py-2">
               <div className="space-y-1.5">
-                <Label htmlFor="noc-title">Title *</Label>
+                <Label htmlFor="noc-title">{t('admin.ops.noc.fieldTitle', 'Title *')}</Label>
                 <Input id="noc-title" value={form.title} onChange={(e) => set({ title: e.target.value })} required />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="noc-severity">Severity</Label>
+                  <Label htmlFor="noc-severity">{t('admin.ops.noc.colSeverity', 'Severity')}</Label>
                   <OptionSelect
                     id="noc-severity"
                     value={form.severity}
                     onChange={(v) => set({ severity: (v || 'minor') as NocSeverity })}
-                    options={(['minor', 'major', 'critical'] as const).map((v) => ({ value: v, label: v }))}
-                    placeholder="Severity"
+                    options={(['minor', 'major', 'critical'] as const).map((v) => ({ value: v, label: labels.severity(v) }))}
+                    placeholder={t('admin.ops.noc.colSeverity', 'Severity')}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="noc-status">Status</Label>
-                  <OptionSelect id="noc-status" value={form.status} onChange={(v) => set({ status: v })} options={statusOptions} placeholder="Status" />
+                  <Label htmlFor="noc-status">{t('admin.customers.list.statusLabel', 'Status')}</Label>
+                  <OptionSelect id="noc-status" value={form.status} onChange={(v) => set({ status: v })} options={statusOptions} placeholder={t('admin.customers.list.statusLabel', 'Status')} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="noc-start">Starts{form.kind === 'maintenance' ? ' *' : ''}</Label>
+                  <Label htmlFor="noc-start">
+                    {t('admin.ops.noc.fieldStarts', 'Starts')}
+                    {form.kind === 'maintenance' ? ' *' : ''}
+                  </Label>
                   <Input id="noc-start" type="datetime-local" value={form.startsAt} onChange={(e) => set({ startsAt: e.target.value })} required={form.kind === 'maintenance'} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="noc-end">Ends</Label>
+                  <Label htmlFor="noc-end">{t('admin.ops.noc.fieldEnds', 'Ends')}</Label>
                   <Input id="noc-end" type="datetime-local" value={form.endsAt} onChange={(e) => set({ endsAt: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Affected routers</Label>
+                <Label>{t('admin.ops.noc.affectedRouters', 'Affected routers')}</Label>
                 <ToggleChips options={options.data?.routers ?? []} value={form.routerIds} onChange={(v) => set({ routerIds: v })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Affected areas</Label>
+                <Label>{t('admin.ops.noc.affectedAreas', 'Affected areas')}</Label>
                 <ToggleChips options={options.data?.areas ?? []} value={form.areaIds} onChange={(v) => set({ areaIds: v })} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="noc-desc">Description</Label>
+                <Label htmlFor="noc-desc">{t('admin.ops.noc.fieldDescription', 'Description')}</Label>
                 <Textarea id="noc-desc" value={form.description} onChange={(e) => set({ description: e.target.value })} rows={3} />
               </div>
               <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button type="submit" disabled={save.isPending}>
-                  {save.isPending ? 'Saving…' : 'Save'}
+                  {save.isPending ? t('admin.ops.noc.saving', 'Saving…') : t('common.save', 'Save')}
                 </Button>
               </DialogFooter>
             </form>
@@ -377,9 +452,9 @@ export function NocPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete record"
-        description={`Delete "${deleteTarget?.title ?? ''}"?`}
-        confirmLabel="Delete"
+        title={t('admin.ops.noc.deleteTitle', 'Delete record')}
+        description={t('admin.ops.noc.deleteDesc', 'Delete "{title}"?', { title: deleteTarget?.title ?? '' })}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (deleteTarget) remove.mutate(deleteTarget.id);

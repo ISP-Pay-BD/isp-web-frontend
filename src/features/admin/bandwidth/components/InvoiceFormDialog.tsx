@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { FormPageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { formatBdtWithSymbol } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { useBandwidthItems } from '../hooks/useBandwidthCatalog';
 import {
   useBandwidthClientOptions,
@@ -43,10 +44,11 @@ export function InvoiceFormDialog({ open, rid, onOpenChange }: InvoiceFormDialog
 }
 
 function EditInvoice({ rid, onDone }: { rid: string; onDone: () => void }) {
+  const t = useTranslations();
   const { data, isLoading, isError, refetch } = useBandwidthInvoice(rid);
   if (isLoading) return <FormPageSkeleton />;
   if (isError || !data) {
-    return <EmptyState title="Could not load the invoice" actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.bandwidth.invoiceForm.loadFailed', 'Could not load the invoice')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />;
   }
   return <InvoiceForm key={rid} invoice={data} onDone={onDone} />;
 }
@@ -54,6 +56,7 @@ function EditInvoice({ rid, onDone }: { rid: string; onDone: () => void }) {
 type HeaderState = Omit<InvoiceInput, 'lines'>;
 
 function InvoiceForm({ invoice, onDone }: { invoice: BandwidthInvoice | null; onDone: () => void }) {
+  const t = useTranslations();
   const clients = useBandwidthClientOptions();
   const catalog = useBandwidthItems();
   const create = useCreateBandwidthInvoice();
@@ -93,14 +96,14 @@ function InvoiceForm({ invoice, onDone }: { invoice: BandwidthInvoice | null; on
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!header.clientId) {
-      setErrors({ client_id: 'Select a customer' });
+      setErrors({ client_id: t('admin.bandwidth.invoiceForm.selectClientError', 'Select a client') });
       return;
     }
     setErrors({});
     const input: InvoiceInput = { ...header, lines };
     const callbacks = {
       onSuccess: () => {
-        toast.success(invoice ? 'Invoice updated' : 'Invoice saved');
+        toast.success(invoice ? t('admin.bandwidth.invoiceForm.updated', 'Invoice updated') : t('admin.bandwidth.invoiceForm.saved', 'Invoice saved'));
         onDone();
       },
       onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
@@ -113,33 +116,35 @@ function InvoiceForm({ invoice, onDone }: { invoice: BandwidthInvoice | null; on
     <>
       <DialogHeader>
         <DialogTitle className="text-base font-bold flex items-center gap-2">
-          <FileText className="h-4 w-4 text-primary" /> {invoice ? `Edit invoice ${invoice.requisitionId}` : 'New sales invoice'}
+          <FileText className="h-4 w-4 text-primary" /> {invoice ? t('admin.bandwidth.invoiceForm.editTitle', 'Edit invoice {no}', { no: invoice.requisitionId }) : t('admin.bandwidth.invoiceForm.newTitle', 'New sales invoice')}
         </DialogTitle>
         <DialogDescription className="text-xs">
-          {invoice ? 'Recorded payments are kept; the due amount is recomputed from the new total.' : 'Invoice total = Σ qty × rate of the lines.'}
+          {invoice
+            ? t('admin.bandwidth.invoiceForm.editDesc', 'Recorded payments are kept; the due amount is recomputed from the new total.')
+            : t('admin.bandwidth.invoiceForm.newDesc', 'Invoice total = Σ qty × rate of the lines.')}
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="space-y-4 pt-2">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="col-span-2 space-y-1.5">
-            <Label className="text-xs font-semibold">Client *</Label>
+            <Label className="text-xs font-semibold">{t('admin.bandwidth.invoiceForm.client', 'Client *')}</Label>
             <OptionSelect
               value={header.clientId}
               onChange={(v) => set({ clientId: v })}
               options={clientOptions}
-              placeholder={clients.isLoading ? 'Loading clients…' : 'Select client'}
+              placeholder={clients.isLoading ? t('admin.bandwidth.invoiceForm.loadingClients', 'Loading clients…') : t('admin.bandwidth.invoiceForm.selectClient', 'Select client')}
               invalid={Boolean(errors.client_id)}
             />
             <FieldError message={errors.client_id} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="inv-date" className="text-xs font-semibold">Invoice date</Label>
+            <Label htmlFor="inv-date" className="text-xs font-semibold">{t('admin.bandwidth.invoiceForm.invoiceDate', 'Invoice date')}</Label>
             <Input id="inv-date" type="date" value={header.requisitionDate} onChange={(e) => set({ requisitionDate: e.target.value })} className="text-xs h-9" />
             <FieldError message={errors.requisition_date} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="inv-deadline" className="text-xs font-semibold">Due date</Label>
+            <Label htmlFor="inv-deadline" className="text-xs font-semibold">{t('admin.bandwidth.shared.dueDate', 'Due date')}</Label>
             <Input id="inv-deadline" type="date" value={header.deadline} onChange={(e) => set({ deadline: e.target.value })} className="text-xs h-9" />
             <FieldError message={errors.deadline} />
           </div>
@@ -148,21 +153,21 @@ function InvoiceForm({ invoice, onDone }: { invoice: BandwidthInvoice | null; on
         <LineItemsEditor lines={lines} onChange={setLines} catalog={catalog.data ?? []} catalogLoading={catalog.isLoading} errors={errors} />
 
         <div className="space-y-1.5">
-          <Label htmlFor="inv-remarks" className="text-xs font-semibold">Remarks</Label>
+          <Label htmlFor="inv-remarks" className="text-xs font-semibold">{t('admin.bandwidth.shared.remarks', 'Remarks')}</Label>
           <Textarea id="inv-remarks" rows={2} value={header.remarks} onChange={(e) => set({ remarks: e.target.value })} className="text-xs" maxLength={1000} />
           <FieldError message={errors.remarks} />
         </div>
 
         <div className="flex justify-end p-3 rounded-xl bg-muted/20 border border-border/50 text-xs">
           <span className="text-muted-foreground">
-            Invoice total <span className="font-mono font-bold text-foreground">{formatBdtWithSymbol(total)}</span>
+            {t('admin.bandwidth.invoiceForm.invoiceTotal', 'Invoice total')} <span className="font-mono font-bold text-foreground">{formatBdtWithSymbol(total)}</span>
           </span>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">{t('common.cancel', 'Cancel')}</Button>
           <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
-            {pending ? 'Saving…' : invoice ? 'Save invoice' : 'Create invoice'}
+            {pending ? t('admin.bandwidth.shared.saving', 'Saving…') : invoice ? t('admin.bandwidth.invoiceForm.save', 'Save invoice') : t('admin.bandwidth.invoiceForm.create', 'Create invoice')}
           </Button>
         </DialogFooter>
       </form>

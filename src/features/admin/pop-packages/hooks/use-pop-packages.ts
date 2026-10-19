@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 type Raw = Record<string, unknown>;
 
@@ -61,6 +62,7 @@ export function usePopPackages(popId: string | null, search: string) {
 
 export function usePopPackageMutations(popId: string | null) {
   const qc = useQueryClient();
+  const t = useTranslations();
   const refresh = () => qc.invalidateQueries({ queryKey: ['admin', 'pops', popId, 'packages'] });
   return {
     updatePrice: useMutation({
@@ -72,14 +74,16 @@ export function usePopPackageMutations(popId: string | null) {
       meta: { silent: true },
       onSuccess: () => {
         refresh();
-        toast.success('Package price updated');
+        toast.success(t('admin.popPackages.packages.priceUpdated', 'Package price updated'));
       },
     }),
     sync: useMutation({
       mutationFn: () => http.post<Raw[]>(`/v1/pops/${popId}/packages/sync`),
       onSuccess: (res) => {
         refresh();
-        toast.success(`Synced ${Array.isArray(res) ? res.length : 0} package(s) from the catalogue`);
+        toast.success(
+          t('admin.popPackages.packages.synced', 'Synced {n} package(s) from the catalogue', { n: Array.isArray(res) ? res.length : 0 }),
+        );
       },
     }),
   };

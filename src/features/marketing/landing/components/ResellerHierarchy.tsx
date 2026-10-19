@@ -47,7 +47,7 @@ export function ResellerHierarchy({ data, matrix }: ResellerHierarchyProps) {
             title={t('marketing.sections.reseller.title')}
             description={t('marketing.sections.roles.desc')}
           />
-          <p className="mt-4 font-mono text-xs text-white/40">{data.levels.join(' → ')}</p>
+          <p className="mt-4 font-mono text-xs text-white/60">{data.levels.join(' → ')}</p>
         </Reveal>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-2 lg:gap-16">
@@ -56,10 +56,10 @@ export function ResellerHierarchy({ data, matrix }: ResellerHierarchyProps) {
               const Icon = tier.icon;
               return (
                 <li key={tier.title} className="flex gap-4 py-5">
-                  <span className="w-6 shrink-0 pt-0.5 font-mono text-xs text-white/35">
+                  <span className="w-6 shrink-0 pt-0.5 font-mono text-xs text-white/60">
                     0{index + 1}
                   </span>
-                  <Icon className="text-landing-cta mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+                  <Icon className="text-landing-accent mt-0.5 h-5 w-5 shrink-0" aria-hidden />
                   <div>
                     <h3 className="font-landing-display text-base font-semibold text-white">
                       {tier.title}

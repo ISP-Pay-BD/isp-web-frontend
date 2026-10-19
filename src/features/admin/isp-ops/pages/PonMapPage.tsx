@@ -11,8 +11,12 @@ import { errorMessage } from '@/lib/api/utils/error-handler';
 import { usePonPorts, type PonPort } from '../hooks/use-network-ops';
 import { useServerTable } from '../hooks/use-server-table';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+
 /** PON / splitter map from the synchronized ONUs of the tenant's OLTs. */
 export function PonMapPage() {
+  const t = useTranslations();
   const table = useServerTable();
   const { data, isLoading, isError, error, refetch } = usePonPorts({ page: table.page, pageSize: table.pageSize, search: table.search });
 
@@ -31,12 +35,12 @@ export function PonMapPage() {
       },
       {
         id: 'splitters',
-        header: 'Splitter',
+        header: t('admin.ops.ponMap.colSplitter', 'Splitter'),
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.splitters.join(', ') || '—'}</span>,
       },
       {
         accessorKey: 'onlineOnus',
-        header: 'Online',
+        header: t('status.online', 'Online'),
         cell: ({ row }) => {
           const { onlineOnus, totalOnus } = row.original;
           const pct = totalOnus > 0 ? Math.round((onlineOnus / totalOnus) * 100) : 0;
@@ -44,14 +48,14 @@ export function PonMapPage() {
             <span className="text-foreground font-mono text-xs tabular-nums">
               {onlineOnus}
               <span className="text-muted-foreground/60">/{totalOnus}</span>
-              <span className={`ml-1.5 text-[10px] ${pct < 50 ? 'text-red-500' : pct < 80 ? 'text-amber-500' : 'text-emerald-500'}`}>{pct}%</span>
+              <span className={`ml-1.5 text-xs ${pct < 50 ? 'text-red-500' : pct < 80 ? 'text-amber-500' : 'text-emerald-500'}`}>{pct}%</span>
             </span>
           );
         },
       },
       {
         accessorKey: 'avgRxDbm',
-        header: 'Avg Rx dBm',
+        header: t('admin.ops.ponMap.colAvgRx', 'Avg Rx dBm'),
         cell: ({ row }) => {
           const dbm = row.original.avgRxDbm;
           if (dbm === null) return <span className="text-muted-foreground text-xs">—</span>;
@@ -63,34 +67,34 @@ export function PonMapPage() {
         },
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading && !data) return <PageSkeleton variant="table" />;
   if (isError && !data) {
-    return <EmptyState title="Failed to load PON ports" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.ponMap.loadFailed', 'Failed to load PON ports')} description={errorMessage(error)} actionLabel={t('common.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="PON / Splitter Map"
-        subtitle="ONUs per PON port and average optical levels, from the latest OLT sync"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'PON / Splitter Map' }]}
+        title={t('admin.ops.ponMap.title', 'PON / Splitter Map')}
+        subtitle={t('admin.ops.ponMap.subtitle', 'ONUs per PON port and average optical levels, from the latest OLT sync')}
+        breadcrumb={[{ label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' }, { label: t('admin.ops.ponMap.title', 'PON / Splitter Map') }]}
       />
       <OpsSummaryStrip
         items={[
-          { value: (data?.meta.total ?? 0).toLocaleString(), label: 'PONs' },
-          { value: `${(data?.summary.onlineOnus ?? 0).toLocaleString()} / ${(data?.summary.totalOnus ?? 0).toLocaleString()}`, label: 'ONUs online' },
+          { value: formatCount((data?.meta.total ?? 0)), label: t('admin.ops.ponMap.kpiPons', 'PONs') },
+          { value: `${formatCount((data?.summary.onlineOnus ?? 0))} / ${formatCount((data?.summary.totalOnus ?? 0))}`, label: t('admin.ops.ponMap.kpiOnus', 'ONUs online') },
         ]}
       />
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data?.items ?? []}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search OLT, PON or splitter…"
-        emptyTitle={table.search ? 'No PON ports match your search' : 'No synchronized ONUs'}
-        emptyDescription="Sync an OLT to populate its PON ports."
+        searchPlaceholder={t('admin.ops.ponMap.searchPlaceholder', 'Search OLT, PON or splitter…')}
+        emptyTitle={table.search ? t('admin.ops.ponMap.emptySearch', 'No PON ports match your search') : t('admin.ops.ponMap.emptyNone', 'No synchronized ONUs')}
+        emptyDescription={t('admin.ops.ponMap.emptyHint', 'Sync an OLT to populate its PON ports.')}
         server={table.server(data?.meta.total ?? 0)}
       />
     </div>

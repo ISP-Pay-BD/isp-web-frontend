@@ -147,6 +147,8 @@ export interface CustomerListFilters {
   packageId?: string;
   routerId?: string;
   accessType?: ConnectionType;
+  /** Customers of another reseller in the hierarchy; defaults to the signed-in reseller. */
+  resellerId?: string;
 }
 
 export interface CustomerListParams extends CustomerListFilters {

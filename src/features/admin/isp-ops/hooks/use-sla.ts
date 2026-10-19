@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 
@@ -78,23 +79,25 @@ export function useSlas({ page, pageSize, search }: { page: number; pageSize: nu
 }
 
 export function useSaveSla() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, body }: { id?: string; body: Record<string, unknown> }) =>
       mapSla(id ? await http.put<unknown>(`/v1/network-ops/slas/${id}`, body) : await http.post<unknown>('/v1/network-ops/slas', body)),
     onSuccess: (_s, { id }) => {
-      toast.success(id ? 'SLA updated' : 'SLA created');
+      toast.success(id ? t('admin.ops.bandwidthSla.toast.updated', 'SLA updated') : t('admin.ops.bandwidthSla.toast.created', 'SLA created'));
       qc.invalidateQueries({ queryKey: slaKeys.all });
     },
   });
 }
 
 export function useDeleteSla() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => http.delete<unknown>(`/v1/network-ops/slas/${id}`),
     onSuccess: () => {
-      toast.success('SLA deleted');
+      toast.success(t('admin.ops.bandwidthSla.toast.deleted', 'SLA deleted'));
       qc.invalidateQueries({ queryKey: slaKeys.all });
     },
   });

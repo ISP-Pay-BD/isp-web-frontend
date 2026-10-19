@@ -31,6 +31,7 @@ import { http } from '@/lib/api/client';
 import { str } from '@/lib/api/case';
 import { getResellerId } from '@/lib/api/auth-utils';
 import { formatDateTime } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useDeleteUsageAlertRule,
   useRunUsageAlerts,
@@ -68,6 +69,7 @@ function usePackageOptions() {
 }
 
 export function UsageAlertsPage() {
+  const t = useTranslations();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
@@ -122,23 +124,34 @@ export function UsageAlertsPage() {
           active: !rule.active,
         },
       },
-      { onSuccess: () => toast.success(`Rule "${rule.name}" ${!rule.active ? 'activated' : 'disabled'}`) },
+      {
+        onSuccess: () =>
+          toast.success(
+            !rule.active
+              ? t('admin.ops.usageAlerts.ruleActivated', 'Rule "{name}" activated', { name: rule.name })
+              : t('admin.ops.usageAlerts.ruleDisabled', 'Rule "{name}" disabled', { name: rule.name }),
+          ),
+      },
     );
 
   const handleSave = () => {
     if (!form.name.trim()) {
-      toast.error('Rule name is required');
+      toast.error(t('admin.ops.usageAlerts.nameRequired', 'Rule name is required'));
       return;
     }
     if (!form.templateId && !form.message.trim()) {
-      toast.error('Choose a template or write a message');
+      toast.error(t('admin.ops.usageAlerts.messageRequired', 'Choose a template or write a message'));
       return;
     }
     saveRule.mutate(
       { id: editing?.id, input: { ...form, name: form.name.trim() } },
       {
         onSuccess: () => {
-          toast.success(editing ? 'Usage alert rule updated' : `Usage alert rule "${form.name.trim()}" created`);
+          toast.success(
+            editing
+              ? t('admin.ops.usageAlerts.ruleUpdated', 'Usage alert rule updated')
+              : t('admin.ops.usageAlerts.ruleCreated', 'Usage alert rule "{name}" created', { name: form.name.trim() }),
+          );
           setModalOpen(false);
         },
       },
@@ -149,7 +162,7 @@ export function UsageAlertsPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Rule Title & Policy',
+        header: t('admin.ops.usageAlerts.colRule', 'Rule Title & Policy'),
         size: 220,
         enableHiding: false,
         cell: ({ row }) => (
@@ -159,8 +172,11 @@ export function UsageAlertsPage() {
             </div>
             <div>
               <span className="font-semibold text-xs text-foreground block">{row.original.name}</span>
-              <span className="text-[10px] text-muted-foreground">
-                {row.original.quotaGb} GB monthly quota · {row.original.packageName || 'All packages'}
+              <span className="text-xs text-muted-foreground">
+                {t('admin.ops.usageAlerts.quotaLine', '{gb} GB monthly quota · {pkg}', {
+                  gb: row.original.quotaGb,
+                  pkg: row.original.packageName || t('admin.ops.usageAlerts.allPackages', 'All packages'),
+                })}
               </span>
             </div>
           </div>
@@ -168,14 +184,14 @@ export function UsageAlertsPage() {
       },
       {
         accessorKey: 'thresholdPct',
-        header: 'Quota Threshold',
+        header: t('admin.ops.usageAlerts.colThreshold', 'Quota Threshold'),
         size: 180,
         cell: ({ row }) => {
           const pct = row.original.thresholdPct;
           return (
             <div className="space-y-1 w-full max-w-[140px]">
-              <div className="flex justify-between text-[11px] font-mono">
-                <span className="font-semibold text-foreground">{pct}% Quota Reached</span>
+              <div className="flex justify-between text-xs font-mono">
+                <span className="font-semibold text-foreground">{t('admin.ops.usageAlerts.quotaReached', '{pct}% Quota Reached', { pct })}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                 <div
@@ -189,39 +205,39 @@ export function UsageAlertsPage() {
       },
       {
         accessorKey: 'channel',
-        header: 'Dispatch Channel',
+        header: t('admin.ops.usageAlerts.colChannel', 'Dispatch Channel'),
         size: 140,
         cell: ({ row }) => (
-          <Badge variant="outline" className="text-[10px] font-mono uppercase">
+          <Badge variant="outline" className="text-xs font-mono uppercase">
             {row.original.channel}
           </Badge>
         ),
       },
       {
         accessorKey: 'active',
-        header: 'Trigger Status',
+        header: t('admin.ops.usageAlerts.colTrigger', 'Trigger Status'),
         size: 140,
         cell: ({ row }) => (
           <div className="flex items-center gap-2.5">
-            <Switch checked={row.original.active} onCheckedChange={() => toggleRule(row.original)} />
+            <Switch aria-label={t('admin.ops.usageAlerts.ruleActive', 'Rule active')} checked={row.original.active} onCheckedChange={() => toggleRule(row.original)} />
             <Badge
               variant={row.original.active ? 'default' : 'secondary'}
-              className={`text-[10px] font-mono ${row.original.active ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}`}
+              tone={row.original.active ? 'success' : undefined} className="text-xs font-mono"
             >
-              {row.original.active ? 'Active' : 'Disabled'}
+              {row.original.active ? t('status.active', 'Active') : t('status.disabled', 'Disabled')}
             </Badge>
           </div>
         ),
       },
       {
         id: 'actions',
-        header: () => <span className="sr-only">Actions</span>,
+        header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
         size: 100,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditor(row.original)} title="Edit rule">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditor(row.original)} title={t('admin.ops.usageAlerts.editRule', 'Edit rule')} aria-label={t('admin.ops.usageAlerts.editRule', 'Edit rule')}>
               <Edit className="h-4 w-4" />
             </Button>
             <Button
@@ -229,7 +245,8 @@ export function UsageAlertsPage() {
               size="icon"
               className="h-8 w-8 text-destructive hover:bg-destructive/10"
               onClick={() => setDeleteId(row.original.id)}
-              title="Delete rule"
+              title={t('admin.ops.usageAlerts.deleteRule', 'Delete rule')}
+              aria-label={t('admin.ops.usageAlerts.deleteRule', 'Delete rule')}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -238,26 +255,26 @@ export function UsageAlertsPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [t],
   );
 
   const logColumns = useMemo<LegacyColumnDef<UsageAlertLogRow, unknown>[]>(
     () => [
       {
         accessorKey: 'customerName',
-        header: 'Customer',
+        header: t('admin.ops.usageAlerts.colCustomer', 'Customer'),
         size: 180,
         cell: ({ row }) => (
           <div>
             <span className="font-semibold text-xs block">{row.original.customerName || '—'}</span>
-            <span className="text-[10px] text-muted-foreground font-mono">{row.original.mobile}</span>
+            <span className="text-xs text-muted-foreground font-mono">{row.original.mobile}</span>
           </div>
         ),
       },
-      { accessorKey: 'ruleName', header: 'Rule', size: 160, cell: ({ row }) => <span className="text-xs">{row.original.ruleName || '—'}</span> },
+      { accessorKey: 'ruleName', header: t('admin.ops.usageAlerts.logRule', 'Rule'), size: 160, cell: ({ row }) => <span className="text-xs">{row.original.ruleName || '—'}</span> },
       {
         accessorKey: 'usageGb',
-        header: 'Usage',
+        header: t('admin.ops.usageAlerts.colUsage', 'Usage'),
         size: 140,
         cell: ({ row }) => (
           <span className="text-xs font-mono">
@@ -267,29 +284,29 @@ export function UsageAlertsPage() {
       },
       {
         accessorKey: 'status',
-        header: 'Delivery',
+        header: t('admin.ops.usageAlerts.colDelivery', 'Delivery'),
         size: 100,
         cell: ({ row }) => (
-          <Badge variant={row.original.status === 'failed' ? 'destructive' : row.original.status === 'sent' ? 'default' : 'secondary'} className="text-[10px] capitalize">
-            {row.original.status}
+          <Badge variant={row.original.status === 'failed' ? 'destructive' : row.original.status === 'sent' ? 'default' : 'secondary'} className="text-xs capitalize">
+            {t(`status.${row.original.status}`, row.original.status)}
           </Badge>
         ),
       },
       {
         accessorKey: 'createdAt',
-        header: 'Alerted',
+        header: t('admin.ops.usageAlerts.colAlerted', 'Alerted'),
         size: 150,
         cell: ({ row }) => (
           <span className="text-xs font-mono text-muted-foreground">{row.original.createdAt ? formatDateTime(row.original.createdAt) : '—'}</span>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (rulesQuery.isLoading) return <PageSkeleton variant="table" />;
   if (rulesQuery.isError && !rulesQuery.data) {
-    return <EmptyState title="Failed to load usage alert rules" actionLabel="Retry" onAction={() => rulesQuery.refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.usageAlerts.loadFailed', 'Failed to load usage alert rules')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => rulesQuery.refetch()} />;
   }
 
   const stats = rulesQuery.data?.stats;
@@ -297,12 +314,12 @@ export function UsageAlertsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Usage Alert & FUP Rules"
-        subtitle="Notify subscribers automatically when their monthly data usage crosses a quota threshold"
+        title={t('admin.ops.usageAlerts.title', 'Usage Alert & FUP Rules')}
+        subtitle={t('admin.ops.usageAlerts.subtitle', 'Notify subscribers automatically when their monthly data usage crosses a quota threshold')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Engagement' },
-          { label: 'Usage Alerts' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.engagement', 'Engagement') },
+          { label: t('admin.ops.usageAlerts.crumb', 'Usage Alerts') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -311,14 +328,14 @@ export function UsageAlertsPage() {
               size="sm"
               className="gap-1.5"
               disabled={runAlerts.isPending || !stats?.activeRules}
-              onClick={() => runAlerts.mutate(undefined, { onSuccess: (r) => toast.success(`${r.alerted} usage alert(s) queued`) })}
+              onClick={() => runAlerts.mutate(undefined, { onSuccess: (r) => toast.success(t('admin.ops.usageAlerts.alertsQueued', '{n} usage alert(s) queued', { n: r.alerted })) })}
             >
               <Play className="h-4 w-4" />
-              Evaluate Now
+              {t('admin.ops.usageAlerts.evaluateNow', 'Evaluate Now')}
             </Button>
             <Button className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => openEditor(null)}>
               <Plus className="h-4 w-4" />
-              Create Alert Rule
+              {t('admin.ops.usageAlerts.createRule', 'Create Alert Rule')}
             </Button>
           </div>
         }
@@ -326,11 +343,11 @@ export function UsageAlertsPage() {
 
       <OpsSummaryStrip
         items={[
-          { label: 'Total FUP Rules', value: stats?.totalRules ?? 0 },
-          { label: 'Active Warning Rules', value: `${stats?.activeRules ?? 0} Enabled` },
-          { label: 'Alerts Today', value: stats?.alertsToday ?? 0 },
-          { label: 'Alerts This Month', value: stats?.alertsThisMonth ?? 0 },
-          { label: 'Usage Data', value: stats?.usageDataAvailable ? 'Collected' : 'Not collected yet' },
+          { label: t('admin.ops.usageAlerts.kpiTotal', 'Total FUP Rules'), value: stats?.totalRules ?? 0 },
+          { label: t('admin.ops.usageAlerts.kpiActive', 'Active Warning Rules'), value: t('admin.ops.usageAlerts.enabledCount', '{n} Enabled', { n: stats?.activeRules ?? 0 }) },
+          { label: t('admin.ops.usageAlerts.kpiToday', 'Alerts Today'), value: stats?.alertsToday ?? 0 },
+          { label: t('admin.ops.usageAlerts.kpiMonth', 'Alerts This Month'), value: stats?.alertsThisMonth ?? 0 },
+          { label: t('admin.ops.usageAlerts.kpiUsageData', 'Usage Data'), value: stats?.usageDataAvailable ? t('admin.ops.usageAlerts.collected', 'Collected') : t('admin.ops.usageAlerts.notCollected', 'Not collected yet') },
         ]}
       />
 
@@ -338,9 +355,11 @@ export function UsageAlertsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <BellRing className="h-4 w-4 text-primary" />
-            Data Consumption Notification Rules
+            {t('admin.ops.usageAlerts.rulesCardTitle', 'Data Consumption Notification Rules')}
           </CardTitle>
-          <CardDescription>Evaluated by the scheduled usage-alert job against each customer&apos;s usage since the 1st of the month; one alert per rule per customer per month</CardDescription>
+          <CardDescription>
+            {t('admin.ops.usageAlerts.rulesCardDesc', "Evaluated by the scheduled usage-alert job against each customer's usage since the 1st of the month; one alert per rule per customer per month")}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DataTable
@@ -348,9 +367,9 @@ export function UsageAlertsPage() {
             data={rulesQuery.data?.items ?? []}
             getRowId={(row) => row.id}
             searchKey="name"
-            searchPlaceholder="Search rules by name..."
-            emptyTitle="No usage alert rules"
-            emptyDescription="Create a rule such as “80% of 100 GB” to start alerting subscribers."
+            searchPlaceholder={t('admin.ops.usageAlerts.searchRules', 'Search rules by name...')}
+            emptyTitle={t('admin.ops.usageAlerts.emptyRules', 'No usage alert rules')}
+            emptyDescription={t('admin.ops.usageAlerts.emptyRulesHint', 'Create a rule such as “80% of 100 GB” to start alerting subscribers.')}
             enableColumnVisibility={false}
             server={{
               page,
@@ -370,7 +389,7 @@ export function UsageAlertsPage() {
             toolbarActions={
               <Button size="sm" onClick={() => openEditor(null)} className="gap-1.5">
                 <Plus className="h-4 w-4" />
-                New Rule
+                {t('admin.ops.usageAlerts.newRule', 'New Rule')}
               </Button>
             }
           />
@@ -381,12 +400,12 @@ export function UsageAlertsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <History className="h-4 w-4 text-primary" />
-            Alerts Sent
+            {t('admin.ops.usageAlerts.logTitle', 'Alerts Sent')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {logQuery.isError ? (
-            <EmptyState title="Could not load alert history" actionLabel="Retry" onAction={() => logQuery.refetch()} />
+            <EmptyState variant="error" title={t('admin.ops.usageAlerts.logLoadFailed', 'Could not load alert history')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => logQuery.refetch()} />
           ) : (
             <DataTable
               columns={logColumns}
@@ -394,8 +413,8 @@ export function UsageAlertsPage() {
               isLoading={logQuery.isLoading}
               getRowId={(row) => row.id}
               searchKey="customerName"
-              searchPlaceholder="Search by customer or phone..."
-              emptyTitle="No alerts sent yet"
+              searchPlaceholder={t('admin.ops.usageAlerts.searchLog', 'Search by customer or phone...')}
+              emptyTitle={t('admin.ops.usageAlerts.emptyLog', 'No alerts sent yet')}
               enableColumnVisibility={false}
               server={{
                 page: logPage,
@@ -422,19 +441,19 @@ export function UsageAlertsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sliders className="h-5 w-5 text-primary" />
-              {editing ? 'Edit Usage Alert Rule' : 'Configure Usage Alert Rule'}
+              {editing ? t('admin.ops.usageAlerts.editTitle', 'Edit Usage Alert Rule') : t('admin.ops.usageAlerts.newTitle', 'Configure Usage Alert Rule')}
             </DialogTitle>
-            <DialogDescription>Set the monthly data quota, threshold and delivery channel.</DialogDescription>
+            <DialogDescription>{t('admin.ops.usageAlerts.dialogDesc', 'Set the monthly data quota, threshold and delivery channel.')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Rule Title</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. 90% Data Cap Warning" className="text-xs" />
+              <Label htmlFor="rule-title" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldTitle', 'Rule Title')}</Label>
+              <Input id="rule-title" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t('admin.ops.usageAlerts.fieldTitlePh', 'e.g. 90% Data Cap Warning')} className="text-xs" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Monthly Quota (GB)</Label>
-                <Input
+                <Label htmlFor="monthly-quota-gb" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldQuota', 'Monthly Quota (GB)')}</Label>
+                <Input id="monthly-quota-gb"
                   type="number"
                   min="1"
                   value={form.quotaGb}
@@ -443,8 +462,8 @@ export function UsageAlertsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Threshold (%)</Label>
-                <Input
+                <Label htmlFor="threshold" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldThreshold', 'Threshold (%)')}</Label>
+                <Input id="threshold"
                   type="number"
                   min="1"
                   max="100"
@@ -456,13 +475,17 @@ export function UsageAlertsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Applies To</Label>
-                <Select value={form.packageId || 'all'} onValueChange={(v) => setForm({ ...form, packageId: v && v !== 'all' ? v : '' })}>
-                  <SelectTrigger className="text-xs">
+                <Label htmlFor="applies-to" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldAppliesTo', 'Applies To')}</Label>
+                <Select
+                  value={form.packageId || 'all'}
+                  onValueChange={(v) => setForm({ ...form, packageId: v && v !== 'all' ? v : '' })}
+                  items={{ all: t('admin.ops.usageAlerts.allPackages', 'All packages'), ...Object.fromEntries((packages.data ?? []).map((p) => [p.id, p.name])) }}
+                >
+                  <SelectTrigger id="applies-to" className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All packages</SelectItem>
+                    <SelectItem value="all">{t('admin.ops.usageAlerts.allPackages', 'All packages')}</SelectItem>
                     {(packages.data ?? []).map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
@@ -472,9 +495,9 @@ export function UsageAlertsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Channel</Label>
-                <Select value={form.channel} onValueChange={(v) => v && setForm({ ...form, channel: v as MessageChannel })}>
-                  <SelectTrigger className="text-xs">
+                <Label htmlFor="channel" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldChannel', 'Channel')}</Label>
+                <Select value={form.channel} onValueChange={(v) => v && setForm({ ...form, channel: v as MessageChannel })} items={{ sms: 'SMS', whatsapp: 'WhatsApp' }}>
+                  <SelectTrigger id="channel" className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -485,16 +508,20 @@ export function UsageAlertsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold">Template</Label>
-              <Select value={form.templateId || 'custom'} onValueChange={(v) => setForm({ ...form, templateId: v && v !== 'custom' ? v : '' })}>
-                <SelectTrigger className="text-xs">
+              <Label htmlFor="template" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldTemplate', 'Template')}</Label>
+              <Select
+                value={form.templateId || 'custom'}
+                onValueChange={(v) => setForm({ ...form, templateId: v && v !== 'custom' ? v : '' })}
+                items={{ custom: t('admin.ops.usageAlerts.customMessage', 'Custom message'), ...Object.fromEntries((templates.data ?? []).map((tpl) => [tpl.id, tpl.templateName])) }}
+              >
+                <SelectTrigger id="template" className="text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="custom">Custom message</SelectItem>
-                  {(templates.data ?? []).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.templateName}
+                  <SelectItem value="custom">{t('admin.ops.usageAlerts.customMessage', 'Custom message')}</SelectItem>
+                  {(templates.data ?? []).map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {tpl.templateName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -502,23 +529,23 @@ export function UsageAlertsPage() {
             </div>
             {!form.templateId && (
               <div className="space-y-2">
-                <Label className="text-xs font-semibold">Message</Label>
-                <Textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="h-20 text-xs font-mono" />
-                <p className="text-[10px] text-muted-foreground">Extra variables: {'{usage_gb}'}, {'{quota_gb}'}, {'{usage_pct}'}</p>
+                <Label htmlFor="message" className="text-xs font-semibold">{t('admin.ops.usageAlerts.fieldMessage', 'Message')}</Label>
+                <Textarea id="message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="h-20 text-xs font-mono" />
+                <p className="text-xs text-muted-foreground">{t('admin.ops.usageAlerts.extraVars', 'Extra variables:')} {'{usage_gb}'}, {'{quota_gb}'}, {'{usage_pct}'}</p>
               </div>
             )}
             <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
-              <span className="font-semibold">Rule active</span>
-              <Switch checked={form.active} onCheckedChange={(c) => setForm({ ...form, active: c })} />
+              <span className="font-semibold">{t('admin.ops.usageAlerts.ruleActive', 'Rule active')}</span>
+              <Switch aria-label={t('admin.ops.usageAlerts.ruleActive', 'Rule active')} checked={form.active} onCheckedChange={(c) => setForm({ ...form, active: c })} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saveRule.isPending} className="gap-1.5 bg-primary text-primary-foreground">
               <CheckCircle2 className="h-4 w-4" />
-              {saveRule.isPending ? 'Saving…' : 'Save Rule'}
+              {saveRule.isPending ? t('admin.ops.usageAlerts.saving', 'Saving…') : t('admin.ops.usageAlerts.saveRule', 'Save Rule')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -527,15 +554,15 @@ export function UsageAlertsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete usage alert rule"
-        description="Alerts already sent stay in the history; the rule stops running."
-        confirmLabel="Delete"
+        title={t('admin.ops.usageAlerts.deleteTitle', 'Delete usage alert rule')}
+        description={t('admin.ops.usageAlerts.deleteDesc', 'Alerts already sent stay in the history; the rule stops running.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleteId) return;
           deleteRule.mutate(deleteId, {
             onSuccess: () => {
-              toast.success('Usage alert rule deleted');
+              toast.success(t('admin.ops.usageAlerts.ruleDeleted', 'Usage alert rule deleted'));
               setDeleteId(null);
             },
           });

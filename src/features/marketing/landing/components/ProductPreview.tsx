@@ -235,7 +235,7 @@ export function ProductPreview() {
             >
               <Monitor className="h-4 w-4" />
               <span>Operator Web Portal</span>
-              <span className="hidden text-[11px] font-normal opacity-80 sm:inline-block">
+              <span className="hidden text-xs font-normal sm:inline-block">
                 (Admin &amp; Reseller)
               </span>
             </button>
@@ -276,7 +276,7 @@ export function ProductPreview() {
                 {cat.badge && (
                   <span
                     className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] ${
-                      active ? 'bg-landing-cta/30 text-white' : 'bg-white/5 text-white/40'
+                      active ? 'bg-landing-cta/30 text-white' : 'bg-white/5 text-white/60'
                     }`}
                   >
                     {cat.badge}
@@ -316,7 +316,7 @@ export function ProductPreview() {
                     key={bullet}
                     className="flex items-start gap-3 text-xs leading-relaxed text-white/70 sm:text-sm"
                   >
-                    <CheckCircle2 className="text-landing-cta mt-0.5 h-4 w-4 shrink-0" />
+                    <CheckCircle2 className="text-landing-accent mt-0.5 h-4 w-4 shrink-0" />
                     <span>{bullet}</span>
                   </li>
                 ))}
@@ -423,13 +423,16 @@ export function ProductPreview() {
                           key={dotIdx}
                           type="button"
                           onClick={() => setImageIndex(dotIdx)}
-                          className={`h-2 rounded-full transition ${
-                            dotIdx === imageIndex
-                              ? 'bg-landing-cta w-6'
-                              : 'w-2 bg-white/30 hover:bg-white/50'
-                          }`}
+                          className="group grid h-6 min-w-6 place-items-center"
                           aria-label={`Go to slide ${dotIdx + 1}`}
-                        />
+                          aria-current={dotIdx === imageIndex}
+                        >
+                          <span
+                            className={`h-2 rounded-full transition ${
+                              dotIdx === imageIndex ? 'bg-landing-cta w-6' : 'w-2 bg-white/30 group-hover:bg-white/50'
+                            }`}
+                          />
+                        </button>
                       ))}
                     </div>
                   )}

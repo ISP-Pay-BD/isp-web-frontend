@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils';
 import { KpiCard } from '../../shared/components';
 import { downloadCsv, todayYmd } from '../../shared/table-utils';
 import { money, percentOf } from '../../shared/format';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
 function SectionBlock({
   title,
@@ -43,6 +45,7 @@ function SectionBlock({
   bg: string;
   border: string;
 }) {
+  const t = useTranslations();
   // Share of the section by magnitude, so contra / negative balances never break the maths.
   const magnitude = items.reduce((s, i) => s + Math.abs(i.balance), 0);
 
@@ -57,8 +60,10 @@ function SectionBlock({
             </div>
             <div>
               <h3 className="text-foreground text-sm font-bold">{title}</h3>
-              <p className="text-muted-foreground text-[11px]">
-                {items.length} {items.length === 1 ? 'account' : 'accounts'} with a balance
+              <p className="text-muted-foreground text-xs">
+                {items.length === 1
+                  ? t('admin.accounting.balanceSheet.accountOne', '{n} account with a balance', { n: formatCount(items.length) })
+                  : t('admin.accounting.balanceSheet.accountMany', '{n} accounts with a balance', { n: formatCount(items.length) })}
               </p>
             </div>
           </div>
@@ -73,7 +78,7 @@ function SectionBlock({
         {/* Items list */}
         <div className="p-3.5">
           {items.length === 0 ? (
-            <p className="text-muted-foreground px-3 py-4 text-xs">No balances</p>
+            <p className="text-muted-foreground px-3 py-4 text-xs">{t('admin.accounting.balanceSheet.noBalances', 'No balances')}</p>
           ) : (
             <ul className="space-y-1">
               {items.map((item) => {
@@ -93,8 +98,8 @@ function SectionBlock({
                           {item.name}
                         </span>
                         {pct && (
-                          <span className="text-muted-foreground block font-mono text-[10px]">
-                            {pct} of section
+                          <span className="text-muted-foreground block font-mono text-xs">
+                            {t('admin.accounting.balanceSheet.ofSection', '{pct} of section', { pct })}
                           </span>
                         )}
                       </div>
@@ -121,6 +126,7 @@ function SectionBlock({
 }
 
 export function BalanceSheetPage() {
+  const t = useTranslations();
   const [asOf, setAsOf] = useState(todayYmd());
   const { balanceSheet, isLoading, isError, error, refetch, isFetching, isPlaceholderData } =
     useBalanceSheet(asOf);
@@ -144,7 +150,7 @@ export function BalanceSheetPage() {
         ['Totals', '', 'Difference (assets − liabilities − equity)', b.difference],
       ],
     );
-    toast.success(`Balance sheet as of ${b.asOf || asOf} exported`);
+    toast.success(t('admin.accounting.balanceSheet.exported', 'Balance sheet as of {date} exported', { date: b.asOf || asOf }));
   };
 
   if (isLoading) return <PageSkeleton variant="dashboard" rows={6} />;
@@ -155,22 +161,22 @@ export function BalanceSheetPage() {
     <div className="w-full space-y-6 pb-12">
       {/* Top Header */}
       <PageHeader
-        title="Balance Sheet (Financial Position)"
+        title={t('admin.accounting.balanceSheet.title', 'Balance Sheet (Financial Position)')}
         subtitle={
           b?.asOf
-            ? `Assets, liabilities and equity as of ${b.asOf}, computed from posted journal entries.`
-            : 'Assets, liabilities and equity computed from posted journal entries.'
+            ? t('admin.accounting.balanceSheet.subtitleAsOf', 'Assets, liabilities and equity as of {date}, computed from posted journal entries.', { date: b.asOf })
+            : t('admin.accounting.balanceSheet.subtitle', 'Assets, liabilities and equity computed from posted journal entries.')
         }
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Accounting' },
-          { label: 'Balance Sheet' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('nav.accounting', 'Accounting') },
+          { label: t('nav.acc-balance', 'Balance Sheet') },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <Input
               type="date"
-              aria-label="As of date"
+              aria-label={t('admin.accounting.balanceSheet.asOfDate', 'As of date')}
               value={asOf}
               max={todayYmd()}
               onChange={(e) => setAsOf(e.target.value)}
@@ -183,7 +189,7 @@ export function BalanceSheetPage() {
               className="border-border/80 hover:bg-accent gap-1.5 text-xs"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-              Refresh
+              {t('admin.accounting.balanceSheet.refresh', 'Refresh')}
             </Button>
             <Button
               variant="outline"
@@ -193,17 +199,17 @@ export function BalanceSheetPage() {
               className="border-border/80 hover:bg-accent gap-1.5 text-xs"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-              Export Balance Sheet
+              {t('admin.accounting.balanceSheet.export', 'Export Balance Sheet')}
             </Button>
           </div>
         }
       />
 
       {isError || !b ? (
-        <EmptyState
-          title="Failed to load balance sheet"
-          description={error?.message ?? 'Could not generate the financial snapshot.'}
-          actionLabel="Retry"
+        <EmptyState variant="error"
+          title={t('admin.accounting.balanceSheet.loadFailed', 'Failed to load balance sheet')}
+          description={error?.message ?? t('admin.accounting.balanceSheet.loadFailedHint', 'Could not generate the financial snapshot.')}
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => refetch()}
         />
       ) : (
@@ -211,41 +217,41 @@ export function BalanceSheetPage() {
           {/* KPI Stats Ribbon */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
-              label="Total Assets"
+              label={t('admin.accounting.balanceSheet.totalAssets', 'Total Assets')}
               value={money(b.totals.assets)}
-              hint={`${b.assets.length} asset accounts`}
+              hint={t('admin.accounting.balanceSheet.assetAccounts', '{n} asset accounts', { n: formatCount(b.assets.length) })}
               icon={Landmark}
               tone="blue"
             />
             <KpiCard
-              label="Total Liabilities"
+              label={t('admin.accounting.balanceSheet.totalLiabilities', 'Total Liabilities')}
               value={money(b.totals.liabilities)}
-              hint={`${b.liabilities.length} liability accounts`}
+              hint={t('admin.accounting.balanceSheet.liabilityAccounts', '{n} liability accounts', { n: formatCount(b.liabilities.length) })}
               icon={CreditCard}
               tone="amber"
             />
             <KpiCard
-              label="Total Equity"
+              label={t('admin.accounting.balanceSheet.totalEquity', 'Total Equity')}
               value={money(b.totals.equity)}
-              hint="Incl. current-period net income & retained earnings"
+              hint={t('admin.accounting.balanceSheet.equityHint', 'Incl. current-period net income & retained earnings')}
               icon={TrendingUp}
               tone="emerald"
             />
             <KpiCard
-              label="Accounting Equation"
+              label={t('admin.accounting.balanceSheet.equation', 'Accounting Equation')}
               value={
                 b.isBalanced ? (
                   <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-400">
-                    <CheckCircle2 className="h-4 w-4" /> Balanced
+                    <CheckCircle2 className="h-4 w-4" /> {t('admin.accounting.balanceSheet.balanced', 'Balanced')}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 text-sm font-bold text-amber-400">
-                    <AlertTriangle className="h-4 w-4" /> Out of balance by{' '}
-                    {money(Math.abs(b.difference))}
+                    <AlertTriangle className="h-4 w-4" />{' '}
+                    {t('admin.accounting.balanceSheet.outOfBalance', 'Out of balance by {amount}', { amount: money(Math.abs(b.difference)) })}
                   </span>
                 )
               }
-              hint="Assets = Liabilities + Equity"
+              hint={t('admin.accounting.balanceSheet.equationHint', 'Assets = Liabilities + Equity')}
               icon={b.isBalanced ? ShieldCheck : AlertTriangle}
               tone={b.isBalanced ? 'purple' : 'amber'}
             />
@@ -254,7 +260,7 @@ export function BalanceSheetPage() {
           {/* Sections */}
           <div className="grid gap-6 lg:grid-cols-3">
             <SectionBlock
-              title="Assets"
+              title={t('admin.accounting.balanceSheet.assets', 'Assets')}
               total={b.totals.assets}
               items={b.assets}
               icon={Landmark}
@@ -263,7 +269,7 @@ export function BalanceSheetPage() {
               border="border-blue-500/20"
             />
             <SectionBlock
-              title="Liabilities"
+              title={t('admin.accounting.balanceSheet.liabilities', 'Liabilities')}
               total={b.totals.liabilities}
               items={b.liabilities}
               icon={CreditCard}
@@ -272,7 +278,7 @@ export function BalanceSheetPage() {
               border="border-amber-500/20"
             />
             <SectionBlock
-              title="Equity"
+              title={t('admin.accounting.balanceSheet.equity', 'Equity')}
               total={b.totals.equity}
               items={b.equity}
               icon={TrendingUp}
@@ -311,24 +317,24 @@ export function BalanceSheetPage() {
                   </div>
                   <div>
                     <h3 className="text-foreground text-base font-bold sm:text-lg">
-                      Total Liabilities & Equity
+                      {t('admin.accounting.balanceSheet.totalLE', 'Total Liabilities & Equity')}
                     </h3>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      Assets ({money(b.totals.assets)}) {b.isBalanced ? '=' : '≠'} Liabilities (
-                      {money(b.totals.liabilities)}) + Equity ({money(b.totals.equity)})
-                      {!b.isBalanced && ` · difference ${money(b.difference)}`}
+                      {t('admin.accounting.balanceSheet.equationLine', 'Assets ({assets}) {op} Liabilities ({liabilities}) + Equity ({equity})', {
+                        assets: money(b.totals.assets),
+                        op: b.isBalanced ? '=' : '≠',
+                        liabilities: money(b.totals.liabilities),
+                        equity: money(b.totals.equity),
+                      })}
+                      {!b.isBalanced &&
+                        ` · ${t('admin.accounting.balanceSheet.difference', 'difference {amount}', { amount: money(b.difference) })}`}
                     </p>
                   </div>
                 </div>
 
                 <Badge
                   variant="outline"
-                  className={cn(
-                    'self-start px-4 py-2 font-mono text-base font-bold shadow-xs sm:self-auto sm:text-lg',
-                    b.isBalanced
-                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                      : 'border-amber-500/20 bg-amber-500/10 text-amber-400',
-                  )}
+                  tone={b.isBalanced ? 'success' : 'warning'} className="self-start px-4 py-2 font-mono text-base font-bold shadow-xs sm:self-auto sm:text-lg"
                 >
                   {money(b.totalLiabilitiesAndEquity)}
                 </Badge>

@@ -11,11 +11,13 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CreditCard, Link2, RefreshCw, Activity, ShieldCheck, Sliders, DollarSign, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatBdtWithSymbol } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import { usePaymentGateways, useUpdatePaymentGateway } from '../hooks/use-payment-gateways';
 
 export function PaymentGatewaysPage() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, isFetching, refetch } = usePaymentGateways();
   const update = useUpdatePaymentGateway();
   const list = useMemo(() => data?.items ?? [], [data]);
@@ -32,10 +34,10 @@ export function PaymentGatewaysPage() {
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load payment gateways"
+      <EmptyState variant="error"
+        title={t('admin.paymentGateways.list.loadFailed', 'Failed to load payment gateways')}
         description={errorMessage(error)}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -44,9 +46,12 @@ export function PaymentGatewaysPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Payment Gateways & Merchant Settlements"
-        subtitle="Online gateways your customers pay through — credentials, charges and the last 30 days of settlements."
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Payment Gateways' }]}
+        title={t('admin.paymentGateways.list.title', 'Payment Gateways & Merchant Settlements')}
+        subtitle={t('admin.paymentGateways.list.subtitle', 'Online gateways your customers pay through — credentials, charges and the last 30 days of settlements.')}
+        breadcrumb={[
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.payment_gateways', 'Payment Gateways') },
+        ]}
         actions={
           <Button
             variant="outline"
@@ -56,25 +61,25 @@ export function PaymentGatewaysPage() {
             className="border-border/80 hover:bg-accent text-xs h-9 gap-1.5"
           >
             <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} />
-            Refresh
+            {t('admin.paymentGateways.list.refresh', 'Refresh')}
           </Button>
         }
       />
 
       {!data.editable ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-3.5 w-3.5" /> Gateway credentials are managed by your ISP admin account; you can view them here.
+          <AlertTriangle className="h-3.5 w-3.5" /> {t('admin.paymentGateways.list.readOnlyNote', 'Gateway credentials are managed by your ISP admin account; you can view them here.')}
         </div>
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Configured" value={`${stats.configured} / ${list.length}`} hint="All credentials present" icon={<CreditCard className="h-4 w-4" />} tone="text-purple-400 bg-purple-500/10 border-purple-500/20" />
-        <Kpi label="Enabled" value={String(stats.active)} hint="Offered to customers" icon={<ShieldCheck className="h-4 w-4" />} tone="text-emerald-400 bg-emerald-500/10 border-emerald-500/20" />
-        <Kpi label="Today's gateway volume" value={`৳${stats.todayVolume.toLocaleString()}`} hint="Settled today" icon={<DollarSign className="h-4 w-4" />} tone="text-blue-400 bg-blue-500/10 border-blue-500/20" />
+        <Kpi label={t('admin.paymentGateways.list.kpiConfigured', 'Configured')} value={`${stats.configured} / ${list.length}`} hint={t('admin.paymentGateways.list.kpiConfiguredHint', 'All credentials present')} icon={<CreditCard className="h-4 w-4" />} tone="text-purple-400 bg-purple-500/10 border-purple-500/20" />
+        <Kpi label={t('admin.paymentGateways.list.kpiEnabled', 'Enabled')} value={String(stats.active)} hint={t('admin.paymentGateways.list.kpiEnabledHint', 'Offered to customers')} icon={<ShieldCheck className="h-4 w-4" />} tone="text-emerald-400 bg-emerald-500/10 border-emerald-500/20" />
+        <Kpi label={t('admin.paymentGateways.list.kpiToday', "Today's gateway volume")} value={`${formatBdtWithSymbol(stats.todayVolume)}`} hint={t('admin.paymentGateways.list.kpiTodayHint', 'Settled today')} icon={<DollarSign className="h-4 w-4" />} tone="text-blue-400 bg-blue-500/10 border-blue-500/20" />
         <Kpi
-          label="Avg. success rate"
+          label={t('admin.paymentGateways.list.kpiSuccess', 'Avg. success rate')}
           value={stats.avgSuccess === null ? '—' : `${stats.avgSuccess}%`}
-          hint="Last 30 days"
+          hint={t('admin.paymentGateways.list.kpiSuccessHint', 'Last 30 days')}
           icon={<Activity className="h-4 w-4" />}
           tone="text-amber-400 bg-amber-500/10 border-amber-500/20"
         />
@@ -95,54 +100,49 @@ export function PaymentGatewaysPage() {
                   <CardTitle className="text-base font-bold text-foreground">{gw.name}</CardTitle>
                   <Badge
                     variant="outline"
-                    className={cn(
-                      'text-[10px] font-semibold uppercase',
-                      gw.mode === 'live'
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-                    )}
+                    tone={gw.mode === 'live' ? 'success' : 'warning'} className="text-xs font-semibold uppercase"
                   >
-                    {gw.mode}
+                    {gw.mode === 'live' ? t('admin.paymentGateways.mode.live', 'Live') : t('admin.paymentGateways.mode.sandbox', 'Sandbox')}
                   </Badge>
                   {!gw.configured ? (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground">Not configured</Badge>
+                    <Badge variant="outline" className="text-xs text-muted-foreground">{t('admin.paymentGateways.list.notConfigured', 'Not configured')}</Badge>
                   ) : null}
                 </div>
                 <CardDescription className="font-mono text-xs text-muted-foreground">
-                  {gw.merchantId || 'No merchant id saved'} · charge {gw.chargePercent}%
+                  {gw.merchantId || t('admin.paymentGateways.list.noMerchantId', 'No merchant id saved')} · {t('admin.paymentGateways.list.charge', 'charge {pct}%', { pct: gw.chargePercent })}
                 </CardDescription>
               </div>
               <Switch
                 checked={gw.enabled}
                 disabled={!data.editable || update.isPending || (!gw.enabled && !gw.configured)}
                 onCheckedChange={(checked) => update.mutate({ id: gw.id, update: { enabled: checked } })}
-                aria-label={`Enable ${gw.name}`}
+                aria-label={t('admin.paymentGateways.list.enableAria', 'Enable {name}', { name: gw.name })}
               />
             </CardHeader>
             <CardContent className="p-5 space-y-4 text-xs">
               <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/50 text-center">
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase">Today</p>
-                  <p className="text-sm font-bold font-mono text-foreground">৳{gw.todayVolume.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground uppercase">{t('admin.paymentGateways.list.today', 'Today')}</p>
+                  <p className="text-sm font-bold font-mono text-foreground">{formatBdtWithSymbol(gw.todayVolume)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase">30 days</p>
-                  <p className="text-sm font-bold font-mono text-foreground">৳{gw.volume30d.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground uppercase">{t('admin.paymentGateways.list.days30', '30 days')}</p>
+                  <p className="text-sm font-bold font-mono text-foreground">{formatBdtWithSymbol(gw.volume30d)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase">Success</p>
+                  <p className="text-xs text-muted-foreground uppercase">{t('admin.paymentGateways.list.success', 'Success')}</p>
                   <p className="text-sm font-bold font-mono text-emerald-500">{gw.successRatePct === null ? '—' : `${gw.successRatePct}%`}</p>
                 </div>
               </div>
 
               <div className="flex justify-between items-center text-xs">
-                <span className="text-muted-foreground">Last settlement:</span>
+                <span className="text-muted-foreground">{t('admin.paymentGateways.list.lastSettlement', 'Last settlement:')}</span>
                 <span className="font-mono text-foreground">{gw.lastSettlementAt ? formatDateTime(gw.lastSettlementAt) : '—'}</span>
               </div>
 
               <div className="flex items-center gap-1.5 text-muted-foreground truncate">
                 <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="truncate font-mono text-[11px]">{gw.callbackUrl}</span>
+                <span className="truncate font-mono text-xs">{gw.callbackUrl}</span>
               </div>
 
               <div className="pt-2 border-t border-border/50 flex justify-end">
@@ -150,7 +150,7 @@ export function PaymentGatewaysPage() {
                   href={`/admin/payment-gateways/${gw.id}`}
                   className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'text-xs h-8 gap-1.5 border-border/80 hover:bg-accent')}
                 >
-                  <Sliders className="h-3.5 w-3.5" /> {data.editable ? 'Configure credentials' : 'View configuration'}
+                  <Sliders className="h-3.5 w-3.5" /> {data.editable ? t('admin.paymentGateways.list.configure', 'Configure credentials') : t('admin.paymentGateways.list.viewConfig', 'View configuration')}
                 </Link>
               </div>
             </CardContent>
@@ -170,7 +170,7 @@ function Kpi({ label, value, hint, icon, tone }: { label: string; value: string;
           <div className={cn('p-2 rounded-lg border', tone)}>{icon}</div>
         </div>
         <div className="mt-2 text-2xl font-black font-mono text-foreground">{value}</div>
-        <div className="mt-2 text-[11px] text-muted-foreground">{hint}</div>
+        <div className="mt-2 text-xs text-muted-foreground">{hint}</div>
       </CardContent>
     </Card>
   );

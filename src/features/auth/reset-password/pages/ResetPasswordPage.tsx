@@ -18,6 +18,7 @@ import { siteConfig } from '@/config/site';
 import { AuthBrandPanel } from '@/features/auth/login/components/AuthBrandPanel';
 import { authService } from '@/lib/api/services/auth.service';
 import { handleApiError } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 
 const schema = z
   .object({
@@ -31,11 +32,13 @@ const schema = z
 type Values = z.infer<typeof schema>;
 
 function ResetPasswordForm() {
+  const { t, te } = useLocale();
   const params = useSearchParams();
   const linkEmail = params.get('email') ?? '';
   const linkCode = params.get('code') ?? '';
   const fromLink = Boolean(linkEmail && linkCode);
   const [done, setDone] = useState(false);
+  const [resettingBefore, resettingAfter] = t('auth.reset.resettingFor', 'Resetting the password for {email}', { email: '\n' }).split('\n');
   const {
     register,
     handleSubmit,
@@ -50,7 +53,7 @@ function ResetPasswordForm() {
     try {
       await authService.resetPassword({ email: values.email, code: values.code, newPassword: values.password });
       setDone(true);
-      toast.success('Password updated');
+      toast.success(t('auth.reset.updatedToast', 'Password updated'));
     } catch (err) {
       handleApiError(err, (field, error) =>
         setError(field === 'new_password' ? 'password' : (field as keyof Values), error),
@@ -62,9 +65,9 @@ function ResetPasswordForm() {
     return (
       <Alert>
         <AlertDescription>
-          Password updated.{' '}
+          {t('auth.reset.done', 'Password updated.')}{' '}
           <Link href="/login" className="text-primary font-medium underline underline-offset-2">
-            Sign in
+            {t('auth.reset.signIn', 'Sign in')}
           </Link>
         </AlertDescription>
       </Alert>
@@ -75,56 +78,59 @@ function ResetPasswordForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className={fromLink ? 'hidden' : 'space-y-4'}>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('auth.reset.email', 'Email')}</Label>
           <Input id="email" type="email" autoComplete="email" {...register('email')} />
-          {errors.email ? <p className="text-destructive text-sm">{errors.email.message}</p> : null}
+          {errors.email ? <p className="text-destructive text-sm">{te(errors.email.message ?? '')}</p> : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="code">Reset code</Label>
+          <Label htmlFor="code">{t('auth.reset.code', 'Reset code')}</Label>
           <Input id="code" autoComplete="one-time-code" {...register('code')} />
-          {errors.code ? <p className="text-destructive text-sm">{errors.code.message}</p> : null}
+          {errors.code ? <p className="text-destructive text-sm">{te(errors.code.message ?? '')}</p> : null}
         </div>
       </div>
       {fromLink ? (
         <p className="text-muted-foreground text-sm">
-          Resetting the password for <span className="text-foreground font-medium">{linkEmail}</span>
+          {resettingBefore}
+          <span className="text-foreground font-medium">{linkEmail}</span>
+          {resettingAfter}
         </p>
       ) : null}
       <div className="space-y-2">
-        <Label htmlFor="password">New password</Label>
+        <Label htmlFor="password">{t('auth.reset.newPassword', 'New password')}</Label>
         <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
-        {errors.password ? <p className="text-destructive text-sm">{errors.password.message}</p> : null}
+        {errors.password ? <p className="text-destructive text-sm">{te(errors.password.message ?? '')}</p> : null}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirm">Confirm password</Label>
+        <Label htmlFor="confirm">{t('auth.reset.confirm', 'Confirm password')}</Label>
         <Input id="confirm" type="password" autoComplete="new-password" {...register('confirm')} />
-        {errors.confirm ? <p className="text-destructive text-sm">{errors.confirm.message}</p> : null}
+        {errors.confirm ? <p className="text-destructive text-sm">{te(errors.confirm.message ?? '')}</p> : null}
       </div>
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Update password
+        {t('auth.reset.submit', 'Update password')}
       </Button>
     </form>
   );
 }
 
 export function ResetPasswordPage() {
+  const { t } = useLocale();
   return (
     <div className="bg-background grid min-h-dvh lg:grid-cols-2">
       <AuthBrandPanel variant="forgot" />
       <div className="flex flex-col justify-center px-6 py-12 sm:px-10">
         <div className="mx-auto w-full max-w-md space-y-6">
           <div className="flex items-center gap-3 lg:hidden">
-            <Image src={brandAssets.logo} alt={`${siteConfig.name} logo`} width={36} height={36} />
+            <Image src={brandAssets.logo} alt={t('common.sidebar.logoAlt', '{name} logo', { name: siteConfig.name })} width={36} height={36} />
             <span className="font-semibold">{siteConfig.name}</span>
           </div>
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               <Key className="text-primary h-5 w-5" />
-              Reset password
+              {t('auth.reset.title', 'Reset password')}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-              Choose a new password for your account
+              {t('auth.reset.subtitle', 'Choose a new password for your account')}
             </p>
           </div>
 
@@ -136,7 +142,7 @@ export function ResetPasswordPage() {
             href="/login"
             className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm transition-colors"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+            <ArrowLeft className="h-3.5 w-3.5" /> {t('auth.reset.back', 'Back to sign in')}
           </Link>
         </div>
       </div>

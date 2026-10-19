@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,22 +21,15 @@ import {
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge, TablePagination } from '@/components/shared';
-import type { MapboxMarker } from '@/components/shared/MapboxMap';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
+import { DataTable } from '@/features/shared/data-table';
+import type { GeoMapMarker } from '@/components/shared/GeoMap';
 import { saveBlob } from '@/lib/api/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { useEmployeeActivity } from '../hooks/use-employee-activity';
 import { useEmployeeMutations } from '../hooks/use-employees';
@@ -43,35 +37,25 @@ import { useInstallationMutations, useInstallations } from '../hooks/use-install
 import { EmployeeModal } from '../components/EmployeeModal';
 import { AssignInstallationDialog } from '../components/AssignInstallationDialog';
 import { useHrMeta } from '../../shared/use-hr-meta';
-import { datePart, formatClock, formatDuration, initials, titleCase } from '../../shared/format';
+import { datePart, formatClock, formatDuration, initials } from '../../shared/format';
+import { hrStatusLabel } from '../../shared/labels';
+import { useTranslations } from '@/i18n/locale-context';
 import type { EmployeeFormValues } from '../schemas';
-import type { InstallationStatus } from '../types';
+import type { AdvanceLog, AttendanceLog, InstallationItem, InstallationStatus } from '../types';
 
-// mapbox-gl is heavy — load the map only when the GPS tab is opened.
-const MapboxMap = dynamic(() => import('@/components/shared/MapboxMap').then((m) => m.MapboxMap), {
+// leaflet is browser-only — load the map only when the GPS tab is opened.
+const GeoMap = dynamic(() => import('@/components/shared/GeoMap').then((m) => m.GeoMap), {
   ssr: false,
   loading: () => <Skeleton className="h-[380px] w-full rounded-lg" />,
 });
 
 type Tab = 'attendance' | 'locations' | 'advances' | 'installations';
 
-const statusTone: Record<string, string> = {
-  present: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  approved: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  completed: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  late: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  pending: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  assigned: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  in_progress: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
-  deducted: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
-  cancelled: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
-};
-const toneFor = (status: string) => statusTone[status] ?? 'bg-rose-500/10 text-rose-500 border-rose-500/20';
-
 const OPEN_INSTALL: InstallationStatus[] = ['pending', 'assigned', 'in_progress'];
 
 export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const router = useRouter();
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<Tab>('attendance');
   const [trackDate, setTrackDate] = useState('');
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -89,7 +73,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
   const data = activity.data;
   const pings = useMemo(() => [...(data?.locations ?? [])].reverse(), [data?.locations]);
 
-  const markers = useMemo<MapboxMarker[]>(
+  const markers = useMemo<GeoMapMarker[]>(
     () =>
       pings.map((p, idx) => ({
         id: p.id,
@@ -103,7 +87,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
+    toast.success(t('admin.customers.list.copied', '{label} copied to clipboard', { label }));
   };
 
   const exportTrack = () => {
@@ -119,14 +103,165 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
 
   const handleSave = (values: EmployeeFormValues) => update.mutateAsync({ id: employeeId, values });
 
+  const { mutate: cancelInstall, isPending: cancelling } = cancel;
+
+  const attendanceColumns = useMemo<LegacyColumnDef<AttendanceLog, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: t('admin.hr.details.colDate', 'Date'),
+        cell: ({ row }) => <span className="font-mono text-xs font-medium text-foreground">{row.original.date}</span>,
+      },
+      {
+        accessorKey: 'checkIn',
+        header: t('admin.hr.details.colCheckIn', 'Check In'),
+        cell: ({ row }) => <span className="font-mono text-xs text-foreground">{formatClock(row.original.checkIn) || '—'}</span>,
+      },
+      {
+        accessorKey: 'checkOut',
+        header: t('admin.hr.details.colCheckOut', 'Check Out'),
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{formatClock(row.original.checkOut) || '—'}</span>,
+      },
+      {
+        id: 'duration',
+        header: t('admin.hr.details.colDuration', 'Duration'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{formatDuration(row.original.checkIn, row.original.checkOut) || '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('common.status', 'Status'),
+        cell: ({ row }) => (row.original.status ? <StatusBadge status={row.original.status} label={hrStatusLabel(t, row.original.status)} /> : <span className="text-xs text-muted-foreground">—</span>),
+      },
+    ],
+    [t],
+  );
+
+  const advanceColumns = useMemo<LegacyColumnDef<AdvanceLog, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'createdAt',
+        header: t('admin.hr.details.colDate', 'Date'),
+        cell: ({ row }) => <span className="font-mono text-xs text-foreground">{datePart(row.original.createdAt) || '—'}</span>,
+      },
+      {
+        accessorKey: 'amount',
+        header: t('admin.hr.details.colAmount', 'Amount'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-bold text-foreground">
+            <CurrencyDisplay amount={row.original.amount} />
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'reason',
+        header: t('admin.hr.details.colReason', 'Reason'),
+        enableSorting: false,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.reason || '—'}</span>,
+      },
+      {
+        accessorKey: 'deductMonth',
+        header: t('admin.hr.details.colDeductMonth', 'Deduct Month'),
+        enableSorting: false,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.deductMonth || '—'}</span>,
+      },
+      {
+        accessorKey: 'status',
+        header: t('common.status', 'Status'),
+        cell: ({ row }) => (row.original.status ? <StatusBadge status={row.original.status} label={hrStatusLabel(t, row.original.status)} /> : <span className="text-xs text-muted-foreground">—</span>),
+      },
+    ],
+    [t],
+  );
+
+  const installationColumns = useMemo<LegacyColumnDef<InstallationItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'title',
+        header: t('admin.hr.details.colJob', 'Job'),
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const job = row.original;
+          return (
+            <div className="text-xs">
+              <div className="font-semibold text-foreground">{job.title}</div>
+              <div className="text-muted-foreground">
+                {[job.customerName, job.address].filter(Boolean).join(' · ') || '—'}
+              </div>
+              {job.completedAt ? (
+                <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                  {t('admin.hr.details.completedAt', 'Completed {at}', { at: `${datePart(job.completedAt)} ${formatClock(job.completedAt)}` })}
+                  {job.completedLatitude !== null && job.completedLongitude !== null
+                    ? ` · ${job.completedLatitude.toFixed(5)}, ${job.completedLongitude.toFixed(5)}`
+                    : ''}
+                </div>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'scheduledAt',
+        header: t('admin.hr.details.colScheduled', 'Scheduled'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {row.original.scheduledAt ? `${datePart(row.original.scheduledAt)} ${formatClock(row.original.scheduledAt)}` : '—'}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('common.status', 'Status'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <StatusBadge
+            status={row.original.status}
+            label={hrStatusLabel(t, row.original.status)}
+            tone={row.original.status === 'assigned' ? 'info' : undefined}
+          />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('admin.hr.details.colAction', 'Action')}</span>,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const job = row.original;
+          return (
+            <div className="flex justify-end">
+              {OPEN_INSTALL.includes(job.status) ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs text-destructive hover:bg-destructive/10"
+                  disabled={cancelling}
+                  onClick={() => cancelInstall(job.id, { onSuccess: () => toast.success(t('admin.hr.details.installCancelled', 'Installation cancelled')) })}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [cancelInstall, cancelling, t],
+  );
+
   if (activity.isLoading) return <PageSkeleton variant="detail" rows={8} />;
   if (activity.isError || !data) {
     const notFound = activity.error?.status === 404;
     return (
       <EmptyState
-        title={notFound ? 'Employee record not found' : 'Failed to load employee'}
-        description={notFound ? 'Could not find a staff member with the requested ID.' : activity.error?.message}
-        actionLabel={notFound ? 'Back to Staff List' : 'Retry'}
+        title={notFound ? t('admin.hr.details.notFound', 'Employee record not found') : t('admin.hr.details.loadFailed', 'Failed to load employee')}
+        description={notFound ? t('admin.hr.details.notFoundHint', 'Could not find a staff member with the requested ID.') : activity.error?.message}
+        actionLabel={notFound ? t('admin.hr.details.backToList', 'Back to Staff List') : t('common.retry', 'Retry')}
         onAction={() => (notFound ? router.push('/admin/hr/employees') : activity.refetch())}
       />
     );
@@ -146,7 +281,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
       )}
     >
       {icon} {label}
-      <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-muted">
+      <Badge variant="secondary" className="text-xs font-mono px-1.5 py-0 bg-muted">
         {count}
       </Badge>
     </button>
@@ -157,11 +292,11 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
       {/* Top Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
         <Link href="/admin/dashboard" className="hover:text-foreground transition-colors">
-          Dashboard
+          {t('common.crumb.dashboard', 'Dashboard')}
         </Link>
         <span>/</span>
         <Link href="/admin/hr/employees" className="hover:text-foreground transition-colors">
-          Staff & Employees
+          {t('admin.hr.employees.title', 'Staff & Employees')}
         </Link>
         <span>/</span>
         <span className="text-foreground">{employee.name}</span>
@@ -218,13 +353,11 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                 disabled={!meta.data}
                 onClick={() => setEditOpen(true)}
               >
-                <Edit2 className="h-3.5 w-3.5" /> Edit
+                <Edit2 className="h-3.5 w-3.5" /> {t('common.edit', 'Edit')}
               </Button>
-              <Link href="/admin/hr/employees">
-                <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs border-border/80">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back to Staff
+              <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs border-border/80" render={<Link href="/admin/hr/employees" />}>
+                  <ArrowLeft className="h-3.5 w-3.5" /> {t('admin.hr.details.backToStaff', 'Back to Staff')}
                 </Button>
-              </Link>
             </div>
           </div>
         </CardContent>
@@ -234,7 +367,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monthly Salary</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.hr.details.kpiSalary', 'Monthly Salary')}</span>
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
               <DollarSign className="h-4 w-4" />
             </div>
@@ -250,7 +383,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attendance Records</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.hr.details.kpiAttendance', 'Attendance Records')}</span>
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
               <Calendar className="h-4 w-4" />
             </div>
@@ -259,13 +392,13 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
             <span className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 tabular-nums">
               {data.attendanceCount}
             </span>
-            <span className="text-xs text-muted-foreground">sessions</span>
+            <span className="text-xs text-muted-foreground">{t('admin.hr.details.sessions', 'sessions')}</span>
           </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">GPS Location Pings</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.hr.details.kpiPings', 'GPS Location Pings')}</span>
             <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
               <Navigation className="h-4 w-4" />
             </div>
@@ -274,23 +407,23 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
             <span className="text-2xl font-bold tracking-tight text-purple-600 dark:text-purple-400 tabular-nums">
               {data.locationCount}
             </span>
-            <span className="text-xs text-muted-foreground">{trackDate ? `on ${trackDate}` : 'recorded'}</span>
+            <span className="text-xs text-muted-foreground">{trackDate ? t('admin.hr.details.onDate', 'on {date}', { date: trackDate }) : t('admin.hr.details.recorded', 'recorded')}</span>
           </div>
         </Card>
 
         <Card className="p-4 border-border/60 bg-card/80 backdrop-blur-sm shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">GPS Tracking</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('admin.hr.details.kpiTracking', 'GPS Tracking')}</span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
               <Compass className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold tracking-tight text-amber-500">
-              {data.locationRequired ? 'Required' : 'Off'}
+              {data.locationRequired ? t('admin.hr.details.trackRequired', 'Required') : t('admin.hr.details.trackOff', 'Off')}
             </span>
             {data.locationRequired && data.locationInterval > 0 ? (
-              <span className="text-xs text-muted-foreground">{data.locationInterval}m interval</span>
+              <span className="text-xs text-muted-foreground">{t('admin.hr.details.interval', '{n}m interval', { n: data.locationInterval })}</span>
             ) : null}
           </div>
         </Card>
@@ -303,19 +436,20 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/50 overflow-hidden">
             <CardHeader className="py-3.5 px-4 border-b border-border/50 bg-muted/20">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" /> Profile Credentials
+                <User className="h-4 w-4 text-primary" /> {t('admin.hr.details.profile', 'Profile Credentials')}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3.5 text-xs">
               <div className="flex items-center justify-between py-1 border-b border-border/40">
-                <span className="text-muted-foreground">Employee ID</span>
+                <span className="text-muted-foreground">{t('admin.hr.details.employeeId', 'Employee ID')}</span>
                 <div className="flex items-center gap-1.5 font-mono font-bold text-foreground">
                   <span>{employee.id}</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(employee.id, 'Employee ID')}
+                    onClick={() => handleCopy(employee.id, t('admin.hr.details.employeeId', 'Employee ID'))}
                     className="text-muted-foreground hover:text-primary"
-                    title="Copy ID"
+                    title={t('admin.hr.details.copyId', 'Copy ID')}
+                    aria-label={t('admin.hr.details.copyId', 'Copy ID')}
                   >
                     <Copy className="h-3 w-3" />
                   </button>
@@ -323,13 +457,13 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
               </div>
 
               {[
-                ['Designation', employee.designationLabel || '—'],
-                ['Official Mobile', employee.mobile || '—'],
-                ['Email Address', employee.email || '—'],
-                ['National ID (NID)', employee.nidNumber ? `${employee.nidNumber}${employee.nidVerified ? ' ✓' : ''}` : '—'],
-                ['Assigned Areas', employee.areaLabel || '—'],
-                ['Address', employee.address || '—'],
-                ['Date Joined', datePart(employee.joinedAt) || '—'],
+                [t('admin.hr.details.designation', 'Designation'), employee.designationLabel || '—'],
+                [t('admin.hr.details.officialMobile', 'Official Mobile'), employee.mobile || '—'],
+                [t('admin.hr.details.email', 'Email Address'), employee.email || '—'],
+                [t('admin.hr.employeeForm.nid', 'National ID (NID)'), employee.nidNumber ? `${employee.nidNumber}${employee.nidVerified ? ' ✓' : ''}` : '—'],
+                [t('admin.hr.details.areas', 'Assigned Areas'), employee.areaLabel || '—'],
+                [t('admin.hr.details.address', 'Address'), employee.address || '—'],
+                [t('admin.hr.details.joined', 'Date Joined'), datePart(employee.joinedAt) || '—'],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-start justify-between gap-3 py-1 border-b border-border/40">
                   <span className="text-muted-foreground shrink-0">{label}</span>
@@ -338,7 +472,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
               ))}
 
               <div className="flex items-center justify-between pt-1">
-                <span className="text-muted-foreground">Last Location Update</span>
+                <span className="text-muted-foreground">{t('admin.hr.details.lastLocation', 'Last Location Update')}</span>
                 <span className="font-mono text-muted-foreground">
                   {data.lastLocationUpdate ? `${datePart(data.lastLocationUpdate)} ${formatClock(data.lastLocationUpdate)}` : '—'}
                 </span>
@@ -352,47 +486,26 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
           <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/50 overflow-hidden">
             <div className="border-b border-border/60 bg-muted/20 px-4 pt-2">
               <div className="flex flex-wrap items-center gap-2">
-                {tabButton('attendance', <Calendar className="h-3.5 w-3.5" />, 'Attendance', data.attendanceCount)}
-                {tabButton('locations', <Navigation className="h-3.5 w-3.5" />, 'GPS Location Track', data.locationCount)}
-                {tabButton('advances', <DollarSign className="h-3.5 w-3.5" />, 'Salary Advances', data.advanceCount)}
-                {tabButton('installations', <Wrench className="h-3.5 w-3.5" />, 'Installations', installTotal)}
+                {tabButton('attendance', <Calendar className="h-3.5 w-3.5" />, t('admin.hr.details.tabAttendance', 'Attendance'), data.attendanceCount)}
+                {tabButton('locations', <Navigation className="h-3.5 w-3.5" />, t('admin.hr.details.tabTrack', 'GPS Location Track'), data.locationCount)}
+                {tabButton('advances', <DollarSign className="h-3.5 w-3.5" />, t('admin.hr.details.tabAdvances', 'Salary Advances'), data.advanceCount)}
+                {tabButton('installations', <Wrench className="h-3.5 w-3.5" />, t('admin.hr.details.tabInstalls', 'Installations'), installTotal)}
               </div>
             </div>
 
             <CardContent className="p-0">
               {activeTab === 'attendance' && (
-                <div className="overflow-x-auto">
+                <div className="p-4">
                   {data.attendance.length === 0 ? (
-                    <div className="py-12 text-center text-xs text-muted-foreground">No attendance recorded for this staff member yet.</div>
+                    <div className="py-12 text-center text-xs text-muted-foreground">{t('admin.hr.details.noAttendance', 'No attendance recorded for this staff member yet.')}</div>
                   ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
-                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Check In</TableHead>
-                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Check Out</TableHead>
-                          <TableHead className="text-xs font-semibold uppercase tracking-wider">Duration</TableHead>
-                          <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody className="divide-y divide-border/60">
-                        {data.attendance.map((rec) => (
-                          <TableRow key={rec.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs font-medium text-foreground">{rec.date}</TableCell>
-                            <TableCell className="font-mono text-xs text-foreground">{formatClock(rec.checkIn) || '—'}</TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground">{formatClock(rec.checkOut) || '—'}</TableCell>
-                            <TableCell className="font-mono text-xs text-muted-foreground">
-                              {formatDuration(rec.checkIn, rec.checkOut) || '—'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="outline" className={cn('capitalize text-[10px] font-medium', toneFor(rec.status))}>
-                                {rec.status || '—'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <DataTable
+                      columns={attendanceColumns}
+                      data={data.attendance}
+                      getRowId={(row) => row.id}
+                      enableColumnVisibility={false}
+                      enableLayoutToggle={false}
+                    />
                   )}
                 </div>
               )}
@@ -404,10 +517,12 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                       <Compass className="h-4 w-4 text-primary" />
                       <div>
                         <span className="text-xs font-bold text-foreground">
-                          {trackDate ? `Track date: ${trackDate}` : 'Most recent pings'}
+                          {trackDate ? t('admin.hr.details.trackDate', 'Track date: {date}', { date: trackDate }) : t('admin.hr.details.recentPings', 'Most recent pings')}
                         </span>
-                        <p className="text-[11px] text-muted-foreground">
-                          Showing {pings.length} recorded stop{pings.length === 1 ? '' : 's'} in chronological order.
+                        <p className="text-xs text-muted-foreground">
+                          {pings.length === 1
+                            ? t('admin.hr.details.stopsOne', 'Showing {n} recorded stop in chronological order.', { n: pings.length })
+                            : t('admin.hr.details.stopsMany', 'Showing {n} recorded stops in chronological order.', { n: pings.length })}
                         </p>
                       </div>
                     </div>
@@ -420,11 +535,11 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                           setSelectedLocationId(null);
                         }}
                         className="h-7 w-[150px] text-xs"
-                        aria-label="Track date"
+                        aria-label={t('admin.hr.details.trackDateLabel', 'Track date')}
                       />
                       {trackDate ? (
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setTrackDate('')}>
-                          Clear
+                          {t('admin.hr.details.clear', 'Clear')}
                         </Button>
                       ) : null}
                       <Button
@@ -434,18 +549,18 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                         disabled={pings.length === 0}
                         className="text-xs h-7 gap-1 border-border/80"
                       >
-                        <Download className="h-3 w-3" /> Export CSV
+                        <Download className="h-3 w-3" /> {t('admin.hr.details.exportCsv', 'Export CSV')}
                       </Button>
                     </div>
                   </div>
 
                   {pings.length === 0 ? (
                     <div className="py-12 text-center text-xs text-muted-foreground">
-                      {activity.isFetching ? 'Loading track…' : 'No GPS pings recorded for this period.'}
+                      {activity.isFetching ? t('admin.hr.details.loadingTrack', 'Loading track…') : t('admin.hr.details.noPings', 'No GPS pings recorded for this period.')}
                     </div>
                   ) : (
                     <>
-                      <MapboxMap
+                      <GeoMap
                         markers={markers}
                         selectedId={selectedLocationId}
                         onSelect={setSelectedLocationId}
@@ -461,7 +576,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                               style={{ backgroundColor: marker.color }}
                             />
                             {selected ? (
-                              <span className="mt-1.5 max-w-[200px] truncate rounded-md bg-popover px-2 py-1 text-[10px] font-bold text-popover-foreground shadow-md ring-1 ring-border">
+                              <span className="mt-1.5 max-w-[200px] truncate rounded-md bg-popover px-2 py-1 text-xs font-bold text-popover-foreground shadow-md ring-1 ring-border">
                                 {marker.label}
                               </span>
                             ) : null}
@@ -470,7 +585,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                       />
 
                       <div className="space-y-2 pt-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Chronological Stops</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('admin.hr.details.stops', 'Chronological Stops')}</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {pings.map((p, i) => (
                             <div
@@ -483,13 +598,13 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                                   : 'bg-card hover:bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground',
                               )}
                             >
-                              <div className="flex items-center justify-between font-mono text-[11px] mb-1">
-                                <span className="font-bold text-foreground">Stop #{i + 1}</span>
+                              <div className="flex items-center justify-between font-mono text-xs mb-1">
+                                <span className="font-bold text-foreground">{t('admin.hr.details.stop', 'Stop #{n}', { n: i + 1 })}</span>
                                 <span className="text-primary font-semibold">
                                   {trackDate ? formatClock(p.createdAt) : `${datePart(p.createdAt)} ${formatClock(p.createdAt)}`}
                                 </span>
                               </div>
-                              <p className="text-foreground text-[11px] truncate">
+                              <p className="text-foreground text-xs truncate">
                                 {p.address || `${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}`}
                               </p>
                             </div>
@@ -502,132 +617,62 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
               )}
 
               {activeTab === 'advances' && (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Date</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Amount</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Reason</TableHead>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">Deduct Month</TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="divide-y divide-border/60">
-                      {data.advances.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="text-center py-12 text-muted-foreground text-xs">
-                            No advance salary requests recorded for this staff member.
-                          </td>
-                        </tr>
-                      ) : (
-                        data.advances.map((adv) => (
-                          <TableRow key={adv.id} className="hover:bg-muted/30 transition-colors">
-                            <TableCell className="font-mono text-xs text-foreground">{datePart(adv.createdAt) || '—'}</TableCell>
-                            <TableCell className="font-mono text-xs font-bold text-foreground">
-                              <CurrencyDisplay amount={adv.amount} />
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{adv.reason || '—'}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{adv.deductMonth || '—'}</TableCell>
-                            <TableCell className="text-right">
-                              <Badge variant="outline" className={cn('capitalize text-[10px] font-medium', toneFor(adv.status))}>
-                                {adv.status || '—'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="p-4">
+                  {data.advances.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-muted-foreground">
+                      {t('admin.hr.details.noAdvances', 'No advance salary requests recorded for this staff member.')}
+                    </div>
+                  ) : (
+                    <DataTable
+                      columns={advanceColumns}
+                      data={data.advances}
+                      getRowId={(row) => row.id}
+                      enableColumnVisibility={false}
+                      enableLayoutToggle={false}
+                    />
+                  )}
                 </div>
               )}
 
               {activeTab === 'installations' && (
                 <div className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">Field installation work orders assigned to {employee.name}.</p>
+                    <p className="text-xs text-muted-foreground">{t('admin.hr.details.installsHint', 'Field installation work orders assigned to {name}.', { name: employee.name })}</p>
                     <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setAssignOpen(true)}>
-                      <Plus className="h-3.5 w-3.5" /> Assign Installation
+                      <Plus className="h-3.5 w-3.5" /> {t('admin.hr.assignInstall.title', 'Assign Installation')}
                     </Button>
                   </div>
                   {installations.isLoading ? (
                     <Skeleton className="h-40 w-full rounded-lg" />
                   ) : installations.isError ? (
-                    <EmptyState
-                      title="Failed to load installations"
+                    <EmptyState variant="error"
+                      title={t('admin.hr.details.installsFailed', 'Failed to load installations')}
                       description={installations.error.message}
-                      actionLabel="Retry"
+                      actionLabel={t('common.retry', 'Retry')}
                       onAction={() => installations.refetch()}
                     />
                   ) : installItems.length === 0 ? (
-                    <div className="py-10 text-center text-xs text-muted-foreground">No installations assigned yet.</div>
+                    <div className="py-10 text-center text-xs text-muted-foreground">{t('admin.hr.details.noInstalls', 'No installations assigned yet.')}</div>
                   ) : (
-                    <div className="overflow-x-auto rounded-lg border border-border/60">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Job</TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Scheduled</TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wider">Status</TableHead>
-                            <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">Action</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody className="divide-y divide-border/60">
-                          {installItems.map((job) => (
-                            <TableRow key={job.id} className="hover:bg-muted/30 transition-colors">
-                              <TableCell className="text-xs">
-                                <div className="font-semibold text-foreground">{job.title}</div>
-                                <div className="text-muted-foreground">
-                                  {[job.customerName, job.address].filter(Boolean).join(' · ') || '—'}
-                                </div>
-                                {job.completedAt ? (
-                                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                                    Completed {datePart(job.completedAt)} {formatClock(job.completedAt)}
-                                    {job.completedLatitude !== null && job.completedLongitude !== null
-                                      ? ` · ${job.completedLatitude.toFixed(5)}, ${job.completedLongitude.toFixed(5)}`
-                                      : ''}
-                                  </div>
-                                ) : null}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs text-muted-foreground">
-                                {job.scheduledAt ? `${datePart(job.scheduledAt)} ${formatClock(job.scheduledAt)}` : '—'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={cn('text-[10px] font-medium', toneFor(job.status))}>
-                                  {titleCase(job.status)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {OPEN_INSTALL.includes(job.status) ? (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 text-xs text-destructive hover:bg-destructive/10"
-                                    disabled={cancel.isPending}
-                                    onClick={() =>
-                                      cancel.mutate(job.id, { onSuccess: () => toast.success('Installation cancelled') })
-                                    }
-                                  >
-                                    Cancel
-                                  </Button>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">—</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <DataTable
+                      columns={installationColumns}
+                      data={installItems}
+                      getRowId={(row) => row.id}
+                      enableColumnVisibility={false}
+                      enableLayoutToggle={false}
+                      pageSizeOptions={[10, 20, 50]}
+                      server={{
+                        page: installPage,
+                        pageSize: installPageSize,
+                        total: installTotal,
+                        onPageChange: setInstallPage,
+                        onPageSizeChange: (size) => {
+                          setInstallPageSize(size);
+                          setInstallPage(1);
+                        },
+                      }}
+                    />
                   )}
-                  <TablePagination
-                    currentPage={installPage}
-                    pageSize={installPageSize}
-                    totalItems={installTotal}
-                    onPageChange={setInstallPage}
-                    onPageSizeChange={setInstallPageSize}
-                    pageSizeOptions={[10, 20, 50]}
-                  />
                 </div>
               )}
             </CardContent>

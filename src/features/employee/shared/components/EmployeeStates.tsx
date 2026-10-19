@@ -1,7 +1,10 @@
+'use client';
+
 import type { ReactNode } from 'react';
-import { AlertCircle, RefreshCw, Inbox } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Inbox } from 'lucide-react';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from '@/i18n/locale-context';
 
 export function EmployeeLoadingSkeleton() {
   return (
@@ -46,23 +49,15 @@ interface EmployeeErrorStateProps {
   onRetry?: () => void;
 }
 
-export function EmployeeErrorState({
-  message = 'Could not load this page. Try again.',
-  onRetry,
-}: EmployeeErrorStateProps) {
+export function EmployeeErrorState({ message, onRetry }: EmployeeErrorStateProps) {
+  const t = useTranslations();
   return (
-    <div className="border-destructive/25 bg-destructive/5 flex min-h-[260px] flex-col items-center justify-center rounded-xl border px-8 py-12 text-center shadow-[var(--shadow-xs)]">
-      <div className="border-destructive/20 bg-card text-destructive mb-4 flex h-12 w-12 items-center justify-center rounded-lg border">
-        <AlertCircle className="h-5 w-5" />
-      </div>
-      <h3 className="text-foreground text-base font-semibold tracking-tight">Could not load data</h3>
-      <p className="text-muted-foreground mt-1.5 max-w-sm text-sm leading-relaxed">{message}</p>
-      {onRetry ? (
-        <Button variant="outline" size="sm" onClick={onRetry} className="mt-5 gap-2">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Try again
-        </Button>
-      ) : null}
-    </div>
+    <EmptyState
+      variant="error"
+      title={t('employee.common.loadFailed', 'Could not load data')}
+      description={message ?? t('employee.common.loadFailedHint', 'Could not load this page. Try again.')}
+      actionLabel={onRetry ? t('employee.common.tryAgain', 'Try again') : undefined}
+      onAction={onRetry}
+    />
   );
 }

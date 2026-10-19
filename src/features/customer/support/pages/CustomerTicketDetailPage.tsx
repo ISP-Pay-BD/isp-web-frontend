@@ -1,23 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { use } from 'react';
+import { use, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  ArrowLeft,
-  Send,
-  User,
-  Headphones,
-  Calendar,
-} from 'lucide-react';
+import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { useCustomerTicketDetail } from '../hooks/use-customer-support';
 import { ticketReplySchema, type TicketReplyInput } from '@/features/customer/shared';
+import {
+  ticketCategoryLabel,
+  ticketPriorityLabel,
+  ticketPriorityTone,
+  ticketStatusLabel,
+  ticketStatusTone,
+} from '../lib/ticket-labels';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useLocale } from '@/i18n/locale-context';
 import { formatDate } from '@/lib/format';
 import { toast } from 'sonner';
 
@@ -26,9 +32,11 @@ interface PageProps {
 }
 
 export function CustomerTicketDetailPage({ params }: PageProps) {
+  const { t, te } = useLocale();
   const resolvedParams = use(params);
   const ticketId = resolvedParams.id;
   const { data: ticket, isLoading, isError, error, refetch, replyMutation } = useCustomerTicketDetail(ticketId);
+  const isMobile = useIsMobile();
 
   const {
     register,
@@ -40,9 +48,27 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
     defaultValues: { message: '' },
   });
 
+  // Chat behaviour: when a new message arrives after the first load, bring it into view above the reply bar.
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const seenMessages = useRef<number | null>(null);
+  const messageCount = ticket?.messages.length ?? null;
+  useEffect(() => {
+    if (messageCount !== null && seenMessages.current !== null && messageCount > seenMessages.current) {
+      bottomRef.current?.scrollIntoView({ block: 'end' });
+    }
+    seenMessages.current = messageCount;
+  }, [messageCount]);
+
+  const shellTitle = t('customer.ticket.title', 'Ticket #{id}', { id: ticketId });
+  const crumbs = [
+    { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
+    { label: t('customer.support.crumb', 'Support'), href: '/customer/support' },
+    { label: `#${ticketId}` },
+  ];
+
   if (isLoading) {
     return (
-      <CustomerPageShell title="Ticket Details" subtitle="Loading conversation thread...">
+      <CustomerPageShell title={shellTitle} subtitle={t('customer.ticket.loading', 'Loading the conversation…')} breadcrumbs={crumbs}>
         <CustomerLoadingSkeleton />
       </CustomerPageShell>
     );
@@ -50,8 +76,8 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
 
   if (isError || !ticket) {
     return (
-      <CustomerPageShell title="Ticket Details" subtitle="Support Ticket Inquiry">
-        <CustomerErrorState message={error?.message || 'Support ticket not found.'} onRetry={() => refetch()} />
+      <CustomerPageShell title={shellTitle} breadcrumbs={crumbs}>
+        <CustomerErrorState message={error?.message || t('customer.ticket.notFound', 'Support ticket not found.')} onRetry={() => refetch()} />
       </CustomerPageShell>
     );
   }
@@ -59,154 +85,128 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
   const onSubmit = async (data: TicketReplyInput) => {
     try {
       await replyMutation.mutateAsync(data.message);
-      toast.success('Reply sent.');
+      toast.success(t('customer.ticket.sent', 'Reply sent.'));
       reset();
     } catch {
       // the backend message is toasted by the query client
     }
   };
 
+  const replyForm = (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+      {ticket.status === 'closed' ? (
+        <p className="text-muted-foreground text-sm">
+          {t('customer.ticket.closedNote', 'This ticket is closed — replying adds to the thread.')}
+        </p>
+      ) : null}
+      <div className="flex items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <label htmlFor="reply" className="sr-only">
+            {t('customer.ticket.replyLabel', 'Your reply')}
+          </label>
+          <Textarea
+            id="reply"
+            rows={1}
+            placeholder={t('customer.ticket.replyPlaceholder', 'Type your message…')}
+            aria-invalid={Boolean(errors.message)}
+            className="max-h-40 min-h-11 resize-none md:min-h-20"
+            {...register('message')}
+          />
+        </div>
+        <Button type="submit" disabled={replyMutation.isPending} className="h-11 shrink-0 gap-2 px-3 font-semibold md:px-4">
+          {replyMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <span className="sr-only md:not-sr-only">
+            {replyMutation.isPending ? t('customer.ticket.sending', 'Sending…') : t('customer.ticket.send', 'Send reply')}
+          </span>
+        </Button>
+      </div>
+      {errors.message && <p className="text-destructive text-sm">{te(errors.message.message ?? '')}</p>}
+    </form>
+  );
+
   return (
     <CustomerPageShell
-      title={`Ticket #${ticket.id}`}
-      subtitle={`Created on ${formatDate(ticket.createdAt)} · Subject: ${ticket.subject || '—'}`}
-      breadcrumbs={[
-        { label: 'Customer', href: '/customer/dashboard' },
-        { label: 'Support', href: '/customer/support' },
-        { label: `#${ticket.id}` },
-      ]}
+      title={shellTitle}
+      subtitle={ticket.subject || t('customer.support.untitled', 'Untitled ticket')}
+      breadcrumbs={crumbs}
       actions={
-        <Link href="/customer/support">
-          <Button variant="outline" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Tickets
-          </Button>
-        </Link>
+        <Button variant="outline" className="h-11 w-full gap-2 sm:w-auto" render={<Link href="/customer/support" />}>
+          <ArrowLeft className="h-4 w-4" />
+          {t('customer.ticket.back', 'Back to tickets')}
+        </Button>
       }
     >
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Ticket Header Card matching PHP /tickets/partials/thread.php */}
+      <div className="mx-auto max-w-4xl pb-24 md:pb-0">
         <Card>
-          <CardHeader className="pb-4 border-b">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Badge
-                    variant={
-                      ticket.status === 'open'
-                        ? 'default'
-                        : ticket.status === 'pending'
-                        ? 'secondary'
-                        : 'outline'
-                    }
-                    className="capitalize"
-                  >
-                    {ticket.status === 'pending' ? 'in progress' : ticket.status}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs capitalize font-semibold ${
-                      ticket.priority === 'high'
-                        ? 'border-rose-500 text-rose-600'
-                        : ticket.priority === 'medium'
-                        ? 'border-amber-500 text-amber-600'
-                        : 'text-muted-foreground'
-                    }`}
-                  >
-                    {ticket.priority} priority
-                  </Badge>
-                </div>
-                <CardTitle className="text-xl font-bold">{ticket.subject || 'Untitled ticket'}</CardTitle>
-              </div>
-
-              <div className="text-xs text-muted-foreground sm:text-right space-y-1">
-                <div className="flex items-center sm:justify-end gap-1 font-mono">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Opened: {formatDate(ticket.createdAt)}</span>
-                </div>
-                {ticket.category && <div className="capitalize">Category: {ticket.category}</div>}
-              </div>
+          <CardHeader className="border-b pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge
+                status={ticket.status}
+                tone={ticketStatusTone(ticket.status)}
+                label={ticketStatusLabel(t, ticket.status)}
+              />
+              {ticket.priority ? (
+                <Badge variant="outline" tone={ticketPriorityTone(ticket.priority)} className="font-semibold">
+                  {t('customer.ticket.priorityBadge', '{priority} priority', {
+                    priority: ticketPriorityLabel(t, ticket.priority),
+                  })}
+                </Badge>
+              ) : null}
             </div>
+            <p className="text-muted-foreground mt-2 text-sm">
+              {t('customer.ticket.opened', 'Opened {date}', { date: formatDate(ticket.createdAt) })}
+              {ticket.category
+                ? ` · ${t('customer.ticket.categoryLine', 'Category: {category}', { category: ticketCategoryLabel(t, ticket.category) })}`
+                : ''}
+            </p>
           </CardHeader>
 
-          {/* Conversation Thread */}
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-4">
-              {ticket.messages.length === 0 && (
-                <p className="text-sm text-muted-foreground">No messages on this ticket yet.</p>
-              )}
-              {ticket.messages.map((msg) => {
-                const isCustomer = msg.fromMe;
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-3.5 ${isCustomer ? 'flex-row' : 'flex-row-reverse'}`}
-                  >
-                    <div
-                      className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
-                        isCustomer
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-emerald-500/10 text-emerald-600'
-                      }`}
-                    >
-                      {isCustomer ? <User className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}
+          <CardContent className="pt-4">
+            {ticket.messages.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{t('customer.ticket.noMessages', 'No messages on this ticket yet.')}</p>
+            ) : (
+              <ol className="space-y-4">
+                {ticket.messages.map((msg) => (
+                  <li key={msg.id} className={cn('flex flex-col gap-1', msg.fromMe ? 'items-end' : 'items-start')}>
+                    <div className="text-muted-foreground flex items-center gap-2 px-1 text-xs">
+                      <span className="text-foreground font-semibold">
+                        {msg.fromMe
+                          ? t('customer.ticket.you', 'You')
+                          : msg.senderName === 'Support team'
+                            ? t('customer.ticket.supportTeam', 'Support team')
+                            : msg.senderName}
+                      </span>
+                      <span>{msg.sentAt}</span>
                     </div>
-
                     <div
-                      className={`max-w-[85%] rounded-2xl p-4 space-y-1.5 shadow-sm ${
-                        isCustomer
-                          ? 'bg-muted/70 border text-foreground rounded-tl-none'
-                          : 'bg-primary text-primary-foreground rounded-tr-none'
-                      }`}
+                      className={cn(
+                        'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap shadow-sm',
+                        msg.fromMe
+                          ? 'bg-primary text-primary-foreground rounded-br-md'
+                          : 'bg-muted text-foreground rounded-bl-md',
+                      )}
                     >
-                      <div className="flex items-center justify-between gap-4 text-xs font-semibold">
-                        <span>{msg.senderName}</span>
-                        <span className="opacity-70 font-mono text-[10px]">{msg.sentAt}</span>
-                      </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                      {msg.body}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Reply Form */}
-            <div className="pt-6 border-t">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="reply" className="text-xs font-bold text-muted-foreground uppercase">
-                    Post a Reply
-                  </label>
-                  <Textarea
-                    id="reply"
-                    rows={4}
-                    placeholder="Type your message or follow-up details here..."
-                    {...register('message')}
-                    className="resize-none"
-                  />
-                  {errors.message && (
-                    <p className="text-xs text-destructive">{errors.message.message}</p>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">
-                    {ticket.status === 'closed' ? 'This ticket is closed — replying adds to the thread.' : ''}
-                  </span>
-                  <Button
-                    type="submit"
-                    disabled={replyMutation.isPending}
-                    className="font-bold gap-2 shadow-sm"
-                  >
-                    <Send className="h-4 w-4" />
-                    {replyMutation.isPending ? 'Sending...' : 'Send Reply'}
-                  </Button>
-                </div>
-              </form>
-            </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <div ref={bottomRef} className="scroll-mb-44 md:scroll-mb-4" />
           </CardContent>
+
+          {isMobile ? null : <div className="border-t p-4">{replyForm}</div>}
         </Card>
       </div>
+
+      {isMobile
+        ? createPortal(
+            <div className="bg-background/95 border-border/70 fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 border-t px-4 py-3 shadow-[var(--shadow-sm)] backdrop-blur-md">
+              {replyForm}
+            </div>,
+            document.body,
+          )
+        : null}
     </CustomerPageShell>
   );
 }

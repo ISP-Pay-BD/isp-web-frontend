@@ -15,10 +15,12 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ApiError } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatBdtWithSymbol } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { usePaymentGateway, useUpdatePaymentGateway, type PaymentGateway } from '../hooks/use-payment-gateways';
 
 export function PaymentGatewayDetailPage({ id }: { id: string }) {
+  const t = useTranslations();
   const router = useRouter();
   const { data: gw, isLoading, isError, error, refetch } = usePaymentGateway(id);
 
@@ -27,9 +29,9 @@ export function PaymentGatewayDetailPage({ id }: { id: string }) {
     const notFound = error instanceof ApiError && error.status === 404;
     return (
       <EmptyState
-        title={notFound ? 'Gateway not found' : 'Failed to load gateway'}
-        description={notFound ? 'This payment gateway is not supported.' : errorMessage(error)}
-        actionLabel={notFound ? 'Back to gateways' : 'Retry'}
+        title={notFound ? t('admin.paymentGateways.detail.notFound', 'Gateway not found') : t('admin.paymentGateways.detail.loadFailed', 'Failed to load gateway')}
+        description={notFound ? t('admin.paymentGateways.detail.notSupported', 'This payment gateway is not supported.') : errorMessage(error)}
+        actionLabel={notFound ? t('admin.paymentGateways.detail.back', 'Back to gateways') : t('admin.customers.list.retry', 'Retry')}
         onAction={() => (notFound ? router.push('/admin/payment-gateways') : refetch())}
       />
     );
@@ -40,6 +42,7 @@ export function PaymentGatewayDetailPage({ id }: { id: string }) {
 }
 
 function GatewayForm({ gw }: { gw: PaymentGateway }) {
+  const t = useTranslations();
   const update = useUpdatePaymentGateway();
   const [mode, setMode] = useState<'sandbox' | 'live'>(gw.mode);
   const [enabled, setEnabled] = useState(gw.enabled);
@@ -77,17 +80,17 @@ function GatewayForm({ gw }: { gw: PaymentGateway }) {
     <div className="space-y-6">
       <PageHeader
         title={gw.name}
-        subtitle="Merchant credentials, mode and gateway charge"
+        subtitle={t('admin.paymentGateways.detail.subtitle', 'Merchant credentials, mode and gateway charge')}
         breadcrumb={[
-          { label: 'Dashboard', url: '/admin/dashboard' },
-          { label: 'Payment Gateways', url: '/admin/payment-gateways' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.payment_gateways', 'Payment Gateways'), url: '/admin/payment-gateways' },
           { label: gw.name },
         ]}
         actions={
           readOnly ? undefined : (
             <Button onClick={save} disabled={update.isPending}>
               {update.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-              Save
+              {t('common.save', 'Save')}
             </Button>
           )
         }
@@ -97,38 +100,45 @@ function GatewayForm({ gw }: { gw: PaymentGateway }) {
         <Card className="border-border/60 lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              Configuration
-              <Badge variant={gw.mode === 'live' ? 'default' : 'secondary'}>{gw.mode}</Badge>
-              {gw.configured ? null : <Badge variant="outline">Incomplete</Badge>}
+              {t('admin.paymentGateways.detail.configuration', 'Configuration')}
+              <Badge variant={gw.mode === 'live' ? 'default' : 'secondary'}>
+                {gw.mode === 'live' ? t('admin.paymentGateways.mode.live', 'Live') : t('admin.paymentGateways.mode.sandbox', 'Sandbox')}
+              </Badge>
+              {gw.configured ? null : <Badge variant="outline">{t('admin.paymentGateways.detail.incomplete', 'Incomplete')}</Badge>}
             </CardTitle>
             <CardDescription>
               {readOnly
-                ? 'Read-only — only the ISP admin account can change gateway credentials.'
-                : 'Secret values are never shown. Leave a secret empty to keep the saved value.'}
+                ? t('admin.paymentGateways.detail.readOnly', 'Read-only — only the ISP admin account can change gateway credentials.')
+                : t('admin.paymentGateways.detail.secretHint', 'Secret values are never shown. Leave a secret empty to keep the saved value.')}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="flex items-center justify-between rounded-lg border border-border/60 p-3">
               <div>
-                <Label>Enabled for customers</Label>
-                <p className="text-xs text-muted-foreground">Requires every credential below.</p>
+                <Label>{t('admin.paymentGateways.detail.enabledForCustomers', 'Enabled for customers')}</Label>
+                <p className="text-xs text-muted-foreground">{t('admin.paymentGateways.detail.requiresCredentials', 'Requires every credential below.')}</p>
               </div>
-              <Switch checked={enabled} onCheckedChange={setEnabled} disabled={readOnly} />
+              <Switch aria-label={t('admin.paymentGateways.detail.enabledForCustomers', 'Enabled for customers')} checked={enabled} onCheckedChange={setEnabled} disabled={readOnly} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Mode</Label>
-                <Select value={mode} onValueChange={(v) => v && setMode(v as 'sandbox' | 'live')} disabled={readOnly}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Label htmlFor="mode">{t('admin.paymentGateways.detail.mode', 'Mode')}</Label>
+                <Select
+                  value={mode}
+                  onValueChange={(v) => v && setMode(v as 'sandbox' | 'live')}
+                  disabled={readOnly}
+                  items={{ sandbox: t('admin.paymentGateways.mode.sandbox', 'Sandbox'), live: t('admin.paymentGateways.mode.live', 'Live') }}
+                >
+                  <SelectTrigger id="mode"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sandbox">Sandbox</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
+                    <SelectItem value="sandbox">{t('admin.paymentGateways.mode.sandbox', 'Sandbox')}</SelectItem>
+                    <SelectItem value="live">{t('admin.paymentGateways.mode.live', 'Live')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Gateway charge (%)</Label>
-                <Input type="number" min={0} max={10} step="0.01" value={charge} onChange={(e) => setCharge(e.target.value)} disabled={readOnly} />
+                <Label htmlFor="gateway-charge">{t('admin.paymentGateways.detail.charge', 'Gateway charge (%)')}</Label>
+                <Input id="gateway-charge" type="number" min={0} max={10} step="0.01" value={charge} onChange={(e) => setCharge(e.target.value)} disabled={readOnly} />
                 {fieldErrors.charge_percent ? <p className="text-xs text-destructive">{fieldErrors.charge_percent}</p> : null}
               </div>
             </div>
@@ -136,13 +146,13 @@ function GatewayForm({ gw }: { gw: PaymentGateway }) {
               <div key={f.key} className="space-y-2">
                 <Label className="flex items-center gap-2">
                   {f.label}
-                  {f.configured ? <Badge variant="secondary" className="text-[10px]">saved</Badge> : <Badge variant="outline" className="text-[10px]">missing</Badge>}
+                  {f.configured ? <Badge variant="secondary" className="text-xs">{t('admin.paymentGateways.detail.saved', 'saved')}</Badge> : <Badge variant="outline" className="text-xs">{t('admin.paymentGateways.detail.missing', 'missing')}</Badge>}
                 </Label>
                 <Input
                   type={f.secret ? 'password' : 'text'}
                   autoComplete="off"
                   value={values[f.key] ?? ''}
-                  placeholder={f.secret && f.configured ? `${f.masked ?? '••••••••'} (unchanged)` : ''}
+                  placeholder={f.secret && f.configured ? t('admin.paymentGateways.detail.unchanged', '{value} (unchanged)', { value: f.masked ?? '••••••••' }) : ''}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
                   disabled={readOnly}
                   className="font-mono text-xs"
@@ -155,18 +165,18 @@ function GatewayForm({ gw }: { gw: PaymentGateway }) {
 
         <Card className="border-border/60 h-fit">
           <CardHeader>
-            <CardTitle className="text-base">Settlements</CardTitle>
-            <CardDescription>From your payments ledger, last 30 days</CardDescription>
+            <CardTitle className="text-base">{t('admin.paymentGateways.detail.settlements', 'Settlements')}</CardTitle>
+            <CardDescription>{t('admin.paymentGateways.detail.settlementsDesc', 'From your payments ledger, last 30 days')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <StatRow label="Transactions" value={String(gw.transactions30d)} />
-            <StatRow label="Success rate" value={gw.successRatePct === null ? '—' : `${gw.successRatePct}%`} />
-            <StatRow label="Volume" value={`৳${gw.volume30d.toLocaleString()}`} />
-            <StatRow label="Today" value={`৳${gw.todayVolume.toLocaleString()}`} />
-            <StatRow label="Last settlement" value={gw.lastSettlementAt ? formatDateTime(gw.lastSettlementAt) : '—'} />
+            <StatRow label={t('admin.paymentGateways.detail.transactions', 'Transactions')} value={String(gw.transactions30d)} />
+            <StatRow label={t('admin.paymentGateways.detail.successRate', 'Success rate')} value={gw.successRatePct === null ? '—' : `${gw.successRatePct}%`} />
+            <StatRow label={t('admin.paymentGateways.detail.volume', 'Volume')} value={`${formatBdtWithSymbol(gw.volume30d)}`} />
+            <StatRow label={t('admin.paymentGateways.list.today', 'Today')} value={`${formatBdtWithSymbol(gw.todayVolume)}`} />
+            <StatRow label={t('admin.paymentGateways.detail.lastSettlement', 'Last settlement')} value={gw.lastSettlementAt ? formatDateTime(gw.lastSettlementAt) : '—'} />
             <div className="space-y-1 pt-2 border-t border-border/50">
-              <Label className="text-xs">Callback URL</Label>
-              <Input readOnly value={gw.callbackUrl} className="font-mono text-xs" />
+              <Label htmlFor="callback-url" className="text-xs">{t('admin.paymentGateways.detail.callbackUrl', 'Callback URL')}</Label>
+              <Input id="callback-url" readOnly value={gw.callbackUrl} className="font-mono text-xs" />
             </div>
           </CardContent>
         </Card>

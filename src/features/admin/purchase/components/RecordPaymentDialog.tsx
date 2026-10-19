@@ -21,6 +21,7 @@ import { errorMessage } from '@/lib/api/utils/error-handler';
 import { OptionSelect } from '@/features/admin/inventory/shared/OptionSelect';
 import { FieldError, fieldError } from '@/features/admin/inventory/shared/form-utils';
 import { todayYmd } from '@/features/admin/inventory/shared/table-utils';
+import { useTranslations } from '@/i18n/locale-context';
 import type { BillPayments } from '../api';
 import { useBillPayments, useRecordBillPayment } from '../hooks/use-purchase-bills';
 
@@ -42,6 +43,7 @@ export function RecordPaymentDialog({ rid, onOpenChange }: RecordPaymentDialogPr
 }
 
 function PaymentBody({ rid, onDone }: { rid: string; onDone: () => void }) {
+  const t = useTranslations();
   const payments = useBillPayments(rid);
   if (payments.isLoading) {
     return (
@@ -52,10 +54,10 @@ function PaymentBody({ rid, onDone }: { rid: string; onDone: () => void }) {
   }
   if (payments.isError || !payments.data) {
     return (
-      <EmptyState
-        title="Failed to load bill payments"
+      <EmptyState variant="error"
+        title={t('admin.purchase.payment.loadFailed', 'Failed to load bill payments')}
         description={errorMessage(payments.error)}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => payments.refetch()}
       />
     );
@@ -64,6 +66,7 @@ function PaymentBody({ rid, onDone }: { rid: string; onDone: () => void }) {
 }
 
 function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; onDone: () => void }) {
+  const t = useTranslations();
   const [amount, setAmount] = useState(info.dueAmount > 0 ? String(info.dueAmount) : '');
   const [paymentDate, setPaymentDate] = useState(todayYmd());
   const [method, setMethod] = useState(info.paymentMethods[0] ?? '');
@@ -79,9 +82,9 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
     e.preventDefault();
     const value = num(amount, NaN);
     const errors: Record<string, string> = {};
-    if (!Number.isFinite(value) || value <= 0) errors.amount = 'Amount must be greater than 0';
-    else if (value > info.dueAmount + 0.009) errors.amount = `Amount cannot exceed the due ${formatBdtWithSymbol(info.dueAmount)}`;
-    if (!method) errors.payment_method = 'Select a payment method';
+    if (!Number.isFinite(value) || value <= 0) errors.amount = t('admin.purchase.payment.amountPositive', 'Amount must be greater than 0');
+    else if (value > info.dueAmount + 0.009) errors.amount = t('admin.purchase.payment.amountExceeds', 'Amount cannot exceed the due {due}', { due: formatBdtWithSymbol(info.dueAmount) });
+    if (!method) errors.payment_method = t('admin.purchase.payment.methodRequired', 'Select a payment method');
     setLocalError(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -98,7 +101,7 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
       },
       {
         onSuccess: () => {
-          toast.success(`Payment of ${formatBdtWithSymbol(value)} recorded for ${rid}`);
+          toast.success(t('admin.purchase.payment.recorded', 'Payment of {amount} recorded for {rid}', { amount: formatBdtWithSymbol(value), rid }));
           onDone();
         },
       },
@@ -110,21 +113,21 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-primary" />
-          Record Payment · {rid}
+          {t('admin.purchase.payment.title', 'Record Payment · {rid}', { rid })}
         </DialogTitle>
         <DialogDescription>
-          Bill total {formatBdtWithSymbol(info.total)} · paid {formatBdtWithSymbol(info.paidAmount)} · due{' '}
+          {t('admin.purchase.payment.billTotal', 'Bill total')} {formatBdtWithSymbol(info.total)} · {t('admin.purchase.payment.paid', 'paid')} {formatBdtWithSymbol(info.paidAmount)} · {t('admin.purchase.payment.due', 'due')}{' '}
           <span className="font-semibold text-foreground">{formatBdtWithSymbol(info.dueAmount)}</span>
         </DialogDescription>
       </DialogHeader>
 
       {info.dueAmount <= 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">This bill is fully paid.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">{t('admin.purchase.payment.fullyPaid', 'This bill is fully paid.')}</p>
       ) : (
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pay-amount">Amount (BDT) *</Label>
+              <Label htmlFor="pay-amount">{t('admin.purchase.payment.amount', 'Amount (BDT) *')}</Label>
               <Input
                 id="pay-amount"
                 type="number"
@@ -139,19 +142,19 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
               <FieldError message={errorFor('amount')} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pay-date">Payment Date</Label>
+              <Label htmlFor="pay-date">{t('admin.purchase.payment.date', 'Payment Date')}</Label>
               <Input id="pay-date" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="font-mono" />
               <FieldError message={errorFor('payment_date')} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="pay-method">Payment Method *</Label>
+            <Label htmlFor="pay-method">{t('admin.purchase.payment.method', 'Payment Method *')}</Label>
             <OptionSelect
               id="pay-method"
               value={method}
               onChange={setMethod}
               options={methodOptions}
-              placeholder={methodOptions.length === 0 ? 'No payment methods configured' : 'Select method'}
+              placeholder={methodOptions.length === 0 ? t('admin.purchase.payment.noMethods', 'No payment methods configured') : t('admin.purchase.payment.selectMethod', 'Select method')}
               disabled={methodOptions.length === 0}
               invalid={Boolean(errorFor('payment_method'))}
             />
@@ -159,12 +162,12 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="pay-ref">Reference</Label>
+              <Label htmlFor="pay-ref">{t('admin.purchase.payment.reference', 'Reference')}</Label>
               <Input id="pay-ref" value={reference} onChange={(e) => setReference(e.target.value)} />
               <FieldError message={errorFor('reference')} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pay-note">Note</Label>
+              <Label htmlFor="pay-note">{t('admin.purchase.payment.note', 'Note')}</Label>
               <Input id="pay-note" value={note} onChange={(e) => setNote(e.target.value)} />
               <FieldError message={errorFor('note')} />
             </div>
@@ -174,11 +177,11 @@ function PaymentForm({ rid, info, onDone }: { rid: string; info: BillPayments; o
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         {info.dueAmount > 0 ? (
           <Button type="submit" disabled={record.isPending}>
-            {record.isPending ? 'Saving…' : 'Record Payment'}
+            {record.isPending ? t('admin.purchase.payment.saving', 'Saving…') : t('admin.purchase.payment.submit', 'Record Payment')}
           </Button>
         ) : null}
       </DialogFooter>

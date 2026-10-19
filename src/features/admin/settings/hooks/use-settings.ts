@@ -83,12 +83,17 @@ export function useUploadBrandingImage() {
   });
 }
 
+/** A group without sections/fields renders as empty instead of crashing the page. */
+function toSettingsGroup(raw: unknown): SettingsGroup {
+  const g = camelizeKeys<SettingsGroup>(raw);
+  return { ...g, sections: (g?.sections ?? []).map((section) => ({ ...section, fields: section.fields ?? [] })) };
+}
+
 /** GET /v1/reseller/settings/{id}/groups/{group} — secrets come back masked. */
 export function useSettingsGroup(group: SettingsGroupId, enabled = true) {
   return useQuery({
     queryKey: settingsKey('group', group),
-    queryFn: async () =>
-      camelizeKeys<SettingsGroup>(await http.get<unknown>(`/v1/reseller/settings/${getResellerId()}/groups/${group}`)),
+    queryFn: async () => toSettingsGroup(await http.get<unknown>(`/v1/reseller/settings/${getResellerId()}/groups/${group}`)),
     enabled,
   });
 }
@@ -98,9 +103,7 @@ export function useSaveSettingsGroup(group: SettingsGroupId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (values: Record<string, string | boolean>) =>
-      camelizeKeys<SettingsGroup>(
-        await http.put<unknown>(`/v1/reseller/settings/${getResellerId()}/groups/${group}`, { values }),
-      ),
+      toSettingsGroup(await http.put<unknown>(`/v1/reseller/settings/${getResellerId()}/groups/${group}`, { values })),
     onSuccess: (data) => qc.setQueryData(settingsKey('group', group), data),
   });
 }

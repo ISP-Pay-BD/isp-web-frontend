@@ -43,7 +43,11 @@ import {
   AlignCenter,
   AlignJustify,
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { replaceQuery } from '@/hooks/use-url-state';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useTranslations } from '@/i18n/locale-context';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS, STORAGE_KEYS } from '@/lib/constants/status';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import {
@@ -87,6 +91,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { TableSkeleton } from '@/components/shared/LoadingSkeleton';
+import { EntriesSummary } from '@/components/shared/EntriesSummary';
+import { readTableUrlState, writeTableUrlState } from '../lib/url-state';
+import { DataTableCards } from './DataTableCards';
+import '../column-meta';
 
 type VisibilityState = Record<string, boolean>;
 type SearchFilterFn<TData extends RowData> = (
@@ -131,6 +139,17 @@ export interface DataTableProps<TData extends RowData> {
    * current page only and page/search changes are delegated to the caller.
    */
   server?: ServerTableState;
+  /**
+   * Keep search, page, page size, sort and facet filters in the URL (`?q=&page=&size=&sort=&f_<column>=`), so Back,
+   * refresh and shared links return to the same view. Other query params on the page are left alone.
+   */
+  urlState?: boolean;
+  /**
+   * Controlled row selection (`{ [rowId]: true }`, ids from `getRowId`). Lets a page keep a selection while the
+   * user pages through a server-paginated list.
+   */
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: (next: RowSelectionState) => void;
 }
 
 export interface ServerTableState {
@@ -159,11 +178,11 @@ export function DataTable<TData extends RowData>({
   columns,
   data,
   isLoading,
-  emptyTitle = 'No results.',
+  emptyTitle,
   emptyDescription,
   className,
   searchKey,
-  searchPlaceholder = 'Filter...',
+  searchPlaceholder,
   searchFilterFn,
   facetFilters = [],
   enableColumnVisibility = true,
@@ -177,8 +196,13 @@ export function DataTable<TData extends RowData>({
   enableLayoutToggle = true,
   defaultLayoutMode = 'full',
   server,
+  urlState = false,
+  rowSelection: controlledSelection,
+  onRowSelectionChange,
 }: DataTableProps<TData>) {
   const id = useId();
+  const t = useTranslations();
+  const searchHint = searchPlaceholder ?? t('common.table.filterPlaceholder', 'Filter...');
   const inputRef = useRef<HTMLInputElement>(null);
   const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
   const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
@@ -204,13 +228,28 @@ export function DataTable<TData extends RowData>({
       localStorage.setItem(STORAGE_KEYS.tableLayout, mode);
     }
   };
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  // Read the URL once, for the first render; later changes are written back by the effect below.
+  const [fromUrl] = useState(() => (urlState ? readTableUrlState(new URLSearchParams(searchParams.toString())) : null));
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(() => {
+    if (!fromUrl) return [];
+    const next: ColumnFiltersState = fromUrl.facets.filter((f) => facetFilters.some((x) => x.columnId === f.id));
+    if (searchKey && !server && fromUrl.search) next.push({ id: searchKey, value: fromUrl.search });
+    return next;
+  });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [sorting, setSorting] = useState<SortingState>(initialSorting);
+  const [localSelection, setLocalSelection] = useState<RowSelectionState>({});
+  const rowSelection = controlledSelection ?? localSelection;
+  const setRowSelection = (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => {
+    const next = typeof updater === 'function' ? updater(rowSelection) : updater;
+    if (onRowSelectionChange) onRowSelectionChange(next);
+    else setLocalSelection(next);
+  };
+  const [sorting, setSorting] = useState<SortingState>(fromUrl?.sorting.length ? fromUrl.sorting : initialSorting);
   const [localPagination, setLocalPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: defaultPageSize,
+    pageIndex: fromUrl ? fromUrl.page - 1 : 0,
+    pageSize: fromUrl?.pageSize ?? defaultPageSize,
   });
   const pagination: PaginationState = server
     ? { pageIndex: Math.max(0, server.page - 1), pageSize: server.pageSize }
@@ -223,22 +262,42 @@ export function DataTable<TData extends RowData>({
   };
 
   // Server search: local input state, debounced into the caller's query.
-  const [serverSearch, setServerSearch] = useState(server?.search ?? '');
+  const [serverSearch, setServerSearch] = useState(fromUrl?.search || (server?.search ?? ''));
   // Keep the latest callback in a ref so an inline `onSearchChange` doesn't
   // re-fire the search (and reset the page) on every parent render.
   const onServerSearchChangeRef = useRef(server?.onSearchChange);
   useEffect(() => {
     onServerSearchChangeRef.current = server?.onSearchChange;
   });
-  const lastEmittedSearch = useRef((server?.search ?? '').trim());
+  const [emittedSearch, setEmittedSearch] = useState(() => (fromUrl?.search || server?.search || '').trim());
+  const lastEmittedSearch = useRef(emittedSearch);
+  const serverRef = useRef(server);
+  useEffect(() => {
+    serverRef.current = server;
+  });
+
+  // URL -> caller (server mode, once): hand the URL's search / size / page to the page that owns them.
+  useEffect(() => {
+    if (!fromUrl || !serverRef.current) return;
+    const srv = serverRef.current;
+    if (fromUrl.search) {
+      lastEmittedSearch.current = fromUrl.search.trim();
+      setEmittedSearch(fromUrl.search.trim());
+      srv.onSearchChange?.(fromUrl.search.trim());
+    }
+    if (fromUrl.pageSize && fromUrl.pageSize !== srv.pageSize) srv.onPageSizeChange(fromUrl.pageSize);
+    if (fromUrl.page > 1) srv.onPageChange(fromUrl.page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const next = serverSearch.trim();
     if (next === lastEmittedSearch.current) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       lastEmittedSearch.current = next;
+      setEmittedSearch(next);
       onServerSearchChangeRef.current?.(next);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [serverSearch]);
 
   const tableColumns = useMemo(() => {
@@ -271,14 +330,14 @@ export function DataTable<TData extends RowData>({
             table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
+          aria-label={t('common.table.selectAll', 'Select all')}
         />
       ),
       cell: ({ row }: { row: LegacyRow<TData> }) => (
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
+          aria-label={t('common.table.selectRow', 'Select row')}
         />
       ),
       size: 28,
@@ -287,7 +346,7 @@ export function DataTable<TData extends RowData>({
     };
 
     return [selectCol, ...next];
-  }, [columns, enableRowSelection, facetFilters, searchFilterFn, searchKey]);
+  }, [columns, enableRowSelection, facetFilters, searchFilterFn, searchKey, t]);
 
   const table = useLegacyTable({
     data,
@@ -327,6 +386,30 @@ export function DataTable<TData extends RowData>({
     }
   }, [columnFilters, data, server]);
 
+  // Table -> URL: skip the first pass (the URL was just read), then mirror every change.
+  const urlWritten = useRef(false);
+  const serverPageSizeAtMount = useRef(server?.pageSize);
+  const urlSearch = server ? emittedSearch : String(columnFilters.find((f) => f.id === searchKey)?.value ?? '');
+  const urlFacets = JSON.stringify(columnFilters.filter((f) => f.id !== searchKey));
+  const urlSort = JSON.stringify(sorting);
+  const urlPage = pagination.pageIndex + 1;
+  const urlPageSize = pagination.pageSize;
+  useEffect(() => {
+    if (!urlState) return;
+    if (!urlWritten.current) {
+      urlWritten.current = true;
+      return;
+    }
+    replaceQuery((params) =>
+      writeTableUrlState(
+        params,
+        { search: urlSearch, page: urlPage, pageSize: urlPageSize, sorting: JSON.parse(urlSort), facets: JSON.parse(urlFacets) },
+        { pageSize: server ? (serverPageSizeAtMount.current ?? defaultPageSize) : defaultPageSize, sorting: initialSorting },
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlState, urlSearch, urlFacets, urlSort, urlPage, urlPageSize]);
+
   const selectedCount = table.getSelectedRowModel().rows.length;
 
   const handleDeleteSelected = () => {
@@ -340,28 +423,28 @@ export function DataTable<TData extends RowData>({
   return (
     <div
       className={cn(
-        'space-y-4 transition-all duration-200',
-        layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full',
+        'space-y-4',
+        enableLayoutToggle && layoutMode === 'centered' ? 'max-w-6xl mx-auto' : 'w-full',
         className
       )}
     >
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex w-full flex-wrap items-center gap-2.5 md:w-auto">
           {server?.onSearchChange ? (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Input
                 id={`${id}-search`}
                 ref={inputRef}
                 className={cn(
-                  'peer min-w-64 h-9 text-xs ps-9 bg-background/70 border-border/70 rounded-lg shadow-2xs',
+                  'peer w-full sm:min-w-64 h-9 text-xs ps-9 bg-background/70 border-border/70 rounded-lg shadow-2xs',
                   serverSearch && 'pe-9',
                 )}
                 value={serverSearch}
                 onChange={(e) => setServerSearch(e.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={searchHint}
                 type="search"
-                aria-label={searchPlaceholder}
+                aria-label={searchHint}
               />
               <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80">
                 <ListFilter size={15} strokeWidth={2} aria-hidden />
@@ -370,7 +453,7 @@ export function DataTable<TData extends RowData>({
                 <button
                   type="button"
                   className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 transition-colors hover:text-foreground"
-                  aria-label="Clear search"
+                  aria-label={t('common.table.clearSearch', 'Clear search')}
                   onClick={() => {
                     setServerSearch('');
                     inputRef.current?.focus();
@@ -381,19 +464,19 @@ export function DataTable<TData extends RowData>({
               ) : null}
             </div>
           ) : searchKey ? (
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Input
                 id={`${id}-search`}
                 ref={inputRef}
                 className={cn(
-                  'peer min-w-64 h-9 text-xs ps-9 bg-background/70 border-border/70 rounded-lg shadow-2xs',
+                  'peer w-full sm:min-w-64 h-9 text-xs ps-9 bg-background/70 border-border/70 rounded-lg shadow-2xs',
                   Boolean(table.getColumn(searchKey)?.getFilterValue()) && 'pe-9',
                 )}
                 value={(table.getColumn(searchKey)?.getFilterValue() ?? '') as string}
                 onChange={(e) => table.getColumn(searchKey)?.setFilterValue(e.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={searchHint}
                 type="text"
-                aria-label={searchPlaceholder}
+                aria-label={searchHint}
               />
               <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
                 <ListFilter size={15} strokeWidth={2} aria-hidden />
@@ -402,7 +485,7 @@ export function DataTable<TData extends RowData>({
                 <button
                   type="button"
                   className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-lg text-muted-foreground/80 outline-offset-2 transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70"
-                  aria-label="Clear filter"
+                  aria-label={t('common.table.clearFilter', 'Clear filter')}
                   onClick={() => {
                     table.getColumn(searchKey)?.setFilterValue('');
                     inputRef.current?.focus();
@@ -425,18 +508,18 @@ export function DataTable<TData extends RowData>({
             />
           ))}
 
-          {enableColumnVisibility ? (
+          {enableColumnVisibility && !isMobile ? (
             <DropdownMenu>
               <DropdownMenuTrigger
                 type="button"
                 className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5 text-xs h-9 border-border/80')}
               >
                 <Columns3 className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                Columns
+                {t('common.table.columns', 'Columns')}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="text-xs">Toggle columns</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs">{t('common.table.toggleColumns', 'Toggle columns')}</DropdownMenuLabel>
                   {table
                     .getAllColumns()
                     .filter((column) => column.getCanHide())
@@ -447,7 +530,7 @@ export function DataTable<TData extends RowData>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-                        {column.id}
+                        {typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id}
                       </DropdownMenuCheckboxItem>
                     ))}
                 </DropdownMenuGroup>
@@ -455,7 +538,7 @@ export function DataTable<TData extends RowData>({
             </DropdownMenu>
           ) : null}
 
-          {enableLayoutToggle && (
+          {enableLayoutToggle && !isMobile && (
             <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40 shadow-2xs">
               <button
                 type="button"
@@ -466,10 +549,10 @@ export function DataTable<TData extends RowData>({
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
-                title="Full width fluid data layout"
+                title={t('common.table.layoutFullTitle', 'Full width fluid data layout')}
               >
                 <AlignJustify size={13} />
-                <span className="hidden sm:inline">Full</span>
+                <span className="hidden sm:inline">{t('common.table.layoutFull', 'Full')}</span>
               </button>
               <button
                 type="button"
@@ -480,10 +563,10 @@ export function DataTable<TData extends RowData>({
                     ? 'bg-background text-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
-                title="Centered structured container layout"
+                title={t('common.table.layoutCenterTitle', 'Centered structured container layout')}
               >
                 <AlignCenter size={13} />
-                <span className="hidden sm:inline">Center</span>
+                <span className="hidden sm:inline">{t('common.table.layoutCenter', 'Center')}</span>
               </button>
             </div>
           )}
@@ -497,8 +580,8 @@ export function DataTable<TData extends RowData>({
                 className={cn(buttonVariants({ variant: 'outline' }), 'gap-2 text-xs h-9 border-border/80')}
               >
                 <Trash className="-ms-1 opacity-60 text-destructive" size={15} strokeWidth={2} aria-hidden />
-                Delete
-                <span className="-me-1 ms-1.5 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1.5 font-mono text-[0.65rem] font-bold text-muted-foreground">
+                {t('common.delete', 'Delete')}
+                <span className="-me-1 ms-1.5 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1.5 font-mono text-xs font-bold text-muted-foreground">
                   {selectedCount}
                 </span>
               </AlertDialogTrigger>
@@ -511,16 +594,17 @@ export function DataTable<TData extends RowData>({
                     <CircleAlert size={16} strokeWidth={2} />
                   </div>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('common.table.deleteTitle', 'Are you absolutely sure?')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete {selectedCount}{' '}
-                      selected {selectedCount === 1 ? 'row' : 'rows'}.
+                      {selectedCount === 1
+                        ? t('common.table.deleteOne', 'This action cannot be undone. This will permanently delete {n} selected row.', { n: selectedCount })
+                        : t('common.table.deleteMany', 'This action cannot be undone. This will permanently delete {n} selected rows.', { n: selectedCount })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteSelected}>Delete</AlertDialogAction>
+                  <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteSelected}>{t('common.delete', 'Delete')}</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -531,16 +615,33 @@ export function DataTable<TData extends RowData>({
 
       {/* Table Container Card */}
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xs ring-1 ring-border/50">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        {isMobile && !table.getRowModel().rows?.length ? (
+          <div className="space-y-1.5 px-6 py-12 text-center">
+            <p className="text-foreground text-sm font-semibold">{emptyTitle}</p>
+            {emptyDescription ? <p className="text-muted-foreground text-sm">{emptyDescription}</p> : null}
+          </div>
+        ) : isMobile ? (
+          <DataTableCards table={table} />
+        ) : (
+        <div>
+          <Table containerClassName="md:max-h-[calc(100dvh-15rem)]">
+            <TableHeader className="sticky top-0 z-10 bg-muted shadow-[0_1px_0_var(--border)]">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-b border-border/80 bg-muted/40 hover:bg-muted/40">
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
+                      aria-sort={
+                        header.column.getIsSorted() === 'asc'
+                          ? 'ascending'
+                          : header.column.getIsSorted() === 'desc'
+                            ? 'descending'
+                            : header.column.getCanSort()
+                              ? 'none'
+                              : undefined
+                      }
                       style={{ width: `${header.getSize()}px` }}
-                      className="h-10 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+                      className="h-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <div
@@ -604,7 +705,7 @@ export function DataTable<TData extends RowData>({
                 <TableRow>
                   <TableCell colSpan={tableColumns.length} className="h-32 text-center">
                     <div className="space-y-1.5 max-w-sm mx-auto">
-                      <p className="font-semibold text-sm text-foreground">{emptyTitle}</p>
+                      <p className="font-semibold text-sm text-foreground">{emptyTitle ?? t('common.noResults', 'No results.')}</p>
                       {emptyDescription ? (
                         <p className="text-xs text-muted-foreground">{emptyDescription}</p>
                       ) : null}
@@ -615,12 +716,13 @@ export function DataTable<TData extends RowData>({
             </TableBody>
           </Table>
         </div>
+        )}
 
         {/* Integrated Bottom Pagination */}
         <div className="flex flex-wrap items-center justify-between gap-4 p-3.5 border-t border-border/70 bg-muted/20 text-xs">
           <div className="flex items-center gap-2.5">
             <Label htmlFor={`${id}-page-size`} className="text-xs text-muted-foreground whitespace-nowrap">
-              Rows per page:
+              {t('common.table.rowsPerPage', 'Rows per page:')}
             </Label>
             <Select
               value={String(table.getState().pagination.pageSize)}
@@ -642,9 +744,11 @@ export function DataTable<TData extends RowData>({
           </div>
 
           <div className="text-xs text-muted-foreground font-mono">
-            Showing <span className="font-bold text-foreground">{table.getRowCount() === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span> to{' '}
-            <span className="font-bold text-foreground">{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getRowCount())}</span> of{' '}
-            <span className="font-bold text-foreground">{table.getRowCount()}</span> entries
+            <EntriesSummary
+              from={table.getRowCount() === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
+              to={Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getRowCount())}
+              total={table.getRowCount()}
+            />
           </div>
 
           <Pagination className="mx-0 w-auto">
@@ -656,7 +760,7 @@ export function DataTable<TData extends RowData>({
                   className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => table.firstPage()}
                   disabled={!table.getCanPreviousPage()}
-                  aria-label="First page"
+                  aria-label={t('common.table.firstPage', 'First page')}
                 >
                   <ChevronFirst className="h-3.5 w-3.5" />
                 </Button>
@@ -668,14 +772,17 @@ export function DataTable<TData extends RowData>({
                   className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
-                  aria-label="Previous page"
+                  aria-label={t('common.table.previousPage', 'Previous page')}
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
               </PaginationItem>
               <PaginationItem>
                 <span className="px-2 font-mono text-xs font-semibold text-foreground">
-                  Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
+                  {t('common.table.pageOf', 'Page {page} of {pages}', {
+                    page: table.getState().pagination.pageIndex + 1,
+                    pages: Math.max(1, table.getPageCount()),
+                  })}
                 </span>
               </PaginationItem>
               <PaginationItem>
@@ -685,7 +792,7 @@ export function DataTable<TData extends RowData>({
                   className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
-                  aria-label="Next page"
+                  aria-label={t('common.table.nextPage', 'Next page')}
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
@@ -697,7 +804,7 @@ export function DataTable<TData extends RowData>({
                   className="h-8 w-8 text-xs border-border/70 hover:bg-primary/10 hover:text-primary disabled:pointer-events-none disabled:opacity-40"
                   onClick={() => table.lastPage()}
                   disabled={!table.getCanNextPage()}
-                  aria-label="Last page"
+                  aria-label={t('common.table.lastPage', 'Last page')}
                 >
                   <ChevronLast className="h-3.5 w-3.5" />
                 </Button>
@@ -723,6 +830,7 @@ function FacetFilter<TData extends RowData>({
   title: string;
   options?: string[];
 }) {
+  const t = useTranslations();
   const column = table.getColumn(columnId);
   const selected = (column?.getFilterValue() as string[] | undefined) ?? [];
 
@@ -758,14 +866,14 @@ function FacetFilter<TData extends RowData>({
         <Filter className="-ms-1 opacity-60" size={16} strokeWidth={2} aria-hidden />
         {title}
         {selected.length > 0 ? (
-          <span className="-me-1 ms-1 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-[0.625rem] font-medium text-muted-foreground/70">
+          <span className="-me-1 ms-1 inline-flex h-5 max-h-full items-center rounded border border-border bg-background px-1 font-[inherit] text-xs font-medium text-muted-foreground/70">
             {selected.length}
           </span>
         ) : null}
       </PopoverTrigger>
       <PopoverContent className="min-w-40 p-3" align="start">
         <div className="space-y-3">
-          <div className="text-xs font-medium text-muted-foreground">Filters</div>
+          <div className="text-xs font-medium text-muted-foreground">{t('common.table.filters', 'Filters')}</div>
           <div className="space-y-3">
             {uniqueValues.map((value, i) => (
               <div key={value} className="flex items-center gap-2">

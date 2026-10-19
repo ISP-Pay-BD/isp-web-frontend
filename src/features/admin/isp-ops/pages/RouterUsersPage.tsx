@@ -14,6 +14,7 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
 import { useRouterDetail } from '@/features/admin/routers/hooks/useRouterDetail';
 import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
 import {
@@ -23,17 +24,12 @@ import {
   type SessionMode,
 } from '@/features/admin/routers/hooks/useRouterSessions';
 
-const MODES: { value: SessionMode; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Online' },
-  { value: 'inactive', label: 'Offline' },
-];
-
 function mb(bytes: number) {
   return bytes > 0 ? (bytes / 1_048_576).toFixed(1) : '—';
 }
 
 export function RouterUsersPage() {
+  const t = useTranslations();
   const params = useParams<{ id: string }>();
   const routerId = params.id;
   const table = useServerTable();
@@ -45,11 +41,17 @@ export function RouterUsersPage() {
   const sessions = useRouterSessions(routerId, { page, pageSize, search, mode });
   const disconnect = useDisconnectSession();
 
+  const modes: { value: SessionMode; label: string }[] = [
+    { value: 'all', label: t('admin.ops.routerUsers.modeAll', 'All') },
+    { value: 'active', label: t('status.online', 'Online') },
+    { value: 'inactive', label: t('status.offline', 'Offline') },
+  ];
+
   const columns = useMemo<LegacyColumnDef<PppoeRow, unknown>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Username',
+        header: t('admin.ops.routerUsers.colUsername', 'Username'),
         enableHiding: false,
         cell: ({ row }) => (
           <div>
@@ -60,7 +62,7 @@ export function RouterUsersPage() {
       },
       {
         accessorKey: 'active',
-        header: 'Status',
+        header: t('admin.ops.routerUsers.colStatus', 'Status'),
         cell: ({ row }) => <StatusBadge status={row.original.active ? 'online' : 'offline'} />,
       },
       {
@@ -70,12 +72,12 @@ export function RouterUsersPage() {
       },
       {
         accessorKey: 'callerId',
-        header: 'MAC / Caller ID',
+        header: t('admin.ops.routerUsers.colCaller', 'MAC / Caller ID'),
         cell: ({ row }) => <span className="font-mono text-xs">{row.original.callerId || '—'}</span>,
       },
       {
         id: 'uptime',
-        header: 'Uptime / Last logout',
+        header: t('admin.ops.routerUsers.colUptime', 'Uptime / Last logout'),
         cell: ({ row }) => (
           <span className="tabular-nums text-sm">
             {row.original.active ? row.original.uptime || '—' : row.original.lastLoggedOut || '—'}
@@ -84,7 +86,7 @@ export function RouterUsersPage() {
       },
       {
         id: 'traffic',
-        header: 'Down / Up (MB)',
+        header: t('admin.ops.routerUsers.colTraffic', 'Down / Up (MB)'),
         cell: ({ row }) => (
           <span className="tabular-nums text-sm">
             {mb(row.original.bytesOut)} / {mb(row.original.bytesIn)}
@@ -97,28 +99,28 @@ export function RouterUsersPage() {
         cell: ({ row }) =>
           row.original.active && row.original.sessionId ? (
             <Button size="sm" variant="outline" onClick={() => setKickTarget(row.original)}>
-              Kick
+              {t('admin.ops.routerUsers.kick', 'Kick')}
             </Button>
           ) : null,
       },
     ],
-    [],
+    [t],
   );
 
   if (sessions.isLoading) return <PageSkeleton variant="table" />;
   if (sessions.isError) {
     return (
-      <EmptyState
-        title="Failed to load sessions"
+      <EmptyState variant="error"
+        title={t('admin.ops.routerUsers.loadFailed', 'Failed to load sessions')}
         description={sessions.error?.message}
-        actionLabel="Retry"
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => sessions.refetch()}
       />
     );
   }
 
   const data = sessions.data;
-  const name = router.data?.name ?? `Router ${routerId}`;
+  const name = router.data?.name ?? t('admin.ops.routerUsers.routerFallback', 'Router {id}', { id: routerId });
 
   const confirmKick = () => {
     const target = kickTarget;
@@ -126,7 +128,7 @@ export function RouterUsersPage() {
     disconnect.mutate(
       { routerId, sessionId: target.sessionId, username: target.name },
       {
-        onSuccess: () => toast.success(`${target.name} disconnected`),
+        onSuccess: () => toast.success(t('admin.ops.routerUsers.disconnected', '{name} disconnected', { name: target.name })),
         onSettled: () => setKickTarget(null),
       },
     );
@@ -135,18 +137,18 @@ export function RouterUsersPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={`PPPoE users · ${name}`}
-        subtitle="Live sessions read from the router — Kick drops the session on the NAS"
+        title={t('admin.ops.routerUsers.title', 'PPPoE users · {name}', { name })}
+        subtitle={t('admin.ops.routerUsers.subtitle', 'Live sessions read from the router — Kick drops the session on the NAS')}
         breadcrumb={[
           { label: 'Dashboard', url: '/admin/dashboard' },
           { label: 'Routers', url: '/admin/routers' },
           { label: name, url: `/admin/routers/${routerId}` },
-          { label: 'Users' },
+          { label: t('admin.ops.routerUsers.crumbUsers', 'Users') },
         ]}
         actions={
           <Button variant="outline" size="sm" onClick={() => sessions.refetch()} disabled={sessions.isFetching}>
             <RefreshCw className={cn('mr-1.5 h-4 w-4', sessions.isFetching && 'animate-spin')} />
-            Refresh
+            {t('admin.ops.routerUsers.refresh', 'Refresh')}
           </Button>
         }
       />
@@ -154,30 +156,30 @@ export function RouterUsersPage() {
       {data && !data.reachable ? (
         <EmptyState
           icon={<WifiOff className="h-5 w-5" />}
-          title="Router offline"
-          description={data.error || 'The router did not answer, so live sessions are unavailable.'}
-          actionLabel="Try again"
+          title={t('admin.ops.routerUsers.offlineTitle', 'Router offline')}
+          description={data.error || t('admin.ops.routerUsers.offlineDesc', 'The router did not answer, so live sessions are unavailable.')}
+          actionLabel={t('admin.ops.routerUsers.tryAgain', 'Try again')}
           onAction={() => sessions.refetch()}
         />
       ) : (
         <>
           <OpsSummaryStrip
             items={[
-              { value: data?.activeCount ?? 0, label: 'online' },
-              { value: mode === 'active' ? '—' : (data?.inactiveCount ?? 0), label: 'offline' },
-              { value: data?.total ?? 0, label: 'matching' },
+              { value: data?.activeCount ?? 0, label: t('admin.ops.routerUsers.sumOnline', 'online') },
+              { value: mode === 'active' ? '—' : (data?.inactiveCount ?? 0), label: t('admin.ops.routerUsers.sumOffline', 'offline') },
+              { value: data?.total ?? 0, label: t('admin.ops.routerUsers.sumMatching', 'matching') },
             ]}
           />
-          <DataTable
+          <DataTable urlState
             columns={columns}
             data={data?.rows ?? []}
             getRowId={(row) => row.name}
-            searchPlaceholder="Search username, IP, MAC, profile…"
-            emptyTitle={search ? 'No user matches your search' : 'No PPPoE users'}
+            searchPlaceholder={t('admin.ops.routerUsers.search', 'Search username, IP, MAC, profile…')}
+            emptyTitle={search ? t('admin.ops.routerUsers.noMatch', 'No user matches your search') : t('admin.ops.routerUsers.empty', 'No PPPoE users')}
             server={table.server(data?.total ?? 0)}
             toolbarActions={
               <div className="flex items-center gap-1">
-                {MODES.map((m) => (
+                {modes.map((m) => (
                   <Button
                     key={m.value}
                     size="sm"
@@ -199,9 +201,9 @@ export function RouterUsersPage() {
       <ConfirmDialog
         open={!!kickTarget}
         onOpenChange={(open) => !open && setKickTarget(null)}
-        title="Disconnect session?"
-        description={kickTarget ? `${kickTarget.name} will be dropped from ${name}. The client can reconnect immediately.` : undefined}
-        confirmLabel="Disconnect"
+        title={t('admin.ops.routerUsers.kickTitle', 'Disconnect session?')}
+        description={kickTarget ? t('admin.ops.routerUsers.kickDesc', '{user} will be dropped from {router}. The client can reconnect immediately.', { user: kickTarget.name, router: name }) : undefined}
+        confirmLabel={t('admin.ops.routerUsers.kickConfirm', 'Disconnect')}
         destructive
         onConfirm={confirmKick}
       />

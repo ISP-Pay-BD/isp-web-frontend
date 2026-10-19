@@ -8,6 +8,7 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Folder, File, ChevronRight } from 'lucide-react';
+import { useTranslations } from '@/i18n/locale-context';
 
 function formatSize(bytes: number | null): string {
   if (bytes === null) return '—';
@@ -17,6 +18,7 @@ function formatSize(bytes: number | null): string {
 }
 
 export function FileManagerPage() {
+  const t = useTranslations();
   const [currentPath, setCurrentPath] = useState('');
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -27,10 +29,10 @@ export function FileManagerPage() {
   if (isLoading) return <PageSkeleton variant="cards" rows={4} />;
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load files"
-        description="Could not retrieve file manager contents."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.fileManager.loadFailed', 'Failed to load files')}
+        description={t('platform.fileManager.loadFailedDesc', 'Could not retrieve file manager contents.')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -44,11 +46,11 @@ export function FileManagerPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Platform File Manager"
-        subtitle="Tenant static assets, branding logos, firmware bin files, automated database backups, and invoice PDFs"
+        title={t('platform.fileManager.title', 'Platform File Manager')}
+        subtitle={t('platform.fileManager.subtitle', 'Tenant static assets, branding logos, firmware bin files, automated database backups, and invoice PDFs')}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'File Manager' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('nav.platform-file-manager', 'File Manager') },
         ]}
       />
 
@@ -56,19 +58,19 @@ export function FileManagerPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{data.items.length}</span>{' '}
-          <span className="text-muted-foreground">total objects</span>
+          <span className="text-muted-foreground">{t('platform.fileManager.totalObjects', 'total objects')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-500">{totalFolders}</span>{' '}
-          <span className="text-muted-foreground">directories</span>
+          <span className="text-muted-foreground">{t('platform.fileManager.directories', 'directories')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-blue-500">{totalFiles}</span>{' '}
-          <span className="text-muted-foreground">files</span>
+          <span className="text-muted-foreground">{t('platform.fileManager.files', 'files')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-500">S3 / MinIO</span>{' '}
-          <span className="text-muted-foreground">storage backend</span>
+          <span className="text-muted-foreground">{t('platform.fileManager.storageBackend', 'storage backend')}</span>
         </p>
       </div>
 
@@ -80,7 +82,7 @@ export function FileManagerPage() {
               onClick={() => setCurrentPath('')}
               className="hover:text-foreground font-mono font-semibold px-1.5 py-0.5 rounded hover:bg-background transition-colors text-primary"
             >
-              {data.root}
+              {data.root || '/'}
             </button>
             {breadcrumbs.map((part, i) => (
               <span key={i} className="flex items-center gap-1.5">
@@ -98,7 +100,7 @@ export function FileManagerPage() {
 
           <div className="divide-y divide-border/40">
             {data.items.length === 0 ? (
-              <p className="py-12 text-center text-xs text-muted-foreground">This storage folder is currently empty.</p>
+              <p className="py-12 text-center text-xs text-muted-foreground">{t('platform.fileManager.empty', 'This storage folder is currently empty.')}</p>
             ) : (
               data.items.map((item) => (
                 <button
@@ -118,11 +120,11 @@ export function FileManagerPage() {
                     <div>
                       <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">{item.name}</div>
                       {item.ext ? (
-                        <div className="text-[10px] text-muted-foreground font-mono uppercase">{item.ext} file</div>
+                        <div className="text-xs text-muted-foreground font-mono uppercase">{t('platform.fileManager.fileExt', '{ext} file', { ext: item.ext })}</div>
                       ) : null}
                     </div>
                   </div>
-                  <div className="text-right text-[11px] text-muted-foreground">
+                  <div className="text-right text-xs text-muted-foreground">
                     <div className="font-mono font-medium">{formatSize(item.size)}</div>
                     <div>{item.modifiedAt}</div>
                   </div>

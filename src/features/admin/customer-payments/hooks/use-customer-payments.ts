@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http, saveBlob } from '@/lib/api/client';
 import { getResellerId } from '@/lib/api/auth-utils';
+import { useTranslations } from '@/i18n/locale-context';
 import { cleanParams, getPagedWithSummary } from '../api/paged';
 import { mapCustomerOption, mapLedgerSummary, mapPaymentRow, mapReceipt } from '../lib/mappers';
 import type { CustomerOption, LedgerFilters, PaymentReceipt } from '../types';
@@ -75,6 +76,7 @@ export interface RecordPaymentInput {
 
 /** POST /v1/reseller/customer-payments/{rid} — backend contract: customer, amount, month, status, paid_via. */
 export function useCreateCustomerPayment() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: RecordPaymentInput) => {
@@ -93,13 +95,14 @@ export function useCreateCustomerPayment() {
       qc.invalidateQueries({ queryKey: customerPaymentKeys.all });
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
       qc.invalidateQueries({ queryKey: ['admin', 'reports'] });
-      toast.success('Payment recorded');
+      toast.success(t('admin.customerPayments.toast.recorded', 'Payment recorded'));
     },
   });
 }
 
 /** PUT /v1/reseller/customer-payments/{rid}/{id} — e.g. settle a pending invoice. */
 export function useUpdatePaymentStatus() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; amountBdt: number; billingMonth: string; status: 'successful' | 'pending' | 'failed'; method: string; trxId?: string }) =>
@@ -114,20 +117,25 @@ export function useUpdatePaymentStatus() {
       qc.invalidateQueries({ queryKey: customerPaymentKeys.all });
       qc.invalidateQueries({ queryKey: customerPaymentKeys.receipt(input.id) });
       qc.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
-      toast.success(input.status === 'successful' ? 'Invoice marked as paid' : 'Invoice updated');
+      toast.success(
+        input.status === 'successful'
+          ? t('admin.customerPayments.toast.markedPaid', 'Invoice marked as paid')
+          : t('admin.customerPayments.toast.invoiceUpdated', 'Invoice updated'),
+      );
     },
   });
 }
 
 /** Sends the receipt text to the customer through the tenant's SMS gateway (POST /v1/reseller/sms/{rid}/send). */
 export function useSendPaymentSms() {
+  const t = useTranslations();
   return useMutation({
     mutationFn: async (input: { customerId: string; content: string }) =>
       http.post<{ sent?: number; failed?: number }>(`/v1/reseller/sms/${getResellerId()}/send`, {
         content: input.content,
         send_to: [Number(input.customerId)],
       }),
-    onSuccess: () => toast.success('SMS sent to the customer'),
+    onSuccess: () => toast.success(t('admin.customerPayments.toast.smsSent', 'SMS sent to the customer')),
   });
 }
 

@@ -57,8 +57,9 @@
   /* ISP landing — deep ink + single orange CTA (no purple/blue dual-accent wash) */
   --landing-bg: #0a0c10;
   --landing-panel: #12161d;
-  --landing-cta: #e85a1a;
-  --landing-cta-hover: #d14e14;
+  /* Solid CTA background: white text on it passes WCAG AA (5.0:1). `--landing-accent` stays the brighter orange for text on the dark canvas. */
+  --landing-cta: #c4440c;
+  --landing-cta-hover: #ab3a09;
   --landing-accent: #e85a1a;
 
   /* Portal fonts */
@@ -68,6 +69,13 @@
     'Satoshi', 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-landing-body: 'Satoshi', 'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-bengali: 'Noto Sans Bengali', var(--font-landing-body);
+
+  /* Motion timing: portals stay inside 150-250ms; the landing page may go longer. */
+  --ease-out-ui: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-marketing: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 160ms;
+  --dur-ui: 200ms;
+  --dur-marketing: 850ms;
 
   /* Cool slate neutrals + rich crisp orange primary (Stripe/Linear grade light mode) */
   --background: oklch(0.975 0.006 250);
@@ -121,11 +129,11 @@
   --popover: oklch(0.185 0.022 250);
   --popover-foreground: oklch(0.97 0.008 250);
   --primary: oklch(0.68 0.155 41);
-  --primary-foreground: oklch(0.99 0.005 80);
+  --primary-foreground: oklch(0.2 0.03 300);
   --secondary: oklch(0.22 0.02 250);
   --secondary-foreground: oklch(0.97 0.008 250);
   --muted: oklch(0.2 0.016 250);
-  --muted-foreground: oklch(0.72 0.015 250);
+  --muted-foreground: oklch(0.77 0.015 250);
   --accent: oklch(0.23 0.02 250);
   --accent-foreground: oklch(0.97 0.008 250);
   --destructive: oklch(0.68 0.17 22);
@@ -140,7 +148,7 @@
   --sidebar: oklch(0.16 0.02 250);
   --sidebar-foreground: oklch(0.97 0.008 250);
   --sidebar-primary: oklch(0.68 0.155 41);
-  --sidebar-primary-foreground: oklch(0.99 0.005 80);
+  --sidebar-primary-foreground: oklch(0.2 0.03 300);
   --sidebar-accent: oklch(0.22 0.02 250);
   --sidebar-accent-foreground: oklch(0.97 0.008 250);
   --sidebar-border: oklch(0.28 0.02 250 / 55%);
@@ -193,6 +201,12 @@
   }
 }
 
+/* Bangla conjuncts need a little more room than Latin: step the two smallest text sizes up (13px / 15px). */
+html:lang(bn) {
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+}
+
 /* Scroll-driven reveal (`Reveal`, `RevealItem`): the browser runs it from the scroll position with no
    JavaScript, so no section sits invisible while the page hydrates on a slow phone. Where scroll
    timelines are unsupported, or motion is reduced, content is simply shown. */
@@ -226,6 +240,12 @@
 }
 
 /* Hero headline: each word rises out of a blur, staggered with `--d`. CSS, so it runs before hydration. */
+@keyframes lp-rise-word {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+}
 @keyframes lp-rise-blur {
   from {
     opacity: 0;
@@ -235,8 +255,14 @@
 }
 .lp-rise-word {
   display: inline-block;
-  animation: lp-rise-blur 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: lp-rise-word var(--dur-marketing) var(--ease-out-marketing) both;
   animation-delay: var(--d, 0ms);
+}
+/* The blur costs a repaint per word, so only larger screens get it; phones keep the plain rise. */
+@media (min-width: 768px) {
+  .lp-rise-word {
+    animation-name: lp-rise-blur;
+  }
 }
 
 /* Section headings: words slide up out of their line as the heading scrolls in (`RevealWords`). */
@@ -336,22 +362,21 @@
 }
 .lp-glow {
   position: absolute;
-  left: var(--gx, 50%);
-  top: var(--gy, 70%);
+  left: 50%;
+  top: 70%;
   width: 46rem;
   height: 46rem;
   pointer-events: none;
   border-radius: 9999px;
   transform: translate(-50%, -50%);
+  translate: var(--dx, 0px) var(--dy, 0px);
   background: radial-gradient(
     closest-side,
     color-mix(in srgb, var(--landing-cta) 22%, transparent),
     transparent
   );
   animation: lp-glow-drift 14s ease-in-out infinite;
-  transition:
-    left 600ms cubic-bezier(0.22, 1, 0.36, 1),
-    top 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: translate 600ms var(--ease-out-marketing);
 }
 
 /* The payment card leans toward the mouse and a sheen follows it (`TiltCard`; never under reduced motion). */
@@ -634,22 +659,24 @@
   }
 }
 
-/* Portal motion — intentional, reduced-motion aware (no Framer on portals) */
+/* Portal motion — intentional, reduced-motion aware (no Framer on portals). Timing tokens live in :root. */
+/* `backwards` (not `both`): once the enter animation ends no transform stays on the page wrapper, so
+   `position: sticky` / `fixed` descendants (bottom nav, reply bars, table headers) anchor to the viewport. */
 .ui-page-enter {
-  animation: ui-fade-up 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: ui-fade-up var(--dur-ui) var(--ease-out-ui) backwards;
 }
 
 .ui-panel-enter {
-  animation: ui-fade 200ms ease-out both;
+  animation: ui-fade var(--dur-ui) ease-out backwards;
 }
 
 .ui-press {
   transition:
-    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 160ms ease-out,
-    border-color 160ms ease-out,
-    color 160ms ease-out,
-    box-shadow 160ms ease-out;
+    transform var(--dur-press) var(--ease-out-ui),
+    background-color var(--dur-press) ease-out,
+    border-color var(--dur-press) ease-out,
+    color var(--dur-press) ease-out,
+    box-shadow var(--dur-press) ease-out;
 }
 
 .ui-press:active {
@@ -788,4 +815,22 @@
     font-weight: bold !important;
     -webkit-print-color-adjust: exact !important;
   }
+}
+
+/* Leaflet (GeoMap) — Tailwind's preflight resets `img { max-width: 100%; height: auto }`,
+   which collides with Leaflet's own tile sizing and is the classic cause of a blank/empty
+   map when Leaflet is dropped into a Tailwind app: tiles mount but render at the wrong
+   size, so nothing visible paints. Leaflet's own stylesheet already undoes this for
+   `.leaflet-container img`, but relies on load order beating Tailwind's cascade, which
+   Next.js doesn't guarantee across client-component CSS chunks — so it's restated here,
+   after Tailwind, where it's guaranteed to win. */
+.leaflet-container img {
+  max-width: none;
+}
+
+/* The divIcon's own wrapper (see markerIcon() in GeoMapImpl) handles anchoring; Leaflet's
+   default icon shadow/backdrop styling is for its bundled pin image, which we never use. */
+.geo-map-marker {
+  background: transparent;
+  border: none;
 }

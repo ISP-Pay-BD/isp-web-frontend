@@ -1,4 +1,8 @@
 import { ApiError } from '@/lib/api/client';
+import { formatDate } from '@/lib/format';
+import type { useTranslations } from '@/i18n/locale-context';
+
+export type Translate = ReturnType<typeof useTranslations>;
 
 /** Backend validation `details` (e.g. `items.0.qty`) as one message per field. */
 export function fieldErrorsOf(error: unknown): Record<string, string> {
@@ -22,10 +26,15 @@ export function monthStartIso(date = new Date()): string {
   return isoDay(new Date(date.getFullYear(), date.getMonth(), 1));
 }
 
-/** "2026-10-01 → 2026-10-31", one side, or "—". */
+/** A stored YYYY-MM-DD date in the active language, or "—". */
+export function dayText(value: string): string {
+  return value ? formatDate(value) : '—';
+}
+
+/** "1 Oct 2026 → 31 Oct 2026", one side, or "—". */
 export function periodLabel(from: string, to: string): string {
-  if (from && to) return `${from} → ${to}`;
-  return from || to || '—';
+  if (from && to) return `${dayText(from)} → ${dayText(to)}`;
+  return dayText(from || to);
 }
 
 /** Client-side CSV of rows that are already fully loaded. */
@@ -43,4 +52,26 @@ export function downloadCsv(filename: string, headers: string[], rows: (string |
   a.click();
   a.remove();
   URL.revokeObjectURL(href);
+}
+
+/** Cash / bank transfer / cheque are translated; wallet and gateway names (bKash, Nagad…) keep their own label. */
+export function paymentMethodLabel(t: Translate, value: string, label = value): string {
+  switch (value.trim().toLowerCase().replace(/\s+/g, '_')) {
+    case 'cash':
+      return t('admin.bandwidth.method.cash', 'Cash');
+    case 'bank_transfer':
+      return t('admin.bandwidth.method.bankTransfer', 'Bank Transfer');
+    case 'cheque':
+      return t('admin.bandwidth.method.cheque', 'Cheque');
+    default:
+      return label;
+  }
+}
+
+export function paidDueLabel(t: Translate, paid: boolean): string {
+  return paid ? t('status.paid', 'Paid') : t('admin.bandwidth.shared.due', 'Due');
+}
+
+export function activeLabel(t: Translate, active: boolean): string {
+  return active ? t('status.active', 'Active') : t('admin.bandwidth.shared.inactive', 'Inactive');
 }

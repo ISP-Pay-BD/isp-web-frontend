@@ -1,2 +1,2 @@
 export { MarketingLayout, MarketingNav, MarketingFooter, MobileStickyCta, LocaleToggle } from './components/MarketingLayout';
-export { LocaleProvider, useLocale, useTranslations } from './context/LocaleContext';
+export { LocaleProvider, useLocale, useTranslations } from '@/i18n/locale-context';

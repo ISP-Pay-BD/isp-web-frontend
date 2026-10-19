@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLocale } from '@/i18n/locale-context';
 
 interface EmployeeModalProps {
   open: boolean;
@@ -39,6 +40,7 @@ const SERVER_KEYS: Record<string, string> = {
 };
 
 export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: EmployeeModalProps) {
+  const { t, te } = useLocale();
   const isEdit = !!employee;
   const schema = useMemo(() => employeeSchema(isEdit), [isEdit]);
   const {
@@ -82,11 +84,11 @@ export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: Em
   const onSubmit = async (values: EmployeeFormValues) => {
     try {
       await onSave(values);
-      toast.success(isEdit ? 'Employee updated successfully' : 'Employee registered successfully');
+      toast.success(isEdit ? t('admin.hr.employeeForm.updated', 'Employee updated successfully') : t('admin.hr.employeeForm.registered', 'Employee registered successfully'));
       reset();
       onOpenChange(false);
     } catch (err) {
-      applyServerErrors(err, setError, SERVER_KEYS);
+      applyServerErrors(err, setError, SERVER_KEYS, t('admin.hr.common.wentWrong', 'Something went wrong. Please try again.'));
     }
   };
 
@@ -94,39 +96,39 @@ export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: Em
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Employee Profile' : 'Register New Employee'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('admin.hr.employeeForm.editTitle', 'Edit Employee Profile') : t('admin.hr.employeeForm.newTitle', 'Register New Employee')}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'Update staff information, payroll amount, and assigned areas.'
-              : 'Add a new staff member with login access to the employee portal.'}
+              ? t('admin.hr.employeeForm.editDesc', 'Update staff information, payroll amount, and assigned areas.')
+              : t('admin.hr.employeeForm.newDesc', 'Add a new staff member with login access to the employee portal.')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="name">{t('admin.hr.employeeForm.fullName', 'Full Name *')}</Label>
               <Input id="name" {...register('name')} />
-              {errors.name && <p className="text-destructive text-xs">{errors.name.message}</p>}
+              {errors.name && <p className="text-destructive text-xs">{te(errors.name.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="mobile">Mobile *</Label>
+              <Label htmlFor="mobile">{t('admin.hr.employeeForm.mobile', 'Mobile *')}</Label>
               <Input id="mobile" inputMode="tel" placeholder="01XXXXXXXXX" {...register('mobile')} />
-              {errors.mobile && <p className="text-destructive text-xs">{errors.mobile.message}</p>}
+              {errors.mobile && <p className="text-destructive text-xs">{te(errors.mobile.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="designation">Designation *</Label>
+              <Label htmlFor="designation">{t('admin.hr.employeeForm.designation', 'Designation *')}</Label>
               <Select
                 items={designationItems}
                 value={selectedDesignation || null}
                 onValueChange={(val) => val && setValue('designation', String(val), { shouldValidate: true })}
               >
                 <SelectTrigger id="designation" className="w-full">
-                  <SelectValue placeholder="Select designation" />
+                  <SelectValue placeholder={t('admin.hr.employeeForm.selectDesignation', 'Select designation')} />
                 </SelectTrigger>
                 <SelectContent>
                   {meta.designations.map((d) => (
@@ -136,21 +138,21 @@ export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: Em
                   ))}
                 </SelectContent>
               </Select>
-              {errors.designation && <p className="text-destructive text-xs">{errors.designation.message}</p>}
+              {errors.designation && <p className="text-destructive text-xs">{te(errors.designation.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="salary">Monthly Salary (৳)</Label>
+              <Label htmlFor="salary">{t('admin.hr.employeeForm.salary', 'Monthly Salary (৳)')}</Label>
               <Input id="salary" type="number" min={0} step="any" {...register('salary')} />
-              {errors.salary && <p className="text-destructive text-xs">{errors.salary.message}</p>}
+              {errors.salary && <p className="text-destructive text-xs">{te(errors.salary.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Service Areas *</Label>
+            <Label>{t('admin.hr.employeeForm.areas', 'Service Areas *')}</Label>
             {meta.areas.length === 0 ? (
               <p className="text-muted-foreground rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs">
-                No service areas yet — create one under Areas first.
+                {t('admin.hr.employeeForm.noAreas', 'No service areas yet — create one under Areas first.')}
               </p>
             ) : (
               <div className="grid max-h-36 grid-cols-1 gap-1.5 overflow-y-auto rounded-lg border border-border/60 p-2.5 sm:grid-cols-2">
@@ -165,52 +167,52 @@ export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: Em
                 ))}
               </div>
             )}
-            {errors.areaIds && <p className="text-destructive text-xs">{errors.areaIds.message}</p>}
+            {errors.areaIds && <p className="text-destructive text-xs">{te(errors.areaIds.message ?? '')}</p>}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="address">Address *</Label>
+            <Label htmlFor="address">{t('admin.hr.employeeForm.address', 'Address *')}</Label>
             <Textarea id="address" rows={2} {...register('address')} />
-            {errors.address && <p className="text-destructive text-xs">{errors.address.message}</p>}
+            {errors.address && <p className="text-destructive text-xs">{te(errors.address.message ?? '')}</p>}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email Address *</Label>
+              <Label htmlFor="email">{t('admin.hr.employeeForm.email', 'Email Address *')}</Label>
               <Input id="email" type="email" {...register('email')} />
-              {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
+              {errors.email && <p className="text-destructive text-xs">{te(errors.email.message ?? '')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="nidNumber">National ID (NID)</Label>
-              <Input id="nidNumber" inputMode="numeric" placeholder="10, 13 or 17 digits" {...register('nidNumber')} />
-              {errors.nidNumber && <p className="text-destructive text-xs">{errors.nidNumber.message}</p>}
+              <Label htmlFor="nidNumber">{t('admin.hr.employeeForm.nid', 'National ID (NID)')}</Label>
+              <Input id="nidNumber" inputMode="numeric" placeholder={t('admin.hr.employeeForm.nidHint', '10, 13 or 17 digits')} {...register('nidNumber')} />
+              {errors.nidNumber && <p className="text-destructive text-xs">{te(errors.nidNumber.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="password">{isEdit ? 'New Password' : 'Password *'}</Label>
+              <Label htmlFor="password">{isEdit ? t('admin.hr.employeeForm.newPassword', 'New Password') : t('admin.hr.employeeForm.password', 'Password *')}</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                placeholder={isEdit ? 'Leave blank to keep' : ''}
+                placeholder={isEdit ? t('admin.hr.employeeForm.keepPassword', 'Leave blank to keep') : ''}
                 {...register('password')}
               />
-              {errors.password && <p className="text-destructive text-xs">{errors.password.message}</p>}
+              {errors.password && <p className="text-destructive text-xs">{te(errors.password.message ?? '')}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="rePassword">{isEdit ? 'Confirm New Password' : 'Confirm Password *'}</Label>
+              <Label htmlFor="rePassword">{isEdit ? t('admin.hr.employeeForm.confirmNewPassword', 'Confirm New Password') : t('admin.hr.employeeForm.confirmPassword', 'Confirm Password *')}</Label>
               <Input id="rePassword" type="password" autoComplete="new-password" {...register('rePassword')} />
-              {errors.rePassword && <p className="text-destructive text-xs">{errors.rePassword.message}</p>}
+              {errors.rePassword && <p className="text-destructive text-xs">{te(errors.rePassword.message ?? '')}</p>}
             </div>
           </div>
 
           <div className="space-y-1.5 sm:w-1/2 sm:pr-2">
-            <Label htmlFor="status">Status</Label>
+            <Label htmlFor="status">{t('common.status', 'Status')}</Label>
             <Select
-              items={{ active: 'Active', inactive: 'Inactive' }}
+              items={{ active: t('status.active', 'Active'), inactive: t('status.inactive', 'Inactive') }}
               value={selectedStatus}
               onValueChange={(val) => val && setValue('status', val as 'active' | 'inactive')}
             >
@@ -218,18 +220,18 @@ export function EmployeeModal({ open, onOpenChange, employee, meta, onSave }: Em
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="active">{t('status.active', 'Active')}</SelectItem>
+                <SelectItem value="inactive">{t('status.inactive', 'Inactive')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <DialogFooter className="pt-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Register Staff'}
+              {isSubmitting ? t('admin.hr.employeeForm.saving', 'Saving...') : isEdit ? t('admin.hr.employeeForm.saveChanges', 'Save Changes') : t('admin.hr.employeeForm.register', 'Register Staff')}
             </Button>
           </DialogFooter>
         </form>

@@ -23,65 +23,87 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { formatBdtWithSymbol } from '@/lib/format/currency';
+import { useLocale } from '@/i18n/locale-context';
 
-const QUICK_MODULES = [
+type Translate = ReturnType<typeof useLocale>['t'];
+
+const quickModules = (t: Translate) => [
   {
     href: '/admin/hotspot/dashboard',
-    label: 'Live Dashboard',
+    label: t('admin.hotspot.hub.modDashboard', 'Live Dashboard'),
     icon: LayoutDashboard,
-    desc: 'Active guest sessions, router health and the hotspot log, refreshed every 30 seconds.',
-    badge: 'Live',
+    desc: t(
+      'admin.hotspot.hub.modDashboardDesc',
+      'Active guest sessions, router health and the hotspot log, refreshed every 30 seconds.',
+    ),
+    badge: t('admin.hotspot.hub.badgeLive', 'Live'),
     color: 'text-primary',
     bgColor: 'bg-primary/10 border-primary/20',
   },
   {
     href: '/admin/hotspot/packages',
-    label: 'Hotspot Profiles & Packages',
+    label: t('admin.hotspot.hub.modPackages', 'Hotspot Profiles & Packages'),
     icon: Package,
-    desc: 'User profiles on the router: rate limit, validity, expiry mode and voucher pricing.',
-    badge: 'Profiles',
+    desc: t(
+      'admin.hotspot.hub.modPackagesDesc',
+      'User profiles on the router: rate limit, validity, expiry mode and voucher pricing.',
+    ),
+    badge: t('admin.hotspot.hub.badgeProfiles', 'Profiles'),
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10 border-emerald-500/20',
   },
   {
     href: '/admin/hotspot/users',
-    label: 'Hotspot Users',
+    label: t('admin.hotspot.kpi.users', 'Hotspot Users'),
     icon: Users,
-    desc: 'Hotspot logins on the router: bound MAC, time limit, traffic and enable/disable.',
-    badge: 'Accounts',
+    desc: t(
+      'admin.hotspot.hub.modUsersDesc',
+      'Hotspot logins on the router: bound MAC, time limit, traffic and enable/disable.',
+    ),
+    badge: t('admin.hotspot.hub.badgeAccounts', 'Accounts'),
     color: 'text-sky-500',
     bgColor: 'bg-sky-500/10 border-sky-500/20',
   },
   {
     href: '/admin/hotspot/vouchers',
-    label: 'Voucher Codes',
+    label: t('admin.hotspot.hub.modVouchers', 'Voucher Codes'),
     icon: Ticket,
-    desc: 'Generate voucher codes for a profile and track which ones are unused, used or disabled.',
-    badge: 'Vouchers',
+    desc: t(
+      'admin.hotspot.hub.modVouchersDesc',
+      'Generate voucher codes for a profile and track which ones are unused, used or disabled.',
+    ),
+    badge: t('admin.hotspot.hub.badgeVouchers', 'Vouchers'),
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10 border-amber-500/20',
   },
   {
     href: '/admin/hotspot/walled-garden',
-    label: 'Walled Garden Rules',
+    label: t('admin.hotspot.hub.modWalled', 'Walled Garden Rules'),
     icon: ShieldCheck,
-    desc: 'Hosts guests can reach before logging in, such as payment gateways and your portal.',
-    badge: 'Pre-login',
+    desc: t(
+      'admin.hotspot.hub.modWalledDesc',
+      'Hosts guests can reach before logging in, such as payment gateways and your portal.',
+    ),
+    badge: t('admin.hotspot.hub.badgePreLogin', 'Pre-login'),
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10 border-purple-500/20',
   },
   {
     href: '/admin/hotspot/reports',
-    label: 'Voucher Sales Report',
+    label: t('admin.hotspot.hub.modReports', 'Voucher Sales Report'),
     icon: BarChart3,
-    desc: 'Voucher sales recorded on the router, by date range, with totals and CSV export.',
-    badge: 'Sales',
+    desc: t(
+      'admin.hotspot.hub.modReportsDesc',
+      'Voucher sales recorded on the router, by date range, with totals and CSV export.',
+    ),
+    badge: t('admin.hotspot.hub.badgeSales', 'Sales'),
     color: 'text-rose-500',
     bgColor: 'bg-rose-500/10 border-rose-500/20',
   },
 ] as const;
 
 export function HotspotHubPage() {
+  const { t } = useLocale();
   const hs = useHotspotRouter();
   const dashboard = useHotspotDashboard(hs.routerId);
   const d = dashboard.data;
@@ -89,28 +111,27 @@ export function HotspotHubPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Hotspot & Captive Portal Hub"
-        subtitle="Manage MikroTik hotspot profiles, users, voucher codes, walled garden and sales."
+        title={t('admin.hotspot.hub.title', 'Hotspot & Captive Portal Hub')}
+        subtitle={t(
+          'admin.hotspot.hub.subtitle',
+          'Manage MikroTik hotspot profiles, users, voucher codes, walled garden and sales.',
+        )}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Hotspot', href: '/admin/hotspot' },
-          { label: 'Hub' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.hotspot', 'Hotspot'), href: '/admin/hotspot' },
+          { label: t('admin.hotspot.hub.crumb', 'Hub') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             <HotspotRouterSelect state={hs} />
-            <Link href="/admin/hotspot/vouchers">
-              <Button variant="outline" size="sm" className="h-9">
+            <Button variant="outline" size="sm" className="h-9" render={<Link href="/admin/hotspot/vouchers" />}>
                 <Ticket className="mr-2 h-4 w-4" />
-                Generate Vouchers
+                {t('admin.hotspot.hub.generateVouchers', 'Generate Vouchers')}
               </Button>
-            </Link>
-            <Link href="/admin/hotspot/packages">
-              <Button size="sm" className="h-9">
+            <Button size="sm" className="h-9" render={<Link href="/admin/hotspot/packages" />}>
                 <Package className="mr-2 h-4 w-4" />
-                New Package
+                {t('admin.hotspot.hub.newPackage', 'New Package')}
               </Button>
-            </Link>
           </div>
         }
       />
@@ -123,34 +144,34 @@ export function HotspotHubPage() {
           <HotspotQueryError
             error={dashboard.error}
             routerName={hs.router?.name}
-            title="Failed to load hotspot overview"
+            title={t('admin.hotspot.hub.loadFailed', 'Failed to load hotspot overview')}
             onRetry={() => void dashboard.refetch()}
           />
         ) : d ? (
           <HotspotKpiRow>
             <HotspotKpi
-              label="Live Sessions"
+              label={t('admin.hotspot.kpi.liveSessions', 'Live Sessions')}
               value={d.activeSessions}
-              hint="Guests online now"
+              hint={t('admin.hotspot.kpi.liveSessionsHint', 'Guests online now')}
               icon={<Activity className="h-4 w-4 text-emerald-500" />}
               positive
             />
             <HotspotKpi
-              label="Hotspot Users"
+              label={t('admin.hotspot.kpi.users', 'Hotspot Users')}
               value={d.totalUsers}
-              hint="Accounts & vouchers on the router"
+              hint={t('admin.hotspot.kpi.usersHint', 'Accounts & vouchers on the router')}
               icon={<Users className="h-4 w-4 text-sky-500" />}
             />
             <HotspotKpi
-              label="Sales Today"
+              label={t('admin.hotspot.kpi.salesToday', 'Sales Today')}
               value={formatBdtWithSymbol(d.incomeToday)}
-              hint="Recorded voucher sales"
+              hint={t('admin.hotspot.kpi.salesHint', 'Recorded voucher sales')}
               icon={<TrendingUp className="h-4 w-4 text-amber-500" />}
             />
             <HotspotKpi
-              label="Sales This Month"
+              label={t('admin.hotspot.kpi.salesMonth', 'Sales This Month')}
               value={formatBdtWithSymbol(d.incomeMonth)}
-              hint="Recorded voucher sales"
+              hint={t('admin.hotspot.kpi.salesHint', 'Recorded voucher sales')}
               icon={<CalendarDays className="h-4 w-4 text-primary" />}
             />
           </HotspotKpiRow>
@@ -160,10 +181,10 @@ export function HotspotHubPage() {
       {/* Module Navigation Cards */}
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Hotspot Control Center
+          {t('admin.hotspot.hub.controlCenter', 'Hotspot Control Center')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_MODULES.map((item) => {
+          {quickModules(t).map((item) => {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href}>

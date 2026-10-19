@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/i18n/locale-context';
 import {
   useBandwidthCategories,
   useCreateBandwidthCategory,
@@ -25,7 +26,7 @@ import {
 } from '../hooks/useBandwidthCatalog';
 import type { ActiveStatus, BandwidthCategory } from '../types';
 import { FieldError, OptionSelect } from '../components/OptionSelect';
-import { downloadCsv, fieldErrorsOf, isoDay } from '../utils';
+import { activeLabel, downloadCsv, fieldErrorsOf, isoDay, type Translate } from '../utils';
 
 /** Category and sub-category rows flattened for one table (sub-categories follow their parent). */
 interface CategoryRow {
@@ -79,12 +80,16 @@ const categorySearchFilter = (row: LegacyRow<CategoryRow>, _columnId: string, fi
 
 type DialogState = { mode: 'create' } | { mode: 'edit'; row: CategoryRow } | null;
 
-const STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
+const statusOptions = (t: Translate) => [
+  { value: 'active', label: activeLabel(t, true) },
+  { value: 'inactive', label: activeLabel(t, false) },
 ];
 
+const kindLabel = (t: Translate, kind: CategoryRow['kind']) =>
+  kind === 'Category' ? t('admin.bandwidth.shared.category', 'Category') : t('admin.bandwidth.shared.subcategory', 'Sub-category');
+
 export function BandwidthCategoriesPage() {
+  const { t } = useLocale();
   const { data, isLoading, isError, refetch } = useBandwidthCategories();
   const deleteCategory = useDeleteBandwidthCategory();
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -107,7 +112,14 @@ export function BandwidthCategoriesPage() {
     if (!toDelete) return;
     deleteCategory.mutate(
       { id: toDelete.categoryId, subIndex: toDelete.subIndex },
-      { onSuccess: () => toast.success(`${toDelete.kind} deleted`) },
+      {
+        onSuccess: () =>
+          toast.success(
+            toDelete.kind === 'Category'
+              ? t('admin.bandwidth.categories.categoryDeleted', 'Category deleted')
+              : t('admin.bandwidth.categories.subDeleted', 'Sub-category deleted'),
+          ),
+      },
     );
     setToDelete(null);
   };
@@ -116,7 +128,7 @@ export function BandwidthCategoriesPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Category',
+        header: t('admin.bandwidth.shared.category', 'Category'),
         enableHiding: false,
         size: 280,
         cell: ({ row }) => (
@@ -131,39 +143,41 @@ export function BandwidthCategoriesPage() {
             <div>
               <div className="font-bold text-sm text-foreground">{row.original.name}</div>
               {row.original.parentName ? (
-                <div className="text-[10px] text-muted-foreground">under {row.original.parentName}</div>
+                <div className="text-xs text-muted-foreground">{t('admin.bandwidth.categories.under', 'under {name}', { name: row.original.parentName })}</div>
               ) : null}
             </div>
           </div>
         ),
       },
       {
-        accessorKey: 'kind',
-        header: 'Type',
+        id: 'kind',
+        accessorFn: (row) => kindLabel(t, row.kind),
+        header: t('admin.bandwidth.categories.colType', 'Type'),
         size: 120,
-        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.kind}</span>,
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{kindLabel(t, row.original.kind)}</span>,
       },
       {
         accessorKey: 'shortDescription',
-        header: 'Description',
+        header: t('admin.bandwidth.shared.description', 'Description'),
         size: 240,
         cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.shortDescription || '—'}</span>,
       },
       {
         accessorKey: 'itemCount',
-        header: 'Items',
+        header: t('admin.bandwidth.categories.colItems', 'Items'),
         size: 110,
         cell: ({ row }) => (
           <Badge variant="secondary" className="font-mono text-xs">
-            {row.original.itemCount} items
+            {t('admin.bandwidth.categories.itemCount', '{n} items', { n: row.original.itemCount })}
           </Badge>
         ),
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
+        id: 'status',
+        accessorFn: (row) => activeLabel(t, row.status === 'active'),
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 110,
-        cell: ({ row }) => <StatusBadge status={row.original.status === 'active' ? 'active' : 'suspended'} label={row.original.status} />,
+        cell: ({ row }) => <StatusBadge status={row.original.status === 'active' ? 'active' : 'suspended'} label={activeLabel(t, row.original.status === 'active')} />,
       },
       {
         id: 'actions',
@@ -171,14 +185,14 @@ export function BandwidthCategoriesPage() {
         size: 90,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setDialog({ mode: 'edit', row: row.original })}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label={t('common.edit', 'Edit')} onClick={() => setDialog({ mode: 'edit', row: row.original })}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              aria-label="Delete"
+              aria-label={t('common.delete', 'Delete')}
               onClick={() => setToDelete(row.original)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -187,14 +201,14 @@ export function BandwidthCategoriesPage() {
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={4} />;
   if (isError) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load categories" description="Could not fetch bandwidth categories." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState variant="error" title={t('admin.bandwidth.categories.loadFailed', 'Failed to load categories')} description={t('admin.bandwidth.categories.loadFailedHint', 'Could not fetch bandwidth categories.')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
       </div>
     );
   }
@@ -202,20 +216,20 @@ export function BandwidthCategoriesPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Item Categories"
-        subtitle="Category and sub-category groups of the bandwidth item catalogue"
+        title={t('admin.bandwidth.categories.title', 'Bandwidth Item Categories')}
+        subtitle={t('admin.bandwidth.categories.subtitle', 'Category and sub-category groups of the bandwidth item catalogue')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
-          { label: 'Categories' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.bandwidth-buy', 'Bandwidth Buy'), url: '/admin/bandwidth/buy' },
+          { label: t('admin.bandwidth.buyHub.modCategories', 'Categories') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={rows.length === 0} className="text-xs border-border/80 hover:bg-accent">
-              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> Export Categories
+              <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" /> {t('admin.bandwidth.categories.export', 'Export Categories')}
             </Button>
             <Button size="sm" onClick={() => setDialog({ mode: 'create' })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-              <Plus className="h-3.5 w-3.5" /> Add Category
+              <Plus className="h-3.5 w-3.5" /> {t('admin.bandwidth.categories.add', 'Add Category')}
             </Button>
           </div>
         }
@@ -224,31 +238,31 @@ export function BandwidthCategoriesPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{categories.length}</span>{' '}
-          <span className="text-muted-foreground">categories</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.categories.statCategories', 'categories')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-foreground">{subTotal}</span>{' '}
-          <span className="text-muted-foreground">sub-categories</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.categories.statSub', 'sub-categories')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-primary">{itemTotal}</span>{' '}
-          <span className="text-muted-foreground">catalogue items</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.items.statItems', 'catalogue items')}</span>
         </p>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={rows}
         getRowId={(row) => row.key}
         searchKey="name"
-        searchPlaceholder="Search categories by name or description..."
+        searchPlaceholder={t('admin.bandwidth.categories.search', 'Search categories by name or description...')}
         searchFilterFn={categorySearchFilter}
         facetFilters={[
-          { columnId: 'kind', title: 'Type' },
-          { columnId: 'status', title: 'Status' },
+          { columnId: 'kind', title: t('admin.bandwidth.categories.colType', 'Type') },
+          { columnId: 'status', title: t('admin.customers.list.statusLabel', 'Status') },
         ]}
-        emptyTitle="No categories found"
-        emptyDescription="Create a bandwidth category to group catalogue items."
+        emptyTitle={t('admin.bandwidth.categories.emptyTitle', 'No categories found')}
+        emptyDescription={t('admin.bandwidth.categories.emptyHint', 'Create a bandwidth category to group catalogue items.')}
       />
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
@@ -267,13 +281,17 @@ export function BandwidthCategoriesPage() {
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={`Delete ${toDelete?.kind.toLowerCase() ?? 'category'} "${toDelete?.name ?? ''}"?`}
+        title={
+          toDelete?.kind === 'Sub-category'
+            ? t('admin.bandwidth.categories.deleteSubTitle', 'Delete sub-category "{name}"?', { name: toDelete.name })
+            : t('admin.bandwidth.categories.deleteTitle', 'Delete category "{name}"?', { name: toDelete?.name ?? '' })
+        }
         description={
           toDelete?.kind === 'Category'
-            ? 'A category that still has sub-categories cannot be deleted.'
-            : 'A sub-category that still has items cannot be deleted.'
+            ? t('admin.bandwidth.categories.deleteDesc', 'A category that still has sub-categories cannot be deleted.')
+            : t('admin.bandwidth.categories.deleteSubDesc', 'A sub-category that still has items cannot be deleted.')
         }
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={confirmDelete}
       />
@@ -282,6 +300,7 @@ export function BandwidthCategoriesPage() {
 }
 
 function CategoryForm({ editing, categories, onDone }: { editing: CategoryRow | null; categories: BandwidthCategory[]; onDone: () => void }) {
+  const { t } = useLocale();
   const create = useCreateBandwidthCategory();
   const update = useUpdateBandwidthCategory();
   const [form, setForm] = useState<CategoryInput>({
@@ -298,7 +317,15 @@ function CategoryForm({ editing, categories, onDone }: { editing: CategoryRow | 
     setErrors({});
     const callbacks = {
       onSuccess: () => {
-        toast.success(editing ? `${editing.kind} updated` : parentId ? 'Sub-category added' : 'Category added');
+        toast.success(
+          editing
+            ? editing.kind === 'Category'
+              ? t('admin.bandwidth.categories.categoryUpdated', 'Category updated')
+              : t('admin.bandwidth.categories.subUpdated', 'Sub-category updated')
+            : parentId
+              ? t('admin.bandwidth.categories.subAdded', 'Sub-category added')
+              : t('admin.bandwidth.categories.categoryAdded', 'Category added'),
+        );
         onDone();
       },
       onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
@@ -311,21 +338,27 @@ function CategoryForm({ editing, categories, onDone }: { editing: CategoryRow | 
     <>
       <DialogHeader>
         <DialogTitle className="text-base font-bold flex items-center gap-2">
-          <Tags className="h-4 w-4 text-primary" /> {editing ? `Edit ${editing.kind.toLowerCase()}` : 'Add bandwidth category'}
+          <Tags className="h-4 w-4 text-primary" /> {editing
+            ? editing.kind === 'Category'
+              ? t('admin.bandwidth.categories.editCategory', 'Edit category')
+              : t('admin.bandwidth.categories.editSub', 'Edit sub-category')
+            : t('admin.bandwidth.categories.addTitle', 'Add bandwidth category')}
         </DialogTitle>
         <DialogDescription className="text-xs">
-          {editing?.parentName ? `Sub-category under ${editing.parentName}.` : 'Pick a parent to create a sub-category instead.'}
+          {editing?.parentName
+            ? t('admin.bandwidth.categories.subUnder', 'Sub-category under {name}.', { name: editing.parentName })
+            : t('admin.bandwidth.categories.pickParent', 'Pick a parent to create a sub-category instead.')}
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="space-y-3.5 pt-2">
         {!editing ? (
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Parent category</Label>
+            <Label className="text-xs font-semibold">{t('admin.bandwidth.categories.parent', 'Parent category')}</Label>
             <OptionSelect
               value={parentId}
               onChange={setParentId}
-              emptyLabel="None — top-level category"
+              emptyLabel={t('admin.bandwidth.categories.noneTop', 'None — top-level category')}
               options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
             />
             <FieldError message={errors.parent_id} />
@@ -333,26 +366,26 @@ function CategoryForm({ editing, categories, onDone }: { editing: CategoryRow | 
         ) : null}
 
         <div className="space-y-1.5">
-          <Label htmlFor="cat-name" className="text-xs font-semibold">Name *</Label>
+          <Label htmlFor="cat-name" className="text-xs font-semibold">{t('admin.bandwidth.categories.name', 'Name *')}</Label>
           <Input id="cat-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="text-xs h-9" required minLength={3} aria-invalid={Boolean(errors.name) || undefined} />
           <FieldError message={errors.name} />
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold">Status *</Label>
-          <OptionSelect value={form.status} onChange={(v) => setForm({ ...form, status: v === 'inactive' ? 'inactive' : 'active' })} options={STATUS_OPTIONS} />
+          <Label className="text-xs font-semibold">{t('admin.bandwidth.shared.statusReq', 'Status *')}</Label>
+          <OptionSelect value={form.status} onChange={(v) => setForm({ ...form, status: v === 'inactive' ? 'inactive' : 'active' })} options={statusOptions(t)} />
           <FieldError message={errors.status} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cat-desc" className="text-xs font-semibold">Short description</Label>
+          <Label htmlFor="cat-desc" className="text-xs font-semibold">{t('admin.bandwidth.categories.shortDesc', 'Short description')}</Label>
           <Textarea id="cat-desc" rows={2} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} className="text-xs" />
         </div>
 
         <div className="flex justify-end gap-2 pt-3 border-t">
-          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">{t('common.cancel', 'Cancel')}</Button>
           <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
-            {pending ? 'Saving…' : 'Save'}
+            {pending ? t('admin.bandwidth.shared.saving', 'Saving…') : t('common.save', 'Save')}
           </Button>
         </div>
       </form>

@@ -16,6 +16,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Cable, Plus, Radio, ShieldCheck, Cpu, RotateCw, ListChecks, Pencil, Trash2, Clock, X } from 'lucide-react';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   ACS_JOB_ACTIONS,
   useAcsDevices,
@@ -31,7 +33,7 @@ import type { CustomerOption } from '../hooks/use-network-ops';
 import { useServerTable } from '../hooks/use-server-table';
 import { CustomerPicker, OptionSelect, fmtDateTime } from '../components/NetOpsControls';
 
-const actionLabel: Record<AcsJobAction, string> = {
+const ACTION_FALLBACK: Record<AcsJobAction, string> = {
   push_config: 'Push configuration',
   reboot: 'Reboot',
   factory_reset: 'Factory reset',
@@ -51,6 +53,9 @@ interface DeviceForm {
 const emptyForm: DeviceForm = { serial: '', manufacturer: '', model: '', firmware: '', macAddress: '', customer: null, notes: '' };
 
 export function AcsPage() {
+  const t = useTranslations();
+  const actionLabel = (action: string) =>
+    action in ACTION_FALLBACK ? t(`admin.ops.acs.action.${action}`, ACTION_FALLBACK[action as AcsJobAction]) : action;
   const table = useServerTable();
   const { data, isLoading, isError, error, refetch } = useAcsDevices({ page: table.page, pageSize: table.pageSize, search: table.search });
   const saveDevice = useSaveAcsDevice();
@@ -116,7 +121,7 @@ export function AcsPage() {
   const columns: LegacyColumnDef<AcsDevice, unknown>[] = [
     {
       accessorKey: 'serial',
-      header: 'CPE Serial / ID',
+      header: t('admin.ops.acs.colSerial', 'CPE Serial / ID'),
       enableHiding: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -132,7 +137,7 @@ export function AcsPage() {
     },
     {
       accessorKey: 'manufacturer',
-      header: 'Manufacturer',
+      header: t('admin.ops.acs.colManufacturer', 'Manufacturer'),
       cell: ({ row }) => (
         <div className="flex items-center gap-1.5">
           <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
@@ -142,7 +147,7 @@ export function AcsPage() {
     },
     {
       accessorKey: 'model',
-      header: 'Model / Firmware',
+      header: t('admin.ops.acs.colModel', 'Model / Firmware'),
       cell: ({ row }) => (
         <div>
           <Badge variant="outline" className="font-mono text-xs border-border/70">
@@ -154,40 +159,41 @@ export function AcsPage() {
     },
     {
       accessorKey: 'customerName',
-      header: 'Customer',
+      header: t('admin.ops.acs.colCustomer', 'Customer'),
       cell: ({ row }) => <span className="text-sm text-foreground">{row.original.customerName ?? '—'}</span>,
     },
     {
       accessorKey: 'lastInformAt',
-      header: 'Last Inform',
+      header: t('admin.ops.acs.colLastInform', 'Last Inform'),
       cell: ({ row }) =>
         row.original.lastInformAt ? (
           <span className="font-mono text-xs font-semibold text-foreground">{fmtDateTime(row.original.lastInformAt)}</span>
         ) : (
           <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">
-            Never informed
+            {t('admin.ops.acs.neverInformedBadge', 'Never informed')}
           </Badge>
         ),
     },
     {
       id: 'actions',
-      header: () => <span className="sr-only">Actions</span>,
+      header: () => <span className="sr-only">{t('common.actions', 'Actions')}</span>,
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
         const dev = row.original;
         return (
           <div className="flex items-center justify-end gap-1.5">
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1" disabled={queueJob.isPending} onClick={() => handleQueue(dev.id, 'reboot')} title="Queue a TR-069 reboot">
-              <RotateCw className="h-3 w-3 text-amber-500" /> Reboot
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1" disabled={queueJob.isPending} onClick={() => handleQueue(dev.id, 'reboot')} title={t('admin.ops.acs.rebootTitle', 'Queue a TR-069 reboot')}>
+              <RotateCw className="h-3 w-3 text-amber-500" /> {t('admin.ops.acs.reboot', 'Reboot')}
             </Button>
             <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => setJobsDevice(dev)}>
-              <ListChecks className="h-3 w-3" /> Jobs{dev.queuedJobs > 0 ? ` (${dev.queuedJobs})` : ''}
+              <ListChecks className="h-3 w-3" /> {t('admin.ops.acs.jobs', 'Jobs')}
+              {dev.queuedJobs > 0 ? ` (${formatCount(dev.queuedJobs)})` : ''}
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(dev)} title="Edit">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(dev)} title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(dev)} title="Remove">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteTarget(dev)} title={t('admin.ops.acs.remove', 'Remove')} aria-label={t('admin.ops.acs.remove', 'Remove')}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -198,27 +204,39 @@ export function AcsPage() {
 
   if (isLoading && !data) return <PageSkeleton variant="table" />;
   if (isError && !data) {
-    return <EmptyState title="Failed to load ACS devices" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return (
+      <EmptyState
+        variant="error"
+        title={t('admin.ops.acs.loadFailed', 'Failed to load ACS devices')}
+        description={errorMessage(error)}
+        actionLabel={t('common.retry', 'Retry')}
+        onAction={() => refetch()}
+      />
+    );
   }
 
   const summary = data?.summary;
   const kpis = [
-    { label: 'Managed CPEs', value: summary?.total ?? 0, hint: 'Registered TR-069 routers', icon: Cable, tone: 'text-primary', text: 'text-foreground' },
-    { label: 'Informed (24h)', value: `${summary?.informed24h ?? 0} / ${summary?.total ?? 0}`, hint: 'Sent an inform in the last day', icon: ShieldCheck, tone: 'text-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
-    { label: 'Never Informed', value: summary?.neverInformed ?? 0, hint: 'No CWMP inform recorded yet', icon: Radio, tone: 'text-rose-500', text: 'text-rose-600 dark:text-rose-400' },
-    { label: 'Queued Jobs', value: summary?.queuedJobs ?? 0, hint: 'Waiting for the ACS worker', icon: Clock, tone: 'text-blue-500', text: 'text-blue-600 dark:text-blue-400' },
+    { label: t('admin.ops.acs.kpiManaged', 'Managed CPEs'), value: formatCount(summary?.total ?? 0), hint: t('admin.ops.acs.kpiManagedHint', 'Registered TR-069 routers'), icon: Cable, tone: 'text-primary', text: 'text-foreground' },
+    { label: t('admin.ops.acs.kpiInformed', 'Informed (24h)'), value: `${formatCount(summary?.informed24h ?? 0)} / ${formatCount(summary?.total ?? 0)}`, hint: t('admin.ops.acs.kpiInformedHint', 'Sent an inform in the last day'), icon: ShieldCheck, tone: 'text-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+    { label: t('admin.ops.acs.kpiNever', 'Never Informed'), value: formatCount(summary?.neverInformed ?? 0), hint: t('admin.ops.acs.kpiNeverHint', 'No CWMP inform recorded yet'), icon: Radio, tone: 'text-rose-500', text: 'text-rose-600 dark:text-rose-400' },
+    { label: t('admin.ops.acs.kpiQueued', 'Queued Jobs'), value: formatCount(summary?.queuedJobs ?? 0), hint: t('admin.ops.acs.kpiQueuedHint', 'Waiting for the ACS worker'), icon: Clock, tone: 'text-blue-500', text: 'text-blue-600 dark:text-blue-400' },
   ];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="ACS / TR-069 Auto Configuration Server"
-        subtitle="Customer CPE registry and queued TR-069 configuration jobs"
-        breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Network' }, { label: 'ACS / TR-069' }]}
+        title={t('admin.ops.acs.title', 'ACS / TR-069 Auto Configuration Server')}
+        subtitle={t('admin.ops.acs.subtitle', 'Customer CPE registry and queued TR-069 configuration jobs')}
+        breadcrumb={[
+          { label: t('common.crumb.dashboard', 'Dashboard'), url: '/admin/dashboard' },
+          { label: t('common.crumb.network', 'Network') },
+          { label: t('nav.acs', 'ACS / TR-069') },
+        ]}
         actions={
           <Button size="sm" onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Register CPE
+            {t('admin.ops.acs.register', 'Register CPE')}
           </Button>
         }
       />
@@ -238,13 +256,13 @@ export function AcsPage() {
         ))}
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data?.items ?? []}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search by serial, manufacturer, model, firmware or MAC..."
-        emptyTitle={table.search ? 'No CPEs match your search' : 'No CPEs registered'}
-        emptyDescription="Register a customer router to manage it over TR-069."
+        searchPlaceholder={t('admin.ops.acs.searchPlaceholder', 'Search by serial, manufacturer, model, firmware or MAC...')}
+        emptyTitle={table.search ? t('admin.ops.acs.emptyFiltered', 'No CPEs match your search') : t('admin.ops.acs.emptyNone', 'No CPEs registered')}
+        emptyDescription={t('admin.ops.acs.emptyHint', 'Register a customer router to manage it over TR-069.')}
         server={table.server(data?.meta.total ?? 0)}
       />
 
@@ -252,46 +270,50 @@ export function AcsPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit CPE' : 'Register Customer CPE Router'}</DialogTitle>
-            <DialogDescription>Record a customer router so TR-069 jobs can be queued for it.</DialogDescription>
+            <DialogTitle>{editing ? t('admin.ops.acs.editTitle', 'Edit CPE') : t('admin.ops.acs.registerTitle', 'Register Customer CPE Router')}</DialogTitle>
+            <DialogDescription>{t('admin.ops.acs.registerDesc', 'Record a customer router so TR-069 jobs can be queued for it.')}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="serial">Serial Number *</Label>
+              <Label htmlFor="serial">{t('admin.ops.acs.fieldSerial', 'Serial Number *')}</Label>
               <Input id="serial" value={form.serial} onChange={(e) => set({ serial: e.target.value })} required />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="manufacturer">Manufacturer</Label>
+                <Label htmlFor="manufacturer">{t('admin.ops.acs.colManufacturer', 'Manufacturer')}</Label>
                 <Input id="manufacturer" value={form.manufacturer} onChange={(e) => set({ manufacturer: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="model">Model</Label>
+                <Label htmlFor="model">{t('admin.ops.acs.fieldModel', 'Model')}</Label>
                 <Input id="model" value={form.model} onChange={(e) => set({ model: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="firmware">Firmware</Label>
+                <Label htmlFor="firmware">{t('admin.ops.acs.fieldFirmware', 'Firmware')}</Label>
                 <Input id="firmware" value={form.firmware} onChange={(e) => set({ firmware: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="mac">MAC Address</Label>
+                <Label htmlFor="mac">{t('admin.ops.acs.fieldMac', 'MAC Address')}</Label>
                 <Input id="mac" value={form.macAddress} onChange={(e) => set({ macAddress: e.target.value })} className="font-mono" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="acs-customer">Customer</Label>
+              <Label htmlFor="acs-customer">{t('admin.ops.acs.colCustomer', 'Customer')}</Label>
               <CustomerPicker id="acs-customer" value={form.customer} onChange={(c) => set({ customer: c })} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="acs-notes">Notes</Label>
+              <Label htmlFor="acs-notes">{t('admin.ops.acs.fieldNotes', 'Notes')}</Label>
               <Textarea id="acs-notes" value={form.notes} onChange={(e) => set({ notes: e.target.value })} rows={2} />
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button type="submit" disabled={saveDevice.isPending}>
-                {saveDevice.isPending ? 'Saving…' : editing ? 'Save' : 'Register Device'}
+                {saveDevice.isPending
+                  ? t('admin.ops.acs.saving', 'Saving…')
+                  : editing
+                    ? t('common.save', 'Save')
+                    : t('admin.ops.acs.registerDevice', 'Register Device')}
               </Button>
             </DialogFooter>
           </form>
@@ -306,77 +328,82 @@ export function AcsPage() {
               <SheetHeader>
                 <SheetTitle className="font-mono">{jobsDevice.serial}</SheetTitle>
                 <SheetDescription>
-                  {[jobsDevice.manufacturer, jobsDevice.model].filter(Boolean).join(' ') || 'CPE'} · {jobsDevice.customerName ?? 'No customer'}
+                  {[jobsDevice.manufacturer, jobsDevice.model].filter(Boolean).join(' ') || 'CPE'} · {jobsDevice.customerName ?? t('admin.ops.acs.noCustomer', 'No customer')}
                 </SheetDescription>
               </SheetHeader>
 
               <div className="space-y-3 rounded-lg border border-border/70 p-4">
-                <Label>Queue a job</Label>
+                <Label>{t('admin.ops.acs.queueJob', 'Queue a job')}</Label>
                 <OptionSelect
                   value={jobAction}
                   onChange={(v) => setJobAction((v || 'push_config') as AcsJobAction)}
-                  options={ACS_JOB_ACTIONS.map((a) => ({ value: a, label: actionLabel[a] }))}
-                  placeholder="Action"
+                  options={ACS_JOB_ACTIONS.map((a) => ({ value: a, label: actionLabel(a) }))}
+                  placeholder={t('admin.ops.acs.actionPlaceholder', 'Action')}
                 />
                 {jobAction === 'push_config' && (
                   <div className="space-y-2">
                     {params.map((p, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <Input
-                          placeholder="TR-069 parameter"
+                          placeholder={t('admin.ops.acs.paramPlaceholder', 'TR-069 parameter')}
+                          aria-label={t('admin.ops.acs.paramPlaceholder', 'TR-069 parameter')}
                           value={p.key}
                           onChange={(e) => setParams((ps) => ps.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)))}
                           className="h-9 text-xs font-mono"
                         />
                         <Input
-                          placeholder="Value"
+                          placeholder={t('admin.ops.acs.valuePlaceholder', 'Value')}
+                          aria-label={t('admin.ops.acs.valuePlaceholder', 'Value')}
                           value={p.value}
                           onChange={(e) => setParams((ps) => ps.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
                           className="h-9 text-xs"
                         />
-                        <Button type="button" variant="ghost" size="icon" className="h-9 w-9" disabled={params.length === 1} onClick={() => setParams((ps) => ps.filter((_, j) => j !== i))}>
+                        <Button type="button" variant="ghost" size="icon" aria-label={t('admin.ops.acs.removeParam', 'Remove parameter')} className="h-9 w-9" disabled={params.length === 1} onClick={() => setParams((ps) => ps.filter((_, j) => j !== i))}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ))}
                     <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setParams((ps) => [...ps, { key: '', value: '' }])}>
-                      <Plus className="h-3 w-3 mr-1" /> Parameter
+                      <Plus className="h-3 w-3 mr-1" /> {t('admin.ops.acs.addParam', 'Parameter')}
                     </Button>
                   </div>
                 )}
                 <Button className="w-full" disabled={queueJob.isPending} onClick={() => handleQueue(jobsDevice.id, jobAction)}>
-                  {queueJob.isPending ? 'Queuing…' : 'Queue job'}
+                  {queueJob.isPending ? t('admin.ops.acs.queuing', 'Queuing…') : t('admin.ops.acs.queueJobButton', 'Queue job')}
                 </Button>
               </div>
 
               <div className="space-y-2">
-                <Label>Job history</Label>
+                <Label>{t('admin.ops.acs.jobHistory', 'Job history')}</Label>
                 {jobs.isLoading ? (
-                  <p className="text-xs text-muted-foreground">Loading…</p>
+                  <p className="text-xs text-muted-foreground">{t('admin.ops.acs.loading', 'Loading…')}</p>
                 ) : jobs.isError ? (
                   <p className="text-xs text-destructive">{errorMessage(jobs.error)}</p>
                 ) : (jobs.data?.items ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No jobs queued for this CPE.</p>
+                  <p className="text-xs text-muted-foreground">{t('admin.ops.acs.noJobs', 'No jobs queued for this CPE.')}</p>
                 ) : (
                   jobs.data?.items.map((j) => (
                     <div key={j.id} className="flex items-start justify-between gap-2 rounded-lg border border-border/60 p-3 text-xs">
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground">{actionLabel[j.action as AcsJobAction] ?? j.action}</p>
+                        <p className="font-semibold text-foreground">{actionLabel(j.action)}</p>
                         {Object.keys(j.parameters).length > 0 && (
-                          <p className="font-mono text-[11px] text-muted-foreground break-all">
+                          <p className="font-mono text-xs text-muted-foreground break-all">
                             {Object.entries(j.parameters).map(([k, v]) => `${k}=${v}`).join(', ')}
                           </p>
                         )}
-                        <p className="text-[11px] text-muted-foreground">Queued {fmtDateTime(j.createdAt)}{j.processedAt ? ` · processed ${fmtDateTime(j.processedAt)}` : ''}</p>
-                        {j.result && <p className="text-[11px] text-foreground/80">{j.result}</p>}
+                        <p className="text-xs text-muted-foreground">
+                          {t('admin.ops.acs.queuedAt', 'Queued {date}', { date: fmtDateTime(j.createdAt) })}
+                          {j.processedAt ? ` · ${t('admin.ops.acs.processedAt', 'processed {date}', { date: fmtDateTime(j.processedAt) })}` : ''}
+                        </p>
+                        {j.result && <p className="text-xs text-foreground/80">{j.result}</p>}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <Badge variant="outline" className="capitalize text-[10px]">
-                          {j.status}
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {t(`status.${j.status}`, j.status)}
                         </Badge>
                         {j.status === 'queued' && (
-                          <Button variant="ghost" size="sm" className="h-6 text-[11px] text-destructive" disabled={cancelJob.isPending} onClick={() => cancelJob.mutate(j.id)}>
-                            Cancel
+                          <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" disabled={cancelJob.isPending} onClick={() => cancelJob.mutate(j.id)}>
+                            {t('common.cancel', 'Cancel')}
                           </Button>
                         )}
                       </div>
@@ -392,9 +419,9 @@ export function AcsPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Remove CPE"
-        description={`Remove ${deleteTarget?.serial ?? ''} from the registry? Its queued jobs are dropped.`}
-        confirmLabel="Remove"
+        title={t('admin.ops.acs.removeTitle', 'Remove CPE')}
+        description={t('admin.ops.acs.removeDesc', 'Remove {serial} from the registry? Its queued jobs are dropped.', { serial: deleteTarget?.serial ?? '' })}
+        confirmLabel={t('admin.ops.acs.remove', 'Remove')}
         destructive
         onConfirm={() => {
           if (deleteTarget) deleteDevice.mutate(deleteTarget.id);

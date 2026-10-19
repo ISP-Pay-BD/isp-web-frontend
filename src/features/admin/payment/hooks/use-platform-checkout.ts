@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /** Display names for the gateway slugs the backend reports as checkout providers. */
 export const GATEWAY_LABEL: Record<string, string> = {
@@ -30,16 +31,17 @@ export function invalidatePlatformBilling(qc: ReturnType<typeof useQueryClient>)
  * the customer app). Redirects the browser to the gateway on success.
  */
 export function usePlatformCheckout() {
+  const t = useTranslations();
   return useMutation({
     mutationFn: async ({ paymentId, gateway }: { paymentId: string; gateway: string }) =>
       http.post<Record<string, unknown>>(`/v1/reseller/billing/checkout/${gateway}`, { payment_id: Number(paymentId) }),
     onSuccess: (data) => {
       const url = str(data?.redirect_url ?? data?.gateway_page_url);
       if (url) {
-        toast.message('Redirecting to the payment gateway…');
+        toast.message(t('admin.payment.toast.redirecting', 'Redirecting to the payment gateway…'));
         window.location.assign(url);
       } else {
-        toast.error('The gateway did not return a checkout page.');
+        toast.error(t('admin.payment.toast.noCheckout', 'The gateway did not return a checkout page.'));
       }
     },
   });
@@ -48,15 +50,16 @@ export function usePlatformCheckout() {
 /** GET /v1/reseller/billing/checkout/{gateway}/status/{ref} — re-verifies with the gateway. */
 export function useCheckoutStatus() {
   const qc = useQueryClient();
+  const t = useTranslations();
   return useMutation({
     mutationFn: async ({ gateway, reference }: { gateway: string; reference: string }) =>
       http.get<{ status?: string }>(`/v1/reseller/billing/checkout/${gateway}/status/${encodeURIComponent(reference)}`),
     onSuccess: (data) => {
       invalidatePlatformBilling(qc);
       const status = str(data?.status);
-      if (status === 'completed') toast.success('Payment confirmed by the gateway');
-      else if (status === 'failed') toast.error('The gateway reports this payment as failed');
-      else toast.message('Still waiting for the gateway to confirm this payment');
+      if (status === 'completed') toast.success(t('admin.payment.toast.confirmed', 'Payment confirmed by the gateway'));
+      else if (status === 'failed') toast.error(t('admin.payment.toast.failed', 'The gateway reports this payment as failed'));
+      else toast.message(t('admin.payment.toast.waiting', 'Still waiting for the gateway to confirm this payment'));
     },
   });
 }

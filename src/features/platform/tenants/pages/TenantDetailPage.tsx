@@ -8,9 +8,10 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatBdt } from '@/lib/format';
+import { formatBdt, formatCount } from '@/lib/format';
 import { ExternalLink, Edit2, Globe, Ticket, HeartPulse, Wallet } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from '@/i18n/locale-context';
 
 interface TenantDetailPageProps {
   tenantId: string;
@@ -26,6 +27,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
+  const t = useTranslations();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['platform', 'tenants', tenantId],
     queryFn: () => platformService.getTenantById(tenantId),
@@ -35,9 +37,9 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
   if (error || !data) {
     return (
       <EmptyState
-        title="Tenant not found"
-        description={error instanceof Error ? error.message : 'Could not load tenant portal details.'}
-        actionLabel="Retry"
+        title={t('platform.tenants.detail.notFound', 'Tenant not found')}
+        description={error instanceof Error ? error.message : t('platform.tenants.detail.notFoundHint', 'Could not load tenant portal details.')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -51,34 +53,28 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
         title={tenant.name}
         subtitle={`${tenant.domain}${tenant.plan ? ` — ${tenant.plan}` : ''}`}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Tenants', href: '/platform/tenants' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('common.crumb.tenants', 'Tenants'), href: '/platform/tenants' },
           { label: tenant.name },
         ]}
         actions={
           <div className="flex flex-wrap gap-2">
             <a href={tenant.portalUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
-                <ExternalLink className="mr-1.5 h-4 w-4" /> Open Portal
+                <ExternalLink className="mr-1.5 h-4 w-4" /> {t('platform.tenants.detail.openPortal', 'Open Portal')}
               </Button>
             </a>
-            <Link href={`/platform/tenants/${tenant.id}/health`}>
-              <Button variant="outline" size="sm">
-                <HeartPulse className="mr-1.5 h-4 w-4" /> Health
+            <Button variant="outline" size="sm" render={<Link href={`/platform/tenants/${tenant.id}/health`} />}>
+                <HeartPulse className="mr-1.5 h-4 w-4" /> {t('platform.tenants.detail.health', 'Health')}
               </Button>
-            </Link>
             {tenant.ownerUserId ? (
-              <Link href={`/platform/admins/${tenant.ownerUserId}/billing`}>
-                <Button variant="outline" size="sm">
-                  <Wallet className="mr-1.5 h-4 w-4" /> Billing
+              <Button variant="outline" size="sm" render={<Link href={`/platform/admins/${tenant.ownerUserId}/billing`} />}>
+                  <Wallet className="mr-1.5 h-4 w-4" /> {t('platform.tenants.detail.billing', 'Billing')}
                 </Button>
-              </Link>
             ) : null}
-            <Link href={`/platform/tenants/${tenant.id}/edit`}>
-              <Button size="sm" className="bg-primary hover:bg-primary/90">
-                <Edit2 className="mr-1.5 h-4 w-4" /> Edit
+            <Button size="sm" className="bg-primary hover:bg-primary/90" render={<Link href={`/platform/tenants/${tenant.id}/edit`} />}>
+                <Edit2 className="mr-1.5 h-4 w-4" /> {t('platform.tenants.detail.edit', 'Edit')}
               </Button>
-            </Link>
           </div>
         }
       />
@@ -87,13 +83,13 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
         <Card className="border-border/60 lg:col-span-1">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Globe className="h-4 w-4" /> Portal Overview
+              <Globe className="h-4 w-4" /> {t('platform.tenants.detail.overview', 'Portal Overview')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             {tenant.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={tenant.logoUrl} alt={`${tenant.name} logo`} className="mx-auto mb-4 h-16 w-16 rounded-xl object-contain" />
+              <img src={tenant.logoUrl} alt={t('platform.tenants.detail.logoAlt', '{name} logo', { name: tenant.name })} className="mx-auto mb-4 h-16 w-16 rounded-xl object-contain" />
             ) : (
               <div
                 className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground"
@@ -102,19 +98,19 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
                 {tenant.name.slice(0, 2).toUpperCase()}
               </div>
             )}
-            <Row label="Status">
+            <Row label={t('admin.customers.list.statusLabel', 'Status')}>
               <Badge variant="outline" className="capitalize">
-                {tenant.status}
+                {t(`status.${tenant.status}`, tenant.status)}
               </Badge>
             </Row>
-            <Row label="Subscribers">
-              <span className="font-semibold tabular-nums">{tenant.customers.toLocaleString()}</span>
+            <Row label={t('platform.tenants.detail.subscribers', 'Subscribers')}>
+              <span className="font-semibold tabular-nums">{formatCount(tenant.customers)}</span>
             </Row>
-            <Row label="Resellers">{tenant.resellers.toLocaleString()}</Row>
-            <Row label="Employees">{tenant.employees.toLocaleString()}</Row>
-            <Row label="Paid this month">৳{formatBdt(tenant.monthRevenue)}</Row>
-            <Row label="Created">{platformDate(tenant.createdAt)}</Row>
-            <Row label="Last Updated">{platformDate(tenant.updatedAt)}</Row>
+            <Row label={t('platform.tenants.detail.resellers', 'Resellers')}>{formatCount(tenant.resellers)}</Row>
+            <Row label={t('platform.tenants.detail.employees', 'Employees')}>{formatCount(tenant.employees)}</Row>
+            <Row label={t('platform.tenants.detail.paidThisMonth', 'Paid this month')}>৳{formatBdt(tenant.monthRevenue)}</Row>
+            <Row label={t('platform.tenants.detail.created', 'Created')}>{platformDate(tenant.createdAt)}</Row>
+            <Row label={t('platform.tenants.detail.updated', 'Last Updated')}>{platformDate(tenant.updatedAt)}</Row>
             {tenant.notes ? (
               <p className="mt-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">{tenant.notes}</p>
             ) : null}
@@ -123,43 +119,45 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
 
         <Card className="border-border/60 lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Owner Contact</CardTitle>
+            <CardTitle className="text-base">{t('platform.tenants.detail.ownerContact', 'Owner Contact')}</CardTitle>
           </CardHeader>
           <CardContent>
             {tenant.ownerUserId ? (
               <dl className="grid gap-3 sm:grid-cols-2 text-sm">
                 <div>
-                  <dt className="text-muted-foreground text-xs">Name</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.ownerName', 'Name')}</dt>
                   <dd className="font-medium">{tenant.ownerName ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Organization</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.organization', 'Organization')}</dt>
                   <dd className="font-medium">{tenant.organizationName ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Email</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.email', 'Email')}</dt>
                   <dd className="font-mono text-xs">{tenant.ownerEmail ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Phone</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.phone', 'Phone')}</dt>
                   <dd className="font-mono">{tenant.ownerPhone ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Admin ID</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.adminId', 'Admin ID')}</dt>
                   <dd className="font-mono text-xs">{tenant.ownerUserId}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground text-xs">Platform subscription</dt>
+                  <dt className="text-muted-foreground text-xs">{t('platform.tenants.detail.platformSubscription', 'Platform subscription')}</dt>
                   <dd className="capitalize">
-                    {tenant.ownerSubscriptionStatus ?? '—'}
+                    {tenant.ownerSubscriptionStatus ? t(`status.${tenant.ownerSubscriptionStatus}`, tenant.ownerSubscriptionStatus) : '—'}
                     {tenant.ownerWillExpire ? (
-                      <span className="ml-1 text-xs text-muted-foreground">until {platformDate(tenant.ownerWillExpire)}</span>
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        {t('platform.tenants.detail.until', 'until {date}', { date: platformDate(tenant.ownerWillExpire) })}
+                      </span>
                     ) : null}
                   </dd>
                 </div>
               </dl>
             ) : (
-              <p className="text-sm text-muted-foreground">No owner account is linked to this portal.</p>
+              <p className="text-sm text-muted-foreground">{t('platform.tenants.detail.noOwner', 'No owner account is linked to this portal.')}</p>
             )}
           </CardContent>
         </Card>
@@ -168,33 +166,31 @@ export function TenantDetailPage({ tenantId }: TenantDetailPageProps) {
       <Card className="border-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            <Ticket className="h-4 w-4" /> Support Tickets raised by the owner
+            <Ticket className="h-4 w-4" /> {t('platform.tenants.detail.ticketsTitle', 'Support Tickets raised by the owner')}
           </CardTitle>
-          <Link href="/platform/support-tickets">
-            <Button variant="ghost" size="sm" className="text-xs">
-              View all tickets
+          <Button variant="ghost" size="sm" className="text-xs" render={<Link href="/platform/support-tickets" />}>
+              {t('platform.tenants.detail.viewAllTickets', 'View all tickets')}
             </Button>
-          </Link>
         </CardHeader>
         <CardContent>
           {tickets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No support tickets for this tenant.</p>
+            <p className="text-sm text-muted-foreground">{t('platform.tenants.detail.noTickets', 'No support tickets for this tenant.')}</p>
           ) : (
             <div className="space-y-2">
-              {tickets.map((t) => (
+              {tickets.map((ticket) => (
                 <Link
-                  key={t.id}
-                  href={`/platform/support-tickets?ticket=${t.id}`}
+                  key={ticket.id}
+                  href={`/platform/support-tickets?ticket=${ticket.id}`}
                   className="flex items-center justify-between rounded-lg border border-border/40 p-3 text-sm hover:bg-muted/30"
                 >
                   <div>
-                    <div className="font-medium">{t.subject}</div>
+                    <div className="font-medium">{ticket.subject}</div>
                     <div className="text-xs text-muted-foreground capitalize">
-                      {t.category} · {t.priority} · {platformDateTime(t.createdAt)}
+                      {t(`admin.support.category.${ticket.category}`, ticket.category)} · {t(`admin.support.priority.${ticket.priority}`, ticket.priority)} · {platformDateTime(ticket.createdAt)}
                     </div>
                   </div>
                   <Badge variant="outline" className="capitalize text-xs">
-                    {t.status}
+                    {t(`admin.support.status.${ticket.status}`, ticket.status)}
                   </Badge>
                 </Link>
               ))}

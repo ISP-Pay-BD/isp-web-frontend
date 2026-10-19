@@ -11,12 +11,59 @@ import {
   type FeatureValue,
 } from '../hooks/use-marketing-pricing';
 
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+
+type Translate = ReturnType<typeof useTranslations>;
+
+/**
+ * The pricing hook builds the comparison rows in English; this maps the labels it generates to the active
+ * language. Anything else (plan names, feature names from the admin packages) is shown as given.
+ */
+function localizeText(t: Translate, text: string): string {
+  switch (text) {
+    case 'Plan limits':
+      return t('marketing.pricing.comparison.planLimits', 'Plan limits');
+    case 'Included features':
+      return t('marketing.pricing.comparison.includedFeatures', 'Included features');
+    case 'Subscribers':
+      return t('marketing.pricing.comparison.subscribers', 'Subscribers');
+    case 'Free trial':
+      return t('marketing.pricing.comparison.freeTrial', 'Free trial');
+    case 'Unlimited':
+      return t('marketing.pricing.comparison.unlimited', 'Unlimited');
+    case 'Unlimited subscribers':
+      return t('marketing.pricing.comparison.unlimitedSubscribers', 'Unlimited subscribers');
+    case '/mo':
+      return t('marketing.pricing.comparison.perMonth', '/mo');
+    case '/year':
+      return t('marketing.pricing.comparison.perYear', '/year');
+    case '/week':
+      return t('marketing.pricing.comparison.perWeek', '/week');
+    case 'Start Free Trial':
+      return t('marketing.pricing.comparison.startFreeTrial', 'Start Free Trial');
+    case 'Get Started':
+      return t('marketing.pricing.comparison.getStarted', 'Get Started');
+  }
+  const days = /^(\d+) days$/.exec(text);
+  if (days) return t('marketing.pricing.comparison.days', '{n} days', { n: formatCount(Number(days[1])) });
+  const upTo = /^Up to (.+) subscribers$/.exec(text);
+  if (upTo) return t('marketing.pricing.comparison.upToSubscribers', 'Up to {count} subscribers', { count: upTo[1] });
+  return text;
+}
+
 /* ── Cell renderer ────────────────────────────────────────────────────── */
 
 function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?: boolean }) {
+  const t = useTranslations();
+
   if (value === true) {
     return (
-      <span className="inline-flex size-6 items-center justify-center rounded-full bg-emerald-500/15">
+      <span
+        role="img"
+        aria-label={t('marketing.pricing.comparison.included', 'Included')}
+        className="inline-flex size-6 items-center justify-center rounded-full bg-emerald-500/15"
+      >
         <Check className="size-3.5 text-emerald-400" />
       </span>
     );
@@ -24,7 +71,11 @@ function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?
 
   if (value === false) {
     return (
-      <span className="inline-flex size-6 items-center justify-center rounded-full bg-white/5">
+      <span
+        role="img"
+        aria-label={t('marketing.pricing.comparison.notIncluded', 'Not included')}
+        className="inline-flex size-6 items-center justify-center rounded-full bg-white/5"
+      >
         <Minus className="size-3.5 text-white/25" />
       </span>
     );
@@ -37,7 +88,7 @@ function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?
         highlighted ? 'text-white' : 'text-white/80'
       )}
     >
-      {value}
+      {localizeText(t, value)}
     </span>
   );
 }
@@ -45,6 +96,7 @@ function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted?
 /* ── Mobile Card Layout ───────────────────────────────────────────────── */
 
 function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans: ComparisonPlan[]; groups: ComparisonGroup[] }) {
+  const t = useTranslations();
   const plan = plans[planIndex];
 
   return (
@@ -59,22 +111,24 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
       {/* Plan header */}
       <div className="text-center">
         {plan.highlighted && (
-          <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-medium tracking-wide text-white">
-            Most Popular
+          <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-xs font-medium tracking-wide text-white">
+            {t('marketing.pricing.comparison.mostPopular', 'Most Popular')}
           </span>
         )}
         <h3 className="font-landing-display text-xl font-bold text-white">{plan.name}</h3>
-        <p className="mt-0.5 text-xs text-white/50">{plan.subtitle}</p>
+        <p className="mt-0.5 text-xs text-white/50">{localizeText(t, plan.subtitle)}</p>
         <div className="mt-3 flex items-baseline justify-center gap-1">
           {plan.priceBdt !== null ? (
             <>
               <span className="text-3xl font-extrabold text-white">
-                ৳{plan.priceBdt.toLocaleString()}
+                {formatBdtWithSymbol(plan.priceBdt)}
               </span>
-              <span className="text-xs text-white/40">{plan.period}</span>
+              <span className="text-xs text-white/60">{localizeText(t, plan.period)}</span>
             </>
           ) : (
-            <span className="text-2xl font-bold text-white">Custom</span>
+            <span className="text-2xl font-bold text-white">
+              {t('marketing.pricing.comparison.custom', 'Custom')}
+            </span>
           )}
         </div>
       </div>
@@ -83,13 +137,13 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
       <div className="mt-6 space-y-5">
         {groups.map((group) => (
           <div key={group.title}>
-            <div className="mb-2 text-[10px] font-medium tracking-wide text-landing-cta">
-              {group.title}
+            <div className="mb-2 text-xs font-medium tracking-wide text-landing-accent">
+              {localizeText(t, group.title)}
             </div>
             <div className="space-y-2.5">
               {group.features.map((feature) => (
                 <div key={feature.label} className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-white/60">{feature.label}</span>
+                  <span className="text-xs text-white/60">{localizeText(t, feature.label)}</span>
                   <FeatureCell value={feature.values[planIndex]} highlighted={plan.highlighted} />
                 </div>
               ))}
@@ -100,18 +154,14 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
 
       {/* CTA */}
       <div className="mt-6">
-        <Link href="/register" className="block">
-          <Button
-            className={cn(
+        <Button className={cn(
               'h-11 w-full text-sm font-semibold',
               plan.highlighted
                 ? 'bg-landing-cta hover:bg-landing-cta-hover text-white shadow-lg shadow-orange-500/20'
                 : 'bg-white/10 hover:bg-white/20 text-white'
-            )}
-          >
-            {plan.cta}
+            )} render={<Link href="/register" className="block" />}>
+            {localizeText(t, plan.cta)}
           </Button>
-        </Link>
       </div>
     </div>
   );
@@ -120,6 +170,8 @@ function MobilePlanCard({ planIndex, plans, groups }: { planIndex: number; plans
 /* ── Desktop Table Layout ─────────────────────────────────────────────── */
 
 function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: ComparisonGroup[] }) {
+  const t = useTranslations();
+
   return (
     <>
       <div className="mt-14 overflow-x-auto">
@@ -127,8 +179,8 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
           <thead>
             <tr>
               <th className="sticky left-0 z-20 w-[260px] bg-landing-bg pb-4 pt-2 text-left">
-                <span className="text-xs font-semibold tracking-wide text-white/40">
-                  Features
+                <span className="text-xs font-semibold tracking-wide text-white/60">
+                  {t('marketing.pricing.comparison.features', 'Features')}
                 </span>
               </th>
               {plans.map((plan) => (
@@ -149,24 +201,26 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
                   />
                   <div className="relative">
                     {plan.highlighted && (
-                      <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-[10px] font-medium tracking-wide text-white">
-                        Most Popular
+                      <span className="mb-2 inline-block rounded-full bg-landing-cta px-3 py-0.5 text-xs font-medium tracking-wide text-white">
+                        {t('marketing.pricing.comparison.mostPopular', 'Most Popular')}
                       </span>
                     )}
                     <h3 className="font-landing-display text-lg font-bold text-white">
                       {plan.name}
                     </h3>
-                    <p className="mt-0.5 text-xs text-white/50">{plan.subtitle}</p>
+                    <p className="mt-0.5 text-xs text-white/50">{localizeText(t, plan.subtitle)}</p>
                     <div className="mt-2 flex items-baseline justify-center gap-1">
                       {plan.priceBdt !== null ? (
                         <>
                           <span className="text-2xl font-extrabold text-white">
-                            ৳{plan.priceBdt.toLocaleString()}
+                            {formatBdtWithSymbol(plan.priceBdt)}
                           </span>
-                          <span className="text-xs text-white/40">{plan.period}</span>
+                          <span className="text-xs text-white/60">{localizeText(t, plan.period)}</span>
                         </>
                       ) : (
-                        <span className="text-xl font-bold text-white">Custom</span>
+                        <span className="text-xl font-bold text-white">
+                          {t('marketing.pricing.comparison.custom', 'Custom')}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -190,18 +244,14 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
         <div />
         {plans.map((plan) => (
           <div key={plan.id} className="flex justify-center px-4">
-            <Link href="/register" className="w-full">
-              <Button
-                className={cn(
+            <Button className={cn(
                   'h-11 w-full text-sm font-semibold',
                   plan.highlighted
                     ? 'bg-landing-cta hover:bg-landing-cta-hover text-white shadow-lg shadow-orange-500/20'
                     : 'bg-white/10 hover:bg-white/20 text-white'
-                )}
-              >
-                {plan.cta}
+                )} render={<Link href="/register" className="w-full" />}>
+                {localizeText(t, plan.cta)}
               </Button>
-            </Link>
           </div>
         ))}
       </div>
@@ -212,6 +262,7 @@ function DesktopTable({ plans, groups }: { plans: ComparisonPlan[]; groups: Comp
 /* ── Main Component ───────────────────────────────────────────────────── */
 
 export default function ComparisonBlock() {
+  const t = useTranslations();
   const { data, isLoading } = useMarketingPricing();
   const plans = data?.comparisonPlans;
   const groups = data?.comparisonGroups;
@@ -220,7 +271,7 @@ export default function ComparisonBlock() {
     return (
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4 text-center text-sm text-white/50">
-          Loading comparison…
+          {t('marketing.pricing.comparison.loading', 'Loading comparison…')}
         </div>
       </section>
     );
@@ -230,14 +281,17 @@ export default function ComparisonBlock() {
     <section className="py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="text-xs font-medium tracking-wide text-landing-cta">
-            Feature Comparison
+          <span className="text-xs font-medium tracking-wide text-landing-accent">
+            {t('marketing.pricing.comparison.eyebrow', 'Feature Comparison')}
           </span>
           <h2 className="font-landing-display mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl md:text-5xl">
-            Compare plans side by side
+            {t('marketing.pricing.comparison.title', 'Compare plans side by side')}
           </h2>
           <p className="mt-4 text-base text-white/60 leading-relaxed">
-            Every ISP Pay BD plan scales with you. Compare features and upgrade the moment you need more.
+            {t(
+              'marketing.pricing.comparison.subtitle',
+              'Every ISP Pay BD plan scales with you. Compare features and upgrade the moment you need more.',
+            )}
           </p>
         </div>
 
@@ -258,20 +312,22 @@ export default function ComparisonBlock() {
 /* ── Group Sub-component (Desktop) ────────────────────────────────────── */
 
 function ComparisonGroup({ group, plans }: { group: ComparisonGroup; plans: ComparisonPlan[] }) {
+  const t = useTranslations();
+
   return (
     <>
       <tr>
         <td
           colSpan={plans.length + 1}
-          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-cta"
+          className="border-t border-white/10 bg-white/[0.02] px-4 py-3 text-xs font-bold tracking-wide text-landing-accent"
         >
-          {group.title}
+          {localizeText(t, group.title)}
         </td>
       </tr>
       {group.features.map((feature) => (
         <tr key={feature.label} className="group/row transition-colors hover:bg-white/[0.015]">
           <td className="sticky left-0 z-10 bg-landing-bg px-4 py-3 text-sm text-white/70 group-hover/row:bg-landing-bg">
-            {feature.label}
+            {localizeText(t, feature.label)}
           </td>
           {feature.values.map((value, i) => (
             <td

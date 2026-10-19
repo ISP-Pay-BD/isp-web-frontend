@@ -3,26 +3,27 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { PageHeader } from '@/features/shared/page-header';
-import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCustomerSubscription } from '@/features/customer/shared';
+import { CustomerPageShell, CustomerLoadingSkeleton, useCustomerSubscription } from '@/features/customer/shared';
 import { formatBdtWithSymbol, formatDate } from '@/lib/format';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useTranslations } from '@/i18n/locale-context';
 import {
   useCustomerAutoPay,
   useUpdateCustomerAutoPay,
   type AutoPayInput,
   type AutoPayPreference,
 } from '../hooks/use-customer-autopay';
+
+const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 /**
  * Renewal: the real expiry (GET /v1/customer/subscription/index) plus the
@@ -32,97 +33,125 @@ import {
  * each payment, so nothing is debited without them.
  */
 export function CustomerAutoPayPage() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, refetch } = useCustomerSubscription();
 
-  if (isLoading) return <PageSkeleton variant="detail" />;
+  const title = t('customer.autoPay.title', 'Renewal');
+  const breadcrumbs = [
+    { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
+    { label: t('customer.nav.payments', 'Payments'), href: '/customer/payments' },
+    { label: title },
+  ];
+
+  if (isLoading) {
+    return (
+      <CustomerPageShell title={title} subtitle={t('customer.autoPay.loading', 'Loading your subscription…')} breadcrumbs={breadcrumbs}>
+        <CustomerLoadingSkeleton variant="form" />
+      </CustomerPageShell>
+    );
+  }
+
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load your subscription"
-        description={error?.message}
-        actionLabel="Retry"
-        onAction={() => refetch()}
-      />
+      <CustomerPageShell title={title} breadcrumbs={breadcrumbs}>
+        <EmptyState
+          variant="error"
+          title={t('customer.autoPay.loadError', 'Failed to load your subscription')}
+          description={error?.message}
+          actionLabel={t('common.retry', 'Retry')}
+          onAction={() => refetch()}
+        />
+      </CustomerPageShell>
     );
   }
 
   const pkg = data.currentPackage;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Renewal"
-        subtitle="How your subscription is renewed"
-        breadcrumb={[
-          { label: 'Dashboard', url: '/customer/dashboard' },
-          { label: 'Payments', url: '/customer/payments' },
-          { label: 'Renewal' },
-        ]}
-      />
+    <CustomerPageShell
+      title={title}
+      subtitle={t('customer.autoPay.subtitle', 'How your subscription is renewed')}
+      breadcrumbs={breadcrumbs}
+    >
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/60 shadow-sm ring-1 ring-border/60">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">{pkg?.name || 'Current subscription'}</CardTitle>
-            <Badge variant="outline" className="capitalize">
-              {data.subscriptionStatus || '—'}
-            </Badge>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <CardTitle className="min-w-0 text-base">
+              {pkg?.name || t('customer.autoPay.currentSubscription', 'Current subscription')}
+            </CardTitle>
+            {data.subscriptionStatus ? (
+              <StatusBadge
+                status={data.subscriptionStatus}
+                label={
+                  data.isActive
+                    ? t('status.active', 'Active')
+                    : t('customer.autoPay.statusInactive', titleCase(data.subscriptionStatus))
+                }
+              />
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Valid until</span>
-                <span className="font-mono">{formatDate(data.willExpire)}</span>
+            <dl className="space-y-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-muted-foreground">{t('customer.autoPay.validUntil', 'Valid until')}</dt>
+                <dd className="font-medium tabular-nums">{formatDate(data.willExpire)}</dd>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Last renewed</span>
-                <span className="font-mono">{formatDate(data.lastRenewed)}</span>
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-muted-foreground">{t('customer.autoPay.lastRenewed', 'Last renewed')}</dt>
+                <dd className="font-medium tabular-nums">{formatDate(data.lastRenewed)}</dd>
               </div>
               {pkg && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Monthly fee</span>
-                  <span className="font-mono">{formatBdtWithSymbol(pkg.priceBdt)}</span>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-muted-foreground">{t('customer.autoPay.monthlyFee', 'Monthly fee')}</dt>
+                  <dd className="font-medium tabular-nums">{formatBdtWithSymbol(pkg.priceBdt)}</dd>
                 </div>
               )}
-            </div>
-            <p className="text-muted-foreground">
-              To renew, create a renewal invoice and pay it on your provider&apos;s payment page before the expiry date
-              above.
+            </dl>
+            <p className="leading-relaxed text-muted-foreground">
+              {t(
+                'customer.autoPay.renewHint',
+                'To renew, create a renewal invoice and pay it on your provider’s payment page before the expiry date above.',
+              )}
             </p>
-            <Link href="/customer/subscription">
-              <Button size="sm">Renew from My Subscription</Button>
-            </Link>
+            <Button className="h-11 w-full sm:h-9 sm:w-auto" render={<Link href="/customer/subscription" />}>
+              {t('customer.autoPay.renewAction', 'Renew from My Subscription')}
+            </Button>
           </CardContent>
         </Card>
         <AutoPayPreferenceCard />
       </div>
-    </div>
+    </CustomerPageShell>
   );
 }
 
 function AutoPayPreferenceCard() {
+  const t = useTranslations();
   const autoPay = useCustomerAutoPay();
 
   return (
     <Card className="border-border/60 shadow-sm ring-1 ring-border/60">
       <CardHeader>
-        <CardTitle className="text-base">Auto-pay preference</CardTitle>
-        <CardDescription>
-          With auto-pay on, we text you the bill and a one-tap pay link for your gateway before renewal. Nothing is
-          charged without your approval.
+        <CardTitle className="text-base">{t('customer.autoPay.prefTitle', 'Auto-pay preference')}</CardTitle>
+        <CardDescription className="text-sm leading-relaxed">
+          {t(
+            'customer.autoPay.prefDesc',
+            'With auto-pay on, we text you the bill and a one-tap pay link for your gateway before renewal. Nothing is charged without your approval.',
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {autoPay.isLoading ? (
           <div className="space-y-4">
-            <Skeleton className="h-8 w-full rounded-lg" />
-            <Skeleton className="h-8 w-full rounded-lg" />
-            <Skeleton className="h-8 w-28 rounded-lg" />
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <Skeleton className="h-11 w-28 rounded-lg" />
           </div>
         ) : autoPay.isError || !autoPay.data ? (
           <EmptyState
-            title="Auto-pay settings unavailable"
-            description={errorMessage(autoPay.error, 'Could not load your auto-pay preference.')}
-            actionLabel="Retry"
+            variant="error"
+            title={t('customer.autoPay.prefUnavailable', 'Auto-pay settings unavailable')}
+            description={errorMessage(autoPay.error, t('customer.autoPay.prefLoadError', 'Could not load your auto-pay preference.'))}
+            actionLabel={t('common.retry', 'Retry')}
             onAction={() => autoPay.refetch()}
           />
         ) : (
@@ -134,6 +163,7 @@ function AutoPayPreferenceCard() {
 }
 
 function AutoPayForm({ pref }: { pref: AutoPayPreference }) {
+  const t = useTranslations();
   const save = useUpdateCustomerAutoPay();
   // Unsaved edits; null = show the stored preference.
   const [draft, setDraft] = useState<AutoPayInput | null>(null);
@@ -155,25 +185,27 @@ function AutoPayForm({ pref }: { pref: AutoPayPreference }) {
     save.mutate(value, {
       onSuccess: () => {
         setDraft(null);
-        toast.success('Auto-pay preference saved');
+        toast.success(t('customer.autoPay.saved', 'Auto-pay preference saved'));
       },
     });
 
   return (
     <form
-      className="space-y-5 text-sm"
+      className="space-y-6 text-sm"
       onSubmit={(e) => {
         e.preventDefault();
         if (canSave) submit();
       }}
     >
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="autopay-enabled" className="text-sm font-medium">
-            Auto-pay
+      <div className="flex min-h-12 items-center justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <Label htmlFor="autopay-enabled" className="text-sm leading-normal font-semibold">
+            {t('customer.autoPay.toggle', 'Auto-pay')}
           </Label>
-          <p className="text-muted-foreground text-xs">
-            {noGateways ? 'Your provider has no online payment gateway enabled yet.' : 'Use my preferred gateway for renewals.'}
+          <p className="text-sm text-muted-foreground">
+            {noGateways
+              ? t('customer.autoPay.noGatewayHint', 'Your provider has no online payment gateway enabled yet.')
+              : t('customer.autoPay.useGatewayHint', 'Use my preferred gateway for renewals.')}
           </p>
         </div>
         <Switch
@@ -184,16 +216,22 @@ function AutoPayForm({ pref }: { pref: AutoPayPreference }) {
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold">Preferred gateway</Label>
+      <div className="space-y-2">
+        <Label htmlFor="gateway" className="text-sm font-semibold">{t('customer.autoPay.gateway', 'Preferred gateway')}</Label>
         <Select
           value={value.preferredGateway}
           items={gatewayItems}
           disabled={noGateways}
           onValueChange={(v) => edit({ preferredGateway: v ? String(v) : null })}
         >
-          <SelectTrigger className="w-full" aria-invalid={staleGateway || undefined}>
-            <SelectValue placeholder={noGateways ? 'No gateways available' : 'Choose a gateway'} />
+          <SelectTrigger id="gateway" className="w-full data-[size=default]:h-11" aria-invalid={staleGateway || undefined}>
+            <SelectValue
+              placeholder={
+                noGateways
+                  ? t('customer.autoPay.noGateways', 'No gateways available')
+                  : t('customer.autoPay.chooseGateway', 'Choose a gateway')
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {pref.gateways.map((g) => (
@@ -204,13 +242,15 @@ function AutoPayForm({ pref }: { pref: AutoPayPreference }) {
           </SelectContent>
         </Select>
         {staleGateway && (
-          <p className="text-destructive text-xs">Your provider no longer offers this gateway. Choose another one.</p>
+          <p className="text-sm text-destructive">
+            {t('customer.autoPay.staleGateway', 'Your provider no longer offers this gateway. Choose another one.')}
+          </p>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="autopay-days" className="text-xs font-semibold">
-          Remind me this many days before expiry
+      <div className="space-y-2">
+        <Label htmlFor="autopay-days" className="text-sm leading-normal font-semibold">
+          {t('customer.autoPay.daysLabel', 'Remind me this many days before expiry')}
         </Label>
         <Input
           id="autopay-days"
@@ -218,26 +258,38 @@ function AutoPayForm({ pref }: { pref: AutoPayPreference }) {
           inputMode="numeric"
           min={0}
           max={pref.notifyDaysMax}
-          className="w-28 font-mono"
+          className="h-11 w-28 font-mono"
           value={Number.isNaN(value.notifyDaysBefore) ? '' : value.notifyDaysBefore}
           aria-invalid={!daysValid || undefined}
           onChange={(e) => edit({ notifyDaysBefore: e.target.value === '' ? NaN : Number(e.target.value) })}
         />
-        {!daysValid && <p className="text-destructive text-xs">Enter 0 to {pref.notifyDaysMax} days.</p>}
+        {!daysValid && (
+          <p className="text-sm text-destructive">
+            {t('customer.autoPay.daysError', 'Enter 0 to {max} days.', { max: pref.notifyDaysMax })}
+          </p>
+        )}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground text-xs">
-          {pref.updatedAt ? `Last saved ${formatDate(pref.updatedAt)}` : 'Not saved yet'}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm text-muted-foreground">
+          {pref.updatedAt
+            ? t('customer.autoPay.lastSaved', 'Last saved {date}', { date: formatDate(pref.updatedAt) })
+            : t('customer.autoPay.notSaved', 'Not saved yet')}
         </span>
         <div className="flex gap-2">
           {draft !== null && (
-            <Button type="button" size="sm" variant="ghost" disabled={save.isPending} onClick={() => setDraft(null)}>
-              Discard
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 flex-1 sm:h-9 sm:flex-none"
+              disabled={save.isPending}
+              onClick={() => setDraft(null)}
+            >
+              {t('customer.autoPay.discard', 'Discard')}
             </Button>
           )}
-          <Button type="submit" size="sm" disabled={!canSave || save.isPending}>
-            {save.isPending ? 'Saving…' : 'Save preference'}
+          <Button type="submit" className="h-11 flex-1 sm:h-9 sm:flex-none" disabled={!canSave || save.isPending}>
+            {save.isPending ? t('customer.autoPay.saving', 'Saving…') : t('customer.autoPay.save', 'Save preference')}
           </Button>
         </div>
       </div>

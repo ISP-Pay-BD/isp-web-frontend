@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { handleApiError } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 import { useCreatePop } from '../hooks/use-pop';
 
 /** Same option sets as the web reseller/add form (PopController::create validates them). */
@@ -47,6 +48,7 @@ const EMPTY: RegisterPopForm = {
 };
 
 export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { t } = useLocale();
   const createPop = useCreatePop();
   const {
     register,
@@ -62,6 +64,22 @@ export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpe
   const division = watch('division');
   const billingType = watch('billing_type');
 
+  const divisionLabels: Record<string, string> = {
+    Barishal: t('admin.pop.register.divBarishal', 'Barishal'),
+    Chattogram: t('admin.pop.register.divChattogram', 'Chattogram'),
+    Dhaka: t('admin.pop.register.divDhaka', 'Dhaka'),
+    Khulna: t('admin.pop.register.divKhulna', 'Khulna'),
+    Mymensingh: t('admin.pop.register.divMymensingh', 'Mymensingh'),
+    Rajshahi: t('admin.pop.register.divRajshahi', 'Rajshahi'),
+    Rangpur: t('admin.pop.register.divRangpur', 'Rangpur'),
+    Sylhet: t('admin.pop.register.divSylhet', 'Sylhet'),
+  };
+  const customerTypeLabels: Record<string, string> = {
+    PPPOE: 'PPPoE',
+    Static: t('admin.pop.register.typeStatic', 'Static'),
+    Hotspot: t('admin.pop.register.typeHotspot', 'Hotspot'),
+  };
+
   const close = (next: boolean) => {
     if (!next) reset(EMPTY);
     onOpenChange(next);
@@ -69,12 +87,12 @@ export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpe
 
   const onSubmit = (values: RegisterPopForm) => {
     if (values.customer_type.length === 0) {
-      setError('customer_type', { type: 'required', message: 'Select at least one customer type' });
+      setError('customer_type', { type: 'required', message: t('admin.pop.register.typeRequired', 'Select at least one customer type') });
       return;
     }
     createPop.mutate(values as unknown as Record<string, unknown>, {
       onSuccess: () => {
-        toast.success(`POP "${values.admin_name}" registered`);
+        toast.success(t('admin.pop.register.registered', 'POP "{name}" registered', { name: values.admin_name }));
         close(false);
       },
       onError: (err) => handleApiError(err, setError),
@@ -91,9 +109,9 @@ export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpe
         className="text-xs h-9"
         aria-invalid={Boolean(errors[name])}
         {...props}
-        {...register(name, { required: `${label} is required` })}
+        {...register(name, { required: t('admin.pop.register.fieldRequired', '{label} is required', { label }) })}
       />
-      {errors[name] && <p className="text-[11px] text-destructive">{String(errors[name]?.message)}</p>}
+      {errors[name] && <p className="text-xs text-destructive">{String(errors[name]?.message)}</p>}
     </div>
   );
 
@@ -102,92 +120,96 @@ export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpe
       <DialogContent className="max-w-lg p-6 border-border/80 shadow-[var(--shadow-md)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-bold flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" /> Register New POP Reseller
+            <Building2 className="h-4 w-4 text-primary" /> {t('admin.pop.register.title', 'Register New POP Reseller')}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Creates the POP&apos;s reseller-admin login and copies your package list to it.
+            {t('admin.pop.register.desc', "Creates the POP's reseller-admin login and copies your package list to it.")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 pt-2">
-          {field('admin_name', 'POP / Owner Name')}
+          {field('admin_name', t('admin.pop.register.ownerName', 'POP / Owner Name'))}
           <div className="grid grid-cols-2 gap-3">
-            {field('mobile', 'Mobile', { inputMode: 'tel', className: 'text-xs h-9 font-mono' })}
-            {field('email', 'Email', { type: 'email' })}
+            {field('mobile', t('admin.pop.register.mobile', 'Mobile'), { inputMode: 'tel', className: 'text-xs h-9 font-mono' })}
+            {field('email', t('admin.pop.register.email', 'Email'), { type: 'email' })}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {field('password', 'Password', { type: 'password', autoComplete: 'new-password' })}
-            {field('confirm_password', 'Confirm Password', { type: 'password', autoComplete: 'new-password' })}
+            {field('password', t('admin.pop.register.password', 'Password'), { type: 'password', autoComplete: 'new-password' })}
+            {field('confirm_password', t('admin.pop.register.confirmPassword', 'Confirm Password'), { type: 'password', autoComplete: 'new-password' })}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Division *</Label>
+              <Label htmlFor="division" className="text-xs font-semibold">{t('admin.pop.register.division', 'Division')} *</Label>
               <Select
                 value={division || null}
                 onValueChange={(v) => v && setValue('division', String(v), { shouldValidate: true })}
               >
-                <SelectTrigger className="text-xs h-9">
-                  <SelectValue>{(v: string | null) => v ?? 'Select division'}</SelectValue>
+                <SelectTrigger id="division" className="text-xs h-9">
+                  <SelectValue>{(v: string | null) => (v ? (divisionLabels[v] ?? v) : t('admin.pop.register.selectDivision', 'Select division'))}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {DIVISIONS.map((d) => (
                     <SelectItem key={d} value={d} className="text-xs">
-                      {d}
+                      {divisionLabels[d]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <input type="hidden" {...register('division', { required: 'Division is required' })} />
-              {errors.division && <p className="text-[11px] text-destructive">{errors.division.message}</p>}
+              <input type="hidden" {...register('division', { required: t('admin.pop.register.divisionRequired', 'Division is required') })} />
+              {errors.division && <p className="text-xs text-destructive">{errors.division.message}</p>}
             </div>
-            {field('district', 'District')}
+            {field('district', t('admin.pop.register.district', 'District'))}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {field('upazilla', 'Upazilla / Thana')}
-            {field('nationalid', 'National ID', { className: 'text-xs h-9 font-mono' })}
+            {field('upazilla', t('admin.pop.register.upazilla', 'Upazilla / Thana'))}
+            {field('nationalid', t('admin.pop.register.nationalId', 'National ID'), { className: 'text-xs h-9 font-mono' })}
           </div>
-          {field('address', 'Address')}
+          {field('address', t('admin.pop.register.address', 'Address'))}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Customer Types *</Label>
+              <Label className="text-xs font-semibold">{t('admin.pop.register.customerTypes', 'Customer Types *')}</Label>
               <div className="flex flex-wrap gap-3 pt-1">
-                {CUSTOMER_TYPES.map((t) => (
-                  <label key={t} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                {CUSTOMER_TYPES.map((ct) => (
+                  <label key={ct} className="flex items-center gap-1.5 text-xs cursor-pointer">
                     <Checkbox
-                      checked={customerTypes.includes(t)}
+                      checked={customerTypes.includes(ct)}
                       onCheckedChange={(checked) =>
                         setValue(
                           'customer_type',
-                          checked ? [...customerTypes, t] : customerTypes.filter((c) => c !== t),
+                          checked ? [...customerTypes, ct] : customerTypes.filter((c) => c !== ct),
                           { shouldValidate: true },
                         )
                       }
                     />
-                    {t}
+                    {customerTypeLabels[ct]}
                   </label>
                 ))}
               </div>
               {errors.customer_type && (
-                <p className="text-[11px] text-destructive">{String(errors.customer_type.message)}</p>
+                <p className="text-xs text-destructive">{String(errors.customer_type.message)}</p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Billing Type</Label>
+              <Label htmlFor="billing-type" className="text-xs font-semibold">{t('admin.pop.register.billingType', 'Billing Type')}</Label>
               <Select
                 value={billingType}
                 onValueChange={(v) => v && setValue('billing_type', v === 'prepaid' ? 'prepaid' : 'postpaid')}
               >
-                <SelectTrigger className="text-xs h-9 capitalize">
-                  <SelectValue />
+                <SelectTrigger id="billing-type" className="text-xs h-9">
+                  <SelectValue>
+                    {(v: string | null) =>
+                      v === 'prepaid' ? t('admin.pop.register.prepaid', 'Prepaid') : t('admin.pop.register.postpaid', 'Postpaid')
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="postpaid" className="text-xs">
-                    Postpaid
+                    {t('admin.pop.register.postpaid', 'Postpaid')}
                   </SelectItem>
                   <SelectItem value="prepaid" className="text-xs">
-                    Prepaid
+                    {t('admin.pop.register.prepaid', 'Prepaid')}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -196,10 +218,10 @@ export function RegisterPopDialog({ open, onOpenChange }: { open: boolean; onOpe
 
           <div className="flex justify-end gap-2 pt-3 border-t">
             <Button type="button" variant="outline" size="sm" onClick={() => close(false)} className="text-xs">
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button type="submit" size="sm" className="text-xs font-semibold" disabled={createPop.isPending}>
-              {createPop.isPending ? 'Registering…' : 'Register POP'}
+              {createPop.isPending ? t('admin.pop.register.registering', 'Registering…') : t('admin.pop.register.submit', 'Register POP')}
             </Button>
           </div>
         </form>

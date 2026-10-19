@@ -10,10 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTenantHealth } from '@/features/platform/shared/hooks/use-platform-catalog';
 import { cn } from '@/lib/utils';
-
-const GRADE_LABEL = { healthy: 'Healthy', watch: 'Watch', at_risk: 'At risk' } as const;
+import { useTranslations } from '@/i18n/locale-context';
 
 export function TenantHealthPage() {
+  const t = useTranslations();
+  const gradeLabel = {
+    healthy: t('platform.tenants.health.gradeHealthy', 'Healthy'),
+    watch: t('platform.tenants.health.gradeWatch', 'Watch'),
+    at_risk: t('platform.tenants.health.gradeAtRisk', 'At risk'),
+  } as const;
   const params = useParams<{ id: string }>();
   const id = params.id ?? '';
   const { data, isLoading, isError, error, refetch, isFetching } = useTenantHealth(id);
@@ -21,10 +26,10 @@ export function TenantHealthPage() {
   if (isLoading) return <PageSkeleton variant="dashboard" />;
   if (isError || !data) {
     return (
-      <EmptyState
-        title="Failed to load health"
+      <EmptyState variant="error"
+        title={t('platform.tenants.health.loadFailed', 'Failed to load health')}
         description={error instanceof Error ? error.message : undefined}
-        actionLabel="Retry"
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -33,32 +38,28 @@ export function TenantHealthPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Tenant health"
-        subtitle={`Scorecard for ${data.tenantName}`}
+        title={t('platform.tenants.health.title', 'Tenant health')}
+        subtitle={t('platform.tenants.health.subtitle', 'Scorecard for {name}', { name: data.tenantName })}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Tenants', href: '/platform/tenants' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('common.crumb.tenants', 'Tenants'), href: '/platform/tenants' },
           { label: data.tenantName, href: `/platform/tenants/${data.tenantId}` },
-          { label: 'Health' },
+          { label: t('platform.tenants.health.crumb', 'Health') },
         ]}
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? 'Refreshing…' : 'Refresh'}
+            {isFetching ? t('platform.tenants.health.refreshing', 'Refreshing…') : t('admin.dashboard.refresh', 'Refresh')}
           </Button>
         }
       />
       <Card className="max-w-xl border-border/60 shadow-sm ring-1 ring-border/60">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Health score</CardTitle>
+          <CardTitle className="text-base">{t('platform.tenants.health.score', 'Health score')}</CardTitle>
           <Badge
             variant="outline"
-            className={cn(
-              data.grade === 'healthy' && 'border-emerald-500/40 text-emerald-700 dark:text-emerald-400',
-              data.grade === 'watch' && 'border-amber-500/40 text-amber-700 dark:text-amber-400',
-              data.grade === 'at_risk' && 'border-rose-500/40 text-rose-700 dark:text-rose-400',
-            )}
+            tone={data.grade === 'healthy' ? 'success' : data.grade === 'watch' ? 'warning' : data.grade === 'at_risk' ? 'danger' : undefined}
           >
-            {GRADE_LABEL[data.grade]}
+            {gradeLabel[data.grade]}
           </Badge>
         </CardHeader>
         <CardContent>
@@ -83,10 +84,10 @@ export function TenantHealthPage() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-[11px] text-muted-foreground">
-            Checked {platformDateTime(data.lastCheckedAt)} ·{' '}
+          <p className="mt-4 text-xs text-muted-foreground">
+            {t('platform.tenants.health.checked', 'Checked {time}', { time: platformDateTime(data.lastCheckedAt) })} ·{' '}
             <Link href={`/platform/tenants/${data.tenantId}`} className="underline">
-              Back to tenant
+              {t('platform.tenants.health.backToTenant', 'Back to tenant')}
             </Link>
           </p>
         </CardContent>

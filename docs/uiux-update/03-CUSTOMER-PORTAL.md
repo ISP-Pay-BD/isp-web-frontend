@@ -1,4 +1,4 @@
-# 03 — Customer portal (C1–C5)
+# 03 — Customer portal (C1–C5) — ✅ implemented
 
 **19 screens.** The users are home and business subscribers in Bangladesh, mostly on a phone and mostly reading Bangla. They have three jobs: **pay**, **check validity**, and **fix Wi-Fi / get support**. Everything here serves those three.
 
@@ -96,3 +96,15 @@ This is the one item from `15-ANIMATION-AND-UX-ROADMAP.md` §4.1 worth building 
 - Ticket: subject (title) · status · last reply time
 
 `/customer/support` is a list, not a DataTable. Check it at 390px against the same card shape.
+
+
+---
+
+## What was built
+
+- **C1** `CustomerPayPage` is now "Pay your bill": a summary of the plan and a full-width **Pay ৳X online** button that starts the same renewal call as My Subscription and opens the provider's payment page. A ref guards against a double tap (the backend creates an invoice on every renew call — the guard is client-side only; **backend idempotency is still recommended**). If the response has no `paymentUrl`, the TrxID form opens with an explanation. "Already paid outside the app?" is a disclosure that opens the unchanged manual form (`?manual=1` opens it directly). The dashboard header button, the plan-card button and the bottom nav "Pay" tab all lead here.
+- **C2** Bottom nav: Home · Pay · Wi-Fi · Support · More (Rewards moved into More; duplicate "Pay Now" removed). Expired accounts keep their own set. `min-h-14` tabs, safe-area padding, `aria-current`.
+- **C3** Customer screens use ≥14px body text, `h-11`/`h-12` controls, full-width primary actions on phones.
+- **C4** `ValidityRing` (SVG, CSS transition ≈700ms, off under reduced motion): days left in the centre, amber ≤3 days, rose when ended, text label alongside; sits in the dashboard's plan card above the Pay button.
+- **C5** Payment history, devices and ticket list use phone cards; the ticket thread is chat-style; the reply box sits above the bottom nav.
+- **Extras:** confirmation before *Restart router*, *Reset connection* (router page and dashboard); language switch available on the profile screen (the header toggle is hidden on the smallest phones).

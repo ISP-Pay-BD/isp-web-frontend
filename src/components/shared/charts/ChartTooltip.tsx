@@ -1,4 +1,7 @@
+
 'use client';
+
+import { formatCount } from '@/lib/format';
 
 interface ChartTooltipProps {
   active?: boolean;
@@ -27,7 +30,7 @@ export function ChartTooltip({
       className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-md)] p-3 min-w-[160px]"
     >
       {label && (
-        <p className="text-[11px] font-semibold text-muted-foreground mb-2 pb-2 border-b border-border/50">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 pb-2 border-b border-border/50">
           {labelFormatter ? labelFormatter(label) : label}
         </p>
       )}
@@ -44,7 +47,7 @@ export function ChartTooltip({
               </span>
             </div>
             <span className="font-bold font-mono text-foreground tabular-nums">
-              {formatter ? formatter(entry.value, entry.name) : entry.value.toLocaleString()}
+              {formatter ? formatter(entry.value, entry.name) : formatCount(entry.value)}
             </span>
           </div>
         ))}
@@ -67,12 +70,12 @@ export function ChartTooltipWithBadge({
       className="rounded-xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-md)] p-3 min-w-[180px]"
     >
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/50">
-        <p className="text-[11px] font-semibold text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           {label}
         </p>
         {badge && (
           <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+            className="text-xs font-bold px-1.5 py-0.5 rounded-full"
             style={{ backgroundColor: `${badge.color}20`, color: badge.color }}
           >
             {badge.label}
@@ -92,7 +95,7 @@ export function ChartTooltipWithBadge({
               </span>
             </div>
             <span className="font-bold font-mono text-foreground tabular-nums">
-              {formatter ? formatter(entry.value, entry.dataKey) : entry.value.toLocaleString()}
+              {formatter ? formatter(entry.value, entry.dataKey) : formatCount(entry.value)}
             </span>
           </div>
         ))}

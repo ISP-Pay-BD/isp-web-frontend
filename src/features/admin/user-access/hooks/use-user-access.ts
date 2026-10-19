@@ -20,9 +20,9 @@ export function useAccessCatalog(role: AccessRole) {
   return useQuery({
     queryKey: [...ACCESS, 'catalog', role],
     queryFn: async () => {
-      const raw = await http.get<{ sections: PermissionSectionDef[]; roles: unknown[] }>('/v1/reseller/access-catalog', { role });
+      const raw = await http.get<{ sections?: PermissionSectionDef[]; roles?: unknown[] }>('/v1/reseller/access-catalog', { role });
       // Section/action keys are permission identifiers — never camelize them.
-      return { sections: raw.sections, roles: camelizeKeys<RoleSummary[]>(raw.roles) };
+      return { sections: raw.sections ?? [], roles: camelizeKeys<RoleSummary[]>(raw.roles ?? []) };
     },
     placeholderData: keepPreviousData,
     staleTime: 10 * 60_000,

@@ -62,7 +62,7 @@ export function CTASection() {
             </Button>
           </div>
 
-          <p className="mt-8 text-xs text-white/40 sm:text-sm">
+          <p className="mt-8 text-xs text-white/60 sm:text-sm">
             {t('marketing.sections.ctaFinal.bullet1')} · {t('marketing.sections.ctaFinal.bullet2')}{' '}
             · {t('marketing.sections.ctaFinal.bullet3')}
           </p>

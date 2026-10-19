@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { formatBdtWithSymbol } from '@/lib/format';
+import { formatBdtWithSymbol, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import type { RoiData } from '../types';
 
 interface RoiSectionProps {
@@ -9,6 +10,7 @@ interface RoiSectionProps {
 }
 
 export function RoiSection({ roi }: RoiSectionProps) {
+  const t = useTranslations();
   const [subscribers, setSubscribers] = useState<number | ''>(2500);
   const [currentCost, setCurrentCost] = useState<number | ''>(5000);
 
@@ -31,10 +33,13 @@ export function RoiSection({ roi }: RoiSectionProps) {
       <div className="mx-auto max-w-6xl px-4 md:px-6">
         <div className="max-w-2xl">
           <h2 className="font-landing-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Calculate your monthly &amp; annual operational savings
+            {t('marketing.landing.roi.title', 'Calculate your monthly & annual operational savings')}
           </h2>
           <p className="mt-4 text-base text-white/60">
-            Staff hours and platform cost if you move reconciliation off spreadsheets.
+            {t(
+              'marketing.landing.roi.subtitle',
+              'Staff hours and platform cost if you move reconciliation off spreadsheets.',
+            )}
           </p>
         </div>
 
@@ -45,10 +50,12 @@ export function RoiSection({ roi }: RoiSectionProps) {
               <div>
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <label htmlFor="subs-slider" className="font-semibold text-white">
-                    Active Subscribers
+                    {t('marketing.landing.roi.activeSubscribers', 'Active Subscribers')}
                   </label>
                   <div className="flex items-center gap-1.5">
                     <input
+                      id="subs-count"
+                      aria-label={t('marketing.landing.roi.activeSubscribersAria', 'Active subscribers (number of lines)')}
                       type="number"
                       min="0"
                       max="100000"
@@ -59,7 +66,9 @@ export function RoiSection({ roi }: RoiSectionProps) {
                       }}
                       className="text-landing-accent focus:border-landing-cta w-24 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-right font-mono text-sm font-bold focus:outline-none"
                     />
-                    <span className="text-xs font-medium text-white/50">lines</span>
+                    <span className="text-xs font-medium text-white/50">
+                      {t('marketing.landing.roi.lines', 'lines')}
+                    </span>
                   </div>
                 </div>
                 <input
@@ -72,10 +81,10 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   onChange={(e) => setSubscribers(Number(e.target.value))}
                   className="accent-landing-cta w-full cursor-pointer"
                 />
-                <div className="mt-1 flex justify-between font-mono text-[11px] text-white/40">
-                  <span>100</span>
-                  <span>5,000</span>
-                  <span>10,000+</span>
+                <div className="mt-1 flex justify-between font-mono text-xs text-white/60">
+                  <span>{formatCount(100)}</span>
+                  <span>{formatCount(5000)}</span>
+                  <span>{formatCount(10000)}+</span>
                 </div>
               </div>
 
@@ -84,7 +93,7 @@ export function RoiSection({ roi }: RoiSectionProps) {
                   htmlFor="current-cost"
                   className="mb-2 block text-sm font-semibold text-white"
                 >
-                  Current monthly software / manual cost (৳)
+                  {t('marketing.landing.roi.currentCost', 'Current monthly software / manual cost (৳)')}
                 </label>
                 <div className="relative">
                   <input
@@ -97,22 +106,26 @@ export function RoiSection({ roi }: RoiSectionProps) {
                       const val = e.target.value;
                       setCurrentCost(val === '' ? '' : Math.max(0, Number(val)));
                     }}
-                    placeholder="e.g. 5000"
+                    placeholder={t('marketing.landing.roi.currentCostPlaceholder', 'e.g. {amount}', {
+                      amount: formatCount(5000),
+                    })}
                     className="focus:border-landing-cta w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 font-mono text-sm text-white focus:outline-none"
                   />
-                  <span className="absolute top-3 right-4 font-mono text-sm text-white/40">
-                    BDT
+                  <span className="absolute top-3 right-4 font-mono text-sm text-white/60">
+                    {t('common.currency', 'BDT')}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs text-white/70">
                 <div className="flex justify-between">
-                  <span>Staff Hours Saved / Month:</span>
-                  <strong className="font-mono text-emerald-400">~{hoursSavedMonthly} hours</strong>
+                  <span>{t('marketing.landing.roi.hoursSaved', 'Staff Hours Saved / Month:')}</span>
+                  <strong className="font-mono text-emerald-400">
+                    {t('marketing.landing.roi.hoursValue', '~{n} hours', { n: formatCount(hoursSavedMonthly) })}
+                  </strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>ISP Pay BD Monthly Estimate:</span>
+                  <span>{t('marketing.landing.roi.monthlyEstimate', 'ISP Pay BD Monthly Estimate:')}</span>
                   <span className="font-mono text-white">
                     {formatBdtWithSymbol(estimatedIspPayBdMonthly)}
                   </span>
@@ -122,18 +135,28 @@ export function RoiSection({ roi }: RoiSectionProps) {
 
             <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-6">
               <div>
-                <p className="text-xs font-medium text-white/45">Estimated total savings</p>
+                <p className="text-xs font-medium text-white/60">
+                  {t('marketing.landing.roi.totalSavings', 'Estimated total savings')}
+                </p>
                 <div className="font-landing-display mt-3 text-4xl font-semibold text-white tabular-nums sm:text-5xl">
                   {formatBdtWithSymbol(annualSavings)}
-                  <span className="text-lg font-normal text-white/50"> / year</span>
+                  <span className="text-lg font-normal text-white/50">
+                    {' '}
+                    {t('marketing.landing.roi.perYear', '/ year')}
+                  </span>
                 </div>
                 <p className="mt-2 font-mono text-sm text-white/60">
-                  ≈ {formatBdtWithSymbol(netMonthlySavings)} / month
+                  {t('marketing.landing.roi.perMonth', '≈ {amount} / month', {
+                    amount: formatBdtWithSymbol(netMonthlySavings),
+                  })}
                 </p>
               </div>
 
               <p className="mt-6 border-t border-white/10 pt-6 text-xs leading-relaxed text-white/50">
-                Recovered operator labor (less SMS cross-checking) plus lower platform overhead.
+                {t(
+                  'marketing.landing.roi.footnote',
+                  'Recovered operator labor (less SMS cross-checking) plus lower platform overhead.',
+                )}
               </p>
             </div>
           </div>

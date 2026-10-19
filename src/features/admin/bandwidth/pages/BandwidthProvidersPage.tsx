@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/i18n/locale-context';
 import {
   useBandwidthProviders,
   useCreateBandwidthProvider,
@@ -24,7 +25,7 @@ import type { BandwidthProvider } from '../types';
 import { FieldError } from '../components/OptionSelect';
 import { RefreshState } from '../components/RefreshState';
 import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
-import { fieldErrorsOf } from '../utils';
+import { fieldErrorsOf, type Translate } from '../utils';
 
 type DialogState = { mode: 'create' } | { mode: 'edit'; provider: BandwidthProvider } | null;
 
@@ -44,6 +45,7 @@ const initials = (name: string) =>
     .join('');
 
 export function BandwidthProvidersPage() {
+  const { t } = useLocale();
   const table = useServerTable();
   const { page, pageSize, search } = table;
   const { data, isLoading, isError, error, refetch, isFetching } = useBandwidthProviders({ page, pageSize, search });
@@ -57,7 +59,14 @@ export function BandwidthProvidersPage() {
   const confirmDelete = () => {
     if (!toDelete?.length) return;
     const ids = toDelete.map((p) => p.id);
-    remove.mutate(ids, { onSuccess: () => toast.success(ids.length === 1 ? 'Provider deleted' : `${ids.length} providers deleted`) });
+    remove.mutate(ids, {
+      onSuccess: () =>
+        toast.success(
+          ids.length === 1
+            ? t('admin.bandwidth.providers.deleted', 'Provider deleted')
+            : t('admin.bandwidth.providers.deletedMany', '{n} providers deleted', { n: ids.length }),
+        ),
+    });
     setToDelete(null);
   };
 
@@ -65,7 +74,7 @@ export function BandwidthProvidersPage() {
     () => [
       {
         accessorKey: 'companyName',
-        header: 'Provider',
+        header: t('admin.bandwidth.providers.colProvider', 'Provider'),
         enableHiding: false,
         size: 260,
         cell: ({ row }) => (
@@ -81,7 +90,7 @@ export function BandwidthProvidersPage() {
             <div>
               <div className="font-bold text-sm text-foreground">{row.original.companyName}</div>
               {row.original.address ? (
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="h-3 w-3 text-primary/70 shrink-0" />
                   <span className="truncate max-w-[200px]">{row.original.address}</span>
                 </div>
@@ -92,13 +101,13 @@ export function BandwidthProvidersPage() {
       },
       {
         accessorKey: 'contactPerson',
-        header: 'Contact Person',
+        header: t('admin.bandwidth.providers.colContact', 'Contact Person'),
         size: 170,
         cell: ({ row }) => <span className="font-semibold text-xs text-foreground">{row.original.contactPerson || '—'}</span>,
       },
       {
         accessorKey: 'mobileNumber',
-        header: 'Mobile & Email',
+        header: t('admin.bandwidth.providers.colMobileEmail', 'Mobile & Email'),
         size: 200,
         cell: ({ row }) => (
           <div className="space-y-0.5">
@@ -107,7 +116,7 @@ export function BandwidthProvidersPage() {
               {row.original.phoneNumber ? <span className="text-muted-foreground font-normal">· {row.original.phoneNumber}</span> : null}
             </div>
             {row.original.email ? (
-              <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+              <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
                 <Mail className="h-3 w-3 text-muted-foreground" /> {row.original.email}
               </div>
             ) : null}
@@ -116,7 +125,7 @@ export function BandwidthProvidersPage() {
       },
       {
         accessorKey: 'website',
-        header: 'Website',
+        header: t('admin.bandwidth.providers.colWebsite', 'Website'),
         size: 170,
         cell: ({ row }) => {
           const href = safeHref(row.original.website);
@@ -138,24 +147,24 @@ export function BandwidthProvidersPage() {
         size: 90,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setDialog({ mode: 'edit', provider: row.original })}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" aria-label={t('common.edit', 'Edit')} onClick={() => setDialog({ mode: 'edit', provider: row.original })}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete([row.original])}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label={t('common.delete', 'Delete')} onClick={() => setToDelete([row.original])}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={4} />;
   if (isError && !data) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load providers" description="Could not fetch bandwidth providers." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState variant="error" title={t('admin.bandwidth.providers.loadFailed', 'Failed to load providers')} description={t('admin.bandwidth.providers.loadFailedHint', 'Could not fetch bandwidth providers.')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
       </div>
     );
   }
@@ -163,16 +172,16 @@ export function BandwidthProvidersPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Upstream Providers"
-        subtitle="Upstream carriers that bandwidth purchase bills are recorded against"
+        title={t('admin.bandwidth.providers.title', 'Bandwidth Upstream Providers')}
+        subtitle={t('admin.bandwidth.providers.subtitle', 'Upstream carriers that bandwidth purchase bills are recorded against')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
-          { label: 'Providers' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.bandwidth-buy', 'Bandwidth Buy'), url: '/admin/bandwidth/buy' },
+          { label: t('admin.bandwidth.buyHub.modProviders', 'Providers') },
         ]}
         actions={
           <Button size="sm" onClick={() => setDialog({ mode: 'create' })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> Add Provider
+            <Plus className="h-3.5 w-3.5" /> {t('admin.bandwidth.providers.add', 'Add Provider')}
           </Button>
         }
       />
@@ -180,21 +189,21 @@ export function BandwidthProvidersPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{total}</span>{' '}
-          <span className="text-muted-foreground">{search ? 'matching providers' : 'providers'}</span>
+          <span className="text-muted-foreground">{search ? t('admin.bandwidth.providers.statMatching', 'matching providers') : t('admin.bandwidth.providers.stat', 'providers')}</span>
         </p>
         <RefreshState fetching={isFetching} error={isError ? error : null} onRetry={() => refetch()} />
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={providers}
         getRowId={(row) => String(row.id)}
-        searchPlaceholder="Search provider by name, contact person, mobile, email..."
+        searchPlaceholder={t('admin.bandwidth.providers.search', 'Search provider by name, contact person, mobile, email...')}
         enableRowSelection
         onDeleteSelected={(rows) => setToDelete(rows)}
         server={table.server(total)}
-        emptyTitle={search ? 'No providers match your search' : 'No providers yet'}
-        emptyDescription={search ? undefined : 'Add an upstream provider to start recording purchase bills.'}
+        emptyTitle={search ? t('admin.bandwidth.providers.emptyFiltered', 'No providers match your search') : t('admin.bandwidth.providers.emptyNone', 'No providers yet')}
+        emptyDescription={search ? undefined : t('admin.bandwidth.providers.emptyHint', 'Add an upstream provider to start recording purchase bills.')}
       />
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
@@ -208,9 +217,13 @@ export function BandwidthProvidersPage() {
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={toDelete?.length === 1 ? `Delete "${toDelete[0]?.companyName ?? ''}"?` : `Delete ${toDelete?.length ?? 0} providers?`}
-        description="This cannot be undone."
-        confirmLabel="Delete"
+        title={
+          toDelete?.length === 1
+            ? t('admin.bandwidth.providers.deleteTitle', 'Delete "{name}"?', { name: toDelete[0]?.companyName ?? '' })
+            : t('admin.bandwidth.providers.deleteManyTitle', 'Delete {n} providers?', { n: toDelete?.length ?? 0 })
+        }
+        description={t('admin.bandwidth.shared.cannotUndo', 'This cannot be undone.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={confirmDelete}
       />
@@ -218,19 +231,20 @@ export function BandwidthProvidersPage() {
   );
 }
 
-const FIELDS: { key: keyof ProviderInput; api: string; label: string; type?: string; required?: boolean; wide?: boolean }[] = [
-  { key: 'companyName', api: 'company_name', label: 'Company name', required: true, wide: true },
-  { key: 'contactPerson', api: 'contact_person', label: 'Contact person', required: true },
-  { key: 'email', api: 'email', label: 'Email', type: 'email', required: true },
-  { key: 'mobileNumber', api: 'mobile_number', label: 'Mobile number', required: true },
-  { key: 'phoneNumber', api: 'phone_number', label: 'Phone number' },
-  { key: 'website', api: 'website', label: 'Website' },
-  { key: 'facebookUrl', api: 'facebook_url', label: 'Facebook URL' },
-  { key: 'skypeId', api: 'skype_id', label: 'Skype ID' },
-  { key: 'address', api: 'address', label: 'Address', wide: true },
+const providerFields = (t: Translate): { key: keyof ProviderInput; api: string; label: string; type?: string; required?: boolean; wide?: boolean }[] => [
+  { key: 'companyName', api: 'company_name', label: t('admin.bandwidth.providers.companyName', 'Company name'), required: true, wide: true },
+  { key: 'contactPerson', api: 'contact_person', label: t('admin.bandwidth.shared.contactPerson', 'Contact person'), required: true },
+  { key: 'email', api: 'email', label: t('admin.bandwidth.shared.email', 'Email'), type: 'email', required: true },
+  { key: 'mobileNumber', api: 'mobile_number', label: t('admin.bandwidth.shared.mobileNumber', 'Mobile number'), required: true },
+  { key: 'phoneNumber', api: 'phone_number', label: t('admin.bandwidth.shared.phoneNumber', 'Phone number') },
+  { key: 'website', api: 'website', label: t('admin.bandwidth.providers.colWebsite', 'Website') },
+  { key: 'facebookUrl', api: 'facebook_url', label: t('admin.bandwidth.providers.facebookUrl', 'Facebook URL') },
+  { key: 'skypeId', api: 'skype_id', label: t('admin.bandwidth.providers.skypeId', 'Skype ID') },
+  { key: 'address', api: 'address', label: t('admin.bandwidth.shared.address', 'Address'), wide: true },
 ];
 
 function ProviderForm({ editing, onDone }: { editing: BandwidthProvider | null; onDone: () => void }) {
+  const { t } = useLocale();
   const create = useCreateBandwidthProvider();
   const update = useUpdateBandwidthProvider();
   const [form, setForm] = useState<ProviderInput>({
@@ -252,7 +266,7 @@ function ProviderForm({ editing, onDone }: { editing: BandwidthProvider | null; 
     setErrors({});
     const callbacks = {
       onSuccess: () => {
-        toast.success(editing ? 'Provider updated' : 'Provider added');
+        toast.success(editing ? t('admin.bandwidth.providers.updated', 'Provider updated') : t('admin.bandwidth.providers.added', 'Provider added'));
         onDone();
       },
       onError: (err: unknown) => setErrors(fieldErrorsOf(err)),
@@ -265,13 +279,13 @@ function ProviderForm({ editing, onDone }: { editing: BandwidthProvider | null; 
     <>
       <DialogHeader>
         <DialogTitle className="text-base font-bold flex items-center gap-2">
-          <Truck className="h-4 w-4 text-primary" /> {editing ? 'Edit provider' : 'Add provider'}
+          <Truck className="h-4 w-4 text-primary" /> {editing ? t('admin.bandwidth.providers.editTitle', 'Edit provider') : t('admin.bandwidth.providers.addTitle', 'Add provider')}
         </DialogTitle>
-        <DialogDescription className="text-xs">Upstream bandwidth carrier contact details.</DialogDescription>
+        <DialogDescription className="text-xs">{t('admin.bandwidth.providers.formDesc', 'Upstream bandwidth carrier contact details.')}</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="grid grid-cols-2 gap-3 pt-2">
-        {FIELDS.map((f) => (
+        {providerFields(t).map((f) => (
           <div key={f.key} className={f.wide ? 'col-span-2 space-y-1.5' : 'col-span-2 sm:col-span-1 space-y-1.5'}>
             <Label htmlFor={`prov-${f.key}`} className="text-xs font-semibold">
               {f.label}
@@ -291,9 +305,9 @@ function ProviderForm({ editing, onDone }: { editing: BandwidthProvider | null; 
         ))}
 
         <div className="col-span-2 flex justify-end gap-2 pt-3 border-t">
-          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">Cancel</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onDone} className="text-xs">{t('common.cancel', 'Cancel')}</Button>
           <Button type="submit" size="sm" disabled={pending} className="text-xs font-semibold">
-            {pending ? 'Saving…' : editing ? 'Save provider' : 'Add provider'}
+            {pending ? t('admin.bandwidth.shared.saving', 'Saving…') : editing ? t('admin.bandwidth.providers.save', 'Save provider') : t('admin.bandwidth.providers.addProvider', 'Add provider')}
           </Button>
         </div>
       </form>

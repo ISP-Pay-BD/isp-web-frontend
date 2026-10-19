@@ -22,10 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable } from '@/features/shared/data-table';
 import type { PlatformAdminUser } from '@/features/platform/types';
+import { useTranslations } from '@/i18n/locale-context';
+import { planTypeLabel, statusLabel } from '../lib/labels';
 
 const selectClass = 'h-9 rounded-md border border-input bg-background px-3 text-xs';
 
 export function AdminsListPage() {
+  const t = useTranslations();
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -75,7 +78,7 @@ export function AdminsListPage() {
       queryClient.clear();
       useAuthStore.setState({ user, token: result.access_token, isAuthenticated: true });
       setAuthCookie({ userId: user.id, role: user.role, status: user.status });
-      toast.success(`Signed in as ${user.name}`);
+      toast.success(t('platform.admins.list.signedInAs', 'Signed in as {name}', { name: user.name }));
       router.replace('/admin/dashboard');
     },
     onSettled: () => setLoginTarget(null),
@@ -85,7 +88,7 @@ export function AdminsListPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'Admin',
+        header: t('platform.admins.list.colAdmin', 'Admin'),
         size: 240,
         enableHiding: false,
         cell: ({ row }) => (
@@ -95,20 +98,26 @@ export function AdminsListPage() {
               <div className="text-xs text-foreground/80">{row.original.organizationName}</div>
             ) : null}
             <div className="text-xs text-muted-foreground">{row.original.email}</div>
-            <div className="text-[11px] font-mono text-muted-foreground">{row.original.phone}</div>
+            <div className="text-xs font-mono text-muted-foreground">{row.original.phone}</div>
           </div>
         ),
       },
       {
         accessorKey: 'role',
-        header: 'Role',
+        header: t('platform.admins.list.colRole', 'Role'),
         size: 110,
-        cell: ({ row }) => <span className="capitalize">{row.original.role.replace('_', ' ')}</span>,
+        cell: ({ row }) => (
+          <span className="capitalize">
+            {row.original.role === 'super_admin'
+              ? t('platform.admins.list.roleSuper', 'Super admin')
+              : t('platform.admins.list.roleAdmin', 'Admin')}
+          </span>
+        ),
       },
       {
         id: 'tenant',
         accessorFn: (row) => row.tenantSlug ?? '',
-        header: 'Portal',
+        header: t('platform.admins.list.colPortal', 'Portal'),
         size: 150,
         cell: ({ row }) =>
           row.original.tenantId ? (
@@ -121,14 +130,14 @@ export function AdminsListPage() {
       },
       {
         accessorKey: 'packageName',
-        header: 'Package',
+        header: t('platform.admins.list.colPackage', 'Package'),
         size: 150,
         cell: ({ row }) =>
           row.original.role === 'admin' ? (
             <div className="text-xs">
-              <div>{row.original.packageName ?? 'No package'}</div>
+              <div>{row.original.packageName ?? t('platform.admins.list.noPackage', 'No package')}</div>
               {row.original.planType ? (
-                <div className="text-[11px] uppercase text-muted-foreground">{row.original.planType}</div>
+                <div className="text-xs uppercase text-muted-foreground">{planTypeLabel(t, row.original.planType)}</div>
               ) : null}
             </div>
           ) : (
@@ -137,7 +146,7 @@ export function AdminsListPage() {
       },
       {
         accessorKey: 'subscriptionStatus',
-        header: 'Subscription',
+        header: t('platform.admins.list.colSubscription', 'Subscription'),
         size: 150,
         cell: ({ row }) => {
           const a = row.original;
@@ -145,71 +154,69 @@ export function AdminsListPage() {
           const trial = a.trialEndsAt && new Date(a.trialEndsAt.replace(' ', 'T')) > new Date();
           return (
             <div className="text-xs">
-              <Badge variant="outline" className="capitalize text-[10px]">
-                {trial ? 'trial' : (a.subscriptionStatus ?? 'unknown')}
+              <Badge variant="outline" className="capitalize text-xs">
+                {trial ? statusLabel(t, 'trial') : a.subscriptionStatus ? statusLabel(t, a.subscriptionStatus) : t('platform.admins.list.unknown', 'unknown')}
               </Badge>
-              {a.willExpire ? <div className="mt-0.5 text-[11px] text-muted-foreground">until {platformDate(a.willExpire)}</div> : null}
+              {a.willExpire ? <div className="mt-0.5 text-xs text-muted-foreground">{t('platform.admins.list.until', 'until {date}', { date: platformDate(a.willExpire) })}</div> : null}
             </div>
           );
         },
       },
       {
         accessorKey: 'status',
-        header: 'Account',
+        header: t('platform.admins.list.colAccount', 'Account'),
         size: 90,
         cell: ({ row }) => (
           <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'} className="capitalize text-xs">
-            {row.original.status}
+            {statusLabel(t, row.original.status)}
           </Badge>
         ),
       },
       {
         accessorKey: 'lastLoginAt',
-        header: 'Last Login',
+        header: t('platform.admins.list.colLastLogin', 'Last Login'),
         size: 140,
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
-            {row.original.lastLoginAt ? platformDateTime(row.original.lastLoginAt) : 'Never recorded'}
+            {row.original.lastLoginAt ? platformDateTime(row.original.lastLoginAt) : t('platform.admins.list.neverLogin', 'Never recorded')}
           </span>
         ),
       },
       {
         id: 'actions',
         header: '',
-        size: 190,
+        size: 230,
         enableHiding: false,
         cell: ({ row }) =>
           row.original.role === 'admin' ? (
             <div className="flex justify-end gap-1.5">
-              <Link href={`/platform/admins/${row.original.id}/billing`}>
-                <Button size="sm" variant="ghost" className="h-8 px-2 text-xs">
-                  <Wallet className="mr-1 h-3.5 w-3.5" /> Billing
+              <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" render={<Link href={`/platform/admins/${row.original.id}/billing`} />}>
+                  <Wallet className="mr-1 h-3.5 w-3.5" /> {t('platform.admins.list.billing', 'Billing')}
                 </Button>
-              </Link>
               <Button
                 size="sm"
                 variant="outline"
                 className="h-8 px-2 text-xs"
                 disabled={row.original.status !== 'active' || impersonate.isPending}
                 onClick={() => setLoginTarget(row.original)}
-                title={row.original.status !== 'active' ? 'Disabled accounts cannot be impersonated' : undefined}
+                title={row.original.status !== 'active' ? t('platform.admins.list.noImpersonate', 'Disabled accounts cannot be impersonated') : undefined}
               >
-                <LogIn className="mr-1 h-3.5 w-3.5" /> Login as
+                <LogIn className="mr-1 h-3.5 w-3.5" /> {t('platform.admins.list.loginAs', 'Login as')}
               </Button>
             </div>
           ) : null,
       },
     ],
-    [impersonate.isPending],
+    [impersonate.isPending, t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={5} />;
   if (error || !data) {
     return (
-      <EmptyState
-        title="Failed to load admins"
-        description={error instanceof Error ? error.message : 'Could not retrieve admin accounts.'}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('platform.admins.list.loadFailed', 'Failed to load admins')}
+        description={error instanceof Error ? error.message : t('platform.admins.list.loadFailedHint', 'Could not retrieve admin accounts.')}
+        actionLabel={t('common.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -220,18 +227,16 @@ export function AdminsListPage() {
   return (
     <div className="space-y-6">
       <PlatformPageHeader
-        title="Second Admins"
-        subtitle="Tenant owner accounts and platform-level administrators"
+        title={t('platform.admins.list.title', 'Second Admins')}
+        subtitle={t('platform.admins.list.subtitle', 'Tenant owner accounts and platform-level administrators')}
         breadcrumb={[
-          { label: 'Platform', href: '/platform/dashboard' },
-          { label: 'Admins' },
+          { label: t('common.crumb.platform', 'Platform'), href: '/platform/dashboard' },
+          { label: t('common.crumb.admins', 'Admins') },
         ]}
         actions={
-          <Link href="/platform/admins/packages">
-            <Button variant="outline" size="sm">
-              Admin Packages
+          <Button variant="outline" size="sm" render={<Link href="/platform/admins/packages" />}>
+              {t('platform.admins.list.adminPackages', 'Admin Packages')}
             </Button>
-          </Link>
         }
       />
 
@@ -239,9 +244,9 @@ export function AdminsListPage() {
         <Card className="border-border/60 bg-card">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Total Administrators</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('platform.admins.list.kpiTotal', 'Total Administrators')}</p>
               <p className="text-2xl font-bold tracking-tight text-foreground font-mono mt-0.5">{summary.total}</p>
-              <p className="text-[11px] text-muted-foreground">{summary.superAdmins} super admin</p>
+              <p className="text-xs text-muted-foreground">{t('platform.admins.list.kpiSuper', '{n} super admin', { n: summary.superAdmins })}</p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Users className="h-5 w-5" />
@@ -252,7 +257,7 @@ export function AdminsListPage() {
         <Card className="border-border/60 bg-card">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Active Accounts</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('platform.admins.list.kpiActive', 'Active Accounts')}</p>
               <p className="text-2xl font-bold tracking-tight text-emerald-500 font-mono mt-0.5">{summary.active}</p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -264,7 +269,7 @@ export function AdminsListPage() {
         <Card className="border-border/60 bg-card">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Linked to a Portal</p>
+              <p className="text-xs font-medium text-muted-foreground">{t('platform.admins.list.kpiLinked', 'Linked to a Portal')}</p>
               <p className="text-2xl font-bold tracking-tight text-blue-500 font-mono mt-0.5">{summary.linked}</p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -274,11 +279,11 @@ export function AdminsListPage() {
         </Card>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={data.items}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search name, email, phone..."
+        searchPlaceholder={t('platform.admins.list.searchPlaceholder', 'Search name, email, phone...')}
         server={{
           page,
           pageSize,
@@ -297,7 +302,7 @@ export function AdminsListPage() {
         toolbarActions={
           <div className="flex gap-2">
             <select
-              aria-label="Filter by role"
+              aria-label={t('platform.admins.list.filterRole', 'Filter by role')}
               className={selectClass}
               value={role}
               onChange={(e) => {
@@ -305,12 +310,12 @@ export function AdminsListPage() {
                 setPage(1);
               }}
             >
-              <option value="">All roles</option>
-              <option value="admin">Tenant admins</option>
-              <option value="super_admin">Super admins</option>
+              <option value="">{t('platform.admins.list.allRoles', 'All roles')}</option>
+              <option value="admin">{t('platform.admins.list.tenantAdmins', 'Tenant admins')}</option>
+              <option value="super_admin">{t('platform.admins.list.superAdmins', 'Super admins')}</option>
             </select>
             <select
-              aria-label="Filter by status"
+              aria-label={t('platform.admins.list.filterStatus', 'Filter by status')}
               className={selectClass}
               value={status}
               onChange={(e) => {
@@ -318,22 +323,22 @@ export function AdminsListPage() {
                 setPage(1);
               }}
             >
-              <option value="">All accounts</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="">{t('platform.admins.list.allAccounts', 'All accounts')}</option>
+              <option value="active">{t('status.active', 'Active')}</option>
+              <option value="inactive">{t('status.inactive', 'Inactive')}</option>
             </select>
           </div>
         }
-        emptyTitle="No admins found"
-        emptyDescription="No admin accounts match your filters."
+        emptyTitle={t('platform.admins.list.emptyTitle', 'No admins found')}
+        emptyDescription={t('platform.admins.list.emptyHint', 'No admin accounts match your filters.')}
       />
 
       <ConfirmDialog
         open={Boolean(loginTarget)}
         onOpenChange={(open) => !open && setLoginTarget(null)}
-        title={loginTarget ? `Login as ${loginTarget.name}?` : 'Login as admin'}
-        description="You will act inside this tenant's admin portal with a short-lived session (no refresh). Password, profile and payment-gateway changes are blocked, and the action is audit-logged. Your super-admin session ends — sign in again afterwards to return."
-        confirmLabel={impersonate.isPending ? 'Signing in…' : 'Login as admin'}
+        title={loginTarget ? t('platform.admins.list.loginTitle', 'Login as {name}?', { name: loginTarget.name }) : t('platform.admins.list.loginAsAdmin', 'Login as admin')}
+        description={t('platform.admins.list.loginDesc', "You will act inside this tenant's admin portal with a short-lived session (no refresh). Password, profile and payment-gateway changes are blocked, and the action is audit-logged. Your super-admin session ends — sign in again afterwards to return.")}
+        confirmLabel={impersonate.isPending ? t('platform.admins.list.signingIn', 'Signing in…') : t('platform.admins.list.loginAsAdmin', 'Login as admin')}
         onConfirm={() => loginTarget && impersonate.mutate(loginTarget)}
       />
     </div>

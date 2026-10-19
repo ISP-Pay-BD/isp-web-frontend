@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import {
   Package as PackageIcon,
   Plus,
@@ -24,12 +25,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { usePackageMutations, usePackageSummary, usePackages } from '../hooks/use-packages';
 import { packageSchema, type PackageFormValues } from '../schemas/package.schema';
 import type { IspPackage } from '../types';
-import { useDebouncedValue } from '@/features/admin/customers/hooks/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { DataTable } from '@/features/shared/data-table';
 import { TablePagination } from '@/components/shared/TablePagination';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { handleApiError, errorMessage } from '@/lib/api/utils/error-handler';
@@ -61,6 +64,9 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+import { formatCount } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
+
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const EMPTY_FORM: PackageFormValues = {
@@ -73,9 +79,19 @@ const EMPTY_FORM: PackageFormValues = {
   mikrotik_profile: '',
 };
 
-const CYCLE_LABEL: Record<IspPackage['pricingType'], string> = { weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
+const priceOf = (pkg: IspPackage) => pkg.sellingPrice ?? pkg.price;
 
 export function PackagesPage() {
+  const { t, te } = useLocale();
+  const cycleLabel = useMemo<Record<IspPackage['pricingType'], string>>(
+    () => ({
+      weekly: t('admin.packages.page.cycle.weekly', 'Weekly'),
+      monthly: t('admin.packages.page.cycle.monthly', 'Monthly'),
+      yearly: t('admin.packages.page.cycle.yearly', 'Yearly'),
+    }),
+    [t],
+  );
+  const statusLabel = (status: IspPackage['status']) => t(`status.${status}`, status);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [search, setSearch] = useState('');
@@ -122,19 +138,125 @@ export function PackagesPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (pkg: IspPackage) => {
-    setEditPkg(pkg);
-    reset({
-      package_name: pkg.name,
-      bandwidth: pkg.bandwidth,
-      price: String(pkg.price),
-      selling_price: pkg.sellingPrice !== null ? String(pkg.sellingPrice) : '',
-      pricing_type: pkg.pricingType,
-      status: pkg.status,
-      mikrotik_profile: pkg.mikrotikProfile ?? '',
-    });
-    setDialogOpen(true);
-  };
+  const openEdit = useCallback(
+    (pkg: IspPackage) => {
+      setEditPkg(pkg);
+      reset({
+        package_name: pkg.name,
+        bandwidth: pkg.bandwidth,
+        price: String(pkg.price),
+        selling_price: pkg.sellingPrice !== null ? String(pkg.sellingPrice) : '',
+        pricing_type: pkg.pricingType,
+        status: pkg.status,
+        mikrotik_profile: pkg.mikrotikProfile ?? '',
+      });
+      setDialogOpen(true);
+    },
+    [reset],
+  );
+
+  const columns = useMemo<LegacyColumnDef<IspPackage, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: t('admin.packages.page.colName', 'Plan Name & ID'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => {
+          const pkg = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg font-bold shrink-0 bg-primary/10 text-primary border border-primary/20">
+                <PackageIcon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 text-left">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPkg(pkg)}
+                  className="block text-left font-semibold text-foreground text-sm hover:text-primary transition-colors"
+                >
+                  {pkg.name}
+                </button>
+                <div className="text-xs font-normal text-muted-foreground font-mono">#{pkg.id}</div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'bandwidth',
+        header: t('admin.packages.page.bandwidth', 'Bandwidth'),
+        cell: ({ row }) => <span className="font-mono font-bold text-foreground text-sm">{row.original.bandwidth || '—'}</span>,
+      },
+      {
+        accessorKey: 'mikrotikProfile',
+        header: t('admin.packages.page.mikrotikProfile', 'MikroTik Profile'),
+        cell: ({ row }) => (
+          <div className="truncate max-w-[160px] font-mono text-xs text-muted-foreground">{row.original.mikrotikProfile ?? '—'}</div>
+        ),
+      },
+      {
+        id: 'price',
+        header: t('admin.packages.page.price', 'Price'),
+        accessorFn: priceOf,
+        cell: ({ row }) => {
+          const pkg = row.original;
+          return (
+            <div className="font-mono">
+              <div className="font-bold text-primary text-sm">
+                <CurrencyDisplay amount={priceOf(pkg)} />
+              </div>
+              {pkg.sellingPrice !== null && pkg.sellingPrice !== pkg.price && (
+                <div className="text-xs font-normal text-muted-foreground">
+                  {t('admin.packages.page.base', 'base')} <CurrencyDisplay amount={pkg.price} />
+                </div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: 'pricingType',
+        header: t('admin.packages.page.colCycle', 'Cycle'),
+        cell: ({ row }) => <span className="text-muted-foreground">{cycleLabel[row.original.pricingType]}</span>,
+      },
+      {
+        accessorKey: 'subscriberCount',
+        header: t('admin.packages.page.subscribers', 'Subscribers'),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-mono font-semibold text-foreground">{formatCount(row.original.subscriberCount)}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: t('admin.customers.list.colActions', 'Actions'),
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <Can menu="packages" action="update">
+              <Button variant="ghost" size="icon" aria-label={t('admin.packages.page.editAria', 'Edit package')} className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(row.original)}>
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </Can>
+            <Can menu="packages" action="delete">
+              <Button variant="ghost" size="icon" aria-label={t('admin.packages.page.deleteAria', 'Delete package')} className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(row.original)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </Can>
+          </div>
+        ),
+      },
+    ],
+    [openEdit, t, cycleLabel],
+  );
 
   const onSubmit = async (values: PackageFormValues) => {
     try {
@@ -149,27 +271,25 @@ export function PackagesPage() {
   if (isLoading) return <PageSkeleton variant="cards" rows={6} />;
   if (isError) {
     return (
-      <EmptyState
-        title="Failed to load packages"
-        description={errorMessage(error, 'Could not fetch package catalog from backend.')}
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.packages.page.loadFailed', 'Failed to load packages')}
+        description={errorMessage(error, t('admin.packages.page.loadFailedHint', 'Could not fetch package catalog from backend.'))}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
   }
 
-  const priceOf = (pkg: IspPackage) => pkg.sellingPrice ?? pkg.price;
-
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Header */}
       <PageHeader
-        title="Internet Packages & Bandwidth Tiers"
-        subtitle="Manage subscriber broadband packages, MikroTik profiles and prices"
+        title={t('admin.packages.page.title', 'Internet Packages & Bandwidth Tiers')}
+        subtitle={t('admin.packages.page.subtitle', 'Manage subscriber broadband packages, MikroTik profiles and prices')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Billing' },
-          { label: 'Packages' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.billing', 'Billing') },
+          { label: t('nav.packages', 'Packages') },
         ]}
         actions={
           <Can menu="packages" action="create">
@@ -178,7 +298,7 @@ export function PackagesPage() {
               onClick={openCreate}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-sm gap-1.5"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Package
+              <Plus className="h-3.5 w-3.5" /> {t('admin.packages.page.add', 'Add Package')}
             </Button>
           </Can>
         }
@@ -188,13 +308,13 @@ export function PackagesPage() {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {(
           [
-            { label: 'Packages', value: kpi(summary?.total), sub: `${kpi(summary?.active)} active · ${kpi(summary?.inactive)} inactive`, icon: Layers, tone: 'bg-primary/10 text-primary' },
-            { label: 'Active Packages', value: kpi(summary?.active), sub: 'Available for new customers', icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-400' },
-            { label: 'Subscribers', value: summary ? summary.subscribers.toLocaleString() : '…', sub: 'Customers on these packages', icon: Users, tone: 'bg-purple-500/10 text-purple-400' },
+            { label: t('nav.packages', 'Packages'), value: kpi(summary?.total), sub: t('admin.packages.page.kpiActiveInactive', '{active} active · {inactive} inactive', { active: kpi(summary?.active), inactive: kpi(summary?.inactive) }), icon: Layers, tone: 'bg-primary/10 text-primary' },
+            { label: t('admin.packages.page.kpiActive', 'Active Packages'), value: kpi(summary?.active), sub: t('admin.packages.page.kpiActiveHint', 'Available for new customers'), icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-400' },
+            { label: t('admin.packages.page.subscribers', 'Subscribers'), value: summary ? formatCount(summary.subscribers) : '…', sub: t('admin.packages.page.kpiSubscribersHint', 'Customers on these packages'), icon: Users, tone: 'bg-purple-500/10 text-purple-400' },
             {
-              label: 'Average Price',
+              label: t('admin.packages.page.kpiAvgPrice', 'Average Price'),
               value: summary ? <CurrencyDisplay amount={summary.avgPrice} /> : '…',
-              sub: 'Mean base price across packages',
+              sub: t('admin.packages.page.kpiAvgPriceHint', 'Mean base price across packages'),
               icon: TrendingUp,
               tone: 'bg-blue-500/10 text-blue-400',
             },
@@ -209,7 +329,7 @@ export function PackagesPage() {
                 </div>
               </div>
               <div className="mt-2 text-2xl font-black tracking-tight text-foreground font-mono">{k.value}</div>
-              <div className="mt-2 text-[11px] text-muted-foreground">{k.sub}</div>
+              <div className="mt-2 text-xs text-muted-foreground">{k.sub}</div>
             </CardContent>
           </Card>
         ))}
@@ -220,7 +340,8 @@ export function PackagesPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by package name..."
+            placeholder={t('admin.packages.page.searchPlaceholder', 'Search by package name...')}
+            aria-label={t('admin.packages.page.searchPlaceholder', 'Search by package name...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 text-xs bg-background/80"
@@ -228,6 +349,7 @@ export function PackagesPage() {
           {search && (
             <button
               onClick={() => setSearch('')}
+              aria-label={t('admin.packages.page.clearSearch', 'Clear search')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -239,9 +361,9 @@ export function PackagesPage() {
           <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
             {(
               [
-                { key: 'all', label: `All (${kpi(summary?.total)})` },
-                { key: 'active', label: `Active (${kpi(summary?.active)})` },
-                { key: 'inactive', label: `Inactive (${kpi(summary?.inactive)})` },
+                { key: 'all', label: t('admin.packages.page.pillAll', 'All ({n})', { n: kpi(summary?.total) }) },
+                { key: 'active', label: t('admin.packages.page.pillActive', 'Active ({n})', { n: kpi(summary?.active) }) },
+                { key: 'inactive', label: t('admin.packages.page.pillInactive', 'Inactive ({n})', { n: kpi(summary?.inactive) }) },
               ] as const
             ).map((pill) => (
               <Button
@@ -270,7 +392,8 @@ export function PackagesPage() {
                 'p-1.5 rounded-lg transition-colors',
                 viewMode === 'table' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
               )}
-              title="Table View"
+              title={t('admin.packages.page.tableView', 'Table View')}
+              aria-label={t('admin.packages.page.tableView', 'Table View')}
             >
               <List className="h-3.5 w-3.5" />
             </button>
@@ -281,7 +404,8 @@ export function PackagesPage() {
                 'p-1.5 rounded-lg transition-colors',
                 viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
               )}
-              title="Grid View"
+              title={t('admin.packages.page.gridView', 'Grid View')}
+              aria-label={t('admin.packages.page.gridView', 'Grid View')}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
@@ -292,98 +416,29 @@ export function PackagesPage() {
       {/* Main Content Area */}
       {items.length === 0 ? (
         <EmptyState
-          title={debouncedSearch || statusFilter !== 'all' ? 'No packages found' : 'No packages yet'}
-          description={debouncedSearch || statusFilter !== 'all' ? 'No packages match your filter.' : 'Create the first package customers can subscribe to.'}
-          actionLabel="Add Package"
+          title={debouncedSearch || statusFilter !== 'all' ? t('admin.packages.page.emptyFiltered', 'No packages found') : t('admin.packages.page.emptyNone', 'No packages yet')}
+          description={
+            debouncedSearch || statusFilter !== 'all'
+              ? t('admin.packages.page.emptyFilteredHint', 'No packages match your filter.')
+              : t('admin.packages.page.emptyNoneHint', 'Create the first package customers can subscribe to.')
+          }
+          actionLabel={t('admin.packages.page.add', 'Add Package')}
           onAction={openCreate}
         />
       ) : viewMode === 'table' ? (
-        <div className={cn('rounded-xl border border-border/60 bg-card overflow-hidden shadow-xs', isFetching && 'opacity-80')}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-muted/40 text-muted-foreground font-medium border-b border-border/60">
-                <tr>
-                  <th className="py-3 px-4">Plan Name & ID</th>
-                  <th className="py-3 px-4">Bandwidth</th>
-                  <th className="py-3 px-4">MikroTik Profile</th>
-                  <th className="py-3 px-4">Price</th>
-                  <th className="py-3 px-4">Cycle</th>
-                  <th className="py-3 px-4">Subscribers</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40">
-                {items.map((pkg) => (
-                  <tr
-                    key={pkg.id}
-                    onClick={() => setSelectedPkg(pkg)}
-                    className="hover:bg-muted/30 cursor-pointer transition-colors duration-150 group"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg font-bold shrink-0 bg-primary/10 text-primary border border-primary/20">
-                          <PackageIcon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{pkg.name}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono">#{pkg.id}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-foreground text-sm">{pkg.bandwidth || '—'}</td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
-                      <div className="truncate max-w-[160px]">{pkg.mikrotikProfile ?? '—'}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono">
-                      <div className="font-bold text-primary text-sm">
-                        <CurrencyDisplay amount={priceOf(pkg)} />
-                      </div>
-                      {pkg.sellingPrice !== null && pkg.sellingPrice !== pkg.price && (
-                        <div className="text-[10px] text-muted-foreground">
-                          base <CurrencyDisplay amount={pkg.price} />
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{CYCLE_LABEL[pkg.pricingType]}</td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="font-mono font-semibold text-foreground">{pkg.subscriberCount.toLocaleString()}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'capitalize text-[10px] font-semibold',
-                          pkg.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : 'bg-muted text-muted-foreground border-border/50'
-                        )}
-                      >
-                        {pkg.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <Can menu="packages" action="update">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(pkg)}>
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        </Can>
-                        <Can menu="packages" action="delete">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(pkg)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </Can>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className={cn('transition-opacity', isFetching && 'opacity-80')}>
+          <DataTable
+            columns={columns}
+            data={items}
+            getRowId={(row) => row.id}
+            server={{
+              page,
+              pageSize,
+              total: data?.meta.total ?? 0,
+              onPageChange: (p) => setPageState({ key: pageKey, page: p }),
+              onPageSizeChange: setPageSize,
+            }}
+          />
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -396,22 +451,22 @@ export function PackagesPage() {
               <div>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
-                      {CYCLE_LABEL[pkg.pricingType]}
+                    <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
+                      {cycleLabel[pkg.pricingType]}
                     </Badge>
                     <h3 className="font-bold text-base text-foreground mt-2 group-hover:text-primary transition-colors">{pkg.name}</h3>
-                    <div className="text-[11px] text-muted-foreground font-mono mt-0.5">#{pkg.id}</div>
+                    <div className="text-xs text-muted-foreground font-mono mt-0.5">#{pkg.id}</div>
                   </div>
-                  <Badge variant="outline" className="capitalize text-[10px]">{pkg.status}</Badge>
+                  <Badge variant="outline" className="capitalize text-xs">{statusLabel(pkg.status)}</Badge>
                 </div>
 
                 <div className="mt-4 p-3 rounded-xl bg-muted/20 border border-border/50 flex items-center justify-between group-hover:border-primary/20 transition-colors">
                   <div>
-                    <div className="text-[11px] text-muted-foreground">Bandwidth</div>
+                    <div className="text-xs text-muted-foreground">{t('admin.packages.page.bandwidth', 'Bandwidth')}</div>
                     <div className="text-xl font-black font-mono text-foreground">{pkg.bandwidth || '—'}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[11px] text-muted-foreground">Price</div>
+                    <div className="text-xs text-muted-foreground">{t('admin.packages.page.price', 'Price')}</div>
                     <div className="text-xl font-black font-mono text-primary">
                       <CurrencyDisplay amount={priceOf(pkg)} />
                     </div>
@@ -421,37 +476,37 @@ export function PackagesPage() {
                 <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-emerald-400" /> Billing Cycle
+                      <Clock className="h-3.5 w-3.5 text-emerald-400" /> {t('admin.packages.page.billingCycle', 'Billing Cycle')}
                     </span>
-                    <span className="font-semibold text-foreground">{CYCLE_LABEL[pkg.pricingType]}</span>
+                    <span className="font-semibold text-foreground">{cycleLabel[pkg.pricingType]}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-purple-400" /> Subscribers
+                      <Users className="h-3.5 w-3.5 text-purple-400" /> {t('admin.packages.page.subscribers', 'Subscribers')}
                     </span>
-                    <span className="font-mono font-semibold text-foreground">{pkg.subscriberCount.toLocaleString()}</span>
+                    <span className="font-mono font-semibold text-foreground">{formatCount(pkg.subscriberCount)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Router className="h-3.5 w-3.5 text-blue-400" /> MikroTik Profile
+                      <Router className="h-3.5 w-3.5 text-blue-400" /> {t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}
                     </span>
-                    <span className="font-mono text-[11px] text-muted-foreground truncate max-w-[130px]">{pkg.mikrotikProfile ?? '—'}</span>
+                    <span className="font-mono text-xs text-muted-foreground truncate max-w-[130px]">{pkg.mikrotikProfile ?? '—'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                 <Button size="sm" variant="outline" onClick={() => setSelectedPkg(pkg)} className="h-8 text-xs border-border/60 hover:bg-accent gap-1">
-                  Details <ChevronRight className="h-3.5 w-3.5" />
+                  {t('admin.packages.page.details', 'Details')} <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
                 <div className="flex items-center gap-1">
                   <Can menu="packages" action="update">
                     <Button size="sm" variant="ghost" onClick={() => openEdit(pkg)} className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary">
-                      <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                      <Edit className="h-3.5 w-3.5 mr-1" /> {t('admin.packages.page.edit', 'Edit')}
                     </Button>
                   </Can>
                   <Can menu="packages" action="delete">
-                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(pkg)} className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10">
+                    <Button size="sm" variant="ghost" aria-label={t('admin.packages.page.deleteAria', 'Delete package')} onClick={() => setDeleteTarget(pkg)} className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </Can>
@@ -462,7 +517,7 @@ export function PackagesPage() {
         </div>
       )}
 
-      {(data?.meta.total ?? 0) > 0 && (
+      {viewMode === 'grid' && (data?.meta.total ?? 0) > 0 && (
         <TablePagination
           currentPage={page}
           pageSize={pageSize}
@@ -480,30 +535,30 @@ export function PackagesPage() {
             <>
               <SheetHeader className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="capitalize text-[10px] font-semibold tracking-wider bg-primary/10 text-primary border-primary/20">
-                    {CYCLE_LABEL[selectedPkg.pricingType]}
+                  <Badge variant="outline" className="capitalize text-xs font-semibold tracking-wider bg-primary/10 text-primary border-primary/20">
+                    {cycleLabel[selectedPkg.pricingType]}
                   </Badge>
-                  <Badge variant="outline" className="text-[10px] capitalize">{selectedPkg.status}</Badge>
+                  <Badge variant="outline" className="text-xs capitalize">{statusLabel(selectedPkg.status)}</Badge>
                 </div>
                 <SheetTitle className="text-xl font-bold text-foreground">{selectedPkg.name}</SheetTitle>
-                <SheetDescription className="text-xs font-mono text-muted-foreground">ID: {selectedPkg.id}</SheetDescription>
+                <SheetDescription className="text-xs font-mono text-muted-foreground">{t('admin.packages.page.idLabel', 'ID: {id}', { id: selectedPkg.id })}</SheetDescription>
               </SheetHeader>
 
               <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-muted/20 border border-border/50">
                 <div>
-                  <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
-                    <Gauge className="h-3 w-3" /> Bandwidth
+                  <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
+                    <Gauge className="h-3 w-3" /> {t('admin.packages.page.bandwidth', 'Bandwidth')}
                   </div>
                   <div className="text-2xl font-black font-mono text-foreground mt-0.5">{selectedPkg.bandwidth || '—'}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[11px] text-muted-foreground font-semibold">Price</div>
+                  <div className="text-xs text-muted-foreground font-semibold">{t('admin.packages.page.price', 'Price')}</div>
                   <div className="text-2xl font-black font-mono text-primary mt-0.5">
                     <CurrencyDisplay amount={priceOf(selectedPkg)} />
                   </div>
                   {selectedPkg.sellingPrice !== null && (
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      base <CurrencyDisplay amount={selectedPkg.price} />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {t('admin.packages.page.base', 'base')} <CurrencyDisplay amount={selectedPkg.price} />
                     </div>
                   )}
                 </div>
@@ -511,12 +566,12 @@ export function PackagesPage() {
 
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50 font-mono">
-                  <span className="text-muted-foreground">MikroTik Profile</span>
+                  <span className="text-muted-foreground">{t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}</span>
                   <span className="font-bold text-foreground">{selectedPkg.mikrotikProfile ?? '—'}</span>
                 </div>
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50">
-                  <span className="text-muted-foreground">Subscribers</span>
-                  <span className="font-bold text-foreground font-mono">{selectedPkg.subscriberCount.toLocaleString()}</span>
+                  <span className="text-muted-foreground">{t('admin.packages.page.subscribers', 'Subscribers')}</span>
+                  <span className="font-bold text-foreground font-mono">{formatCount(selectedPkg.subscriberCount)}</span>
                 </div>
               </div>
 
@@ -530,11 +585,11 @@ export function PackagesPage() {
                     }}
                     className="flex-1 bg-primary text-primary-foreground text-xs font-semibold h-9"
                   >
-                    <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit Package
+                    <Edit className="h-3.5 w-3.5 mr-1.5" /> {t('admin.packages.page.editPackage', 'Edit Package')}
                   </Button>
                 </Can>
                 <Button variant="outline" onClick={() => setSelectedPkg(null)} className="text-xs h-9">
-                  Close
+                  {t('common.close', 'Close')}
                 </Button>
               </div>
             </>
@@ -550,81 +605,81 @@ export function PackagesPage() {
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 {editPkg ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editPkg ? 'Edit Internet Package' : 'Create New Internet Package'}
+              {editPkg ? t('admin.packages.page.dialogEdit', 'Edit Internet Package') : t('admin.packages.page.dialogCreate', 'Create New Internet Package')}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Bandwidth, price, billing cycle and the MikroTik profile applied to customers.
+              {t('admin.packages.page.dialogDesc', 'Bandwidth, price, billing cycle and the MikroTik profile applied to customers.')}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="package_name" className="text-xs font-semibold">Package Name</Label>
+              <Label htmlFor="package_name" className="text-xs font-semibold">{t('admin.packages.page.fieldName', 'Package Name')}</Label>
               <Input id="package_name" {...register('package_name')} className="text-xs h-9 shadow-xs" />
-              {errors.package_name && <p className="text-xs text-destructive">{errors.package_name.message}</p>}
+              {errors.package_name && <p className="text-xs text-destructive">{te(errors.package_name.message ?? '')}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Bandwidth (Mbps)</Label>
-                <Input {...register('bandwidth')} inputMode="numeric" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.bandwidth && <p className="text-xs text-destructive">{errors.bandwidth.message}</p>}
+                <Label htmlFor="bandwidth" className="text-xs font-semibold">{t('admin.packages.page.fieldBandwidth', 'Bandwidth (Mbps)')}</Label>
+                <Input id="bandwidth" {...register('bandwidth')} inputMode="numeric" className="text-xs h-9 font-mono shadow-xs" />
+                {errors.bandwidth && <p className="text-xs text-destructive">{te(errors.bandwidth.message ?? '')}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">MikroTik Profile</Label>
-                <Input {...register('mikrotik_profile')} className="text-xs h-9 font-mono shadow-xs" />
-                {errors.mikrotik_profile && <p className="text-xs text-destructive">{errors.mikrotik_profile.message}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Price (৳)</Label>
-                <Input {...register('price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Selling Price (৳, optional)</Label>
-                <Input {...register('selling_price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.selling_price && <p className="text-xs text-destructive">{errors.selling_price.message}</p>}
+                <Label htmlFor="mikrotik_profile" className="text-xs font-semibold">{t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}</Label>
+                <Input id="mikrotik_profile" {...register('mikrotik_profile')} className="text-xs h-9 font-mono shadow-xs" />
+                {errors.mikrotik_profile && <p className="text-xs text-destructive">{te(errors.mikrotik_profile.message ?? '')}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Billing Cycle</Label>
+                <Label htmlFor="price" className="text-xs font-semibold">{t('admin.packages.page.fieldPrice', 'Price (৳)')}</Label>
+                <Input id="price" {...register('price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
+                {errors.price && <p className="text-xs text-destructive">{te(errors.price.message ?? '')}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="selling_price" className="text-xs font-semibold">{t('admin.packages.page.fieldSellingPrice', 'Selling Price (৳, optional)')}</Label>
+                <Input id="selling_price" {...register('selling_price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
+                {errors.selling_price && <p className="text-xs text-destructive">{te(errors.selling_price.message ?? '')}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="billing-cycle" className="text-xs font-semibold">{t('admin.packages.page.billingCycle', 'Billing Cycle')}</Label>
                 <Select
                   value={watch('pricing_type')}
                   onValueChange={(v) => v && setValue('pricing_type', v as PackageFormValues['pricing_type'])}
-                  items={CYCLE_LABEL}
+                  items={cycleLabel}
                 >
-                  <SelectTrigger className="text-xs h-9 shadow-xs w-full">
+                  <SelectTrigger id="billing-cycle" className="text-xs h-9 shadow-xs w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="weekly">{cycleLabel.weekly}</SelectItem>
+                    <SelectItem value="monthly">{cycleLabel.monthly}</SelectItem>
+                    <SelectItem value="yearly">{cycleLabel.yearly}</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.pricing_type && <p className="text-xs text-destructive">{errors.pricing_type.message}</p>}
+                {errors.pricing_type && <p className="text-xs text-destructive">{te(errors.pricing_type.message ?? '')}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Status</Label>
+                <Label htmlFor="status" className="text-xs font-semibold">{t('admin.customers.list.statusLabel', 'Status')}</Label>
                 <Select
                   value={watch('status')}
                   onValueChange={(v) => v && setValue('status', v as PackageFormValues['status'])}
-                  items={{ active: 'Active', inactive: 'Inactive' }}
+                  items={{ active: statusLabel('active'), inactive: statusLabel('inactive') }}
                 >
-                  <SelectTrigger className="text-xs h-9 shadow-xs w-full">
+                  <SelectTrigger id="status" className="text-xs h-9 shadow-xs w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">{statusLabel('active')}</SelectItem>
+                    <SelectItem value="inactive">{statusLabel('inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.status && <p className="text-xs text-destructive">{errors.status.message}</p>}
+                {errors.status && <p className="text-xs text-destructive">{te(errors.status.message ?? '')}</p>}
               </div>
             </div>
 
@@ -634,7 +689,7 @@ export function PackagesPage() {
                 className="w-full text-xs font-semibold shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground h-9"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Saving…' : editPkg ? 'Save Changes' : 'Create Package'}
+                {isSubmitting ? t('admin.packages.page.saving', 'Saving…') : editPkg ? t('admin.packages.page.saveChanges', 'Save Changes') : t('admin.packages.page.create', 'Create Package')}
               </Button>
             </div>
           </form>
@@ -645,13 +700,13 @@ export function PackagesPage() {
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Package"
+        title={t('admin.packages.page.deleteTitle', 'Delete Package')}
         description={
           deleteTarget && deleteTarget.subscriberCount > 0
-            ? `${deleteTarget.subscriberCount} customers are on this package and will need reassignment. Delete it anyway?`
-            : 'Are you sure you want to delete this package?'
+            ? t('admin.packages.page.deleteWithCustomers', '{n} customers are on this package and will need reassignment. Delete it anyway?', { n: deleteTarget.subscriberCount })
+            : t('admin.packages.page.deleteHint', 'Are you sure you want to delete this package?')
         }
-        confirmLabel="Delete Package"
+        confirmLabel={t('admin.packages.page.deleteTitle', 'Delete Package')}
         destructive
         onConfirm={async () => {
           if (deleteTarget) {

@@ -1,50 +1,36 @@
 'use client';
 import { PageHero, PageContent } from '@/components/motion/PageHero';
 
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { useSalaries, useSalarySummary } from '../hooks/use-salaries';
+import type { SalaryPaymentItem } from '../types';
 import { useHrMeta } from '../../shared/use-hr-meta';
-import { useDebouncedValue } from '../../shared/use-debounced-value';
-import { datePart, initials, titleCase } from '../../shared/format';
-import { PageSkeleton, EmptyState, CurrencyDisplay, TablePagination } from '@/components/shared';
+import { datePart, initials } from '../../shared/format';
+import { hrStatusLabel, monthLabel } from '../../shared/labels';
+import { useTranslations } from '@/i18n/locale-context';
+import { PageSkeleton, EmptyState, CurrencyDisplay, StatusBadge } from '@/components/shared';
+import type { Tone } from '@/components/shared/status-tones';
+import { DataTable } from '@/features/shared/data-table';
+import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { SalaryPaymentModal } from '../components/SalaryPaymentModal';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Banknote, PlusCircle, Search, X } from 'lucide-react';
+import { Banknote, PlusCircle } from 'lucide-react';
 
-const statusBadge: Record<string, { cls: string; dot: string; label: string }> = {
-  successful: { cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500', label: 'Paid' },
-  pending: { cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', dot: 'bg-amber-500', label: 'Pending' },
-  failed: { cls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', dot: 'bg-rose-500', label: 'Failed' },
-};
+const paymentTone: Record<string, Tone> = { successful: 'success', pending: 'warning', failed: 'danger' };
 
 export function SalariesPage() {
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search.trim());
+  const t = useTranslations();
+  const table = useServerTable(DEFAULT_PAGE_SIZE);
   const [monthFilter, setMonthFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, monthFilter, statusFilter, pageSize]);
-
-  const list = useSalaries({ page, perPage: pageSize, search: debouncedSearch, month: monthFilter, status: statusFilter });
-  const summary = useSalarySummary({ search: debouncedSearch, month: monthFilter });
+  const list = useSalaries({ page: table.page, perPage: table.pageSize, search: table.search, month: monthFilter, status: statusFilter });
+  const summary = useSalarySummary({ search: table.search, month: monthFilter });
   const meta = useHrMeta();
 
   const payments = list.data?.items ?? [];
@@ -55,11 +41,95 @@ export function SalariesPage() {
   const s = summary.data;
   const avgPayout = s && s.successfulCount > 0 ? Math.round(s.successfulTotal / s.successfulCount) : 0;
 
+  const columns = useMemo<LegacyColumnDef<SalaryPaymentItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'invoice',
+        header: t('admin.hr.salaries.colVoucher', 'Voucher'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="font-mono text-xs font-semibold bg-muted/40 px-2 py-1 rounded-md">{row.original.invoice || `#${row.original.id}`}</span>
+        ),
+      },
+      {
+        accessorKey: 'employeeName',
+        header: t('admin.hr.salaries.colEmployee', 'Employee'),
+        enableSorting: false,
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 font-bold text-xs">
+              {initials(row.original.employeeName)}
+            </div>
+            <span className="font-semibold text-sm">{row.original.employeeName || `#${row.original.employeeId}`}</span>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'month',
+        header: t('admin.hr.salaries.colMonth', 'Month'),
+        enableSorting: false,
+        cell: ({ row }) => <Badge variant="secondary" className="font-mono text-xs bg-muted/40">{row.original.month ? monthLabel(t, row.original.month) : '—'}</Badge>,
+      },
+      {
+        accessorKey: 'amount',
+        header: t('admin.hr.salaries.colAmount', 'Amount'),
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div>
+            <span className="font-mono font-bold text-sm"><CurrencyDisplay amount={row.original.amount} /></span>
+            {row.original.advanceDeducted > 0 ? (
+              <div className="text-xs text-muted-foreground">
+                + <CurrencyDisplay amount={row.original.advanceDeducted} className="inline" /> {t('admin.hr.salaries.advanceRecovered', 'advance recovered')}
+              </div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'paidAt',
+        header: t('admin.hr.salaries.colPaidDate', 'Paid Date'),
+        enableSorting: false,
+        cell: ({ row }) => <span className="text-muted-foreground text-xs font-mono">{datePart(row.original.paidAt) || '—'}</span>,
+      },
+      {
+        accessorKey: 'paidVia',
+        header: t('admin.hr.salaries.colPaidVia', 'Paid Via'),
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.paidVia ? (
+            <Badge variant="secondary" className="text-xs font-medium border border-border/50 bg-muted/40">
+              {row.original.paidVia}
+            </Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('common.status', 'Status'),
+        enableSorting: false,
+        cell: ({ row }) => {
+          const status = row.original.status;
+          const label =
+            status === 'successful'
+              ? t('status.paid', 'Paid')
+              : status === 'failed'
+                ? t('status.failed', 'Failed')
+                : t('status.pending', 'Pending');
+          return <StatusBadge status={status} tone={paymentTone[status] ?? 'warning'} label={label} />;
+        },
+      },
+    ],
+    [t],
+  );
+
   if (list.isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (list.isError) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load salary disbursements" description={list.error?.message ?? 'Could not load the payroll payment registry.'} actionLabel="Retry" onAction={() => list.refetch()} />
+        <EmptyState variant="error" title={t('admin.hr.salaries.loadFailed', 'Failed to load salary disbursements')} description={list.error?.message ?? t('admin.hr.salaries.loadFailedHint', 'Could not load the payroll payment registry.')} actionLabel={t('common.retry', 'Retry')} onAction={() => list.refetch()} />
       </div>
     );
   }
@@ -72,15 +142,15 @@ export function SalariesPage() {
             <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
               <Banknote className="h-6 w-6" />
             </div>
-            Salary Payments
+            {t('admin.hr.salaries.title', 'Salary Payments')}
           </h1>
           <p className="text-muted-foreground text-sm mt-1.5">
-            Disburse and review monthly employee payroll and payment vouchers.
+            {t('admin.hr.salaries.subtitle', 'Disburse and review monthly employee payroll and payment vouchers.')}
           </p>
         </div>
         <div >
           <Button onClick={() => setModalOpen(true)} disabled={!meta.data} className="bg-primary hover:bg-primary/90 font-semibold shadow-sm gap-1.5">
-            <PlusCircle className="h-4 w-4" /> New Salary Payment
+            <PlusCircle className="h-4 w-4" /> {t('admin.hr.salaries.newPayment', 'New Salary Payment')}
           </Button>
         </div>
       </PageHero>
@@ -91,149 +161,66 @@ export function SalariesPage() {
           <span className="font-semibold tabular-nums">
             {s ? <CurrencyDisplay amount={s.successfulTotal} className="inline font-semibold" /> : '—'}
           </span>{' '}
-          <span className="text-muted-foreground">disbursed</span>
+          <span className="text-muted-foreground">{t('admin.hr.salaries.kpiDisbursed', 'disbursed')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{s?.totalCount ?? '—'}</span>{' '}
-          <span className="text-muted-foreground">vouchers</span>
+          <span className="text-muted-foreground">{t('admin.hr.salaries.kpiVouchers', 'vouchers')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">
             {s ? <CurrencyDisplay amount={s.pendingTotal} className="inline font-semibold" /> : '—'}
           </span>{' '}
-          <span className="text-muted-foreground">pending</span>
+          <span className="text-muted-foreground">{t('admin.hr.salaries.kpiPending', 'pending')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">
             {s ? <CurrencyDisplay amount={avgPayout} className="inline font-semibold" /> : '—'}
           </span>{' '}
-          <span className="text-muted-foreground">avg payout</span>
+          <span className="text-muted-foreground">{t('admin.hr.salaries.kpiAvg', 'avg payout')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums">{meta.data ? activeStaff : '—'}</span>{' '}
-          <span className="text-muted-foreground">staff on payroll</span>
+          <span className="text-muted-foreground">{t('admin.hr.salaries.kpiStaff', 'staff on payroll')}</span>
         </p>
       </div>
 
-      <div>
-        <Card className="border-border/60 bg-card shadow-sm ring-1 ring-border/60 overflow-hidden">
-          <div className="p-4 border-b border-border/50">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1 min-w-[200px] sm:min-w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by employee, invoice or method..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-9 bg-background border-border/60 text-sm shadow-sm" />
-                {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select items={Object.fromEntries([['all', 'All Months'], ...months.map((m) => [m, m])])} value={monthFilter} onValueChange={(v) => setMonthFilter(v ?? 'all')}>
-                  <SelectTrigger className="w-[150px] h-9 text-xs border-border/60">
-                    <SelectValue placeholder="Salary Month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
-                    {months.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select items={Object.fromEntries([['all', 'All Status'], ...statuses.map((st) => [st, titleCase(st)])])} value={statusFilter} onValueChange={(v) => setStatusFilter(v ?? 'all')}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs border-border/60">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    {statuses.map((st) => <SelectItem key={st} value={st}>{titleCase(st)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Badge variant="secondary" className="font-mono text-xs px-2.5 py-1">{total} result{total !== 1 ? 's' : ''}</Badge>
-              </div>
-            </div>
-          </div>
-
-          {payments.length === 0 ? (
-            <div className="py-16">
-              <EmptyState icon={<Banknote className="h-10 w-10" />} title="No salary disbursements found" description={debouncedSearch || monthFilter !== 'all' || statusFilter !== 'all' ? 'No salary payment matches your search or filters.' : 'Recorded salary payments will appear here.'} actionLabel={meta.data ? 'Disburse Salary' : undefined} onAction={meta.data ? () => setModalOpen(true) : undefined} />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-12 text-[11px] font-medium tracking-wide text-muted-foreground">#</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Voucher</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Employee</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Month</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Amount</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Paid Date</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Paid Via</TableHead>
-                    <TableHead className="text-[11px] font-medium tracking-wide text-muted-foreground">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((p, idx) => {
-                    const st = statusBadge[p.status] ?? statusBadge.pending;
-                    return (
-                      <tr
-                        key={p.id}
-                        className="group border-border/40 hover:bg-muted/30 transition-colors"
-                      >
-                        <TableCell className="text-muted-foreground font-mono text-xs">{(page - 1) * pageSize + idx + 1}</TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs font-semibold bg-muted/40 px-2 py-1 rounded-md">{p.invoice || `#${p.id}`}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20 font-bold text-[10px]">
-                              {initials(p.employeeName)}
-                            </div>
-                            <span className="font-semibold text-sm group-hover:text-primary transition-colors">{p.employeeName || `#${p.employeeId}`}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono text-xs bg-muted/40">{p.month || '—'}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-mono font-bold text-sm"><CurrencyDisplay amount={p.amount} /></span>
-                          {p.advanceDeducted > 0 ? (
-                            <div className="text-[10px] text-muted-foreground">
-                              + <CurrencyDisplay amount={p.advanceDeducted} className="inline" /> advance recovered
-                            </div>
-                          ) : null}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs font-mono">{datePart(p.paidAt) || '—'}</TableCell>
-                        <TableCell>
-                          {p.paidVia ? (
-                            <Badge variant="secondary" className="text-[10px] font-medium border border-border/50 bg-muted/40">
-                              {p.paidVia}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`${st.cls} text-xs font-medium gap-1`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${st.dot} inline-block`} /> {st.label}
-                          </Badge>
-                        </TableCell>
-                      </tr>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          <TablePagination
-            currentPage={list.data?.meta.page ?? page}
-            pageSize={pageSize}
-            totalItems={total}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[10, 20, 50, 100]}
-          />
-        </Card>
-      </div>
+      <DataTable
+        urlState
+        columns={columns}
+        data={payments}
+        getRowId={(row) => row.id}
+        searchPlaceholder={t('admin.hr.salaries.searchPlaceholder', 'Search by employee, invoice or method...')}
+        emptyTitle={t('admin.hr.salaries.emptyTitle', 'No salary disbursements found')}
+        emptyDescription={
+          table.search || monthFilter !== 'all' || statusFilter !== 'all'
+            ? t('admin.hr.salaries.emptyFiltered', 'No salary payment matches your search or filters.')
+            : t('admin.hr.salaries.emptyNone', 'Recorded salary payments will appear here.')
+        }
+        server={table.server(total)}
+        toolbarActions={
+          <>
+            <Select items={Object.fromEntries([['all', t('admin.hr.salaries.allMonths', 'All Months')], ...months.map((m) => [m, monthLabel(t, m)])])} value={monthFilter} onValueChange={(v) => { setMonthFilter(v ?? 'all'); table.resetPage(); }}>
+              <SelectTrigger className="w-[170px] h-9 text-xs border-border/60" aria-label={t('admin.hr.salaries.filterMonth', 'Filter by salary month')}>
+                <SelectValue placeholder={t('admin.hr.salaries.salaryMonth', 'Salary Month')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.hr.salaries.allMonths', 'All Months')}</SelectItem>
+                {months.map((m) => <SelectItem key={m} value={m}>{monthLabel(t, m)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select items={Object.fromEntries([['all', t('admin.hr.salaries.allStatus', 'All Status')], ...statuses.map((st) => [st, hrStatusLabel(t, st)])])} value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? 'all'); table.resetPage(); }}>
+              <SelectTrigger className="w-[150px] h-9 text-xs border-border/60" aria-label={t('admin.hr.salaries.filterStatus', 'Filter by status')}>
+                <SelectValue placeholder={t('admin.hr.salaries.allStatus', 'All Status')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('admin.hr.salaries.allStatus', 'All Status')}</SelectItem>
+                {statuses.map((st) => <SelectItem key={st} value={st}>{hrStatusLabel(t, st)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </>
+        }
+      />
 
       </PageContent>
       {modalOpen && meta.data && <SalaryPaymentModal open={modalOpen} onOpenChange={setModalOpen} meta={meta.data} />}

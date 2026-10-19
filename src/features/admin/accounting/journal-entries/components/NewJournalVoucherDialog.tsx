@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useChartOfAccounts } from '../../chart-of-accounts/hooks/use-chart-of-accounts';
 import { money } from '../../shared/format';
 import { todayYmd } from '../../shared/table-utils';
+import { useLocale } from '@/i18n/locale-context';
 import { useCreateJournalEntry } from '../hooks/use-journal-entries';
 
 /** Snake_case names so the backend's 422 details (`lines.N.account_id`, …) map straight onto fields. */
@@ -41,6 +42,7 @@ const emptyLine = { account_id: '', debit: '', credit: '' };
 const cents = (v: string) => Math.round(num(v) * 100);
 
 export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
+  const { t, te } = useLocale();
   const { accounts, isLoading: accountsLoading, isError: accountsError } = useChartOfAccounts();
   const form = useForm<VoucherForm>({
     defaultValues: { entry_date: todayYmd(), description: '', lines: [emptyLine, emptyLine] },
@@ -66,15 +68,15 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
   const linesValid = lines.every((l) => l.account_id && cents(l.debit) > 0 !== cents(l.credit) > 0);
   const blocker =
     lines.length < 2
-      ? 'Add at least two lines.'
+      ? t('admin.accounting.journal.dialog.blockLines', 'Add at least two lines.')
       : !linesValid
-        ? 'Each line needs an account and either a debit or a credit amount.'
+        ? t('admin.accounting.journal.dialog.blockLineValid', 'Each line needs an account and either a debit or a credit amount.')
         : debitCents === 0
-          ? 'Enter the voucher amounts.'
+          ? t('admin.accounting.journal.dialog.blockAmounts', 'Enter the voucher amounts.')
           : diffCents !== 0
-            ? 'Total debits must equal total credits.'
+            ? t('admin.accounting.journal.dialog.blockBalance', 'Total debits must equal total credits.')
             : !entryDate || !description.trim()
-              ? 'Date and description are required.'
+              ? t('admin.accounting.journal.dialog.blockFields', 'Date and description are required.')
               : null;
 
   const onSubmit = form.handleSubmit((v) =>
@@ -90,7 +92,11 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
       },
       {
         onSuccess: (res) => {
-          toast.success(`Journal voucher${res?.id ? ` #${res.id}` : ''} posted`);
+          toast.success(
+            res?.id
+              ? t('admin.accounting.journal.dialog.postedId', 'Journal voucher #{id} posted', { id: String(res.id) })
+              : t('admin.accounting.journal.dialog.posted', 'Journal voucher posted'),
+          );
           onClose();
         },
       },
@@ -103,9 +109,9 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Record Journal Voucher</DialogTitle>
+          <DialogTitle>{t('admin.accounting.journal.dialog.title', 'Record Journal Voucher')}</DialogTitle>
           <DialogDescription>
-            Post a balanced double-entry transaction to the general ledger.
+            {t('admin.accounting.journal.dialog.desc', 'Post a balanced double-entry transaction to the general ledger.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -113,7 +119,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
           <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
             <div className="space-y-1.5">
               <Label htmlFor="jv-date" className="text-muted-foreground text-xs font-semibold">
-                Date *
+                {t('admin.accounting.journal.dialog.date', 'Date *')}
               </Label>
               <Input
                 id="jv-date"
@@ -122,25 +128,25 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                 {...form.register('entry_date')}
               />
               {errors.entry_date && (
-                <p className="text-destructive text-xs">{errors.entry_date.message}</p>
+                <p className="text-destructive text-xs">{te(errors.entry_date.message ?? '')}</p>
               )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="jv-desc" className="text-muted-foreground text-xs font-semibold">
-                Description *
+                {t('admin.accounting.journal.dialog.description', 'Description *')}
               </Label>
               <Input id="jv-desc" className="h-9 text-xs" {...form.register('description')} />
               {errors.description && (
-                <p className="text-destructive text-xs">{errors.description.message}</p>
+                <p className="text-destructive text-xs">{te(errors.description.message ?? '')}</p>
               )}
             </div>
           </div>
 
           <div className="border-border/60 overflow-hidden rounded-xl border">
-            <div className="bg-muted/40 text-muted-foreground grid grid-cols-[1fr_120px_120px_36px] gap-2 px-3 py-2 text-[11px] font-semibold tracking-wider uppercase">
-              <span>Account</span>
-              <span className="text-right">Debit (৳)</span>
-              <span className="text-right">Credit (৳)</span>
+            <div className="bg-muted/40 text-muted-foreground grid grid-cols-[1fr_120px_120px_36px] gap-2 px-3 py-2 text-xs font-semibold tracking-wider uppercase">
+              <span>{t('admin.accounting.journal.colAccount', 'Account')}</span>
+              <span className="text-right">{t('admin.accounting.journal.dialog.debitTaka', 'Debit (৳)')}</span>
+              <span className="text-right">{t('admin.accounting.journal.dialog.creditTaka', 'Credit (৳)')}</span>
               <span />
             </div>
             <div className="divide-border/40 divide-y">
@@ -166,11 +172,13 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                           >
                             <SelectTrigger
                               className="h-9 w-full text-xs"
-                              aria-label={`Line ${i + 1} account`}
+                              aria-label={t('admin.accounting.journal.dialog.lineAccount', 'Line {n} account', { n: i + 1 })}
                             >
                               <SelectValue
                                 placeholder={
-                                  accountsLoading ? 'Loading accounts…' : 'Select account'
+                                  accountsLoading
+                                    ? t('admin.accounting.journal.dialog.loadingAccounts', 'Loading accounts…')
+                                    : t('admin.accounting.journal.dialog.selectAccount', 'Select account')
                                 }
                               />
                             </SelectTrigger>
@@ -189,7 +197,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                         step="0.01"
                         min="0"
                         inputMode="decimal"
-                        aria-label={`Line ${i + 1} debit`}
+                        aria-label={t('admin.accounting.journal.dialog.lineDebit', 'Line {n} debit', { n: i + 1 })}
                         className="h-9 text-right font-mono text-xs"
                         {...form.register(`lines.${i}.debit`, {
                           onChange: (e) =>
@@ -201,7 +209,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                         step="0.01"
                         min="0"
                         inputMode="decimal"
-                        aria-label={`Line ${i + 1} credit`}
+                        aria-label={t('admin.accounting.journal.dialog.lineCredit', 'Line {n} credit', { n: i + 1 })}
                         className="h-9 text-right font-mono text-xs"
                         {...form.register(`lines.${i}.credit`, {
                           onChange: (e) =>
@@ -213,7 +221,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                         variant="ghost"
                         size="icon"
                         className="text-muted-foreground hover:text-destructive h-8 w-8"
-                        aria-label={`Remove line ${i + 1}`}
+                        aria-label={t('admin.accounting.journal.dialog.removeLine', 'Remove line {n}', { n: i + 1 })}
                         disabled={fields.length <= 2}
                         onClick={() => remove(i)}
                       >
@@ -234,7 +242,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
                 onClick={() => append(emptyLine)}
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add line
+                {t('admin.accounting.journal.dialog.addLine', 'Add line')}
               </Button>
               <span className="text-right font-mono text-xs font-bold tabular-nums">
                 {money(debitCents / 100)}
@@ -247,7 +255,7 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
           </div>
 
           {accountsError && (
-            <p className="text-destructive text-xs">Could not load the chart of accounts.</p>
+            <p className="text-destructive text-xs">{t('admin.accounting.journal.dialog.accountsFailed', 'Could not load the chart of accounts.')}</p>
           )}
           {linesError && <p className="text-destructive text-xs">{linesError}</p>}
 
@@ -266,11 +274,13 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
             )}
             {diffCents === 0
               ? debitCents > 0
-                ? 'Balanced'
-                : 'No amounts yet'
-              : `Difference ${money(Math.abs(diffCents) / 100)} (${diffCents > 0 ? 'debits exceed credits' : 'credits exceed debits'})`}
+                ? t('admin.accounting.journal.dialog.balanced', 'Balanced')
+                : t('admin.accounting.journal.dialog.noAmounts', 'No amounts yet')
+              : diffCents > 0
+                ? t('admin.accounting.journal.dialog.debitsExceed', 'Difference {amount} (debits exceed credits)', { amount: money(Math.abs(diffCents) / 100) })
+                : t('admin.accounting.journal.dialog.creditsExceed', 'Difference {amount} (credits exceed debits)', { amount: money(Math.abs(diffCents) / 100) })}
           </div>
-          {blocker && <p className="text-muted-foreground text-[11px]">{blocker}</p>}
+          {blocker && <p className="text-muted-foreground text-xs">{blocker}</p>}
 
           <DialogFooter className="pt-2">
             <Button
@@ -280,14 +290,14 @@ export function NewJournalVoucherDialog({ onClose }: { onClose: () => void }) {
               disabled={create.isPending}
               className="text-xs"
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               type="submit"
               disabled={!!blocker || create.isPending}
               className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold"
             >
-              {create.isPending ? 'Posting…' : 'Post Journal Voucher'}
+              {create.isPending ? t('admin.accounting.journal.dialog.posting', 'Posting…') : t('admin.accounting.journal.dialog.post', 'Post Journal Voucher')}
             </Button>
           </DialogFooter>
         </form>

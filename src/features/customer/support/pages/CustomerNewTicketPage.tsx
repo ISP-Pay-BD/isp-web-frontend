@@ -4,24 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  LifeBuoy,
-  Send,
-  ArrowLeft,
-  Info,
-} from 'lucide-react';
+import { LifeBuoy, Send, ArrowLeft, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   CustomerPageShell,
   createTicketSchema,
@@ -30,20 +19,13 @@ import {
   type CreateTicketInput,
 } from '@/features/customer/shared';
 import { useCreateTicket } from '../hooks/use-customer-support';
+import { ticketCategoryLabel, ticketPriorityLabel } from '../lib/ticket-labels';
 import { handleApiError } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 import { toast } from 'sonner';
 
-/** Labels for the backend's `tickets.category` enum values. */
-const CATEGORY_LABELS: Record<(typeof TICKET_CATEGORIES)[number], string> = {
-  technical: 'Technical / connection problem',
-  noc: 'Network outage (NOC)',
-  sales: 'Sales / package inquiry',
-  marketing: 'Offers & marketing',
-  general: 'General / billing',
-  none: 'Other',
-};
-
 export function CustomerNewTicketPage() {
+  const { t, te } = useLocale();
   const router = useRouter();
   const createMutation = useCreateTicket();
 
@@ -65,11 +47,12 @@ export function CustomerNewTicketPage() {
   });
 
   const selectedPriority = watch('priority');
+  const categoryLabels = Object.fromEntries(TICKET_CATEGORIES.map((cat) => [cat, ticketCategoryLabel(t, cat)]));
 
   const onSubmit = async (data: CreateTicketInput) => {
     try {
       const res = await createMutation.mutateAsync(data);
-      toast.success('Support ticket opened. Your provider will reply here.');
+      toast.success(t('customer.newTicket.created', 'Support ticket opened. Your provider will reply here.'));
       router.push(res?.id ? `/customer/support/${res.id}` : '/customer/support');
     } catch (err) {
       handleApiError(err, setError);
@@ -78,132 +61,118 @@ export function CustomerNewTicketPage() {
 
   return (
     <CustomerPageShell
-      title="Create Support Ticket"
-      subtitle="Report an issue to your ISP technical support desk and track progress."
+      title={t('customer.newTicket.title', 'Create support ticket')}
+      subtitle={t('customer.newTicket.subtitle', 'Report an issue to your ISP technical support desk and track progress.')}
       breadcrumbs={[
-        { label: 'Customer', href: '/customer/dashboard' },
-        { label: 'Support', href: '/customer/support' },
-        { label: 'New Ticket' },
+        { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
+        { label: t('customer.support.crumb', 'Support'), href: '/customer/support' },
+        { label: t('customer.newTicket.crumb', 'New ticket') },
       ]}
       actions={
-        <Link href="/customer/support">
-          <Button variant="outline" size="sm" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Tickets
-          </Button>
-        </Link>
+        <Button variant="outline" className="h-11 w-full gap-2 sm:w-auto" render={<Link href="/customer/support" />}>
+          <ArrowLeft className="h-4 w-4" />
+          {t('customer.newTicket.back', 'Back to tickets')}
+        </Button>
       }
     >
-      <div className="max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <LifeBuoy className="h-5 w-5 text-primary" />
-                Ticket Information
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <LifeBuoy className="text-primary h-5 w-5" />
+                {t('customer.newTicket.cardTitle', 'Ticket information')}
               </CardTitle>
-              <CardDescription className="text-xs">
-                Provide specific details so your provider can diagnose the issue quickly.
+              <CardDescription className="text-sm">
+                {t('customer.newTicket.cardDesc', 'Give specific details so your provider can find the problem quickly.')}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Category */}
               <div className="space-y-1.5">
-                <Label htmlFor="category">Issue Category</Label>
+                <Label htmlFor="category">{t('customer.newTicket.category', 'Issue category')}</Label>
                 <Select
-                  items={CATEGORY_LABELS}
+                  items={categoryLabels}
                   defaultValue="technical"
                   onValueChange={(val) => {
                     if (val) setValue('category', val as CreateTicketInput['category']);
                   }}
                 >
-                  <SelectTrigger id="category" className="w-full">
-                    <SelectValue placeholder="Select issue category" />
+                  <SelectTrigger id="category" className="w-full data-[size=default]:h-11">
+                    <SelectValue placeholder={t('customer.newTicket.categoryPlaceholder', 'Select issue category')} />
                   </SelectTrigger>
                   <SelectContent>
                     {TICKET_CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
-                        {CATEGORY_LABELS[cat]}
+                        {categoryLabels[cat]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.category && (
-                  <p className="text-xs text-destructive">{errors.category.message}</p>
-                )}
+                {errors.category && <p className="text-destructive text-sm">{te(errors.category.message ?? '')}</p>}
               </div>
 
-              {/* Priority */}
               <div className="space-y-1.5">
-                <Label>Priority Level</Label>
+                <Label>{t('customer.newTicket.priority', 'Priority')}</Label>
                 <div className="grid grid-cols-3 gap-2.5">
                   {TICKET_PRIORITIES.map((p) => (
                     <Button
                       key={p}
                       type="button"
                       variant={selectedPriority === p ? 'default' : 'outline'}
-                      size="sm"
+                      aria-pressed={selectedPriority === p}
                       onClick={() => setValue('priority', p)}
-                      className={`capitalize font-bold text-xs ${
-                        selectedPriority === p && p === 'high'
-                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                          : ''
-                      }`}
+                      className="h-11 font-semibold"
                     >
-                      {p}
+                      {ticketPriorityLabel(t, p)}
                     </Button>
                   ))}
                 </div>
               </div>
 
-              {/* Subject */}
               <div className="space-y-1.5">
-                <Label htmlFor="subject">Subject Summary</Label>
+                <Label htmlFor="subject">{t('customer.newTicket.subject', 'Subject')}</Label>
                 <Input
                   id="subject"
-                  placeholder="e.g. Internet speed drops after 8 PM every evening"
+                  maxLength={120}
+                  placeholder={t('customer.newTicket.subjectPlaceholder', 'e.g. Internet speed drops after 8 PM every evening')}
+                  className="h-11"
                   {...register('subject')}
                 />
-                {errors.subject && (
-                  <p className="text-xs text-destructive">{errors.subject.message}</p>
-                )}
+                {errors.subject && <p className="text-destructive text-sm">{te(errors.subject.message ?? '')}</p>}
               </div>
 
-              {/* Description Body */}
               <div className="space-y-1.5">
-                <Label htmlFor="message">Detailed Description</Label>
+                <Label htmlFor="message">{t('customer.newTicket.message', 'Details')}</Label>
                 <Textarea
                   id="message"
                   rows={5}
-                  placeholder="Please describe what happens, when it started, and whether router restart resolves it..."
+                  placeholder={t(
+                    'customer.newTicket.messagePlaceholder',
+                    'Describe what happens, when it started, and whether restarting the router helps…',
+                  )}
                   {...register('message')}
                 />
-                {errors.message && (
-                  <p className="text-xs text-destructive">{errors.message.message}</p>
-                )}
+                {errors.message && <p className="text-destructive text-sm">{te(errors.message.message ?? '')}</p>}
               </div>
 
-              <div className="rounded-lg bg-muted/50 p-3 flex items-start gap-2.5 text-xs text-muted-foreground border">
-                <Info className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+              <div className="bg-muted/50 text-muted-foreground flex items-start gap-2.5 rounded-lg border p-3 text-sm">
+                <Info className="text-primary mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  Tip: If your ONT router exhibits a <strong>Red LOS</strong> light, please inspect if the yellow optical patch cord is bent or detached before submitting.
+                  {t(
+                    'customer.newTicket.tip',
+                    'Tip: if your ONT shows a red LOS light, check whether the yellow fibre patch cord is bent or unplugged before you submit.',
+                  )}
                 </span>
               </div>
 
-              <div className="pt-3 border-t flex justify-end gap-3">
-                <Link href="/customer/support">
-                  <Button variant="ghost" type="button">
-                    Cancel
-                  </Button>
-                </Link>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="font-bold gap-2 shadow-sm"
-                >
-                  <Send className="h-4 w-4" />
-                  {createMutation.isPending ? 'Submitting...' : 'Submit Support Ticket'}
+              <div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+                <Button variant="ghost" type="button" className="h-11 w-full sm:w-auto" render={<Link href="/customer/support" />}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending} className="h-11 w-full gap-2 font-semibold sm:w-auto">
+                  {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {createMutation.isPending ? t('customer.newTicket.submitting', 'Submitting…') : t('customer.newTicket.submit', 'Submit ticket')}
                 </Button>
               </div>
             </CardContent>

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslations } from '@/i18n/locale-context';
 import { employeeService } from '@/lib/api/services/employee.service';
 import { normalizeBdPhone } from '@/lib/format';
 import { employeeKeys } from '@/features/employee/shared/keys';
@@ -23,6 +24,7 @@ export function useEmployeeProfile() {
  */
 export function useUpdateEmployeeProfile(current: EmployeeProfile | undefined) {
   const queryClient = useQueryClient();
+  const t = useTranslations();
 
   return useMutation({
     mutationFn: (values: ProfileUpdateFormValues) => {
@@ -38,7 +40,7 @@ export function useUpdateEmployeeProfile(current: EmployeeProfile | undefined) {
       return employeeService.updateProfile(body);
     },
     onSuccess: () => {
-      toast.success('Profile updated successfully');
+      toast.success(t('employee.profile.updated', 'Profile updated successfully'));
       queryClient.invalidateQueries({ queryKey: employeeKeys.profile });
     },
   });

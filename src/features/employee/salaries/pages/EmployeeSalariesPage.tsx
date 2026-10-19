@@ -9,8 +9,9 @@ import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ChartCard } from '@/components/shared/ChartCard';
 import { FilterBar } from '@/components/shared/FilterBar';
-import { formatBdt } from '@/lib/format';
+import { formatBdt, formatBdtCompact, formatBdtWithSymbol } from '@/lib/format';
 import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
+import { useLocale } from '@/i18n/locale-context';
 import {
   EmployeePageShell,
   EmployeeLoadingSkeleton,
@@ -18,14 +19,22 @@ import {
   EmployeeErrorState,
 } from '@/features/employee/shared';
 import { useEmployeeSummary } from '@/features/employee/shared/hooks/use-employee-summary';
-import { formatDay } from '@/features/employee/shared/lib/datetime';
+import { formatDay, formatMonthName } from '@/features/employee/shared/lib/datetime';
+import { statusLabel } from '@/features/employee/shared/lib/labels';
 import { useEmployeeSalaries } from '../hooks/use-employee-salaries';
 import type { EmployeeSalary } from '@/features/employee/shared';
 
 const STATUS_LABEL: Record<EmployeeSalary['status'], string> = { successful: 'paid', pending: 'pending', failed: 'failed' };
-const periodLabel = (s: EmployeeSalary) => [s.month, s.year].filter(Boolean).join(' ') || '—';
+const rawPeriod = (s: EmployeeSalary) => [s.month, s.year].filter(Boolean).join(' ') || '—';
+/** "March 2026" as the API spells it -> the month in the active language. */
+const localizePeriod = (raw: string) => {
+  const [month, ...rest] = raw.split(' ');
+  return [formatMonthName(month), ...rest].join(' ');
+};
+const periodLabel = (s: EmployeeSalary) => localizePeriod(rawPeriod(s));
 
 export function EmployeeSalariesPage() {
+  const { t } = useLocale();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   const { data, isLoading, isError, error, refetch } = useEmployeeSalaries(page, pageSize);
@@ -37,22 +46,26 @@ export function EmployeeSalariesPage() {
     () => [
       {
         id: 'period',
-        header: 'Month',
+        header: t('employee.salaries.colMonth', 'Month'),
         cell: ({ row }) => <span className="font-medium">{periodLabel(row.original)}</span>,
       },
       {
         accessorKey: 'netAmount',
-        header: 'Net Amount',
+        header: t('employee.salaries.colNet', 'Net Amount'),
+        meta: { mobile: 'title' },
         cell: ({ row }) => <CurrencyDisplay amount={row.original.netAmount} className="font-semibold" />,
       },
       {
         id: 'breakdown',
-        header: 'Breakdown',
+        header: t('employee.salaries.colBreakdown', 'Breakdown'),
         cell: ({ row }) => {
           const s = row.original;
           return s.advanceDeducted > 0 ? (
             <span className="text-muted-foreground text-xs">
-              Gross {formatBdt(s.grossSalary)} · Advance recovered {formatBdt(s.advanceDeducted)}
+              {t('employee.salaries.breakdown', 'Gross {gross} · Advance recovered {advance}', {
+                gross: formatBdt(s.grossSalary),
+                advance: formatBdt(s.advanceDeducted),
+              })}
             </span>
           ) : (
             <span className="text-muted-foreground text-xs">—</span>
@@ -61,21 +74,25 @@ export function EmployeeSalariesPage() {
       },
       {
         id: 'paidVia',
-        header: 'Method',
+        header: t('employee.salaries.colMethod', 'Method'),
         cell: ({ row }) => <span className="text-xs">{row.original.paidVia || '—'}</span>,
       },
       {
         id: 'paidAt',
-        header: 'Paid On',
+        header: t('employee.salaries.colPaidOn', 'Paid On'),
         cell: ({ row }) => <span className="tabular-nums">{formatDay(row.original.paidAt) || '—'}</span>,
       },
       {
         id: 'status',
-        header: 'Status',
-        cell: ({ row }) => <StatusBadge status={STATUS_LABEL[row.original.status]} />,
+        header: t('employee.common.colStatus', 'Status'),
+        meta: { mobile: 'status' },
+        cell: ({ row }) => {
+          const status = STATUS_LABEL[row.original.status];
+          return <StatusBadge status={status} label={statusLabel(t, status)} />;
+        },
       },
     ],
-    [],
+    [t],
   );
 
   // Trend of the payments on this page (oldest → newest).
@@ -84,7 +101,7 @@ export function EmployeeSalariesPage() {
       [...items]
         .filter((s) => s.status === 'successful')
         .reverse()
-        .map((s) => ({ month: periodLabel(s), amount: s.netAmount })),
+        .map((s) => ({ month: rawPeriod(s), amount: s.netAmount })),
     [items],
   );
 
@@ -92,7 +109,10 @@ export function EmployeeSalariesPage() {
 
   if (isLoading) {
     return (
-      <EmployeePageShell title="My Salaries" subtitle="Loading salary history...">
+      <EmployeePageShell
+        title={t('employee.salaries.title', 'My Salaries')}
+        subtitle={t('employee.salaries.loadingSubtitle', 'Loading salary history...')}
+      >
         <EmployeeLoadingSkeleton />
       </EmployeePageShell>
     );
@@ -100,7 +120,10 @@ export function EmployeeSalariesPage() {
 
   if (isError) {
     return (
-      <EmployeePageShell title="My Salaries" subtitle="Salary slips and payment history">
+      <EmployeePageShell
+        title={t('employee.salaries.title', 'My Salaries')}
+        subtitle={t('employee.salaries.errorSubtitle', 'Salary slips and payment history')}
+      >
         <EmployeeErrorState message={error?.message} onRetry={() => refetch()} />
       </EmployeePageShell>
     );
@@ -108,11 +131,11 @@ export function EmployeeSalariesPage() {
 
   return (
     <EmployeePageShell
-      title="My Salaries"
-      subtitle="View your salary slips and payment history"
+      title={t('employee.salaries.title', 'My Salaries')}
+      subtitle={t('employee.salaries.subtitle', 'View your salary slips and payment history')}
       breadcrumbs={[
-        { label: 'Employee', href: '/employee/salaries' },
-        { label: 'Salaries' },
+        { label: t('employee.common.breadcrumb', 'Employee'), href: '/employee/salaries' },
+        { label: t('employee.salaries.breadcrumb', 'Salaries') },
       ]}
     >
       <div className="space-y-6">
@@ -121,20 +144,20 @@ export function EmployeeSalariesPage() {
             <span className="font-semibold tabular-nums">
               {summary.data ? <CurrencyDisplay amount={summary.data.salaryReceived} /> : '—'}
             </span>{' '}
-            <span className="text-muted-foreground">total received</span>
+            <span className="text-muted-foreground">{t('employee.salaries.totalReceived', 'total received')}</span>
           </p>
           <p>
             <span className="font-semibold tabular-nums">
               {summary.data ? <CurrencyDisplay amount={summary.data.salaryPending} /> : '—'}
             </span>{' '}
-            <span className="text-muted-foreground">pending</span>
+            <span className="text-muted-foreground">{t('employee.salaries.pending', 'pending')}</span>
           </p>
           <p>
             <span className="font-semibold tabular-nums">{total}</span>{' '}
-            <span className="text-muted-foreground">payments</span>
+            <span className="text-muted-foreground">{t('employee.salaries.payments', 'payments')}</span>
           </p>
           <p className="text-muted-foreground">
-            Last{' '}
+            {t('employee.salaries.last', 'Last')}{' '}
             {lastPayment ? (
               <>
                 <span className="font-medium text-foreground">
@@ -149,27 +172,31 @@ export function EmployeeSalariesPage() {
         </div>
 
         {chartData.length > 1 ? (
-          <ChartCard title="Salary trend" description="Net salary per payment">
+          <ChartCard
+            title={t('employee.salaries.trendTitle', 'Salary trend')}
+            description={t('employee.salaries.trendDescription', 'Net salary per payment')}
+          >
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={localizePeriod}
+                    tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
                     tickLine={false}
                     axisLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(v) => `৳${v / 1000}k`}
+                    tickFormatter={(v: number) => formatBdtCompact(v)}
                   />
-                  <Tooltip content={<ChartTooltip formatter={(val: number) => `৳${formatBdt(val)}`} />} />
+                  <Tooltip content={<ChartTooltip formatter={(val: number) => formatBdtWithSymbol(val)} labelFormatter={localizePeriod} />} />
                   <Bar
                     dataKey="amount"
-                    fill="hsl(var(--primary))"
+                    fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                     animationDuration={280}
                     animationEasing="ease-out"
@@ -180,20 +207,21 @@ export function EmployeeSalariesPage() {
           </ChartCard>
         ) : null}
 
-        <FilterBar filters={<span className="text-muted-foreground text-sm">Payment history</span>} />
+        <FilterBar filters={<span className="text-muted-foreground text-sm">{t('employee.salaries.history', 'Payment history')}</span>} />
 
         {total === 0 ? (
           <EmployeeEmptyState
-            title="No salary records"
-            description="Your salary payments will appear here once processed by HR."
+            title={t('employee.salaries.empty', 'No salary records')}
+            description={t('employee.salaries.emptyHint', 'Your salary payments will appear here once processed by HR.')}
           />
         ) : (
           <DataTable
+            urlState
             columns={columns}
             data={items}
             getRowId={(row) => row.id}
-            emptyTitle="No salary records"
-            emptyDescription="Your salary payments will appear here once processed."
+            emptyTitle={t('employee.salaries.empty', 'No salary records')}
+            emptyDescription={t('employee.salaries.emptyTableHint', 'Your salary payments will appear here once processed.')}
             server={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: (size) => { setPageSize(size); setPage(1); } }}
           />
         )}

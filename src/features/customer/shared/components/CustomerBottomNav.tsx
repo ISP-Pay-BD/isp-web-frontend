@@ -9,7 +9,7 @@ import {
   Gift,
   MoreHorizontal,
   CalendarCheck,
-  Router,
+  Wifi,
   User,
   KeyRound,
   Package,
@@ -24,28 +24,31 @@ import { useMemo, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSupportContact } from '../hooks/use-customer-account';
 import { whatsappHref } from '@/lib/api/adapters/customer.adapter';
+import { useTranslations } from '@/i18n/locale-context';
 
 type NavTab = {
+  key: string;
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
 };
 
 const activePrimaryTabs: NavTab[] = [
-  { label: 'Home', href: '/customer/dashboard', icon: LayoutDashboard },
-  { label: 'Pay', href: '/customer/payments/pay', icon: CreditCard },
-  { label: 'Support', href: '/customer/support', icon: LifeBuoy },
-  { label: 'Rewards', href: '/customer/rewards', icon: Gift },
+  { key: 'home', label: 'Home', href: '/customer/dashboard', icon: LayoutDashboard },
+  { key: 'pay', label: 'Pay', href: '/customer/payments/pay', icon: CreditCard },
+  { key: 'router', label: 'Wi-Fi', href: '/customer/router', icon: Wifi },
+  { key: 'support', label: 'Support', href: '/customer/support', icon: LifeBuoy },
 ];
 
 const expiredPrimaryTabs: NavTab[] = [
-  { label: 'Subscription', href: '/customer/subscription', icon: CalendarCheck },
-  { label: 'Packages', href: '/customer/packages', icon: Package },
-  { label: 'Pay Now', href: '/customer/payments/pay', icon: CreditCard },
-  { label: 'Payments', href: '/customer/payments', icon: Banknote },
+  { key: 'subscription', label: 'Subscription', href: '/customer/subscription', icon: CalendarCheck },
+  { key: 'packages', label: 'Packages', href: '/customer/packages', icon: Package },
+  { key: 'pay', label: 'Pay now', href: '/customer/payments/pay', icon: CreditCard },
+  { key: 'payments', label: 'Payments', href: '/customer/payments', icon: Banknote },
 ];
 
 type MoreLink = {
+  key: string;
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
@@ -53,23 +56,23 @@ type MoreLink = {
 };
 
 const activeMoreLinks: MoreLink[] = [
-  { label: 'My Subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Plan details, expiry & renewal' },
-  { label: 'Available Packages', href: '/customer/packages', icon: Package, desc: 'Explore broadband speeds & upgrades' },
-  { label: 'Payment History', href: '/customer/payments', icon: CreditCard, desc: 'Past invoices & receipts' },
-  { label: 'Router & WiFi', href: '/customer/router', icon: Router, desc: 'Tools, connected devices & passwords' },
-  { label: 'News & Notices', href: '/customer/news', icon: Newspaper, desc: 'ISP maintenance & announcements' },
-  { label: 'Customer Profile', href: '/customer/profile', icon: User, desc: 'Account details & contact information' },
-  { label: 'Change Password', href: '/customer/change-password', icon: KeyRound, desc: 'Update portal password' },
+  { key: 'subscription', label: 'My subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Plan details, expiry & renewal' },
+  { key: 'packages', label: 'Available packages', href: '/customer/packages', icon: Package, desc: 'Explore broadband speeds & upgrades' },
+  { key: 'payments', label: 'Payment history', href: '/customer/payments', icon: Banknote, desc: 'Past invoices & receipts' },
+  { key: 'rewards', label: 'Rewards', href: '/customer/rewards', icon: Gift, desc: 'Points, referrals & redeem' },
+  { key: 'news', label: 'News & notices', href: '/customer/news', icon: Newspaper, desc: 'ISP maintenance & announcements' },
+  { key: 'profile', label: 'My profile', href: '/customer/profile', icon: User, desc: 'Account details & contact information' },
+  { key: 'password', label: 'Change password', href: '/customer/change-password', icon: KeyRound, desc: 'Update portal password' },
 ];
 
 const expiredMoreLinks: MoreLink[] = [
-  { label: 'My Subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Renew your broadband plan' },
-  { label: 'Available Packages', href: '/customer/packages', icon: Package, desc: 'Choose a package to reconnect' },
-  { label: 'Payment History', href: '/customer/payments', icon: CreditCard, desc: 'Past invoices & receipts' },
-  { label: 'Pay Now', href: '/customer/payments/pay', icon: CreditCard, desc: 'Submit a payment for verification' },
+  { key: 'subscription', label: 'My subscription', href: '/customer/subscription', icon: CalendarCheck, desc: 'Renew your broadband plan' },
+  { key: 'packages', label: 'Available packages', href: '/customer/packages', icon: Package, desc: 'Choose a package to reconnect' },
+  { key: 'payments', label: 'Payment history', href: '/customer/payments', icon: Banknote, desc: 'Past invoices & receipts' },
 ];
 
 export function CustomerBottomNav() {
+  const t = useTranslations();
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
@@ -92,30 +95,34 @@ export function CustomerBottomNav() {
           href={whatsapp}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="WhatsApp Support"
+          aria-label={t('customer.nav.whatsapp', 'WhatsApp support')}
           className="bg-[#25D366] fixed right-4 bottom-20 z-40 flex h-12 w-12 items-center justify-center rounded-lg text-white shadow-[var(--shadow-md)] transition-transform hover:scale-[1.03] active:scale-95 md:bottom-6"
         >
           <MessageCircle className="h-6 w-6" />
         </a>
       )}
 
-      <div className="bg-background/95 border-border/70 fixed right-0 bottom-0 left-0 z-30 flex h-16 items-center justify-around border-t px-2 py-1 shadow-[var(--shadow-sm)] backdrop-blur-md md:hidden">
+      <nav
+        aria-label={t('customer.nav.label', 'Main')}
+        className="bg-background/95 border-border/70 fixed right-0 bottom-0 left-0 z-30 flex min-h-16 items-stretch justify-around border-t px-1 pb-[env(safe-area-inset-bottom)] shadow-[var(--shadow-sm)] backdrop-blur-md md:hidden"
+      >
         {primaryTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
           return (
             <Link
-              key={tab.href}
+              key={tab.key}
               href={tab.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-1.5 transition-colors',
+                'flex min-h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1.5 transition-colors',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <Icon className={cn('h-5 w-5', isActive && 'stroke-[2.25]')} />
-              <span className="text-[11px] tracking-tight">{tab.label}</span>
+              <span className="text-xs tracking-tight">{t(`customer.nav.tab.${tab.key}`, tab.label)}</span>
             </Link>
           );
         })}
@@ -124,21 +131,21 @@ export function CustomerBottomNav() {
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger
               className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-1.5 transition-colors',
+                'flex min-h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1.5 transition-colors',
                 moreIsActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <MoreHorizontal className="h-5 w-5" />
-              <span className="text-[11px] tracking-tight">More</span>
+              <span className="text-xs tracking-tight">{t('customer.nav.more', 'More')}</span>
             </SheetTrigger>
             <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl p-4 pt-2">
               <SheetHeader className="border-border/60 border-b pb-3 text-left">
                 <SheetTitle className="flex items-center justify-between text-base font-semibold">
-                  <span>Menu</span>
+                  <span>{t('customer.nav.menu', 'Menu')}</span>
                   <span className="text-muted-foreground text-xs font-normal">
-                    ID: {user?.id ?? '—'}
+                    {t('customer.nav.id', 'ID')}: {user?.id ?? '—'}
                   </span>
                 </SheetTitle>
               </SheetHeader>
@@ -149,11 +156,11 @@ export function CustomerBottomNav() {
                   const isCur = pathname === item.href;
                   return (
                     <Link
-                      key={item.href}
+                      key={item.key}
                       href={item.href}
                       onClick={() => setSheetOpen(false)}
                       className={cn(
-                        'flex items-center gap-3.5 rounded-xl p-2.5 transition-colors',
+                        'flex min-h-14 items-center gap-3.5 rounded-xl p-2.5 transition-colors',
                         isCur ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted text-foreground',
                       )}
                     >
@@ -161,8 +168,8 @@ export function CustomerBottomNav() {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm">{item.label}</div>
-                        <div className="text-xs text-muted-foreground truncate">{item.desc}</div>
+                        <div className="text-sm">{t(`customer.nav.more_${item.key}`, item.label)}</div>
+                        <div className="text-xs text-muted-foreground truncate">{t(`customer.nav.more_${item.key}_desc`, item.desc)}</div>
                       </div>
                     </Link>
                   );
@@ -174,14 +181,14 @@ export function CustomerBottomNav() {
                     className="mt-3 pt-3 border-t flex items-center gap-2 text-xs text-muted-foreground px-2"
                   >
                     <PhoneCall className="h-3.5 w-3.5 text-primary" />
-                    <span>Helpline: {support.mobile}</span>
+                    <span>{t('customer.nav.helpline', 'Helpline')}: {support.mobile}</span>
                   </a>
                 )}
               </div>
             </SheetContent>
           </Sheet>
         )}
-      </div>
+      </nav>
     </>
   );
 }

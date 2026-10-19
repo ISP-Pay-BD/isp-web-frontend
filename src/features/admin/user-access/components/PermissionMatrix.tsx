@@ -17,6 +17,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+import { actionLabel, categoryLabel, sectionLabel, sectionMatches } from '../labels';
 import type { PermissionMap, PermissionSectionDef } from '../types';
 
 interface PermissionMatrixProps {
@@ -29,61 +32,29 @@ interface PermissionMatrixProps {
 export const PERMISSION_CATEGORIES = [
   {
     id: 'all',
-    label: 'All Modules',
     keys: [] as string[],
   },
   {
     id: 'core',
-    label: 'Customer & Ops',
     keys: ['customer', 'area', 'packages', 'Resellers', 'support_ticket', 'referral', 'recycle_bin'],
   },
   {
     id: 'finance',
-    label: 'Billing & Accounting',
     keys: ['customer_payment', 'employee_payment', 'accounting', 'payment', 'subscription', 'inventory_purchess'],
   },
   {
     id: 'network',
-    label: 'Network & Infra',
     keys: ['network', 'routers', 'olt', 'hotspot'],
   },
   {
     id: 'hr',
-    label: 'Staff & Payroll',
     keys: ['employee', 'employee_attendance', 'advance_salary'],
   },
   {
     id: 'system',
-    label: 'System & Messaging',
     keys: ['sms_message', 'reports', 'software_settings', 'user_access', 'profile_update', 'password_change', 'ai_chat', 'whatsapp_business', 'whatsapp_waha'],
   },
 ];
-
-// Clean human-friendly action labels
-const ACTION_PRETTY_LABELS: Record<string, string> = {
-  read: 'View',
-  create: 'Create',
-  update: 'Edit',
-  delete: 'Delete',
-  update_subscription: 'Update Subscription',
-  update_conn: 'Update Connection',
-  free_customer_create: 'Free User Create',
-  self_recharge: 'Self Recharge',
-  daily_payment_generate: 'Daily Bill Generate',
-  invoice: 'Invoice Download',
-  send_msg: 'Send Message',
-  restore: 'Restore',
-  delete_forever: 'Delete Forever',
-  empty: 'Empty Trash',
-  sync: 'Sync Users',
-  payment: 'Online Payment',
-  renew: 'Renew Subscription',
-  chat: 'Access AI',
-  ai: 'AI Auto-reply',
-  utility: 'Utility Templates',
-  authentication: 'Auth OTP',
-  marketing: 'Marketing Campaigns',
-};
 
 export function PermissionMatrix({
   sections,
@@ -91,6 +62,7 @@ export function PermissionMatrix({
   onChange,
   readOnly = false,
 }: PermissionMatrixProps) {
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -103,20 +75,9 @@ export function PermissionMatrix({
         }
       }
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = section.label.toLowerCase().includes(q) || section.key.toLowerCase().includes(q);
-        const matchesAction = Object.entries(section.actions).some(
-          ([key, label]) =>
-            label.toLowerCase().includes(q) ||
-            (ACTION_PRETTY_LABELS[key] && ACTION_PRETTY_LABELS[key].toLowerCase().includes(q))
-        );
-        return matchesName || matchesAction;
-      }
-
-      return true;
+      return sectionMatches(t, section, searchQuery);
     });
-  }, [sections, selectedCategory, searchQuery]);
+  }, [sections, selectedCategory, searchQuery, t]);
 
   const toggle = (menuKey: string, action: string, checked: boolean) => {
     const current = permissions[menuKey] ?? [];
@@ -138,7 +99,7 @@ export function PermissionMatrix({
       next[s.key] = Object.keys(s.actions);
     });
     onChange(next);
-    toast.success('Selected all permissions for visible modules');
+    toast.success(t('admin.userAccess.matrix.toastSelectAll', 'Selected all permissions for visible modules'));
   };
 
   const handleClearAllFiltered = () => {
@@ -147,7 +108,7 @@ export function PermissionMatrix({
       delete next[s.key];
     });
     onChange(next);
-    toast.info('Cleared permissions for visible modules');
+    toast.info(t('admin.userAccess.matrix.toastCleared', 'Cleared permissions for visible modules'));
   };
 
   const handleSetReadOnlyFiltered = () => {
@@ -161,7 +122,7 @@ export function PermissionMatrix({
       }
     });
     onChange(next);
-    toast.success('Applied View-Only permissions');
+    toast.success(t('admin.userAccess.matrix.toastViewOnly', 'Applied View-Only permissions'));
   };
 
   return (
@@ -172,14 +133,16 @@ export function PermissionMatrix({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search module (e.g. Customers, Invoices)..."
+            placeholder={t('admin.userAccess.matrix.searchPlaceholder', 'Search module (e.g. Customers, Invoices)...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-8.5 text-xs bg-background border-border/60"
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery('')}
+              aria-label={t('common.table.clearSearch', 'Clear search')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
@@ -197,7 +160,7 @@ export function PermissionMatrix({
               className="h-8 px-2.5 text-xs gap-1.5"
             >
               <CheckSquare className="h-3.5 w-3.5 text-primary" />
-              Select All
+              {t('admin.userAccess.matrix.selectAll', 'Select All')}
             </Button>
             <Button
               type="button"
@@ -207,7 +170,7 @@ export function PermissionMatrix({
               className="h-8 px-2.5 text-xs gap-1.5"
             >
               <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-              View Only
+              {t('admin.userAccess.matrix.viewOnly', 'View Only')}
             </Button>
             <Button
               type="button"
@@ -217,7 +180,7 @@ export function PermissionMatrix({
               className="h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive"
             >
               <Square className="h-3.5 w-3.5" />
-              Clear
+              {t('admin.userAccess.matrix.clear', 'Clear')}
             </Button>
           </div>
         )}
@@ -226,7 +189,7 @@ export function PermissionMatrix({
       {/* Category Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
         <span className="text-xs text-muted-foreground flex items-center gap-1 mr-1 shrink-0 font-medium">
-          <Layers className="h-3.5 w-3.5" /> Filter:
+          <Layers className="h-3.5 w-3.5" /> {t('admin.userAccess.matrix.filter', 'Filter:')}
         </span>
         {PERMISSION_CATEGORIES.map((cat) => {
           const active = selectedCategory === cat.id;
@@ -241,7 +204,7 @@ export function PermissionMatrix({
                   : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground'
               }`}
             >
-              {cat.label}
+              {categoryLabel(t, cat.id)}
             </button>
           );
         })}
@@ -253,16 +216,16 @@ export function PermissionMatrix({
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/40 border-b border-border/50 text-muted-foreground font-semibold">
               <tr>
-                <th className="py-3 px-4 w-[240px]">Feature / Module</th>
-                <th className="py-3 px-4">Allowed Permissions</th>
-                <th className="py-3 px-4 text-right w-[110px]">Toggle All</th>
+                <th className="py-3 px-4 w-[240px]">{t('admin.userAccess.matrix.colModule', 'Feature / Module')}</th>
+                <th className="py-3 px-4">{t('admin.userAccess.matrix.colPermissions', 'Allowed Permissions')}</th>
+                <th className="py-3 px-4 text-right w-[110px]">{t('admin.userAccess.matrix.colToggle', 'Toggle All')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
               {filteredSections.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="py-12 text-center text-muted-foreground">
-                    No matching modules found.
+                    {t('admin.userAccess.matrix.noMatch', 'No matching modules found.')}
                   </td>
                 </tr>
               ) : (
@@ -282,10 +245,13 @@ export function PermissionMatrix({
                       <td className="py-3 px-4 align-top">
                         <div className="font-semibold text-foreground text-sm flex items-center gap-2">
                           <span className={`h-2 w-2 rounded-full ${sectionActions.length > 0 ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
-                          {section.label}
+                          {sectionLabel(t, section)}
                         </div>
-                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
-                          {sectionActions.length} of {allKeys.length} enabled
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                          {t('admin.userAccess.matrix.enabledOf', '{n} of {total} enabled', {
+                            n: formatCount(sectionActions.length),
+                            total: formatCount(allKeys.length),
+                          })}
                         </div>
                       </td>
 
@@ -294,7 +260,7 @@ export function PermissionMatrix({
                         <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
                           {Object.entries(section.actions).map(([actKey, defaultLabel]) => {
                             const isChecked = sectionActions.includes(actKey);
-                            const labelText = ACTION_PRETTY_LABELS[actKey] || defaultLabel;
+                            const labelText = actionLabel(t, actKey, defaultLabel);
                             const id = `matrix-${section.key}-${actKey}`;
 
                             return (
@@ -331,7 +297,7 @@ export function PermissionMatrix({
                             onClick={() => toggleSection(section, !isAll)}
                             className="h-7 px-2.5 text-xs text-primary hover:bg-primary/10 font-medium"
                           >
-                            {isAll ? 'Deselect' : 'Select All'}
+                            {isAll ? t('admin.userAccess.matrix.deselect', 'Deselect') : t('admin.userAccess.matrix.selectAll', 'Select All')}
                           </Button>
                         )}
                       </td>
@@ -364,6 +330,7 @@ export function PermissionMatrixEditor({
   readOnly = false,
   onLoadDefaults,
 }: PermissionMatrixEditorProps) {
+  const t = useTranslations();
   const [permissions, setPermissions] = useState<PermissionMap>(initialPermissions);
   const [saving, setSaving] = useState(false);
   const [loadingDefaults, setLoadingDefaults] = useState(false);
@@ -372,7 +339,7 @@ export function PermissionMatrixEditor({
     setSaving(true);
     try {
       await onSave(permissions);
-      toast.success('Permissions saved');
+      toast.success(t('admin.userAccess.matrix.saved', 'Permissions saved'));
     } catch {
       // the API error is toasted globally
     } finally {
@@ -385,9 +352,9 @@ export function PermissionMatrixEditor({
     setLoadingDefaults(true);
     try {
       setPermissions(await onLoadDefaults());
-      toast.info('Platform defaults loaded — review and save to apply');
+      toast.info(t('admin.userAccess.matrix.defaultsLoaded', 'Platform defaults loaded — review and save to apply'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not load the defaults');
+      toast.error(err instanceof Error ? err.message : t('admin.userAccess.matrix.defaultsFailed', 'Could not load the defaults'));
     } finally {
       setLoadingDefaults(false);
     }
@@ -403,15 +370,15 @@ export function PermissionMatrixEditor({
         <div className="text-xs text-muted-foreground">
           {readOnly ? (
             <span className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" /> These defaults are managed by the platform and are read-only for your account.
+              <Shield className="h-3.5 w-3.5" /> {t('admin.userAccess.matrix.readOnlyNotice', 'These defaults are managed by the platform and are read-only for your account.')}
             </span>
           ) : hasChanges ? (
             <span className="text-amber-500 font-medium flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              You have unsaved changes
+              {t('admin.userAccess.matrix.unsaved', 'You have unsaved changes')}
             </span>
           ) : (
-            <span>All permissions saved</span>
+            <span>{t('admin.userAccess.matrix.allSaved', 'All permissions saved')}</span>
           )}
         </div>
 
@@ -420,7 +387,7 @@ export function PermissionMatrixEditor({
             {onLoadDefaults && (
               <Button variant="outline" size="sm" onClick={handleLoadDefaults} disabled={loadingDefaults || saving} className="text-xs h-9 gap-1.5">
                 <Layers className="h-3.5 w-3.5" />
-                {loadingDefaults ? 'Loading…' : 'Platform defaults'}
+                {loadingDefaults ? t('common.loading', 'Loading…') : t('admin.userAccess.matrix.platformDefaults', 'Platform defaults')}
               </Button>
             )}
             <Button
@@ -431,7 +398,7 @@ export function PermissionMatrixEditor({
               className="text-xs h-9 gap-1.5"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              Discard
+              {t('admin.userAccess.matrix.discard', 'Discard')}
             </Button>
             <Button
               onClick={handleSave}
@@ -442,12 +409,12 @@ export function PermissionMatrixEditor({
               {saving ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Saving...
+                  {t('admin.userAccess.matrix.saving', 'Saving...')}
                 </>
               ) : (
                 <>
                   <Save className="h-3.5 w-3.5" />
-                  Save Permissions
+                  {t('admin.userAccess.matrix.savePermissions', 'Save Permissions')}
                 </>
               )}
             </Button>

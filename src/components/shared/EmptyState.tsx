@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +9,8 @@ interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  /** `error` is for a failed load: announced to screen readers, with a warning icon unless `icon` is given. */
+  variant?: 'empty' | 'error';
   className?: string;
 }
 
@@ -17,18 +20,28 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  variant = 'empty',
   className,
 }: EmptyStateProps) {
+  const isError = variant === 'error';
+  const shownIcon = icon ?? (isError ? <AlertTriangle className="h-5 w-5" /> : null);
   return (
     <div
+      role={isError ? 'alert' : undefined}
       className={cn(
-        'relative flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/70 bg-muted/25 px-8 py-14 text-center shadow-[var(--shadow-xs)]',
+        'relative flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-8 py-14 text-center shadow-[var(--shadow-xs)]',
+        isError ? 'border-destructive/40 bg-destructive/5' : 'border-border/70 bg-muted/25',
         className,
       )}
     >
-      {icon ? (
-        <div className="border-border/60 bg-card text-muted-foreground flex h-12 w-12 items-center justify-center rounded-lg border shadow-[var(--shadow-xs)]">
-          {icon}
+      {shownIcon ? (
+        <div
+          className={cn(
+            'flex h-12 w-12 items-center justify-center rounded-lg border shadow-[var(--shadow-xs)]',
+            isError ? 'border-destructive/30 bg-card text-destructive' : 'border-border/60 bg-card text-muted-foreground',
+          )}
+        >
+          {shownIcon}
         </div>
       ) : null}
       <div className="space-y-1.5">
@@ -40,7 +53,7 @@ export function EmptyState({
         ) : null}
       </div>
       {actionLabel && onAction ? (
-        <Button onClick={onAction} size="sm" className="mt-1">
+        <Button onClick={onAction} variant={isError ? 'outline' : 'default'} className="mt-1 min-h-11 px-5">
           {actionLabel}
         </Button>
       ) : null}

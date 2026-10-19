@@ -3,11 +3,13 @@
 import { Suspense } from 'react';
 import { AuthBrandPanel } from '../components/AuthBrandPanel';
 import { LoginForm } from '../components/LoginForm';
+import { useTranslations } from '@/i18n/locale-context';
 
 function LoginFormFallback() {
+  const t = useTranslations();
   return (
     <div className="flex w-full items-center justify-center lg:w-1/2">
-      <p className="text-muted-foreground text-sm">Loading sign in…</p>
+      <p className="text-muted-foreground text-sm">{t('auth.login.loading', 'Loading sign in…')}</p>
     </div>
   );
 }

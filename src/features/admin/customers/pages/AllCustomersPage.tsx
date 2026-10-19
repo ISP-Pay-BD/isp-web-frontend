@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   Search,
@@ -19,20 +19,15 @@ import {
   Copy,
   Receipt,
   MessageSquare,
-  SlidersHorizontal,
   Server,
   Package as PackageIcon,
   MapPin,
-  CheckSquare,
-  Square,
   RotateCcw,
   Send,
   ToggleLeft,
   Key,
   Calendar,
   X,
-  AlignJustify,
-  AlignCenter,
 } from 'lucide-react';
 import {
   useAreaOptions,
@@ -41,21 +36,24 @@ import {
   useCustomers,
   useDeleteCustomer,
   useExportCustomers,
+  usePrefetchCustomer,
   usePackageOptions,
   useRouterOptions,
 } from '../hooks/use-customers';
-import { useDebouncedValue } from '../hooks/use-debounced-value';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { replaceQuery } from '@/hooks/use-url-state';
 import { SendSmsDialog } from '../components/SendSmsDialog';
-import type { CustomerListFilters } from '../types';
+import type { Customer, CustomerListFilters } from '../types';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import type { RowSelectionState } from '@tanstack/react-table';
+import { DataTable } from '@/features/shared/data-table';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { CurrencyDisplay } from '@/components/shared/CurrencyDisplay';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Can } from '@/components/shared/Can';
-import { TablePagination } from '@/components/shared/TablePagination';
-import { DEFAULT_PAGE_SIZE, STORAGE_KEYS } from '@/lib/constants/status';
-import { useThemeCustomizerStore } from '@/stores/theme-store';
+import { DEFAULT_PAGE_SIZE } from '@/lib/constants/status';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,58 +81,21 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/i18n/locale-context';
+import { customerStatusLabel } from '../lib/labels';
 
-// Column visibility keys matching the old ISP portal
-type ColumnKey =
-  | 'id'
-  | 'customer'
-  | 'package'
-  | 'area'
-  | 'mobile'
-  | 'address'
-  | 'router'
-  | 'pppoeSecret'
-  | 'payment'
-  | 'status'
-  | 'accStatus'
-  | 'balance';
-
-interface ColumnConfig {
-  key: ColumnKey;
-  label: string;
-  locked?: boolean;
-}
-
-const ALL_COLUMNS: ColumnConfig[] = [
-  { key: 'id', label: 'C.ID' },
-  { key: 'customer', label: 'Customer', locked: true },
-  { key: 'package', label: 'Package' },
-  { key: 'area', label: 'Area / Sub-area' },
-  { key: 'mobile', label: 'Mobile' },
-  { key: 'address', label: 'Address' },
-  { key: 'router', label: 'Router' },
-  { key: 'pppoeSecret', label: 'PPPoE Secret' },
-  { key: 'payment', label: 'Expiry & Cycle' },
-  { key: 'status', label: 'Conn Status' },
-  { key: 'accStatus', label: 'Acc Status' },
-  { key: 'balance', label: 'Balance' },
-];
-
-type QuickStatus = 'all' | 'online' | 'offline' | 'expired' | 'suspended';
+type QuickStatus = 'all' | 'active' | 'online' | 'offline' | 'expired' | 'suspended';
 type BulkModal = 'delete' | 'sms' | 'router' | 'package' | 'accStatus' | 'recharge' | null;
+
+const QUICK_STATUSES: QuickStatus[] = ['all', 'active', 'online', 'offline', 'expired', 'suspended'];
 
 /** Quick status pill → backend list filter. */
 const QUICK_FILTER: Record<QuickStatus, CustomerListFilters> = {
   all: {},
+  active: { status: 'active' },
   online: { connection: 'online' },
   offline: { connection: 'offline' },
   expired: { status: 'expired' },
@@ -145,73 +106,70 @@ const ymd = (value: string | null | undefined) => (value ? value.slice(0, 10) : 
 /** id → label map for Select `items` (trigger shows the label, not the id). */
 const labels = (options: { id: string; name: string }[]) => Object.fromEntries(options.map((o) => [o.id, o.name]));
 
-export function AllCustomersPage() {
-  const router = useRouter();
-
-  // Filters state (all applied server-side)
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search.trim());
-  const [statusFilter, setStatusFilter] = useState<QuickStatus>('all');
-  const [areaFilter, setAreaFilter] = useState('all');
-  const [packageFilter, setPackageFilter] = useState('all');
-  const [routerFilter, setRouterFilter] = useState('all');
-  const [connFilter, setConnFilter] = useState('all'); // all | pppoe | static
-  const [expiryFilter, setExpiryFilter] = useState('all');
-
-  // Pagination & Layout Mode state
-  const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
-  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
-  const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEYS.tableLayout);
-        if (saved === 'centered' || saved === 'full') return saved;
-      } catch {
-        /* storage unavailable */
-      }
-    }
-    return globalTableLayout || 'full';
-  });
-
-  // Sync when global theme setting changes
-  useEffect(() => {
-    if (globalTableLayout) {
-      setLayoutMode(globalTableLayout);
-    }
-  }, [globalTableLayout]);
-
-  const handleLayoutModeChange = (mode: 'full' | 'centered') => {
-    setLayoutMode(mode);
-    try {
-      localStorage.setItem(STORAGE_KEYS.tableLayout, mode);
-    } catch {
-      /* storage unavailable */
-    }
+/**
+ * Every filter, the search text, the page and the page size live in the URL (`?status=expired&area=3&page=2`), so
+ * Back, refresh and shared links keep the same view and the dashboard can link straight into a filtered list.
+ */
+function useCustomerListUrl() {
+  const params = useSearchParams();
+  const read = (key: string, fallback = 'all') => params.get(key) || fallback;
+  const status = read('status');
+  const state = {
+    status: (QUICK_STATUSES as string[]).includes(status) ? (status as QuickStatus) : ('all' as QuickStatus),
+    area: read('area'),
+    pkg: read('package'),
+    router: read('router'),
+    conn: read('conn'),
+    expiry: read('expiry'),
+    reseller: read('resellerId', ''),
+    search: read('q', ''),
+    page: Math.max(1, Number(params.get('page')) || 1),
+    pageSize: Number(params.get('size')) || DEFAULT_PAGE_SIZE,
   };
+  const update = useCallback((patch: Record<string, string | number | null>) => {
+    replaceQuery((p) => {
+      for (const [key, value] of Object.entries(patch)) {
+        if (value === null || value === '' || value === 'all') p.delete(key);
+        else p.set(key, String(value));
+      }
+      // a changed filter, search or page size starts again from page 1
+      if (!('page' in patch)) p.delete('page');
+    });
+  }, []);
+  return { state, update };
+}
+
+export function AllCustomersPage() {
+  const t = useTranslations();
+  const { state, update } = useCustomerListUrl();
+  const statusFilter = state.status;
+
+  // Search box: typed locally, written to the URL once the typing pauses.
+  const [searchInput, setSearchInput] = useState(state.search);
+  const debouncedSearch = useDebouncedValue(searchInput.trim());
+  useEffect(() => {
+    if (debouncedSearch !== state.search) update({ q: debouncedSearch });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   /** Scope filters shared by the list and the KPI summary. */
   const scopeFilters = useMemo<CustomerListFilters>(
     () => ({
-      search: debouncedSearch || undefined,
-      areaId: areaFilter !== 'all' ? areaFilter : undefined,
-      packageId: packageFilter !== 'all' ? packageFilter : undefined,
-      routerId: routerFilter !== 'all' ? routerFilter : undefined,
-      accessType: connFilter === 'pppoe' || connFilter === 'static' ? connFilter : undefined,
+      search: state.search || undefined,
+      areaId: state.area !== 'all' ? state.area : undefined,
+      packageId: state.pkg !== 'all' ? state.pkg : undefined,
+      routerId: state.router !== 'all' ? state.router : undefined,
+      accessType: state.conn === 'pppoe' || state.conn === 'static' ? state.conn : undefined,
+      resellerId: state.reseller || undefined,
     }),
-    [debouncedSearch, areaFilter, packageFilter, routerFilter, connFilter],
+    [state.search, state.area, state.pkg, state.router, state.conn, state.reseller],
   );
   const listFilters = useMemo<CustomerListFilters>(
-    () => ({ ...scopeFilters, ...QUICK_FILTER[statusFilter], expiry: expiryFilter !== 'all' ? expiryFilter : undefined }),
-    [scopeFilters, statusFilter, expiryFilter],
+    () => ({ ...scopeFilters, ...QUICK_FILTER[statusFilter], expiry: state.expiry !== 'all' ? state.expiry : undefined }),
+    [scopeFilters, statusFilter, state.expiry],
   );
 
-  // Any filter / page-size change starts again from page 1.
-  const pageKey = `${JSON.stringify(listFilters)}|${pageSize}`;
-  const [pageState, setPageState] = useState({ key: pageKey, page: 1 });
-  const currentPage = pageState.key === pageKey ? pageState.page : 1;
-  const setCurrentPage = (page: number) => setPageState({ key: pageKey, page });
-
-  const { data, isLoading, isError, isFetching, refetch } = useCustomers({ ...listFilters, page: currentPage, perPage: pageSize });
+  const { data, isLoading, isError, isFetching, refetch } = useCustomers({ ...listFilters, page: state.page, perPage: state.pageSize });
   const summaryQuery = useCustomerSummary(scopeFilters);
   const areasQuery = useAreaOptions();
   const packagesQuery = usePackageOptions();
@@ -219,6 +177,7 @@ export function AllCustomersPage() {
   const deleteMutation = useDeleteCustomer();
   const exportMutation = useExportCustomers();
   const actions = useCustomerActions();
+  const prefetchCustomer = usePrefetchCustomer();
 
   const rows = useMemo(() => data?.items ?? [], [data?.items]);
   const totalRows = data?.meta.total ?? 0;
@@ -227,6 +186,7 @@ export function AllCustomersPage() {
   // Bulk selection state (ids survive paging, so bulk actions can span pages)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selected = useMemo(() => Array.from(selectedIds), [selectedIds]);
+  const rowSelection = useMemo<RowSelectionState>(() => Object.fromEntries(selected.map((id) => [id, true])), [selected]);
 
   // Delete & Bulk Action Modal States
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -240,63 +200,29 @@ export function AllCustomersPage() {
   const [rechargeUntil, setRechargeUntil] = useState('');
   const [rechargePackage, setRechargePackage] = useState('');
 
-  // Column Visibility state
-  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>({
-    id: true,
-    customer: true,
-    package: true,
-    area: true,
-    mobile: true,
-    address: true,
-    router: true,
-    pppoeSecret: true,
-    payment: true,
-    status: true,
-    accStatus: true,
-    balance: true,
-  });
-
-  // Bulk selection helpers
-  const allPageSelected = rows.length > 0 && rows.every((c) => selectedIds.has(c.id));
-
-  const toggleSelectAll = () => {
-    const next = new Set(selectedIds);
-    if (allPageSelected) rows.forEach((c) => next.delete(c.id));
-    else rows.forEach((c) => next.add(c.id));
-    setSelectedIds(next);
-  };
-
-  const toggleSelectRow = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
   const clearFilters = () => {
-    setSearch('');
-    setStatusFilter('all');
-    setAreaFilter('all');
-    setPackageFilter('all');
-    setRouterFilter('all');
-    setConnFilter('all');
-    setExpiryFilter('all');
+    setSearchInput('');
+    update({ q: null, status: null, area: null, package: null, router: null, conn: null, expiry: null, resellerId: null });
   };
 
   const activeFilterCount = [
     statusFilter !== 'all',
-    areaFilter !== 'all',
-    packageFilter !== 'all',
-    routerFilter !== 'all',
-    connFilter !== 'all',
-    expiryFilter !== 'all',
-    search !== '',
+    state.area !== 'all',
+    state.pkg !== 'all',
+    state.router !== 'all',
+    state.conn !== 'all',
+    state.expiry !== 'all',
+    Boolean(state.reseller),
+    state.search !== '',
   ].filter(Boolean).length;
 
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`${label} copied to clipboard`);
-  };
+  const handleCopy = useCallback(
+    (text: string, label: string) => {
+      navigator.clipboard.writeText(text);
+      toast.success(t('admin.customers.list.copied', '{label} copied to clipboard', { label }));
+    },
+    [t],
+  );
 
   const finishBulk = () => {
     setBulkModal(null);
@@ -305,20 +231,234 @@ export function AllCustomersPage() {
 
   const openBulk = (modal: Exclude<BulkModal, null>) => {
     if (selectedIds.size === 0) {
-      toast.error('Select customers first');
+      toast.error(t('admin.customers.list.selectFirst', 'Select customers first'));
       return;
     }
     if (modal === 'sms') setSmsTargets(selected);
     setBulkModal(modal);
   };
 
-  if (isLoading) return <PageSkeleton variant="table" rows={8} layoutMode={layoutMode} />;
+  const columns = useMemo<LegacyColumnDef<Customer, unknown>[]>(
+    () => [
+      {
+        id: 'id',
+        header: t('admin.customers.list.colId', 'C.ID'),
+        cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.id}</span>,
+        meta: { mobile: 'hide' },
+      },
+      {
+        id: 'customer',
+        header: t('admin.customers.list.colSubscriber', 'Subscriber'),
+        enableHiding: false,
+        cell: ({ row }) => {
+          const c = row.original;
+          return (
+            <div className="flex items-center gap-2.5">
+              <div className="relative shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-xs font-bold text-primary">
+                  {c.name.slice(0, 2).toUpperCase()}
+                </div>
+                <span
+                  className={cn(
+                    'absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-background',
+                    c.online ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+                  )}
+                />
+              </div>
+              <div className="min-w-0">
+                <Link
+                  href={`/admin/customers/${c.id}`}
+                  onMouseEnter={() => void prefetchCustomer(c.id)}
+                  onFocus={() => void prefetchCustomer(c.id)}
+                  className="block max-w-[200px] truncate py-0.5 text-left text-sm font-bold text-foreground transition-colors hover:text-primary hover:underline"
+                >
+                  {c.name}
+                </Link>
+                <div className="truncate font-mono text-xs text-muted-foreground">{c.username || '—'}</div>
+              </div>
+            </div>
+          );
+        },
+        meta: { mobile: 'title' },
+      },
+      {
+        id: 'package',
+        header: t('admin.customers.list.colPackage', 'Package'),
+        cell: ({ row }) => (
+          <>
+            <div className="max-w-[140px] truncate font-semibold text-foreground">{row.original.packageName || '—'}</div>
+            {row.original.packagePrice !== null && (
+              <div className="font-mono text-xs text-muted-foreground">
+                <CurrencyDisplay amount={row.original.packagePrice} />
+              </div>
+            )}
+          </>
+        ),
+      },
+      {
+        id: 'area',
+        header: t('admin.customers.list.colArea', 'Area / Sub-area'),
+        cell: ({ row }) => (
+          <>
+            <div className="max-w-[130px] truncate font-medium text-foreground">{row.original.areaName || '—'}</div>
+            {row.original.subAreaName && <div className="truncate text-xs text-muted-foreground">{row.original.subAreaName}</div>}
+          </>
+        ),
+      },
+      {
+        id: 'mobile',
+        header: t('admin.customers.list.colMobile', 'Mobile'),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1 font-mono text-xs text-foreground">
+            <Phone className="h-3 w-3 text-muted-foreground" />
+            {row.original.phone ? <a href={`tel:${row.original.phone}`} className="hover:underline">{row.original.phone}</a> : <span>—</span>}
+          </div>
+        ),
+      },
+      {
+        id: 'address',
+        header: t('admin.customers.list.colAddress', 'Address'),
+        cell: ({ row }) => <span className="block max-w-[160px] truncate text-xs text-muted-foreground">{row.original.address || '—'}</span>,
+        meta: { mobile: 'hide' },
+      },
+      {
+        id: 'router',
+        header: t('admin.customers.list.colRouter', 'Router'),
+        cell: ({ row }) => (
+          <div className="flex max-w-[130px] items-center gap-1 truncate font-mono text-xs text-foreground">
+            <Server className="h-3 w-3 shrink-0 text-primary/70" />
+            <span>{row.original.routerName || '—'}</span>
+          </div>
+        ),
+      },
+      {
+        id: 'pppoeSecret',
+        header: t('admin.customers.list.colPppoe', 'PPPoE Secret'),
+        cell: ({ row }) =>
+          row.original.username ? (
+            <div className="flex max-w-[140px] items-center justify-between gap-1 rounded border border-border/50 bg-muted/40 px-2 py-0.5 font-mono text-xs text-foreground">
+              <span className="truncate">{row.original.username}</span>
+              <button
+                type="button"
+                onClick={() => handleCopy(row.original.username, t('admin.customers.list.pppoeSecret', 'PPPoE Secret'))}
+                aria-label={t('admin.customers.list.copyPppoe', 'Copy PPPoE secret')}
+                className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+        meta: { mobile: 'hide' },
+      },
+      {
+        id: 'payment',
+        header: t('admin.customers.list.colExpiry', 'Expiry Date'),
+        cell: ({ row }) => {
+          const isExpired = row.original.status === 'expired';
+          return (
+            <>
+              <div className={cn('font-mono text-xs font-semibold', isExpired ? 'flex items-center gap-1 text-destructive' : 'text-foreground')}>
+                {isExpired && <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />}
+                <span>{ymd(row.original.expiryDate)}</span>
+              </div>
+              {row.original.paymentSummary && <div className="text-xs text-muted-foreground">{row.original.paymentSummary}</div>}
+            </>
+          );
+        },
+        meta: { mobileLabel: t('admin.customers.list.expires', 'Expires') },
+      },
+      {
+        id: 'connStatus',
+        header: t('admin.customers.list.colConn', 'Conn Status'),
+        cell: ({ row }) => (
+          <StatusBadge status={row.original.online ? 'online' : 'offline'} label={customerStatusLabel(t, row.original.online ? 'online' : 'offline')} />
+        ),
+        meta: { mobile: 'status' },
+      },
+      {
+        id: 'accStatus',
+        header: t('admin.customers.list.colAcc', 'Acc Status'),
+        cell: ({ row }) => (
+          <StatusBadge status={row.original.status} label={customerStatusLabel(t, row.original.status)} />
+        ),
+        meta: { mobile: 'status' },
+      },
+      {
+        id: 'balance',
+        header: t('admin.customers.list.colBalance', 'Balance'),
+        cell: ({ row }) => (
+          <span className={cn('font-mono text-xs font-bold', row.original.balanceBdt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
+            <CurrencyDisplay amount={row.original.balanceBdt} />
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
+        enableHiding: false,
+        enableSorting: false,
+        cell: ({ row }) => {
+          const c = row.original;
+          return (
+            <div className="text-right">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="ghost" size="icon" aria-label={t('admin.customers.list.actionsFor', 'Actions for {name}', { name: c.name })} className="h-9 w-9 rounded-md hover:bg-muted/80">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-52 p-1">
+                  <div className="px-2 py-1 text-xs font-bold tracking-wider text-muted-foreground uppercase">{t('admin.customers.list.subscriberActions', 'Subscriber Actions')}</div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-2 text-xs" render={<Link href={`/admin/customers/${c.id}`} />}>
+                    <Eye className="h-3.5 w-3.5 text-primary" /> {t('admin.customers.list.viewDetails', 'View Details')}
+                  </DropdownMenuItem>
+                  <Can menu="customer" action="update">
+                    <DropdownMenuItem className="cursor-pointer gap-2 text-xs" render={<Link href={`/admin/customers/${c.id}/edit`} />}>
+                      <Edit className="h-3.5 w-3.5" /> {t('admin.customers.list.editProfile', 'Edit Profile')}
+                    </DropdownMenuItem>
+                  </Can>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer gap-2 text-xs" render={<Link href={`/admin/customer-payments/new?customerId=${c.id}`} />}>
+                    <Receipt className="h-3.5 w-3.5 text-emerald-500" /> {t('admin.customers.list.collectPayment', 'Collect Payment')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer gap-2 text-xs"
+                    onClick={() => {
+                      setSmsTargets([c.id]);
+                      setBulkModal('sms');
+                    }}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 text-amber-500" /> {t('admin.customers.list.sendSms', 'Send SMS')}
+                  </DropdownMenuItem>
+                  <Can menu="customer" action="delete">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" className="cursor-pointer gap-2 text-xs" onClick={() => setDeleteId(c.id)}>
+                      <Trash2 className="h-3.5 w-3.5" /> {t('admin.customers.list.deleteAccount', 'Delete Account')}
+                    </DropdownMenuItem>
+                  </Can>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
+        meta: { mobile: 'actions' },
+      },
+    ],
+    [handleCopy, prefetchCustomer, t],
+  );
+
+  if (isLoading) return <PageSkeleton variant="table" rows={8} />;
   if (isError) {
     return (
-      <EmptyState
-        title="Failed to load customers"
-        description="Could not fetch subscriber directory from backend."
-        actionLabel="Retry"
+      <EmptyState variant="error"
+        title={t('admin.customers.list.loadFailed', 'Failed to load customers')}
+        description={t('admin.customers.list.loadFailedHint', 'Could not fetch subscriber directory from backend.')}
+        actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
     );
@@ -328,122 +468,47 @@ export function AllCustomersPage() {
   const packageOptions = packagesQuery.data ?? [];
   const routerOptions = routersQuery.data ?? [];
   const count = (n: number | undefined) => (summary ? n ?? 0 : '…');
+  const connItems: Record<string, string> = {
+    all: t('admin.customers.list.allProtocols', 'All Protocols'),
+    pppoe: 'PPPoE',
+    static: t('admin.customers.list.staticIp', 'Static IP (corporate)'),
+  };
+  const expiryItems: Record<string, string> = {
+    all: t('admin.customers.list.allExpiry', 'All Expiry Cycles'),
+    expired_today: t('admin.customers.list.expiredToday', 'Expired Today'),
+    expired_7: t('admin.customers.list.expired7', 'Expired (Last 7 Days)'),
+    due_today: t('admin.customers.list.dueToday', 'Due Today'),
+    due_3: t('admin.customers.list.due3', 'Due in 3 Days'),
+    due_7: t('admin.customers.list.due7', 'Due in 7 Days'),
+    paid_7: t('admin.customers.list.paid7', 'Paid (7+ Days Left)'),
+  };
+  const accStatusItems: Record<string, string> = {
+    conn: t('admin.customers.list.accConn', 'Connected (PPPoE enabled)'),
+    disconn: t('admin.customers.list.accDisconn', 'Disconnected (PPPoE disabled)'),
+  };
 
   return (
-    <div
-      className={cn(
-        'space-y-6 pb-16 transition-all duration-200',
-        layoutMode === 'centered' ? 'max-w-7xl mx-auto' : 'w-full'
-      )}
-    >
+    <div className="w-full space-y-6 pb-16">
       {/* Page Header with Action Toolbar */}
       <PageHeader
-        title="Customer Directory"
-        subtitle="Manage broadband subscribers, PPPoE credentials, bandwidth tiers, routers, and payment cycles"
+        title={t('admin.customers.list.title', 'Customer Directory')}
+        subtitle={t('admin.customers.list.subtitle', 'Manage broadband subscribers, PPPoE credentials, bandwidth tiers, routers, and payment cycles')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Customers' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('admin.customers.list.breadcrumbCustomers', 'Customers') },
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {/* Layout Alignment Toggle */}
-            <div className="flex items-center rounded-lg border border-border/70 p-0.5 bg-muted/40">
-              <button
-                type="button"
-                onClick={() => handleLayoutModeChange('full')}
-                className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
-                  layoutMode === 'full'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                title="Full width edge-to-edge layout"
-              >
-                <AlignJustify className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Full</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLayoutModeChange('centered')}
-                className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition duration-150',
-                  layoutMode === 'centered'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                title="Centered container layout"
-              >
-                <AlignCenter className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Center</span>
-              </button>
-            </div>
-
-            {/* Column Picker */}
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-8 gap-1.5 border-border/80 hover:bg-accent"
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                    Columns
-                  </Button>
-                }
-              />
-              <PopoverContent align="end" className="w-56 p-3 space-y-2">
-                <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                  <span className="text-xs font-bold text-foreground">Show Columns</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const resetObj = {} as Record<ColumnKey, boolean>;
-                      ALL_COLUMNS.forEach((c) => (resetObj[c.key] = true));
-                      setVisibleColumns(resetObj);
-                    }}
-                    className="text-[10px] text-primary hover:underline font-semibold"
-                  >
-                    Reset
-                  </button>
-                </div>
-                <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                  {ALL_COLUMNS.map((col) => (
-                    <label
-                      key={col.key}
-                      className={cn(
-                        'flex items-center gap-2 text-xs py-1 px-1.5 rounded hover:bg-muted/50 cursor-pointer',
-                        col.locked && 'opacity-60 cursor-not-allowed'
-                      )}
-                    >
-                      <Checkbox
-                        checked={visibleColumns[col.key]}
-                        disabled={col.locked}
-                        onCheckedChange={(checked) => {
-                          if (col.locked) return;
-                          setVisibleColumns((prev) => ({
-                            ...prev,
-                            [col.key]: Boolean(checked),
-                          }));
-                        }}
-                      />
-                      <span className="text-foreground text-xs">{col.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-
             {/* Export (server-side xlsx with the active filters) */}
             <Button
               variant="outline"
               size="sm"
               disabled={exportMutation.isPending}
               onClick={() => exportMutation.mutate(listFilters)}
-              className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
+              className="text-xs h-9 border-border/80 hover:bg-accent"
             >
               <Download className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
-              {exportMutation.isPending ? 'Exporting…' : 'Export'}
+              {exportMutation.isPending ? t('admin.customers.list.exporting', 'Exporting…') : t('admin.customers.list.export', 'Export')}
             </Button>
 
             {/* Sync PPPoE ids with the routers (whole tenant) */}
@@ -453,11 +518,11 @@ export function AllCustomersPage() {
                 size="sm"
                 disabled={actions.syncPppoe.isPending}
                 onClick={() => actions.syncPppoe.mutate(undefined)}
-                className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
-                title="Re-link every customer's PPPoE secret id from its router"
+                className="text-xs h-9 border-border/80 hover:bg-accent"
+                title={t('admin.customers.list.syncHint', "Re-link every customer's PPPoE secret id from its router")}
               >
                 <Key className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
-                {actions.syncPppoe.isPending ? 'Syncing…' : 'Sync PPPoE'}
+                {actions.syncPppoe.isPending ? t('admin.customers.list.syncing', 'Syncing…') : t('admin.customers.list.sync', 'Sync PPPoE')}
               </Button>
             </Can>
 
@@ -465,61 +530,46 @@ export function AllCustomersPage() {
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-8 border-border/80 hover:bg-accent"
-                  >
+                  <Button variant="outline" size="sm" aria-label={t('admin.customers.list.bulkOps', 'Bulk operations')} className="text-xs h-9 border-border/80 hover:bg-accent">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 }
               />
               <DropdownMenuContent align="end" className="w-56 p-1">
-                <div className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Bulk Operations ({selectedIds.size} Selected)
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {t('admin.customers.list.bulkTitle', 'Bulk Operations ({n} Selected)', { n: selectedIds.size })}
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('sms')}>
-                  <Send className="h-3.5 w-3.5 text-blue-500" /> Send SMS
+                  <Send className="h-3.5 w-3.5 text-blue-500" /> {t('admin.customers.list.sendSms', 'Send SMS')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('router')}>
-                  <Server className="h-3.5 w-3.5 text-primary" /> Migrate / Change Router
+                  <Server className="h-3.5 w-3.5 text-primary" /> {t('admin.customers.list.bulkRouter', 'Migrate / Change Router')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('package')}>
-                  <PackageIcon className="h-3.5 w-3.5 text-amber-500" /> Change Package
+                  <PackageIcon className="h-3.5 w-3.5 text-amber-500" /> {t('admin.customers.list.bulkPackage', 'Change Package')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('accStatus')}>
-                  <ToggleLeft className="h-3.5 w-3.5 text-emerald-500" /> Set Account Status
+                  <ToggleLeft className="h-3.5 w-3.5 text-emerald-500" /> {t('admin.customers.list.bulkAccStatus', 'Set Account Status')}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('recharge')}>
-                  <Receipt className="h-3.5 w-3.5 text-purple-500" /> Bulk Recharge
+                  <Receipt className="h-3.5 w-3.5 text-purple-500" /> {t('admin.customers.list.bulkRecharge', 'Bulk Recharge')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" className="gap-2 cursor-pointer text-xs" onClick={() => openBulk('delete')}>
-                  <Trash2 className="h-3.5 w-3.5" /> Delete Selected ({selectedIds.size})
+                  <Trash2 className="h-3.5 w-3.5" /> {t('admin.customers.list.bulkDelete', 'Delete Selected ({n})', { n: selectedIds.size })}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             {/* Import & New Customer buttons */}
             <Can menu="customer" action="create">
-              <Link href="/admin/customers/import">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-8 border-border/80 hover:bg-accent transition duration-150"
-                >
-                  <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Import Excel
-                </Button>
-              </Link>
-              <Link href="/admin/customers/new">
-                <Button
-                  size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 shadow-sm transition duration-150"
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" /> New Customer
-                </Button>
-              </Link>
+              <Button variant="outline" size="sm" className="text-xs h-9 border-border/80 hover:bg-accent" render={<Link href="/admin/customers/import" />}>
+                <FileSpreadsheet className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> {t('admin.customers.list.importExcel', 'Import Excel')}
+              </Button>
+              <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 shadow-sm" render={<Link href="/admin/customers/new" />}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> {t('admin.customers.list.newCustomer', 'New Customer')}
+              </Button>
             </Can>
           </div>
         }
@@ -529,45 +579,39 @@ export function AllCustomersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm px-4 py-3 text-xs shadow-2xs">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-muted-foreground">
           <span>
-            Total <span className="font-bold text-foreground tabular-nums">{count(summary?.total)}</span> subscribers
+            {t('admin.customers.list.kpiTotal', 'Total')} <span className="font-bold text-foreground tabular-nums">{count(summary?.total)}</span> {t('admin.customers.list.kpiSubscribers', 'subscribers')}
           </span>
           <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {count(summary?.online)}
-            </span>{' '}
-            online
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{count(summary?.online)}</span> {t('admin.customers.list.kpiOnline', 'online')}
           </span>
           <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-            <span className="font-bold text-muted-foreground tabular-nums">
-              {count(summary?.offline)}
-            </span>{' '}
-            offline
+            <span className="font-bold text-muted-foreground tabular-nums">{count(summary?.offline)}</span> {t('admin.customers.list.kpiOffline', 'offline')}
           </span>
           <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-rose-500" />
-            <span className="font-bold text-rose-500 tabular-nums">{count(summary?.expired)}</span> expired
+            <span className="font-bold text-rose-500 tabular-nums">{count(summary?.expired)}</span> {t('admin.customers.list.kpiExpired', 'expired')}
           </span>
           <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-amber-500" />
-            <span className="font-bold text-amber-500 tabular-nums">{count(summary?.due7)}</span> due in 7 days
+            <span className="font-bold text-amber-500 tabular-nums">{count(summary?.due7)}</span> {t('admin.customers.list.kpiDue7', 'due in 7 days')}
           </span>
         </div>
 
         {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-lg text-xs font-semibold animate-in fade-in duration-200">
-            <span>{selectedIds.size} customer(s) selected</span>
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <span>{t('admin.customers.list.selected', '{n} customer(s) selected', { n: selectedIds.size })}</span>
             <button
               type="button"
               onClick={() => setSelectedIds(new Set())}
-              className="text-muted-foreground hover:text-foreground text-[10px] ml-1 underline cursor-pointer"
+              className="ml-1 cursor-pointer text-xs text-muted-foreground underline hover:text-foreground"
             >
-              Clear
+              {t('admin.customers.list.clear', 'Clear')}
             </button>
           </div>
         )}
@@ -581,18 +625,20 @@ export function AllCustomersPage() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, mobile, email, PPPoE username or ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 h-9 text-xs bg-background border-border/60 rounded-lg shadow-inner"
+                placeholder={t('admin.customers.list.searchPlaceholder', 'Search by name, mobile, email, PPPoE username or ID...')}
+                aria-label={t('admin.customers.list.searchLabel', 'Search customers')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9 pr-9 h-10 text-sm bg-background border-border/60 rounded-lg shadow-inner"
               />
-              {search && (
+              {searchInput && (
                 <button
                   type="button"
-                  onClick={() => setSearch('')}
+                  aria-label={t('admin.customers.list.clearSearch', 'Clear search')}
+                  onClick={() => setSearchInput('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -600,11 +646,12 @@ export function AllCustomersPage() {
             <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-muted/40 border border-border/60">
               {(
                 [
-                  { key: 'all', label: 'All', n: summary?.total, className: '' },
-                  { key: 'online', label: 'Online', n: summary?.online, className: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-                  { key: 'offline', label: 'Offline', n: summary?.offline, className: 'text-muted-foreground', dot: 'bg-muted-foreground/40' },
-                  { key: 'expired', label: 'Expired', n: summary?.expired, className: 'text-rose-500', dot: 'bg-rose-500' },
-                  { key: 'suspended', label: 'Disconnected', n: summary?.disconnected, className: 'text-amber-500' },
+                  { key: 'all', label: t('admin.customers.list.pillAll', 'All'), n: summary?.total, className: '' },
+                  { key: 'active', label: t('admin.customers.status.active', 'Active'), n: undefined, className: '' },
+                  { key: 'online', label: t('admin.customers.status.online', 'Online'), n: summary?.online, className: 'text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
+                  { key: 'offline', label: t('admin.customers.status.offline', 'Offline'), n: summary?.offline, className: 'text-muted-foreground', dot: 'bg-muted-foreground/40' },
+                  { key: 'expired', label: t('admin.customers.status.expired', 'Expired'), n: summary?.expired, className: 'text-rose-500', dot: 'bg-rose-500' },
+                  { key: 'suspended', label: t('admin.customers.status.disconnected', 'Disconnected'), n: summary?.disconnected, className: 'text-amber-500' },
                 ] as { key: QuickStatus; label: string; n?: number; className: string; dot?: string }[]
               ).map((pill) => (
                 <Button
@@ -612,26 +659,40 @@ export function AllCustomersPage() {
                   type="button"
                   size="sm"
                   variant={statusFilter === pill.key ? 'default' : 'ghost'}
-                  onClick={() => setStatusFilter(pill.key)}
-                  className={cn('text-xs h-7 px-2.5', pill.className)}
+                  aria-pressed={statusFilter === pill.key}
+                  onClick={() => update({ status: pill.key })}
+                  className={cn('text-xs h-8 px-2.5', statusFilter !== pill.key && pill.className)}
                 >
                   {pill.dot && <span className={cn('mr-1 h-1.5 w-1.5 rounded-full', pill.dot)} />}
-                  {pill.label} ({count(pill.n)})
+                  {pill.label}
+                  {pill.n !== undefined ? ` (${count(pill.n)})` : ''}
                 </Button>
               ))}
             </div>
           </div>
 
+          {/* Reseller scope chip (set by the hierarchy view) */}
+          {state.reseller ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{t('admin.customers.list.resellerScope', 'Showing customers of reseller')}</span>
+              <Badge variant="outline" className="gap-1 font-mono">
+                #{state.reseller}
+                <button type="button" aria-label={t('admin.customers.list.removeReseller', 'Remove reseller filter')} onClick={() => update({ resellerId: null })} className="hover:text-foreground">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          ) : null}
+
           {/* Bottom Row: Detailed Dropdown Filters (Area, Package, Router, Protocol, Expiry) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-border/40">
-            {/* Area Filter */}
-            <Select value={areaFilter} onValueChange={(val) => setAreaFilter(val || 'all')} items={{ all: 'All Coverage Areas', ...labels(areaOptions) }}>
-              <SelectTrigger className="h-8 text-xs bg-background border-border/60">
+            <Select value={state.area} onValueChange={(val) => update({ area: val || 'all' })} items={{ all: t('admin.customers.list.allAreas', 'All Coverage Areas'), ...labels(areaOptions) }}>
+              <SelectTrigger className="h-9 text-xs bg-background border-border/60">
                 <MapPin className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-                <SelectValue placeholder="All Areas" />
+                <SelectValue placeholder={t('admin.customers.list.allAreasShort', 'All Areas')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Coverage Areas</SelectItem>
+                <SelectItem value="all">{t('admin.customers.list.allAreas', 'All Coverage Areas')}</SelectItem>
                 {areaOptions.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.name}
@@ -640,14 +701,13 @@ export function AllCustomersPage() {
               </SelectContent>
             </Select>
 
-            {/* Package Filter */}
-            <Select value={packageFilter} onValueChange={(val) => setPackageFilter(val || 'all')} items={{ all: 'All Packages', ...labels(packageOptions) }}>
-              <SelectTrigger className="h-8 text-xs bg-background border-border/60">
+            <Select value={state.pkg} onValueChange={(val) => update({ package: val || 'all' })} items={{ all: t('admin.customers.list.allPackages', 'All Packages'), ...labels(packageOptions) }}>
+              <SelectTrigger className="h-9 text-xs bg-background border-border/60">
                 <PackageIcon className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-                <SelectValue placeholder="All Packages" />
+                <SelectValue placeholder={t('admin.customers.list.allPackages', 'All Packages')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Packages</SelectItem>
+                <SelectItem value="all">{t('admin.customers.list.allPackages', 'All Packages')}</SelectItem>
                 {packageOptions.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
@@ -657,14 +717,13 @@ export function AllCustomersPage() {
               </SelectContent>
             </Select>
 
-            {/* Router Filter */}
-            <Select value={routerFilter} onValueChange={(val) => setRouterFilter(val || 'all')} items={{ all: 'All Routers', ...labels(routerOptions) }}>
-              <SelectTrigger className="h-8 text-xs bg-background border-border/60">
+            <Select value={state.router} onValueChange={(val) => update({ router: val || 'all' })} items={{ all: t('admin.customers.list.allRouters', 'All Routers'), ...labels(routerOptions) }}>
+              <SelectTrigger className="h-9 text-xs bg-background border-border/60">
                 <Server className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-                <SelectValue placeholder="All Routers" />
+                <SelectValue placeholder={t('admin.customers.list.allRouters', 'All Routers')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Routers</SelectItem>
+                <SelectItem value="all">{t('admin.customers.list.allRouters', 'All Routers')}</SelectItem>
                 {routerOptions.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.name}
@@ -673,415 +732,82 @@ export function AllCustomersPage() {
               </SelectContent>
             </Select>
 
-            {/* Connection Protocol Filter */}
-            <Select value={connFilter} onValueChange={(val) => setConnFilter(val || 'all')}>
-              <SelectTrigger className="h-8 text-xs bg-background border-border/60">
+            <Select value={state.conn} onValueChange={(val) => update({ conn: val || 'all' })} items={connItems}>
+              <SelectTrigger className="h-9 text-xs bg-background border-border/60">
                 <Wifi className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-                <SelectValue placeholder="All Protocols" />
+                <SelectValue placeholder={t('admin.customers.list.allProtocols', 'All Protocols')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Protocols</SelectItem>
-                <SelectItem value="pppoe">PPPoE</SelectItem>
-                <SelectItem value="static">Static IP (corporate)</SelectItem>
+                <SelectItem value="all">{connItems.all}</SelectItem>
+                <SelectItem value="pppoe">{connItems.pppoe}</SelectItem>
+                <SelectItem value="static">{connItems.static}</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* Expiry & Cycle Filter (backend expiry buckets) */}
-            <Select value={expiryFilter} onValueChange={(val) => setExpiryFilter(val || 'all')}>
-              <SelectTrigger className="h-8 text-xs bg-background border-border/60">
+            <Select value={state.expiry} onValueChange={(val) => update({ expiry: val || 'all' })} items={expiryItems}>
+              <SelectTrigger className="h-9 text-xs bg-background border-border/60">
                 <Calendar className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-                <SelectValue placeholder="All Expiry" />
+                <SelectValue placeholder={t('admin.customers.list.allExpiryShort', 'All Expiry')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Expiry Cycles</SelectItem>
-                <SelectItem value="expired_today">Expired Today</SelectItem>
-                <SelectItem value="expired_7">Expired (Last 7 Days)</SelectItem>
-                <SelectItem value="due_today">Due Today</SelectItem>
-                <SelectItem value="due_3">Due in 3 Days</SelectItem>
-                <SelectItem value="due_7">Due in 7 Days</SelectItem>
-                <SelectItem value="paid_7">Paid (7+ Days Left)</SelectItem>
+                {Object.entries(expiryItems).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            {/* Reset Filter Button */}
             {activeFilterCount > 0 ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={clearFilters}
-                className="h-8 text-xs font-medium border-border/80 text-muted-foreground hover:text-foreground col-span-2 sm:col-span-3 lg:col-span-1 gap-1"
+                className="h-9 text-xs font-medium border-border/80 text-muted-foreground hover:text-foreground col-span-2 sm:col-span-3 lg:col-span-1 gap-1"
               >
-                <RotateCcw className="h-3 w-3" /> Reset ({activeFilterCount})
+                <RotateCcw className="h-3 w-3" /> {t('admin.customers.list.reset', 'Reset ({n})', { n: activeFilterCount })}
               </Button>
             ) : (
-              <div className="hidden lg:flex items-center justify-end text-xs text-muted-foreground pr-2 font-mono">
-                {totalRows} records
-              </div>
+              <div className="hidden lg:flex items-center justify-end text-xs text-muted-foreground pr-2 font-mono">{t('admin.customers.list.records', '{n} records', { n: totalRows })}</div>
             )}
           </div>
         </CardContent>
       </Card>
 
       {/* Customers Data Table (current server page) */}
-      <Card className={cn('border-border/70 shadow-2xs bg-card overflow-hidden ring-1 ring-border/50', isFetching && 'opacity-80')}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1300px] text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                {/* Bulk Checkbox */}
-                <th className="py-3 px-4 w-10">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
-                    title={allPageSelected ? 'Deselect page' : 'Select page'}
-                  >
-                    {allPageSelected ? (
-                      <CheckSquare className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Square className="h-4 w-4" />
-                    )}
-                  </button>
-                </th>
-
-                {visibleColumns.id && <th className="py-3 px-3 w-16">C.ID</th>}
-                {visibleColumns.customer && <th className="py-3 px-4">Subscriber</th>}
-                {visibleColumns.package && <th className="py-3 px-4">Package</th>}
-                {visibleColumns.area && <th className="py-3 px-4">Area / Sector</th>}
-                {visibleColumns.mobile && <th className="py-3 px-4">Mobile</th>}
-                {visibleColumns.address && <th className="py-3 px-4">Address</th>}
-                {visibleColumns.router && <th className="py-3 px-4">Router</th>}
-                {visibleColumns.pppoeSecret && <th className="py-3 px-4">PPPoE Secret</th>}
-                {visibleColumns.payment && <th className="py-3 px-4">Expiry Date</th>}
-                {visibleColumns.status && <th className="py-3 px-4">Status</th>}
-                {visibleColumns.accStatus && <th className="py-3 px-4">Acc Status</th>}
-                {visibleColumns.balance && <th className="py-3 px-4">Balance</th>}
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={Object.values(visibleColumns).filter(Boolean).length + 2} className="text-center py-16 text-muted-foreground">
-                    <div className="max-w-xs mx-auto space-y-2">
-                      <Search className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                      <p className="font-semibold text-foreground">
-                        {activeFilterCount > 0 ? 'No matching subscribers' : 'No customers yet'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeFilterCount > 0
-                          ? 'Try clearing or relaxing your active search and filter combinations.'
-                          : 'Add a customer or import them from Excel to get started.'}
-                      </p>
-                      {activeFilterCount > 0 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={clearFilters}
-                          className="mt-2 text-xs"
-                        >
-                          Clear All Filters
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                rows.map((c) => {
-                  const isExpired = c.status === 'expired';
-                  const isSelected = selectedIds.has(c.id);
-
-                  return (
-                    <tr
-                      key={c.id}
-                      className={cn(
-                        'group transition-colors duration-150',
-                        isSelected
-                          ? 'bg-primary/[0.04] hover:bg-primary/[0.08]'
-                          : 'hover:bg-muted/30'
-                      )}
-                    >
-                      {/* Row Checkbox */}
-                      <td className="py-3 px-4">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelectRow(c.id)}
-                          className="flex items-center text-muted-foreground hover:text-foreground focus:outline-none"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Square className="h-4 w-4 text-muted-foreground/60" />
-                          )}
-                        </button>
-                      </td>
-
-                      {/* C.ID */}
-                      {visibleColumns.id && (
-                        <td className="py-3 px-3 font-mono text-[11px] text-muted-foreground">
-                          {c.id}
-                        </td>
-                      )}
-
-                      {/* Subscriber Name & User */}
-                      {visibleColumns.customer && (
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="relative shrink-0">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-xs border border-primary/20">
-                                {c.name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <span
-                                className={cn(
-                                  'absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-2 ring-background',
-                                  c.online ? 'bg-emerald-500' : 'bg-muted-foreground/40'
-                                )}
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <button
-                                type="button"
-                                onClick={() => router.push(`/admin/customers/${c.id}`)}
-                                className="font-bold text-foreground hover:text-primary hover:underline transition-colors text-xs text-left truncate block max-w-[150px]"
-                              >
-                                {c.name}
-                              </button>
-                              <div className="text-[10px] text-muted-foreground font-mono truncate">
-                                {c.username || '—'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      )}
-
-                      {/* Package */}
-                      {visibleColumns.package && (
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-foreground truncate max-w-[130px]">
-                            {c.packageName || '—'}
-                          </div>
-                          {c.packagePrice !== null && (
-                            <div className="text-[10px] text-muted-foreground font-mono">
-                              ৳{c.packagePrice}
-                            </div>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Area / Sub-area */}
-                      {visibleColumns.area && (
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-foreground truncate max-w-[120px]">
-                            {c.areaName || '—'}
-                          </div>
-                          {c.subAreaName && (
-                            <div className="text-[10px] text-muted-foreground truncate">
-                              {c.subAreaName}
-                            </div>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Mobile */}
-                      {visibleColumns.mobile && (
-                        <td className="py-3 px-4 font-mono text-[11px] text-foreground">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            <span>{c.phone || '—'}</span>
-                          </div>
-                        </td>
-                      )}
-
-                      {/* Address */}
-                      {visibleColumns.address && (
-                        <td className="py-3 px-4 text-[11px] text-muted-foreground truncate max-w-[140px]">
-                          {c.address || '—'}
-                        </td>
-                      )}
-
-                      {/* Router */}
-                      {visibleColumns.router && (
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1 font-mono text-[11px] text-foreground truncate max-w-[120px]">
-                            <Server className="h-3 w-3 text-primary/70 shrink-0" />
-                            <span>{c.routerName || '—'}</span>
-                          </div>
-                        </td>
-                      )}
-
-                      {/* PPPoE Secret */}
-                      {visibleColumns.pppoeSecret && (
-                        <td className="py-3 px-4">
-                          {c.username ? (
-                            <div className="flex items-center gap-1 font-mono text-[11px] text-foreground bg-muted/40 px-2 py-0.5 rounded border border-border/50 max-w-[120px] justify-between">
-                              <span className="truncate">{c.username}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopy(c.username, 'PPPoE Secret')}
-                                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                              >
-                                <Copy className="h-2.5 w-2.5" />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Payment & Expiry */}
-                      {visibleColumns.payment && (
-                        <td className="py-3 px-4">
-                          <div
-                            className={cn(
-                              'font-mono text-xs font-semibold',
-                              isExpired ? 'text-destructive flex items-center gap-1' : 'text-foreground'
-                            )}
-                          >
-                            {isExpired && <AlertCircle className="h-3 w-3 text-destructive shrink-0" />}
-                            <span>{ymd(c.expiryDate)}</span>
-                          </div>
-                          {c.paymentSummary && (
-                            <div className="text-[10px] text-muted-foreground">{c.paymentSummary}</div>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Conn Status (Online/Offline) */}
-                      {visibleColumns.status && (
-                        <td className="py-3 px-4">
-                          {c.online ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium gap-1"
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
-                              Online
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-muted text-muted-foreground border-border/60 text-[10px] font-medium gap-1"
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground inline-block" />
-                              Offline
-                            </Badge>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Acc Status (Active / Disconnected / Expired) */}
-                      {visibleColumns.accStatus && (
-                        <td className="py-3 px-4">
-                          <StatusBadge status={c.status} label={c.status === 'suspended' ? 'Disconnected' : undefined} />
-                        </td>
-                      )}
-
-                      {/* Balance */}
-                      {visibleColumns.balance && (
-                        <td className="py-3 px-4 font-mono font-bold text-xs">
-                          {c.balanceBdt > 0 ? (
-                            <span className="text-amber-500">
-                              <CurrencyDisplay amount={c.balanceBdt} />
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              <CurrencyDisplay amount={0} />
-                            </span>
-                          )}
-                        </td>
-                      )}
-
-                      {/* Action Dropdown */}
-                      <td className="py-3 px-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 rounded-md hover:bg-muted/80 focus:outline-none"
-                              >
-                                <MoreHorizontal className="h-3.5 w-3.5" />
-                              </Button>
-                            }
-                          />
-                          <DropdownMenuContent align="end" className="w-52 p-1">
-                            <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Subscriber Actions
-                            </div>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-xs"
-                              onClick={() => router.push(`/admin/customers/${c.id}`)}
-                            >
-                              <Eye className="h-3.5 w-3.5 text-primary" /> View Details
-                            </DropdownMenuItem>
-                            <Can menu="customer" action="update">
-                              <DropdownMenuItem
-                                className="gap-2 cursor-pointer text-xs"
-                                onClick={() => router.push(`/admin/customers/${c.id}/edit`)}
-                              >
-                                <Edit className="h-3.5 w-3.5" /> Edit Profile
-                              </DropdownMenuItem>
-                            </Can>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-xs"
-                              onClick={() =>
-                                router.push(`/admin/customer-payments/new?customerId=${c.id}`)
-                              }
-                            >
-                              <Receipt className="h-3.5 w-3.5 text-emerald-500" /> Collect Payment
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="gap-2 cursor-pointer text-xs"
-                              onClick={() => {
-                                setSmsTargets([c.id]);
-                                setBulkModal('sms');
-                              }}
-                            >
-                              <MessageSquare className="h-3.5 w-3.5 text-amber-500" /> Send SMS
-                            </DropdownMenuItem>
-                            <Can menu="customer" action="delete">
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                variant="destructive"
-                                className="gap-2 cursor-pointer text-xs"
-                                onClick={() => setDeleteId(c.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" /> Delete Account
-                              </DropdownMenuItem>
-                            </Can>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Server Pagination Bar */}
-        <TablePagination
-          currentPage={currentPage}
-          pageSize={pageSize}
-          totalItems={totalRows}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
+      <div className={cn(isFetching && 'opacity-80')}>
+        <DataTable
+          columns={columns}
+          data={rows}
+          getRowId={(c) => c.id}
+          enableRowSelection
+          rowSelection={rowSelection}
+          onRowSelectionChange={(next) => setSelectedIds(new Set(Object.keys(next).filter((id) => next[id])))}
+          enableLayoutToggle={false}
           pageSizeOptions={[10, 20, 50, 100]}
+          emptyTitle={activeFilterCount > 0 ? t('admin.customers.list.emptyFiltered', 'No matching subscribers') : t('admin.customers.list.emptyNone', 'No customers yet')}
+          emptyDescription={
+            activeFilterCount > 0
+              ? t('admin.customers.list.emptyFilteredHint', 'Try clearing or relaxing your active search and filter combinations.')
+              : t('admin.customers.list.emptyNoneHint', 'Add a customer or import them from Excel to get started.')
+          }
+          server={{
+            page: state.page,
+            pageSize: state.pageSize,
+            total: totalRows,
+            onPageChange: (page) => update({ page }),
+            onPageSizeChange: (size) => update({ size }),
+          }}
         />
-      </Card>
+      </div>
 
       {/* ── Single Delete Confirmation Dialog ──────────────────────── */}
       <ConfirmDialog
         open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete Customer Account"
-        description="Are you sure you want to remove this subscriber? This removes their PPPoE secret from the router and deletes the account."
-        confirmLabel="Confirm Delete"
+        title={t('admin.customers.list.deleteTitle', 'Delete Customer Account')}
+        description={t('admin.customers.list.deleteHint', 'Are you sure you want to remove this subscriber? This removes their PPPoE secret from the router and deletes the account.')}
+        confirmLabel={t('admin.customers.list.deleteConfirm', 'Confirm Delete')}
         destructive
         onConfirm={async () => {
           if (deleteId) {
@@ -1096,7 +822,7 @@ export function AllCustomersPage() {
         open={bulkModal === 'sms'}
         onOpenChange={(o) => !o && setBulkModal(null)}
         ids={smsTargets}
-        title="Send SMS"
+        title={t('admin.customers.list.sendSms', 'Send SMS')}
       />
 
       {/* ── Bulk Migrate Router Dialog ──────────────────────────────── */}
@@ -1105,18 +831,18 @@ export function AllCustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Server className="h-5 w-5 text-primary" />
-              Change Router
+              {t('admin.customers.list.routerTitle', 'Change Router')}
             </DialogTitle>
             <DialogDescription>
-              Reassign <strong className="text-foreground">{selectedIds.size}</strong> subscribers to another MikroTik router.
+              {t('admin.customers.list.routerHint', 'Reassign {n} subscribers to another MikroTik router.', { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Target Router</Label>
+              <Label htmlFor="targetRouter" className="text-xs font-semibold">{t('admin.customers.list.targetRouter', 'Target Router')}</Label>
               <Select value={targetRouter || null} onValueChange={(val) => setTargetRouter(val || '')} items={labels(routerOptions)}>
-                <SelectTrigger className="h-10 text-xs">
-                  <SelectValue placeholder={routersQuery.isLoading ? 'Loading routers…' : 'Select router'} />
+                <SelectTrigger id="targetRouter" className="h-10 text-xs">
+                  <SelectValue placeholder={routersQuery.isLoading ? t('admin.customers.list.loadingRouters', 'Loading routers…') : t('admin.customers.list.selectRouter', 'Select router')} />
                 </SelectTrigger>
                 <SelectContent>
                   {routerOptions.map((r) => (
@@ -1130,7 +856,7 @@ export function AllCustomersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setBulkModal(null)}>
-              Cancel
+              {t('admin.customers.list.cancel', 'Cancel')}
             </Button>
             <Button
               size="sm"
@@ -1138,7 +864,7 @@ export function AllCustomersPage() {
               onClick={() => actions.bulkUpdateRouter.mutate({ ids: selected, routerId: targetRouter }, { onSuccess: finishBulk })}
               className="gap-1"
             >
-              <Server className="h-3.5 w-3.5" /> Reassign Router
+              <Server className="h-3.5 w-3.5" /> {t('admin.customers.list.reassignRouter', 'Reassign Router')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1150,18 +876,18 @@ export function AllCustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PackageIcon className="h-5 w-5 text-amber-500" />
-              Change Package
+              {t('admin.customers.list.bulkPackage', 'Change Package')}
             </DialogTitle>
             <DialogDescription>
-              Move <strong className="text-foreground">{selectedIds.size}</strong> selected subscribers to another package.
+              {t('admin.customers.list.packageHint', 'Move {n} selected subscribers to another package.', { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">New Package</Label>
+              <Label htmlFor="newPackage" className="text-xs font-semibold">{t('admin.customers.list.newPackage', 'New Package')}</Label>
               <Select value={targetPackage || null} onValueChange={(val) => setTargetPackage(val || '')} items={labels(packageOptions)}>
-                <SelectTrigger className="h-10 text-xs">
-                  <SelectValue placeholder={packagesQuery.isLoading ? 'Loading packages…' : 'Select package'} />
+                <SelectTrigger id="newPackage" className="h-10 text-xs">
+                  <SelectValue placeholder={packagesQuery.isLoading ? t('admin.customers.list.loadingPackages', 'Loading packages…') : t('admin.customers.list.selectPackage', 'Select package')} />
                 </SelectTrigger>
                 <SelectContent>
                   {packageOptions.map((pkg) => (
@@ -1176,15 +902,15 @@ export function AllCustomersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setBulkModal(null)}>
-              Cancel
+              {t('admin.customers.list.cancel', 'Cancel')}
             </Button>
             <Button
               size="sm"
               disabled={!targetPackage || actions.bulkChangePackage.isPending}
               onClick={() => actions.bulkChangePackage.mutate({ ids: selected, packageId: targetPackage }, { onSuccess: finishBulk })}
-              className="bg-amber-600 hover:bg-amber-700 text-white gap-1"
+              className="bg-amber-700 hover:bg-amber-800 text-white gap-1"
             >
-              <PackageIcon className="h-3.5 w-3.5" /> Apply Package
+              <PackageIcon className="h-3.5 w-3.5" /> {t('admin.customers.list.applyPackage', 'Apply Package')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1196,32 +922,33 @@ export function AllCustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ToggleLeft className="h-5 w-5 text-emerald-500" />
-              Set Account Status
+              {t('admin.customers.list.bulkAccStatus', 'Set Account Status')}
             </DialogTitle>
             <DialogDescription>
-              Enable or disable the PPPoE secret of <strong className="text-foreground">{selectedIds.size}</strong> selected accounts on their routers.
+              {t('admin.customers.list.accStatusHint', 'Enable or disable the PPPoE secret of {n} selected accounts on their routers.', { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Status</Label>
+              <Label htmlFor="statusLabel" className="text-xs font-semibold">{t('admin.customers.list.statusLabel', 'Status')}</Label>
               <Select
                 value={targetAccStatus}
                 onValueChange={(v) => setTargetAccStatus(v === 'disconn' ? 'disconn' : 'conn')}
+                items={accStatusItems}
               >
-                <SelectTrigger className="h-10 text-xs">
+                <SelectTrigger id="statusLabel" className="h-10 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="conn">Connected (PPPoE enabled)</SelectItem>
-                  <SelectItem value="disconn">Disconnected (PPPoE disabled)</SelectItem>
+                  <SelectItem value="conn">{accStatusItems.conn}</SelectItem>
+                  <SelectItem value="disconn">{accStatusItems.disconn}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setBulkModal(null)}>
-              Cancel
+              {t('admin.customers.list.cancel', 'Cancel')}
             </Button>
             <Button
               size="sm"
@@ -1229,7 +956,7 @@ export function AllCustomersPage() {
               onClick={() => actions.bulkConnStatus.mutate({ ids: selected, status: targetAccStatus }, { onSuccess: finishBulk })}
               className="gap-1"
             >
-              Apply Status
+              {t('admin.customers.list.applyStatus', 'Apply Status')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1241,25 +968,25 @@ export function AllCustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-purple-500" />
-              Bulk Recharge Subscribers
+              {t('admin.customers.list.rechargeTitle', 'Bulk Recharge Subscribers')}
             </DialogTitle>
             <DialogDescription>
-              Set a new expiry for <strong className="text-foreground">{selectedIds.size}</strong> customers. A future date activates and connects them.
+              {t('admin.customers.list.rechargeHint', 'Set a new expiry for {n} customers. A future date activates and connects them.', { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Valid until</Label>
-              <Input type="date" value={rechargeUntil} onChange={(e) => setRechargeUntil(e.target.value)} className="h-10 text-xs" />
+              <Label htmlFor="validUntil" className="text-xs font-semibold">{t('admin.customers.list.validUntil', 'Valid until')}</Label>
+              <Input id="validUntil" type="date" value={rechargeUntil} onChange={(e) => setRechargeUntil(e.target.value)} className="h-10 text-xs" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Package (optional)</Label>
-              <Select value={rechargePackage || 'keep'} onValueChange={(v) => setRechargePackage(!v || v === 'keep' ? '' : v)} items={{ keep: 'Keep current package', ...labels(packageOptions) }}>
-                <SelectTrigger className="h-10 text-xs">
+              <Label htmlFor="packageOptional" className="text-xs font-semibold">{t('admin.customers.list.packageOptional', 'Package (optional)')}</Label>
+              <Select value={rechargePackage || 'keep'} onValueChange={(v) => setRechargePackage(!v || v === 'keep' ? '' : v)} items={{ keep: t('admin.customers.list.keepPackage', 'Keep current package'), ...labels(packageOptions) }}>
+                <SelectTrigger id="packageOptional" className="h-10 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="keep">Keep current package</SelectItem>
+                  <SelectItem value="keep">{t('admin.customers.list.keepPackage', 'Keep current package')}</SelectItem>
                   {packageOptions.map((pkg) => (
                     <SelectItem key={pkg.id} value={pkg.id}>
                       {pkg.name}
@@ -1271,7 +998,7 @@ export function AllCustomersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setBulkModal(null)}>
-              Cancel
+              {t('admin.customers.list.cancel', 'Cancel')}
             </Button>
             <Button
               size="sm"
@@ -1284,7 +1011,7 @@ export function AllCustomersPage() {
               }
               className="bg-purple-600 hover:bg-purple-700 text-white gap-1"
             >
-              <Receipt className="h-3.5 w-3.5" /> Execute Recharge
+              <Receipt className="h-3.5 w-3.5" /> {t('admin.customers.list.executeRecharge', 'Execute Recharge')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1296,15 +1023,15 @@ export function AllCustomersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
-              Delete {selectedIds.size} Customers?
+              {t('admin.customers.list.bulkDeleteTitle', 'Delete {n} Customers?', { n: selectedIds.size })}
             </DialogTitle>
             <DialogDescription>
-              This action cannot be undone. PPPoE secrets are removed from the routers and the {selectedIds.size} accounts are deleted.
+              {t('admin.customers.list.bulkDeleteHint', 'This action cannot be undone. PPPoE secrets are removed from the routers and the {n} accounts are deleted.', { n: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setBulkModal(null)}>
-              Cancel
+              {t('admin.customers.list.cancel', 'Cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -1313,7 +1040,7 @@ export function AllCustomersPage() {
               onClick={() => actions.bulkDelete.mutate(selected, { onSuccess: finishBulk })}
               className="gap-1"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Delete Selected
+              <Trash2 className="h-3.5 w-3.5" /> {t('admin.customers.list.deleteSelected', 'Delete Selected')}
             </Button>
           </DialogFooter>
         </DialogContent>

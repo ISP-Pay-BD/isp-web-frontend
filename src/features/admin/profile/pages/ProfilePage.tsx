@@ -51,23 +51,37 @@ import {
   type TwoFactorSetup,
 } from '../hooks/use-admin-profile';
 
+import { dateLocale, formatDateTime } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+
 const tabs = [
-  { id: 'overview', label: 'Profile Overview', icon: User },
-  { id: 'edit', label: 'Update Details', icon: Edit3 },
-  { id: 'password', label: 'Change Password', icon: Lock },
-  { id: 'security', label: 'Security & Sessions', icon: ShieldCheck },
+  { id: 'overview', icon: User },
+  { id: 'edit', icon: Edit3 },
+  { id: 'password', icon: Lock },
+  { id: 'security', icon: ShieldCheck },
 ] as const;
 
 type TabId = (typeof tabs)[number]['id'];
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Platform Owner',
-  admin: 'ISP Admin',
-  resellerAdmin: 'Reseller / POP',
-  employee: 'Employee',
-};
+type Translate = ReturnType<typeof useTranslations>;
 
-const fmt = (iso: string | null) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleString() : '—');
+function roleLabelOf(t: Translate, role: string): string {
+  switch (role) {
+    case 'super_admin':
+      return t('admin.profile.roleOwner', 'Platform Owner');
+    case 'admin':
+      return t('admin.profile.roleAdmin', 'ISP Admin');
+    case 'resellerAdmin':
+      return t('admin.profile.roleReseller', 'Reseller / POP');
+    case 'employee':
+      return t('admin.profile.roleEmployee', 'Employee');
+    default:
+      return role;
+  }
+}
+
+const fmt = (iso: string | null) => (iso ? formatDateTime(iso.replace(' ', 'T')) : '—');
 const initials = (name: string) =>
   name
     .split(/\s+/)
@@ -77,26 +91,34 @@ const initials = (name: string) =>
     .join('') || '?';
 
 export function ProfilePage() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, refetch } = useAdminProfile();
 
   if (isLoading) return <PageSkeleton variant="form" />;
   if (isError || !data) {
-    return <EmptyState title="Failed to load profile" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.profile.loadFailed', 'Failed to load profile')} description={errorMessage(error)} actionLabel={t('common.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   return <ProfilePageInner profile={data} />;
 }
 
 function ProfilePageInner({ profile }: { profile: AdminProfile }) {
+  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const roleLabel = ROLE_LABELS[profile.role] ?? profile.role;
+  const roleLabel = roleLabelOf(t, profile.role);
+  const tabLabels: Record<TabId, string> = {
+    overview: t('admin.profile.tabOverview', 'Profile Overview'),
+    edit: t('admin.profile.tabEdit', 'Update Details'),
+    password: t('admin.profile.tabPassword', 'Change Password'),
+    security: t('admin.profile.tabSecurity', 'Security & Sessions'),
+  };
   const joined = profile.joinedAt ? new Date(profile.joinedAt.replace(' ', 'T')) : null;
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="My Profile"
-        subtitle="Your account details, password and sign-in security"
+        title={t('admin.profile.title', 'My Profile')}
+        subtitle={t('admin.profile.subtitle', 'Your account details, password and sign-in security')}
         breadcrumb={[{ label: 'Dashboard', url: '/admin/dashboard' }, { label: 'Profile' }]}
       />
 
@@ -112,11 +134,7 @@ function ProfilePageInner({ profile }: { profile: AdminProfile }) {
                 <Badge variant="secondary" className="text-xs font-medium">
                   <Shield className="mr-1 h-3 w-3" /> {roleLabel}
                 </Badge>
-                {profile.status && (
-                  <Badge variant="outline" className="text-xs capitalize text-emerald-700 dark:text-emerald-400">
-                    {profile.status}
-                  </Badge>
-                )}
+                {profile.status && <StatusBadge status={profile.status} />}
               </div>
               {profile.organizationName && <p className="text-sm font-semibold text-foreground">{profile.organizationName}</p>}
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground pt-1">
@@ -132,8 +150,10 @@ function ProfilePageInner({ profile }: { profile: AdminProfile }) {
                 )}
                 {joined && !Number.isNaN(joined.getTime()) && (
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Joined{' '}
-                    {joined.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />{' '}
+                    {t('admin.profile.joined', 'Joined {date}', {
+                      date: joined.toLocaleDateString(dateLocale(), { month: 'short', year: 'numeric' }),
+                    })}
                   </span>
                 )}
               </div>
@@ -141,10 +161,10 @@ function ProfilePageInner({ profile }: { profile: AdminProfile }) {
           </div>
           <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
             <Button size="sm" variant={activeTab === 'edit' ? 'default' : 'outline'} onClick={() => setActiveTab('edit')} className="text-xs font-semibold">
-              <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Profile
+              <Edit3 className="mr-1.5 h-3.5 w-3.5" /> {t('admin.profile.editProfile', 'Edit Profile')}
             </Button>
             <Button size="sm" variant={activeTab === 'password' ? 'default' : 'outline'} onClick={() => setActiveTab('password')} className="text-xs font-semibold">
-              <Key className="mr-1.5 h-3.5 w-3.5" /> Password
+              <Key className="mr-1.5 h-3.5 w-3.5" /> {t('admin.profile.password', 'Password')}
             </Button>
           </div>
         </CardContent>
@@ -159,12 +179,13 @@ function ProfilePageInner({ profile }: { profile: AdminProfile }) {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
+                aria-label={tabLabels[tab.id]}
                 className={`relative z-10 flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold transition-colors duration-200 cursor-pointer select-none ${
                   isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden sm:inline">{tabLabels[tab.id]}</span>
               </button>
             );
           })}
@@ -191,6 +212,7 @@ function Row({ icon, label, value, mono }: { icon: React.ReactNode; label: strin
 }
 
 function OverviewTab({ profile, roleLabel }: { profile: AdminProfile; roleLabel: string }) {
+  const t = useTranslations();
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <Card className="border-border/70 shadow-2xs overflow-hidden">
@@ -199,15 +221,15 @@ function OverviewTab({ profile, roleLabel }: { profile: AdminProfile; roleLabel:
             <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
               <User className="h-4 w-4" />
             </div>
-            Personal & Contact Info
+            {t('admin.profile.personalInfo', 'Personal & Contact Info')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-xs">
-          <Row icon={<User className="h-3.5 w-3.5 text-primary" />} label="Full Name" value={profile.name} />
-          <Row icon={<Mail className="h-3.5 w-3.5 text-primary" />} label="Email" value={profile.email} mono />
-          <Row icon={<Phone className="h-3.5 w-3.5 text-primary" />} label="Mobile" value={profile.mobile} mono />
+          <Row icon={<User className="h-3.5 w-3.5 text-primary" />} label={t('admin.profile.fullName', 'Full Name')} value={profile.name} />
+          <Row icon={<Mail className="h-3.5 w-3.5 text-primary" />} label={t('admin.profile.email', 'Email')} value={profile.email} mono />
+          <Row icon={<Phone className="h-3.5 w-3.5 text-primary" />} label={t('admin.profile.mobile', 'Mobile')} value={profile.mobile} mono />
           {profile.whatsapp && <Row icon={<Phone className="h-3.5 w-3.5 text-muted-foreground" />} label="WhatsApp" value={profile.whatsapp} mono />}
-          <Row icon={<IdCard className="h-3.5 w-3.5 text-primary" />} label="National ID (NID)" value={profile.nationalId} mono />
+          <Row icon={<IdCard className="h-3.5 w-3.5 text-primary" />} label={t('admin.profile.nid', 'National ID (NID)')} value={profile.nationalId} mono />
         </CardContent>
       </Card>
       <Card className="border-border/70 shadow-2xs overflow-hidden">
@@ -216,16 +238,16 @@ function OverviewTab({ profile, roleLabel }: { profile: AdminProfile; roleLabel:
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <Building className="h-4 w-4" />
             </div>
-            Organization
+            {t('admin.profile.organization', 'Organization')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-xs">
-          <Row icon={<Building className="h-3.5 w-3.5 text-emerald-500" />} label="Organization" value={profile.organizationName} />
-          <Row icon={<ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />} label="Access Role" value={roleLabel} />
-          <Row icon={<MapPin className="h-3.5 w-3.5 text-emerald-500" />} label="Division / District" value={[profile.division, profile.district].filter(Boolean).join(', ')} />
+          <Row icon={<Building className="h-3.5 w-3.5 text-emerald-500" />} label={t('admin.profile.organization', 'Organization')} value={profile.organizationName} />
+          <Row icon={<ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />} label={t('admin.profile.accessRole', 'Access Role')} value={roleLabel} />
+          <Row icon={<MapPin className="h-3.5 w-3.5 text-emerald-500" />} label={t('admin.profile.divisionDistrict', 'Division / District')} value={[profile.division, profile.district].filter(Boolean).join(', ')} />
           <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-1">
             <span className="text-muted-foreground flex items-center gap-2.5">
-              <MapPin className="h-3.5 w-3.5 text-emerald-500" /> Address
+              <MapPin className="h-3.5 w-3.5 text-emerald-500" /> {t('admin.profile.address', 'Address')}
             </span>
             <p className="font-medium text-foreground leading-relaxed pt-1">{profile.address || '—'}</p>
           </div>
@@ -236,14 +258,15 @@ function OverviewTab({ profile, roleLabel }: { profile: AdminProfile; roleLabel:
 }
 
 function EditTab({ profile }: { profile: AdminProfile }) {
+  const t = useTranslations();
   const [draft, setDraft] = useState<AdminProfile>(profile);
   const update = useUpdateAdminProfile();
   const dirty = JSON.stringify(draft) !== JSON.stringify(profile);
 
   const input = (key: keyof AdminProfile, label: string, opts: { type?: string; mono?: boolean } = {}) => (
     <div className="space-y-1.5">
-      <Label className="text-xs font-semibold">{label}</Label>
-      <Input
+      <Label htmlFor={`profile-${key}`} className="text-xs font-semibold">{label}</Label>
+      <Input id={`profile-${key}`}
         type={opts.type ?? 'text'}
         value={String(draft[key] ?? '')}
         onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
@@ -254,14 +277,14 @@ function EditTab({ profile }: { profile: AdminProfile }) {
 
   const handleSave = () => {
     if (!draft.name.trim()) {
-      toast.error('Name is required');
+      toast.error(t('admin.profile.nameRequired', 'Name is required'));
       return;
     }
     if (draft.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email)) {
-      toast.error('Enter a valid email address');
+      toast.error(t('admin.profile.emailInvalid', 'Enter a valid email address'));
       return;
     }
-    update.mutate({ next: draft, prev: profile }, { onSuccess: () => toast.success('Profile updated') });
+    update.mutate({ next: draft, prev: profile }, { onSuccess: () => toast.success(t('admin.profile.updated', 'Profile updated')) });
   };
 
   return (
@@ -271,29 +294,29 @@ function EditTab({ profile }: { profile: AdminProfile }) {
           <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
             <Settings className="h-4 w-4" />
           </div>
-          Update Account Information
+          {t('admin.profile.editTitle', 'Update Account Information')}
         </CardTitle>
-        <CardDescription className="text-xs">Changes to your email or mobile also change how you sign in.</CardDescription>
+        <CardDescription className="text-xs">{t('admin.profile.editDesc', 'Changes to your email or mobile also change how you sign in.')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {input('name', 'Full Name')}
-          {input('email', 'Email Address', { type: 'email', mono: true })}
-          {input('mobile', 'Mobile', { mono: true })}
+          {input('name', t('admin.profile.fullName', 'Full Name'))}
+          {input('email', t('admin.profile.emailAddress', 'Email Address'), { type: 'email', mono: true })}
+          {input('mobile', t('admin.profile.mobile', 'Mobile'), { mono: true })}
         </div>
         <div className="pt-4 border-t border-border/60 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {input('organizationName', 'Organization / ISP Name')}
-          {input('nationalId', 'National ID (NID)', { mono: true })}
-          {input('division', 'Division')}
-          {input('district', 'District')}
-          <div className="md:col-span-2">{input('address', 'Address')}</div>
+          {input('organizationName', t('admin.profile.orgName', 'Organization / ISP Name'))}
+          {input('nationalId', t('admin.profile.nid', 'National ID (NID)'), { mono: true })}
+          {input('division', t('admin.profile.division', 'Division'))}
+          {input('district', t('admin.profile.district', 'District'))}
+          <div className="md:col-span-2">{input('address', t('admin.profile.address', 'Address'))}</div>
         </div>
         <div className="pt-4 flex justify-end gap-2">
           <Button variant="outline" disabled={!dirty || update.isPending} onClick={() => setDraft(profile)} className="text-xs">
-            Discard
+            {t('admin.profile.discard', 'Discard')}
           </Button>
           <Button onClick={handleSave} disabled={!dirty || update.isPending} className="text-xs font-semibold px-8">
-            {update.isPending ? 'Saving…' : 'Save Changes'}
+            {update.isPending ? t('admin.profile.saving', 'Saving…') : t('admin.profile.saveChanges', 'Save Changes')}
           </Button>
         </div>
       </CardContent>
@@ -302,6 +325,7 @@ function EditTab({ profile }: { profile: AdminProfile }) {
 }
 
 function PasswordTab() {
+  const t = useTranslations();
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
   const change = useChangePassword();
@@ -309,31 +333,31 @@ function PasswordTab() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwords.current || !passwords.next) {
-      toast.error('Enter your current and new password');
+      toast.error(t('admin.profile.enterBoth', 'Enter your current and new password'));
       return;
     }
     if (passwords.next.length < 8) {
-      toast.error('New password must be at least 8 characters');
+      toast.error(t('admin.profile.minLength', 'New password must be at least 8 characters'));
       return;
     }
     if (passwords.next !== passwords.confirm) {
-      toast.error('New passwords do not match');
+      toast.error(t('admin.profile.mismatch', 'New passwords do not match'));
       return;
     }
     change.mutate(passwords, {
       onSuccess: () => {
-        toast.success('Password updated');
+        toast.success(t('admin.profile.passwordUpdated', 'Password updated'));
         setPasswords({ current: '', next: '', confirm: '' });
       },
-      onError: (err) => toast.error(firstErrorDetail(err)),
+      onError: (err) => toast.error(firstErrorDetail(err, t('admin.profile.genericError', 'Something went wrong. Please try again.'))),
     });
   };
 
   const field = (key: 'current' | 'next' | 'confirm', label: string, placeholder: string) => (
     <div className="space-y-1.5">
-      <Label className="text-xs font-semibold">{label}</Label>
+      <Label htmlFor={`password-${key}`} className="text-xs font-semibold">{label}</Label>
       <div className="relative">
-        <Input
+        <Input id={`password-${key}`}
           type={show[key] ? 'text' : 'password'}
           value={passwords[key]}
           autoComplete={key === 'current' ? 'current-password' : 'new-password'}
@@ -345,7 +369,7 @@ function PasswordTab() {
           type="button"
           onClick={() => setShow({ ...show, [key]: !show[key] })}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={show[key] ? 'Hide password' : 'Show password'}
+          aria-label={show[key] ? t('admin.profile.hidePassword', 'Hide password') : t('admin.profile.showPassword', 'Show password')}
         >
           {show[key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
@@ -360,18 +384,18 @@ function PasswordTab() {
           <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
             <Lock className="h-4 w-4" />
           </div>
-          Update Password
+          {t('admin.profile.passwordTitle', 'Update Password')}
         </CardTitle>
-        <CardDescription className="text-xs">Use at least 8 characters.</CardDescription>
+        <CardDescription className="text-xs">{t('admin.profile.passwordDesc', 'Use at least 8 characters.')}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
-          {field('current', 'Current Password', 'Enter current password')}
-          {field('next', 'New Password', 'Minimum 8 characters')}
-          {field('confirm', 'Confirm New Password', 'Repeat new password')}
+          {field('current', t('admin.profile.currentPassword', 'Current Password'), t('admin.profile.currentPlaceholder', 'Enter current password'))}
+          {field('next', t('admin.profile.newPassword', 'New Password'), t('admin.profile.newPlaceholder', 'Minimum 8 characters'))}
+          {field('confirm', t('admin.profile.confirmPassword', 'Confirm New Password'), t('admin.profile.confirmPlaceholder', 'Repeat new password'))}
           <div className="pt-3">
-            <Button type="submit" disabled={change.isPending} className="text-xs font-semibold px-8 bg-amber-600 hover:bg-amber-700 text-white">
-              {change.isPending ? 'Updating…' : 'Update Password'}
+            <Button type="submit" disabled={change.isPending} className="text-xs font-semibold px-8 bg-amber-700 hover:bg-amber-800 text-white">
+              {change.isPending ? t('admin.profile.updating', 'Updating…') : t('admin.profile.passwordTitle', 'Update Password')}
             </Button>
           </div>
         </form>
@@ -381,6 +405,7 @@ function PasswordTab() {
 }
 
 function SecurityTab() {
+  const t = useTranslations();
   const { data, isLoading, isError, error, refetch } = useSecurityOverview();
   const signOutOthers = useSignOutOtherDevices();
   const setup = useSetupTwoFactor();
@@ -394,7 +419,7 @@ function SecurityTab() {
 
   if (isLoading) return <PageSkeleton variant="form" />;
   if (isError || !data) {
-    return <EmptyState title="Could not load account security" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.profile.securityFailed', 'Could not load account security')} description={errorMessage(error)} actionLabel={t('common.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   const tf = data.twoFactor;
@@ -407,23 +432,28 @@ function SecurityTab() {
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <ShieldCheck className="h-4 w-4" />
             </div>
-            Two-Factor Authentication (TOTP)
+            {t('admin.profile.tfTitle', 'Two-Factor Authentication (TOTP)')}
           </CardTitle>
-          <CardDescription className="text-xs">Link an authenticator app (Google Authenticator, Authy, 1Password…) to this account.</CardDescription>
+          <CardDescription className="text-xs">{t('admin.profile.tfDesc', 'Link an authenticator app (Google Authenticator, Authy, 1Password…) to this account.')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-border/50 bg-muted/20">
             <div className="space-y-1">
               <div className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Activity className="h-4 w-4 text-emerald-500" /> {tf.enabled ? `Enabled ${tf.confirmedAt ? `since ${fmt(tf.confirmedAt)}` : ''}` : 'Not enabled'}
+                <Activity className="h-4 w-4 text-emerald-500" /> {tf.enabled
+                  ? tf.confirmedAt
+                    ? t('admin.profile.tfEnabledSince', 'Enabled since {date}', { date: fmt(tf.confirmedAt) })
+                    : t('admin.profile.tfEnabled', 'Enabled')
+                  : t('admin.profile.tfDisabled', 'Not enabled')}
               </div>
               {tf.enabled && !tf.enforcedAtLogin && (
                 <p className="text-xs text-muted-foreground">
-                  Your authenticator is linked to this account; sign-in does not ask for a code yet.
+                  {t('admin.profile.tfNotEnforced', 'Your authenticator is linked to this account; sign-in does not ask for a code yet.')}
                 </p>
               )}
             </div>
             <Switch
+              aria-label={t('admin.profile.tfSwitch', 'Two-factor authentication')}
               checked={tf.enabled}
               disabled={!tf.available || setup.isPending}
               onCheckedChange={(v) => {
@@ -441,7 +471,7 @@ function SecurityTab() {
               }}
             />
           </div>
-          {!tf.available && <p className="text-xs text-amber-500">Two-factor setup is not available on this server yet.</p>}
+          {!tf.available && <p className="text-xs text-amber-500">{t('admin.profile.tfUnavailable', 'Two-factor setup is not available on this server yet.')}</p>}
         </CardContent>
       </Card>
 
@@ -452,7 +482,7 @@ function SecurityTab() {
               <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                 <Laptop className="h-4 w-4" />
               </div>
-              Signed-in Devices
+              {t('admin.profile.devicesTitle', 'Signed-in Devices')}
             </span>
             <Button
               size="sm"
@@ -461,23 +491,23 @@ function SecurityTab() {
               onClick={() => setConfirmSignOut(true)}
               className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
             >
-              <LogOut className="mr-1 h-3 w-3" /> {signOutOthers.isPending ? 'Signing out…' : 'Sign out other devices'}
+              <LogOut className="mr-1 h-3 w-3" /> {signOutOthers.isPending ? t('admin.profile.signingOut', 'Signing out…') : t('admin.profile.signOutOthers', 'Sign out other devices')}
             </Button>
           </CardTitle>
           <CardDescription className="text-xs">
-            Ends every other session (web and app) immediately; this browser stays signed in.
-            {data.tokensRevokedAt && ` Last used ${fmt(data.tokensRevokedAt)}.`}
+            {t('admin.profile.devicesDesc', 'Ends every other session (web and app) immediately; this browser stays signed in.')}
+            {data.tokensRevokedAt && ` ${t('admin.profile.lastUsed', 'Last used {date}.', { date: fmt(data.tokensRevokedAt) })}`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2.5">
-          <h4 className="text-xs font-semibold text-muted-foreground">Recent sign-ins</h4>
+          <h4 className="text-xs font-semibold text-muted-foreground">{t('admin.profile.recentSignIns', 'Recent sign-ins')}</h4>
           {data.loginHistory.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No sign-ins have been recorded for this account.</p>
+            <p className="text-xs text-muted-foreground">{t('admin.profile.noSignIns', 'No sign-ins have been recorded for this account.')}</p>
           ) : (
             data.loginHistory.map((l) => (
               <div key={l.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-card text-xs">
                 <span className="font-semibold text-foreground capitalize">{l.action.replace(/_/g, ' ')}</span>
-                <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px]">
+                <div className="flex items-center gap-3 text-muted-foreground font-mono text-xs">
                   {l.client && <span>{l.client}</span>}
                   {l.ip && <span>{l.ip}</span>}
                   <span>{fmt(l.at)}</span>
@@ -494,13 +524,13 @@ function SecurityTab() {
             <div className="p-2 rounded-lg bg-muted text-muted-foreground border border-border/60">
               <Clock className="h-4 w-4" />
             </div>
-            Account Activity
+            {t('admin.profile.activityTitle', 'Account Activity')}
           </CardTitle>
-          <CardDescription className="text-xs">Latest actions recorded in the audit log for your account.</CardDescription>
+          <CardDescription className="text-xs">{t('admin.profile.activityDesc', 'Latest actions recorded in the audit log for your account.')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2.5">
           {data.events.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No activity recorded yet.</p>
+            <p className="text-xs text-muted-foreground">{t('admin.profile.noActivity', 'No activity recorded yet.')}</p>
           ) : (
             data.events.map((ev) => (
               <div key={ev.id} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10 text-xs">
@@ -508,7 +538,7 @@ function SecurityTab() {
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> {ev.action}
                   {ev.entity && <span className="text-muted-foreground font-normal">· {ev.entity}</span>}
                 </span>
-                <div className="flex items-center gap-3 text-muted-foreground font-mono text-[11px]">
+                <div className="flex items-center gap-3 text-muted-foreground font-mono text-xs">
                   {ev.ip && <span>{ev.ip}</span>}
                   <span>{fmt(ev.at)}</span>
                 </div>
@@ -522,8 +552,8 @@ function SecurityTab() {
       <Dialog open={Boolean(enrolment)} onOpenChange={(open) => !open && setEnrolment(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Set up your authenticator</DialogTitle>
-            <DialogDescription>Add this key to your authenticator app (account {enrolment?.account}), then enter the 6-digit code it shows.</DialogDescription>
+            <DialogTitle>{t('admin.profile.setupTitle', 'Set up your authenticator')}</DialogTitle>
+            <DialogDescription>{t('admin.profile.setupDesc', 'Add this key to your authenticator app (account {account}), then enter the 6-digit code it shows.', { account: enrolment?.account ?? '' })}</DialogDescription>
           </DialogHeader>
           {enrolment && (
             <div className="space-y-3">
@@ -534,18 +564,18 @@ function SecurityTab() {
                 <Button
                   size="icon"
                   variant="outline"
-                  aria-label="Copy key"
-                  onClick={() => void navigator.clipboard.writeText(enrolment.secret).then(() => toast.success('Key copied'))}
+                  aria-label={t('admin.profile.copyKey', 'Copy key')}
+                  onClick={() => void navigator.clipboard.writeText(enrolment.secret).then(() => toast.success(t('admin.profile.keyCopied', 'Key copied')))}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
               <a href={enrolment.otpauthUri} className="text-xs text-primary hover:underline">
-                Open in an authenticator app on this device
+                {t('admin.profile.openApp', 'Open in an authenticator app on this device')}
               </a>
               <div className="space-y-1.5">
-                <Label className="text-xs">6-digit code</Label>
-                <Input
+                <Label htmlFor="6-digit-code" className="text-xs">{t('admin.profile.code', '6-digit code')}</Label>
+                <Input id="6-digit-code"
                   inputMode="numeric"
                   maxLength={6}
                   value={code}
@@ -557,21 +587,21 @@ function SecurityTab() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEnrolment(null)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               disabled={code.length !== 6 || enable.isPending}
               onClick={() =>
                 enable.mutate(code, {
                   onSuccess: () => {
-                    toast.success('Two-factor authentication enabled');
+                    toast.success(t('admin.profile.tfEnabledToast', 'Two-factor authentication enabled'));
                     setEnrolment(null);
                   },
-                  onError: (err) => toast.error(firstErrorDetail(err)),
+                  onError: (err) => toast.error(firstErrorDetail(err, t('admin.profile.genericError', 'Something went wrong. Please try again.'))),
                 })
               }
             >
-              {enable.isPending ? 'Verifying…' : 'Verify & enable'}
+              {enable.isPending ? t('admin.profile.verifying', 'Verifying…') : t('admin.profile.verifyEnable', 'Verify & enable')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -581,20 +611,21 @@ function SecurityTab() {
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Turn off two-factor authentication</DialogTitle>
-            <DialogDescription>Confirm with your account password.</DialogDescription>
+            <DialogTitle>{t('admin.profile.disableTitle', 'Turn off two-factor authentication')}</DialogTitle>
+            <DialogDescription>{t('admin.profile.disableDesc', 'Confirm with your account password.')}</DialogDescription>
           </DialogHeader>
           <Input
             type="password"
             autoComplete="current-password"
             value={disablePassword}
             onChange={(e) => setDisablePassword(e.target.value)}
-            placeholder="Account password"
+            placeholder={t('admin.profile.accountPassword', 'Account password')}
+            aria-label={t('admin.profile.accountPassword', 'Account password')}
             className="text-xs"
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDisableOpen(false)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -604,15 +635,15 @@ function SecurityTab() {
                   { password: disablePassword },
                   {
                     onSuccess: () => {
-                      toast.success('Two-factor authentication turned off');
+                      toast.success(t('admin.profile.tfDisabledToast', 'Two-factor authentication turned off'));
                       setDisableOpen(false);
                     },
-                    onError: (err) => toast.error(firstErrorDetail(err)),
+                    onError: (err) => toast.error(firstErrorDetail(err, t('admin.profile.genericError', 'Something went wrong. Please try again.'))),
                   },
                 )
               }
             >
-              {disable.isPending ? 'Turning off…' : 'Turn off'}
+              {disable.isPending ? t('admin.profile.turningOff', 'Turning off…') : t('admin.profile.turnOff', 'Turn off')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -621,13 +652,13 @@ function SecurityTab() {
       <ConfirmDialog
         open={confirmSignOut}
         onOpenChange={setConfirmSignOut}
-        title="Sign out other devices?"
-        description="Every other browser and app session for your account ends now."
-        confirmLabel="Sign out others"
+        title={t('admin.profile.signOutTitle', 'Sign out other devices?')}
+        description={t('admin.profile.signOutDesc', 'Every other browser and app session for your account ends now.')}
+        confirmLabel={t('admin.profile.signOutConfirm', 'Sign out others')}
         destructive
         onConfirm={() => {
           setConfirmSignOut(false);
-          signOutOthers.mutate(undefined, { onSuccess: () => toast.success('Signed out of all other devices') });
+          signOutOthers.mutate(undefined, { onSuccess: () => toast.success(t('admin.profile.signedOutAll', 'Signed out of all other devices')) });
         }}
       />
     </div>

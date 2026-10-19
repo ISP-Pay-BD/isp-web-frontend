@@ -28,21 +28,23 @@ import {
   useRedeemPreview,
 } from '../hooks/use-customer-rewards';
 import { errorMessage } from '@/lib/api/utils/error-handler';
-import { formatBdtWithSymbol, formatDate } from '@/lib/format';
+import { formatBdtWithSymbol, formatDate, formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 import { toast } from 'sonner';
 
 const LEDGER_PAGE_SIZE = 10;
 
-async function copyText(value: string, label: string) {
+async function copyText(value: string, copied: string, failed: string) {
   try {
     await navigator.clipboard.writeText(value);
-    toast.success(`${label} copied to clipboard`);
+    toast.success(copied);
   } catch {
-    toast.error(`Could not copy the ${label.toLowerCase()}`);
+    toast.error(failed);
   }
 }
 
 export function CustomerRewardsPage() {
+  const t = useTranslations();
   const wallet = useRewardWallet();
   const referral = useReferralOverview();
   const subscription = useCustomerSubscription();
@@ -53,9 +55,11 @@ export function CustomerRewardsPage() {
   const packageId = subscription.data?.packageId ?? '';
   const preview = useRedeemPreview(packageId, redeemDialogOpen);
 
+  const title = t('customer.rewards.title', 'Referrals & Rewards');
+
   if (wallet.isLoading || referral.isLoading) {
     return (
-      <CustomerPageShell title="Referrals & Rewards" subtitle="Loading your reward wallet...">
+      <CustomerPageShell title={title} subtitle={t('customer.rewards.loading', 'Loading your reward wallet…')}>
         <CustomerLoadingSkeleton variant="rewards" />
       </CustomerPageShell>
     );
@@ -63,7 +67,7 @@ export function CustomerRewardsPage() {
 
   if (wallet.isError || referral.isError || !wallet.data || !referral.data) {
     return (
-      <CustomerPageShell title="Referrals & Rewards" subtitle="Loyalty & Referral Points">
+      <CustomerPageShell title={title} subtitle={t('customer.rewards.errorSubtitle', 'Loyalty & referral points')}>
         <CustomerErrorState
           message={(wallet.error ?? referral.error)?.message || undefined}
           onRetry={() => {
@@ -88,10 +92,14 @@ export function CustomerRewardsPage() {
         onSuccess: (checkout) => {
           setRedeemDialogOpen(false);
           if (checkout.paymentUrl) {
-            toast.info('Renewal invoice created with your points — taking you to the payment page…');
+            toast.info(
+              t('customer.rewards.invoiceRedirect', 'Renewal invoice created with your points — taking you to the payment page…'),
+            );
             openPaymentPage(checkout.paymentUrl);
           } else {
-            toast.success(checkout.message || 'Renewal invoice created with your points applied.');
+            toast.success(
+              checkout.message || t('customer.rewards.invoiceCreated', 'Renewal invoice created with your points applied.'),
+            );
           }
         },
       },
@@ -100,56 +108,70 @@ export function CustomerRewardsPage() {
 
   return (
     <CustomerPageShell
-      title="Referrals & Rewards"
-      subtitle="Earn points by referring new customers and use them on your renewals."
+      title={title}
+      subtitle={t('customer.rewards.subtitle', 'Earn points by referring new customers and use them on your renewals.')}
       breadcrumbs={[
-        { label: 'Customer', href: '/customer/dashboard' },
-        { label: 'Rewards' },
+        { label: t('customer.common.crumb', 'Customer'), href: '/customer/dashboard' },
+        { label: t('customer.rewards.crumb', 'Rewards') },
       ]}
     >
       <div className="space-y-6">
         <div className="grid gap-6 md:grid-cols-12">
-          <div className="md:col-span-6 rounded-xl border border-border/60 bg-card p-6 flex flex-col justify-between">
+          <div className="border-border/60 bg-card flex flex-col justify-between rounded-xl border p-6 md:col-span-6">
             <div>
-              <span className="text-xs font-semibold tracking-wide text-muted-foreground flex items-center gap-1.5">
-                <Gift className="h-4 w-4 text-primary" /> Reward points
+              <span className="text-muted-foreground flex items-center gap-1.5 text-sm font-semibold">
+                <Gift className="text-primary h-4 w-4" /> {t('customer.rewards.points', 'Reward points')}
               </span>
 
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-bold tracking-tight tabular-nums">{w.balance.toLocaleString()}</span>
-                <span className="text-sm font-medium text-muted-foreground">points available</span>
+              <div className="mt-4 flex flex-wrap items-baseline gap-2">
+                <span className="text-3xl font-bold tracking-tight tabular-nums">{formatCount(w.balance)}</span>
+                <span className="text-muted-foreground text-sm font-medium">{t('customer.rewards.available', 'points available')}</span>
               </div>
 
               {w.pointValueBdt > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Worth up to{' '}
-                  <strong className="text-foreground">{formatBdtWithSymbol(w.balance * w.pointValueBdt)}</strong> off a
-                  renewal.
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {t('customer.rewards.worth', 'Worth up to {amount} off a renewal.', {
+                    amount: formatBdtWithSymbol(w.balance * w.pointValueBdt),
+                  })}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
-                Earned {w.lifetimeEarned.toLocaleString()} · Used {w.lifetimeUsed.toLocaleString()}
-                {w.held > 0 ? ` · ${w.held.toLocaleString()} held for a pending invoice` : ''}
-                {w.expiringPoints > 0 ? ` · ${w.expiringPoints.toLocaleString()} expiring within 30 days` : ''}
+              <p className="text-muted-foreground mt-2 text-sm">
+                {t('customer.rewards.earnedUsed', 'Earned {earned} · Used {used}', {
+                  earned: formatCount(w.lifetimeEarned),
+                  used: formatCount(w.lifetimeUsed),
+                })}
+                {w.held > 0
+                  ? ` · ${t('customer.rewards.held', '{n} held for a pending invoice', { n: formatCount(w.held) })}`
+                  : ''}
+                {w.expiringPoints > 0
+                  ? ` · ${t('customer.rewards.expiring', '{n} expiring within 30 days', { n: formatCount(w.expiringPoints) })}`
+                  : ''}
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-border/60 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {w.pointValueBdt > 0 ? `1 point = ${formatBdtWithSymbol(w.pointValueBdt)}` : 'Point value not configured'}
+            <div className="border-border/60 mt-6 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-muted-foreground text-sm">
+                {w.pointValueBdt > 0
+                  ? t('customer.rewards.pointValue', '1 point = {amount}', { amount: formatBdtWithSymbol(w.pointValueBdt) })
+                  : t('customer.rewards.pointValueNone', 'Point value not configured')}
               </span>
               <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
                 <DialogTrigger
-                  render={<Button disabled={w.balance <= 0 || !packageId} className="font-semibold text-xs h-9" />}
+                  render={<Button disabled={w.balance <= 0 || !packageId} className="h-11 w-full font-semibold sm:w-auto" />}
                 >
-                  Use on Renewal
+                  {t('customer.rewards.useOnRenewal', 'Use on renewal')}
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Use Points on Your Renewal</DialogTitle>
-                    <DialogDescription>
-                      Points are applied as a discount on your next renewal invoice
-                      {subscription.data?.currentPackage?.name ? ` for ${subscription.data.currentPackage.name}` : ''}.
+                    <DialogTitle>{t('customer.rewards.dialogTitle', 'Use points on your renewal')}</DialogTitle>
+                    <DialogDescription className="text-sm">
+                      {subscription.data?.currentPackage?.name
+                        ? t(
+                            'customer.rewards.dialogHintNamed',
+                            'Points are applied as a discount on your next renewal invoice for {name}.',
+                            { name: subscription.data.currentPackage.name },
+                          )
+                        : t('customer.rewards.dialogHint', 'Points are applied as a discount on your next renewal invoice.')}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -160,49 +182,53 @@ export function CustomerRewardsPage() {
                       <Skeleton className="h-5 w-2/3" />
                     </div>
                   ) : preview.isError || !preview.data ? (
-                    <div className="pt-2 text-sm text-muted-foreground flex items-center justify-between gap-2">
-                      <span>{errorMessage(preview.error, 'Could not calculate the discount.')}</span>
-                      <Button size="sm" variant="outline" onClick={() => preview.refetch()}>
-                        Retry
+                    <div className="text-muted-foreground flex flex-col gap-3 pt-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <span>{errorMessage(preview.error, t('customer.rewards.previewFailed', 'Could not calculate the discount.'))}</span>
+                      <Button variant="outline" className="h-11" onClick={() => preview.refetch()}>
+                        {t('customer.common.retry', 'Retry')}
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-4 pt-2">
-                      <div className="rounded-xl border bg-muted/40 p-4 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Package price</span>
+                      <div className="bg-muted/40 space-y-2 rounded-xl border p-4 text-sm">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">{t('customer.rewards.packagePrice', 'Package price')}</span>
                           <span className="font-semibold">{formatBdtWithSymbol(preview.data.packagePrice)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Points you can use</span>
-                          <span className="font-semibold">{preview.data.pointsApplied.toLocaleString()}</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">{t('customer.rewards.pointsUsable', 'Points you can use')}</span>
+                          <span className="font-semibold">{formatCount(preview.data.pointsApplied)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Discount</span>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">{t('customer.rewards.discount', 'Discount')}</span>
                           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                             −{formatBdtWithSymbol(preview.data.discountBdt)}
                           </span>
                         </div>
-                        <div className="flex justify-between border-t pt-2 font-bold">
-                          <span>You pay</span>
+                        <div className="flex justify-between gap-3 border-t pt-2 font-bold">
+                          <span>{t('customer.rewards.youPay', 'You pay')}</span>
                           <span>{formatBdtWithSymbol(preview.data.finalPayable)}</span>
                         </div>
                       </div>
                       {preview.data.maxRedeemPercent > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Up to {preview.data.maxRedeemPercent}% of a package price can be paid with points.
+                        <p className="text-muted-foreground text-sm">
+                          {t('customer.rewards.maxPercent', 'Up to {percent}% of a package price can be paid with points.', {
+                            percent: formatCount(preview.data.maxRedeemPercent),
+                          })}
                         </p>
                       )}
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" onClick={() => setRedeemDialogOpen(false)}>
-                          Cancel
+                      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <Button variant="ghost" className="h-11 w-full sm:w-auto" onClick={() => setRedeemDialogOpen(false)}>
+                          {t('common.cancel', 'Cancel')}
                         </Button>
                         <Button
                           disabled={preview.data.pointsApplied <= 0 || renew.isPending}
                           onClick={handleRedeemRenew}
-                          className="font-bold"
+                          className="h-11 w-full font-bold sm:w-auto"
                         >
-                          {renew.isPending ? 'Creating invoice…' : 'Renew with points'}
+                          {renew.isPending
+                            ? t('customer.rewards.creating', 'Creating invoice…')
+                            : t('customer.rewards.renewWithPoints', 'Renew with points')}
                         </Button>
                       </div>
                     </div>
@@ -212,58 +238,72 @@ export function CustomerRewardsPage() {
             </div>
           </div>
 
-          <Card className="md:col-span-6 flex flex-col justify-between">
+          <Card className="flex flex-col justify-between md:col-span-6">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" />
-                Your Personal Referral Code
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <Users className="text-primary h-4 w-4" />
+                {t('customer.rewards.codeTitle', 'Your personal referral code')}
               </CardTitle>
-              <CardDescription className="text-xs">
-                Share this code with friends when they take a new connection.
+              <CardDescription className="text-sm">
+                {t('customer.rewards.codeHint', 'Share this code with friends when they take a new connection.')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-2 p-2.5 rounded-xl border bg-muted/50">
-                <div className="font-mono font-bold text-lg text-primary tracking-wider px-2 flex-1">
-                  {ref.code || '—'}
-                </div>
+              <div className="bg-muted/50 flex flex-col gap-2 rounded-xl border p-2.5 sm:flex-row sm:items-center">
+                <div className="text-primary flex-1 px-2 font-mono text-lg font-bold tracking-wider break-all">{ref.code || '—'}</div>
                 <Button
                   variant="outline"
-                  size="sm"
                   disabled={!ref.code}
-                  onClick={() => copyText(ref.code, 'Referral code')}
-                  className="gap-1.5 text-xs font-semibold"
+                  onClick={() =>
+                    copyText(
+                      ref.code,
+                      t('customer.rewards.codeCopied', 'Referral code copied to clipboard'),
+                      t('customer.rewards.codeCopyFailed', 'Could not copy the referral code'),
+                    )
+                  }
+                  className="h-11 w-full gap-1.5 font-semibold sm:w-auto"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy Code
+                  <Copy className="h-4 w-4" />
+                  {t('customer.rewards.copyCode', 'Copy code')}
                 </Button>
               </div>
               {ref.link && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={() => copyText(ref.link, 'Referral link')}
-                  className="gap-1.5 text-xs h-8 px-2"
+                  onClick={() =>
+                    copyText(
+                      ref.link,
+                      t('customer.rewards.linkCopied', 'Referral link copied to clipboard'),
+                      t('customer.rewards.linkCopyFailed', 'Could not copy the referral link'),
+                    )
+                  }
+                  className="h-11 gap-1.5 px-3"
                 >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Copy referral link
+                  <Link2 className="h-4 w-4" />
+                  {t('customer.rewards.copyLink', 'Copy referral link')}
                 </Button>
               )}
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-lg border p-3 bg-muted/20">
-                  <span className="text-muted-foreground">Verified referrals</span>
-                  <div className="text-lg font-bold mt-0.5">{ref.verified}</div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-muted/20 rounded-lg border p-3">
+                  <span className="text-muted-foreground">{t('customer.rewards.verified', 'Verified referrals')}</span>
+                  <div className="mt-0.5 text-lg font-bold">{formatCount(ref.verified)}</div>
                 </div>
-                <div className="rounded-lg border p-3 bg-muted/20">
-                  <span className="text-muted-foreground">Pending verification</span>
-                  <div className="text-lg font-bold mt-0.5">{ref.pending}</div>
+                <div className="bg-muted/20 rounded-lg border p-3">
+                  <span className="text-muted-foreground">{t('customer.rewards.pendingVerification', 'Pending verification')}</span>
+                  <div className="mt-0.5 text-lg font-bold">{formatCount(ref.pending)}</div>
                 </div>
               </div>
 
-              <p className="text-[11px] text-muted-foreground">
-                You have earned <strong>{ref.earnedPoints.toLocaleString()} points</strong> from {ref.total}{' '}
-                {ref.total === 1 ? 'referral' : 'referrals'}.
+              <p className="text-muted-foreground text-sm">
+                {ref.total === 1
+                  ? t('customer.rewards.earnedFromOne', 'You have earned {points} points from 1 referral.', {
+                      points: formatCount(ref.earnedPoints),
+                    })
+                  : t('customer.rewards.earnedFromMany', 'You have earned {points} points from {n} referrals.', {
+                      points: formatCount(ref.earnedPoints),
+                      n: formatCount(ref.total),
+                    })}
               </p>
             </CardContent>
           </Card>
@@ -271,33 +311,31 @@ export function CustomerRewardsPage() {
 
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" />
-                Reward Points Ledger
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base font-bold">
+                <History className="text-primary h-4 w-4" />
+                {t('customer.rewards.ledger', 'Reward points ledger')}
               </CardTitle>
               {ledgerPages > 1 && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span>
-                    Page {ledgerPage} of {ledgerPages}
-                  </span>
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <span>{t('customer.common.pageOf', 'Page {page} of {total}', { page: formatCount(ledgerPage), total: formatCount(ledgerPages) })}</span>
                   <Button
-                    size="sm"
                     variant="outline"
-                    className="h-7 px-2"
+                    className="h-11 w-11 p-0"
+                    aria-label={t('customer.common.previousPage', 'Previous page')}
                     disabled={ledgerPage <= 1 || ledger.isFetching}
                     onClick={() => setLedgerPage((p) => Math.max(1, p - 1))}
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="sm"
                     variant="outline"
-                    className="h-7 px-2"
+                    className="h-11 w-11 p-0"
+                    aria-label={t('customer.common.nextPage', 'Next page')}
                     disabled={ledgerPage >= ledgerPages || ledger.isFetching}
                     onClick={() => setLedgerPage((p) => p + 1)}
                   >
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -311,34 +349,39 @@ export function CustomerRewardsPage() {
                 ))}
               </div>
             ) : ledger.isError || !ledger.data ? (
-              <div className="text-sm text-muted-foreground flex items-center justify-between gap-2">
-                <span>{errorMessage(ledger.error, 'Could not load your points history.')}</span>
-                <Button size="sm" variant="outline" onClick={() => ledger.refetch()}>
-                  Retry
+              <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <span>{errorMessage(ledger.error, t('customer.rewards.ledgerFailed', 'Could not load your points history.'))}</span>
+                <Button variant="outline" className="h-11" onClick={() => ledger.refetch()}>
+                  {t('customer.common.retry', 'Retry')}
                 </Button>
               </div>
             ) : ledger.data.items.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No reward activity yet.</p>
+              <p className="text-muted-foreground py-4 text-center text-sm">{t('customer.rewards.ledgerEmpty', 'No reward activity yet.')}</p>
             ) : (
               <div className="divide-y text-sm">
                 {ledger.data.items.map((tx) => (
-                  <div key={tx.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <div className="font-semibold text-foreground text-xs sm:text-sm">{tx.description || '—'}</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">
-                        {formatDate(tx.date)} · balance {tx.balanceAfter.toLocaleString()}
+                  <div key={tx.id} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="text-foreground text-sm font-semibold">{tx.description || '—'}</div>
+                      <div className="text-muted-foreground font-mono text-sm">
+                        {t('customer.rewards.balanceAfter', '{date} · balance {n}', {
+                          date: formatDate(tx.date),
+                          n: formatCount(tx.balanceAfter),
+                        })}
                       </div>
                     </div>
 
                     <div
-                      className={`font-mono font-bold text-sm ${
+                      className={`shrink-0 font-mono text-sm font-bold ${
                         tx.direction === 'credit'
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
-                      {tx.direction === 'credit' ? '+' : '−'}
-                      {tx.points.toLocaleString()} pts
+                      {t('customer.rewards.pointsDelta', '{sign}{n} pts', {
+                        sign: tx.direction === 'credit' ? '+' : '−',
+                        n: formatCount(tx.points),
+                      })}
                     </div>
                   </div>
                 ))}

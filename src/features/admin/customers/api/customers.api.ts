@@ -207,18 +207,18 @@ export function filterParams(f: CustomerListFilters = {}): Record<string, unknow
   return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''));
 }
 
-const base = () => `/v1/reseller/customers/${getResellerId()}`;
+const base = (resellerId?: string) => `/v1/reseller/customers/${resellerId || getResellerId()}`;
 
 export const customersApi = {
   list: async (params: CustomerListParams = {}) => {
     const { page = 1, perPage = 20, ...filters } = params;
-    const res = await http.getPage<Raw>(base(), { ...filterParams(filters), page, per_page: perPage });
+    const res = await http.getPage<Raw>(base(filters.resellerId), { ...filterParams(filters), page, per_page: perPage });
     return { items: res.items.map(mapCustomer), meta: res.meta };
   },
 
   summary: async (filters: CustomerListFilters = {}) => {
-    const { search, areaId, packageId, routerId, accessType } = filters;
-    return mapSummary(await http.get<Raw>(`${base()}/summary`, filterParams({ search, areaId, packageId, routerId, accessType })));
+    const { search, areaId, packageId, routerId, accessType, resellerId } = filters;
+    return mapSummary(await http.get<Raw>(`${base(resellerId)}/summary`, filterParams({ search, areaId, packageId, routerId, accessType })));
   },
 
   detail: async (id: string, compact = false) =>

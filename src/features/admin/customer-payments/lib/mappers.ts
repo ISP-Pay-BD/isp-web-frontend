@@ -148,17 +148,31 @@ export function mapCustomerOption(r: Raw): CustomerOption {
   };
 }
 
-/** Plain-text SMS body for a payment receipt — every value comes from the receipt. */
-export function receiptSmsText(r: PaymentReceipt): string {
-  const when = r.paidAt ?? r.createdAt ?? '';
-  const parts = [
-    `Dear ${r.customer?.name || 'customer'},`,
-    r.status === 'completed'
-      ? `we received BDT ${r.amountBdt.toFixed(2)}${r.methodRaw ? ` via ${r.methodRaw}` : ''}${when ? ` on ${when.slice(0, 10)}` : ''}.`
-      : `your invoice of BDT ${r.amountBdt.toFixed(2)} is ${r.status}.`,
-    `Invoice ${r.invoiceNo}.`,
-  ];
-  if (r.trxId) parts.push(`Ref ${r.trxId}.`);
+/**
+ * Plain-text SMS body for a payment receipt — every value comes from the receipt. English by default (one SMS segment
+ * holds 160 Latin characters); `bn` follows the operator's language choice but uses Unicode, so it costs more segments.
+ */
+export function receiptSmsText(r: PaymentReceipt, locale: 'en' | 'bn' = 'en'): string {
+  const when = (r.paidAt ?? r.createdAt ?? '').slice(0, 10);
+  const name = r.customer?.name || (locale === 'bn' ? 'গ্রাহক' : 'customer');
+  const amount = r.amountBdt.toFixed(2);
+  const parts =
+    locale === 'bn'
+      ? [
+          `প্রিয় ${name},`,
+          r.status === 'completed'
+            ? `আমরা ${amount} টাকা পেয়েছি${r.methodRaw ? ` (${r.methodRaw})` : ''}${when ? `, তারিখ ${when}` : ''}।`
+            : `আপনার ${amount} টাকার ইনভয়েসটি ${r.status}।`,
+          `ইনভয়েস ${r.invoiceNo}।`,
+        ]
+      : [
+          `Dear ${name},`,
+          r.status === 'completed'
+            ? `we received BDT ${amount}${r.methodRaw ? ` via ${r.methodRaw}` : ''}${when ? ` on ${when}` : ''}.`
+            : `your invoice of BDT ${amount} is ${r.status}.`,
+          `Invoice ${r.invoiceNo}.`,
+        ];
+  if (r.trxId) parts.push(locale === 'bn' ? `রেফ ${r.trxId}।` : `Ref ${r.trxId}.`);
   if (r.issuer.name) parts.push(`- ${r.issuer.name}`);
   return parts.join(' ');
 }

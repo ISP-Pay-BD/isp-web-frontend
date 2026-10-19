@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { toast } from 'sonner';
 import { Plus, Warehouse, Building2, Boxes, Coins, MoreHorizontal, Edit, Trash2, ExternalLink } from 'lucide-react';
@@ -37,10 +37,12 @@ import { ListState } from '../shared/ListState';
 import { FieldError, fieldError, fmtDateTime } from '../shared/form-utils';
 import { useServerTable } from '../shared/table-utils';
 
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 const MENU = 'inventory_purchess';
 
 export function InventoryLocationsPage() {
-  const router = useRouter();
+  const t = useTranslations();
   const table = useServerTable();
   const query = useStoreLocations({ page: table.page, pageSize: table.pageSize, search: table.search });
   const summary = useInventorySummary();
@@ -57,7 +59,7 @@ export function InventoryLocationsPage() {
     () => [
       {
         accessorKey: 'locationName',
-        header: 'Store / Warehouse',
+        header: t('admin.inventory.locations.colName', 'Store / Warehouse'),
         enableHiding: false,
         size: 280,
         cell: ({ row }) => (
@@ -71,7 +73,7 @@ export function InventoryLocationsPage() {
       },
       {
         accessorKey: 'shortValue',
-        header: 'Short Code',
+        header: t('admin.inventory.locations.colCode', 'Short Code'),
         size: 140,
         cell: ({ row }) => (
           <Badge variant="outline" className="font-mono text-xs bg-background">
@@ -81,7 +83,7 @@ export function InventoryLocationsPage() {
       },
       {
         accessorKey: 'createdAt',
-        header: 'Created',
+        header: t('admin.inventory.common.created', 'Created'),
         size: 170,
         cell: ({ row }) => (
           <span className="font-mono text-xs text-muted-foreground">{fmtDateTime(row.original.createdAt)}</span>
@@ -95,14 +97,17 @@ export function InventoryLocationsPage() {
           const loc = row.original;
           return (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors">
+              <DropdownMenuTrigger
+                aria-label={t('admin.inventory.common.rowActions', 'Row actions')}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Location Options</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => router.push(`/admin/inventory/stock?location_id=${encodeURIComponent(loc.id)}`)}>
+                <DropdownMenuLabel>{t('admin.inventory.locations.options', 'Location Options')}</DropdownMenuLabel>
+                <DropdownMenuItem render={<Link href={`/admin/inventory/stock?location_id=${encodeURIComponent(loc.id)}`} />}>
                   <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                  View On-Hand Stock
+                  {t('admin.inventory.locations.viewStock', 'View On-Hand Stock')}
                 </DropdownMenuItem>
                 <Can menu={MENU} action="update">
                   <DropdownMenuItem
@@ -112,14 +117,14 @@ export function InventoryLocationsPage() {
                     }}
                   >
                     <Edit className="h-3.5 w-3.5 mr-2" />
-                    Edit Location
+                    {t('admin.inventory.locations.edit', 'Edit Location')}
                   </DropdownMenuItem>
                 </Can>
                 <Can menu={MENU} action="delete">
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-rose-500 focus:text-rose-500" onClick={() => setDeleting(loc)}>
                     <Trash2 className="h-3.5 w-3.5 mr-2" />
-                    Delete Location
+                    {t('admin.inventory.locations.delete', 'Delete Location')}
                   </DropdownMenuItem>
                 </Can>
               </DropdownMenuContent>
@@ -128,18 +133,18 @@ export function InventoryLocationsPage() {
         },
       },
     ],
-    [router],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Store & Warehouse Locations"
-        subtitle="Physical storage points that hold stock (central depot, POP sub-stores…)."
+        title={t('admin.inventory.locations.title', 'Store & Warehouse Locations')}
+        subtitle={t('admin.inventory.locations.subtitle', 'Physical storage points that hold stock (central depot, POP sub-stores…).')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Inventory', href: '/admin/inventory/items' },
-          { label: 'Store Locations' },
+          { label: t('common.crumb.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('common.crumb.inventory', 'Inventory'), href: '/admin/inventory/items' },
+          { label: t('admin.inventory.locations.crumb', 'Store Locations') },
         ]}
         actions={
           <Can menu={MENU} action="create">
@@ -152,7 +157,7 @@ export function InventoryLocationsPage() {
               className="h-9"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Store Location
+              {t('admin.inventory.locations.add', 'Add Store Location')}
             </Button>
           </Can>
         }
@@ -161,23 +166,23 @@ export function InventoryLocationsPage() {
       {/* KPI Ribbon */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <KpiTile
-          label="Store Locations"
+          label={t('admin.inventory.locations.kpiLocations', 'Store Locations')}
           icon={<Building2 className="h-4 w-4 text-primary" />}
-          value={s ? s.locationsCount.toLocaleString() : '—'}
-          hint="Stock-holding points"
+          value={s ? formatCount(s.locationsCount) : '—'}
+          hint={t('admin.inventory.locations.kpiLocationsHint', 'Stock-holding points')}
         />
         <KpiTile
-          label="Units On Hand"
+          label={t('admin.inventory.locations.kpiOnHand', 'Units On Hand')}
           icon={<Boxes className="h-4 w-4 text-emerald-500" />}
-          value={s ? s.stockQuantity.toLocaleString() : '—'}
-          hint="Across all locations"
+          value={s ? formatCount(s.stockQuantity) : '—'}
+          hint={t('admin.inventory.locations.kpiOnHandHint', 'Across all locations')}
           hintClassName="text-emerald-600 dark:text-emerald-400 font-medium"
         />
         <KpiTile
-          label="Stock Value"
+          label={t('admin.inventory.locations.kpiValue', 'Stock Value')}
           icon={<Coins className="h-4 w-4 text-primary" />}
           value={s ? formatBdtWithSymbol(s.stockValue) : '—'}
-          hint="On-hand quantity × unit price"
+          hint={t('admin.inventory.locations.kpiValueHint', 'On-hand quantity × unit price')}
         />
       </div>
 
@@ -187,18 +192,18 @@ export function InventoryLocationsPage() {
         error={query.error}
         onRetry={() => query.refetch()}
         isEmpty={!table.search && page?.meta.total === 0}
-        errorTitle="Failed to load locations"
-        emptyTitle="No store locations yet"
-        emptyDescription="Add a warehouse or POP store to start recording stock."
+        errorTitle={t('admin.inventory.locations.loadFailed', 'Failed to load locations')}
+        emptyTitle={t('admin.inventory.locations.emptyNone', 'No store locations yet')}
+        emptyDescription={t('admin.inventory.locations.emptyNoneHint', 'Add a warehouse or POP store to start recording stock.')}
         icon={<Warehouse className="h-5 w-5" />}
         rows={6}
       >
-        <DataTable
+        <DataTable urlState
           columns={columns}
           data={page?.items ?? []}
           getRowId={(r) => r.id}
-          searchPlaceholder="Search locations..."
-          emptyTitle="No locations match your search"
+          searchPlaceholder={t('admin.inventory.locations.search', 'Search locations...')}
+          emptyTitle={t('admin.inventory.locations.emptySearch', 'No locations match your search')}
           server={{
             page: table.page,
             pageSize: table.pageSize,
@@ -220,14 +225,16 @@ export function InventoryLocationsPage() {
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title="Delete store location?"
-        description={deleting ? `"${deleting.locationName}" will be deleted.` : undefined}
-        confirmLabel="Delete"
+        title={t('admin.inventory.locations.deleteTitle', 'Delete store location?')}
+        description={deleting ? t('admin.inventory.common.willBeDeleted', '"{name}" will be deleted.', { name: deleting.locationName }) : undefined}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={() => {
           if (!deleting) return;
           const target = deleting;
-          deleteLocation.mutate(target.id, { onSuccess: () => toast.success(`"${target.locationName}" deleted`) });
+          deleteLocation.mutate(target.id, {
+            onSuccess: () => toast.success(t('admin.inventory.common.deleted', '"{name}" deleted', { name: target.locationName })),
+          });
           setDeleting(null);
         }}
       />
@@ -236,6 +243,7 @@ export function InventoryLocationsPage() {
 }
 
 function LocationForm({ location, onDone }: { location: StoreLocation | null; onDone: () => void }) {
+  const t = useTranslations();
   const [locationName, setLocationName] = useState(location?.locationName ?? '');
   const [shortValue, setShortValue] = useState(location?.shortValue ?? '');
   const save = useSaveStoreLocation();
@@ -248,7 +256,11 @@ function LocationForm({ location, onDone }: { location: StoreLocation | null; on
       { id: location?.id, body: { location_name: locationName.trim(), short_value: shortValue.trim() } },
       {
         onSuccess: () => {
-          toast.success(location ? `"${locationName.trim()}" updated` : `Store location "${locationName.trim()}" added`);
+          toast.success(
+            location
+              ? t('admin.inventory.common.updated', '"{name}" updated', { name: locationName.trim() })
+              : t('admin.inventory.locations.added', 'Store location "{name}" added', { name: locationName.trim() }),
+          );
           onDone();
         },
       },
@@ -260,14 +272,14 @@ function LocationForm({ location, onDone }: { location: StoreLocation | null; on
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
           <Warehouse className="h-5 w-5 text-primary" />
-          {location ? 'Edit Store Location' : 'Add Store Location'}
+          {location ? t('admin.inventory.locations.editTitle', 'Edit Store Location') : t('admin.inventory.locations.add', 'Add Store Location')}
         </DialogTitle>
-        <DialogDescription>A warehouse or sub-store that holds inventory.</DialogDescription>
+        <DialogDescription>{t('admin.inventory.locations.formDesc', 'A warehouse or sub-store that holds inventory.')}</DialogDescription>
       </DialogHeader>
 
       <div className="grid gap-4 py-4">
         <div className="space-y-1.5">
-          <Label htmlFor="loc-name">Location Name *</Label>
+          <Label htmlFor="loc-name">{t('admin.inventory.locations.fieldName', 'Location Name')} *</Label>
           <Input
             id="loc-name"
             value={locationName}
@@ -278,7 +290,7 @@ function LocationForm({ location, onDone }: { location: StoreLocation | null; on
           <FieldError message={fieldError(err, 'location_name')} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="loc-short">Short Code *</Label>
+          <Label htmlFor="loc-short">{t('admin.inventory.locations.colCode', 'Short Code')} *</Label>
           <Input
             id="loc-short"
             value={shortValue}
@@ -293,10 +305,10 @@ function LocationForm({ location, onDone }: { location: StoreLocation | null; on
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t('common.cancel', 'Cancel')}
         </Button>
         <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : location ? 'Save Changes' : 'Add Location'}
+          {save.isPending ? t('admin.inventory.common.saving', 'Saving…') : location ? t('admin.inventory.common.saveChanges', 'Save Changes') : t('admin.inventory.locations.addSubmit', 'Add Location')}
         </Button>
       </DialogFooter>
     </form>

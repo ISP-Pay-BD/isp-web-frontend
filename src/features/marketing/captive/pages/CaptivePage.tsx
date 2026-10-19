@@ -6,6 +6,7 @@ import { Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Reveal } from '@/components/motion/Reveal';
+import { useTranslations } from '@/i18n/locale-context';
 import { formatBdtWithSymbol } from '@/lib/format';
 import { useCaptivePay, useCaptiveReconnect, useCaptiveSession } from '../hooks/use-captive';
 
@@ -16,6 +17,7 @@ const card =
 
 /** Captive paywall — marketing dark surface; session resolved from the MikroTik redirect (rid/ip/mac). */
 export function CaptivePage() {
+  const t = useTranslations();
   const params = useSearchParams();
   const locator = {
     rid: params.get('rid') ?? '',
@@ -31,7 +33,7 @@ export function CaptivePage() {
     return (
       <div className={shell}>
         <div className={card}>
-          <p className="text-sm text-white/60">Checking your connection…</p>
+          <p className="text-sm text-white/60">{t('marketing.captive.checking', 'Checking your connection…')}</p>
         </div>
       </div>
     );
@@ -47,11 +49,15 @@ export function CaptivePage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
               <WifiOff className="h-5 w-5 text-white/70" />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight">We couldn&apos;t identify your connection</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {t('marketing.captive.notFoundTitle', "We couldn't identify your connection")}
+            </h1>
           </div>
           <p className="text-sm text-white/60">
-            Make sure you are connected to your ISP&apos;s network, then reload this page. If it keeps happening,
-            contact your ISP.
+            {t(
+              'marketing.captive.notFoundBody',
+              "Make sure you are connected to your ISP's network, then reload this page. If it keeps happening, contact your ISP.",
+            )}
           </p>
           <div className="flex flex-wrap gap-3 text-sm">
             <button
@@ -59,10 +65,10 @@ export function CaptivePage() {
               onClick={() => refetch()}
               className="rounded-lg border border-white/15 px-4 py-2 text-white/80 transition-colors hover:bg-white/5 hover:text-white"
             >
-              Try again
+              {t('marketing.captive.tryAgain', 'Try again')}
             </button>
             <Link href="/help" className="px-1 py-2 text-white/60 underline">
-              Help
+              {t('marketing.captive.help', 'Help')}
             </Link>
           </div>
         </Reveal>
@@ -74,13 +80,13 @@ export function CaptivePage() {
     return (
       <div className={shell}>
         <div className={card}>
-          <p className="text-sm text-white/70">{error?.message || 'Something went wrong.'}</p>
+          <p className="text-sm text-white/70">{error?.message || t('marketing.captive.genericError', 'Something went wrong.')}</p>
           <button
             type="button"
             onClick={() => refetch()}
             className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white"
           >
-            Retry
+            {t('marketing.captive.retry', 'Retry')}
           </button>
         </div>
       </div>
@@ -93,7 +99,9 @@ export function CaptivePage() {
     pay.mutate(undefined, {
       onSuccess: (res) => {
         if (!res.payUrl) {
-          toast.error('The payment link is not available. Please contact your ISP.');
+          toast.error(
+            t('marketing.captive.payLinkUnavailable', 'The payment link is not available. Please contact your ISP.'),
+          );
           return;
         }
         window.location.assign(res.payUrl);
@@ -103,8 +111,8 @@ export function CaptivePage() {
   const startReconnect = () =>
     reconnect.mutate(undefined, {
       onSuccess: (res) => {
-        if (res.status === 'success') toast.success(res.message || 'Reconnected');
-        else toast.message(res.message || 'Reconnection requested');
+        if (res.status === 'success') toast.success(res.message || t('marketing.captive.reconnected', 'Reconnected'));
+        else toast.message(res.message || t('marketing.captive.reconnectRequested', 'Reconnection requested'));
       },
     });
 
@@ -113,11 +121,13 @@ export function CaptivePage() {
       <Reveal className={card}>
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-landing-cta/20">
-            <Wifi className="h-5 w-5 text-landing-cta" />
+            <Wifi className="h-5 w-5 text-landing-accent" />
           </div>
           <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight">
-              {customer.expired ? 'Session expired' : 'Your connection'}
+              {customer.expired
+                ? t('marketing.captive.sessionExpired', 'Session expired')
+                : t('marketing.captive.yourConnection', 'Your connection')}
             </h1>
             <p className="truncate text-sm text-white/70">{customer.name}</p>
             <p className="truncate font-mono text-xs text-white/50">{customer.username}</p>
@@ -126,19 +136,21 @@ export function CaptivePage() {
 
         <div className="rounded-lg border border-white/10 bg-black/20 p-4 text-sm">
           <div className="flex justify-between gap-3">
-            <span className="text-white/60">Package</span>
+            <span className="text-white/60">{t('marketing.captive.package', 'Package')}</span>
             <span className="text-right">
               {customer.packageName || '—'}
               {customer.bandwidth ? <span className="ml-1 text-white/50">· {customer.bandwidth}</span> : null}
             </span>
           </div>
           <div className="mt-2 flex justify-between text-xs text-white/50">
-            <span>{customer.expired ? 'Expired' : 'Expires'}</span>
+            <span>
+              {customer.expired ? t('status.expired', 'Expired') : t('marketing.captive.expires', 'Expires')}
+            </span>
             <span className="font-mono">{customer.expiresAt ?? '—'}</span>
           </div>
           <div className="mt-3 flex justify-between font-semibold">
-            <span className="text-white/60">Due</span>
-            <span className="tabular-nums text-landing-cta">{formatBdtWithSymbol(customer.dueBdt)}</span>
+            <span className="text-white/60">{t('marketing.captive.due', 'Due')}</span>
+            <span className="tabular-nums text-landing-accent">{formatBdtWithSymbol(customer.dueBdt)}</span>
           </div>
         </div>
 
@@ -158,7 +170,9 @@ export function CaptivePage() {
             disabled={reconnect.isPending}
             onClick={startReconnect}
           >
-            {reconnect.isPending ? 'Reconnecting…' : 'Reconnect now'}
+            {reconnect.isPending
+              ? t('marketing.captive.reconnecting', 'Reconnecting…')
+              : t('marketing.captive.reconnectNow', 'Reconnect now')}
           </Button>
         ) : (
           <Button
@@ -166,11 +180,13 @@ export function CaptivePage() {
             disabled={pay.isPending}
             onClick={startPayment}
           >
-            {pay.isPending ? 'Opening payment…' : 'Pay now'}
+            {pay.isPending
+              ? t('marketing.captive.openingPayment', 'Opening payment…')
+              : t('marketing.captive.payNow', 'Pay now')}
           </Button>
         )}
 
-        <p className="text-center text-xs text-white/40">
+        <p className="text-center text-xs text-white/60">
           {canReconnect ? (
             <button
               type="button"
@@ -178,29 +194,31 @@ export function CaptivePage() {
               disabled={pay.isPending}
               onClick={startPayment}
             >
-              Pay a bill
+              {t('marketing.captive.payBill', 'Pay a bill')}
             </button>
           ) : (
             <>
-              Already paid?{' '}
+              {t('marketing.captive.alreadyPaid', 'Already paid?')}{' '}
               <button
                 type="button"
                 className="text-landing-accent underline underline-offset-2 disabled:opacity-50"
                 disabled={reconnect.isPending}
                 onClick={startReconnect}
               >
-                {reconnect.isPending ? 'Reconnecting…' : 'Reconnect'}
+                {reconnect.isPending
+                  ? t('marketing.captive.reconnecting', 'Reconnecting…')
+                  : t('marketing.captive.reconnect', 'Reconnect')}
               </button>
             </>
           )}
           {' · '}
           <Link href="/help" className="text-white/60 underline">
-            Help
+            {t('marketing.captive.help', 'Help')}
           </Link>
         </p>
 
         {isp && (isp.name || isp.phone) ? (
-          <p className="text-center text-xs text-white/40">
+          <p className="text-center text-xs text-white/60">
             {isp.name}
             {isp.name && isp.phone ? ' · ' : ''}
             {isp.phone ? (

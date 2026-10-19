@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatBdtWithSymbol } from '@/lib/format';
+import { useLocale } from '@/i18n/locale-context';
 import { useBandwidthBills, useDeleteBandwidthBills } from '../hooks/useBandwidthBills';
 import { useBandwidthProviderOptions } from '../hooks/useBandwidthCatalog';
 import { useServerTable } from '@/features/admin/routers/hooks/useServerTable';
@@ -22,11 +23,12 @@ import type { BandwidthPurchaseBill } from '../types';
 import { BillFormDialog } from '../components/BillFormDialog';
 import { OptionSelect } from '../components/OptionSelect';
 import { RefreshState } from '../components/RefreshState';
-import { periodLabel } from '../utils';
+import { dayText, paidDueLabel, paymentMethodLabel, periodLabel } from '../utils';
 
 const statusKey = (s: BandwidthPurchaseBill['paymentStatus']) => (s === 'Paid' ? 'paid' : 'pending');
 
 export function BandwidthBillsPage() {
+  const { t } = useLocale();
   const table = useServerTable();
   const [providerId, setProviderId] = useState('');
   const [status, setStatus] = useState<'' | 'Paid' | 'Due'>('');
@@ -59,7 +61,14 @@ export function BandwidthBillsPage() {
   const confirmDelete = () => {
     if (!toDelete?.length) return;
     const ids = toDelete.map((b) => b.id);
-    remove.mutate(ids, { onSuccess: () => toast.success(ids.length === 1 ? 'Bill deleted' : `${ids.length} bills deleted`) });
+    remove.mutate(ids, {
+      onSuccess: () =>
+        toast.success(
+          ids.length === 1
+            ? t('admin.bandwidth.bills.deleted', 'Bill deleted')
+            : t('admin.bandwidth.bills.deletedMany', '{n} bills deleted', { n: ids.length }),
+        ),
+    });
     setToDelete(null);
   };
 
@@ -67,7 +76,7 @@ export function BandwidthBillsPage() {
     () => [
       {
         accessorKey: 'invoiceNumber',
-        header: 'Invoice #',
+        header: t('admin.bandwidth.shared.invoiceNo', 'Invoice #'),
         enableHiding: false,
         size: 190,
         cell: ({ row }) => (
@@ -79,39 +88,39 @@ export function BandwidthBillsPage() {
               <button type="button" className="font-mono font-bold text-xs text-foreground hover:text-primary transition-colors" onClick={() => setVoucher(row.original)}>
                 {row.original.invoiceNumber || `#${row.original.id}`}
               </button>
-              <div className="text-[10px] text-muted-foreground font-mono">{row.original.billingDate}</div>
+              <div className="text-xs text-muted-foreground font-mono">{dayText(row.original.billingDate)}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'providerName',
-        header: 'Provider',
+        header: t('admin.bandwidth.providers.colProvider', 'Provider'),
         size: 190,
         cell: ({ row }) => (
           <div>
             <div className="font-bold text-xs text-foreground">{row.original.providerName || '—'}</div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
-              {row.original.items.map((l) => l.item).filter(Boolean).join(', ') || `${row.original.items.length} lines`}
+            <div className="text-xs text-muted-foreground truncate max-w-[180px]">
+              {row.original.items.map((l) => l.item).filter(Boolean).join(', ') || t('admin.bandwidth.bills.lines', '{n} lines', { n: row.original.items.length })}
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'total',
-        header: 'Total',
+        header: t('admin.bandwidth.shared.total', 'Total'),
         size: 130,
         cell: ({ row }) => <span className="font-mono text-sm font-bold text-foreground">{formatBdtWithSymbol(row.original.total)}</span>,
       },
       {
         accessorKey: 'paid',
-        header: 'Paid',
+        header: t('status.paid', 'Paid'),
         size: 120,
         cell: ({ row }) => <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(row.original.paid)}</span>,
       },
       {
         accessorKey: 'due',
-        header: 'Due',
+        header: t('admin.bandwidth.shared.due', 'Due'),
         size: 120,
         cell: ({ row }) => (
           <span className={row.original.due > 0 ? 'font-mono text-xs font-bold text-amber-600 dark:text-amber-400' : 'font-mono text-xs text-muted-foreground'}>
@@ -120,10 +129,11 @@ export function BandwidthBillsPage() {
         ),
       },
       {
-        accessorKey: 'paymentStatus',
-        header: 'Status',
+        id: 'paymentStatus',
+        accessorFn: (row) => paidDueLabel(t, row.paymentStatus === 'Paid'),
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 100,
-        cell: ({ row }) => <StatusBadge status={statusKey(row.original.paymentStatus)} label={row.original.paymentStatus} />,
+        cell: ({ row }) => <StatusBadge status={statusKey(row.original.paymentStatus)} label={paidDueLabel(t, row.original.paymentStatus === 'Paid')} />,
       },
       {
         id: 'actions',
@@ -132,26 +142,26 @@ export function BandwidthBillsPage() {
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
             <Button variant="ghost" size="sm" className="h-7 text-xs text-primary hover:bg-primary/10" onClick={() => setVoucher(row.original)}>
-              Voucher
+              {t('admin.bandwidth.bills.voucher', 'Voucher')}
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" aria-label="Edit" onClick={() => setForm({ bill: row.original })}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" aria-label={t('common.edit', 'Edit')} onClick={() => setForm({ bill: row.original })}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Delete" onClick={() => setToDelete([row.original])}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label={t('common.delete', 'Delete')} onClick={() => setToDelete([row.original])}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError && !data) {
     return (
       <div className="p-6">
-        <EmptyState title="Failed to load purchase bills" description="Could not fetch bandwidth purchase bills." actionLabel="Retry" onAction={() => refetch()} />
+        <EmptyState variant="error" title={t('admin.bandwidth.bills.loadFailed', 'Failed to load purchase bills')} description={t('admin.bandwidth.bills.loadFailedHint', 'Could not fetch bandwidth purchase bills.')} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />
       </div>
     );
   }
@@ -159,16 +169,16 @@ export function BandwidthBillsPage() {
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Bandwidth Purchase Bills"
-        subtitle="Upstream provider bills with line VAT, payments and outstanding dues"
+        title={t('admin.bandwidth.bills.title', 'Bandwidth Purchase Bills')}
+        subtitle={t('admin.bandwidth.bills.subtitle', 'Upstream provider bills with line VAT, payments and outstanding dues')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Bandwidth Buy', url: '/admin/bandwidth/buy' },
-          { label: 'Purchase Bills' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('nav.bandwidth-buy', 'Bandwidth Buy'), url: '/admin/bandwidth/buy' },
+          { label: t('admin.bandwidth.buyHub.modBills', 'Purchase Bills') },
         ]}
         actions={
           <Button size="sm" onClick={() => setForm({ bill: null })} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-2xs gap-1.5">
-            <Plus className="h-3.5 w-3.5" /> Record Purchase Bill
+            <Plus className="h-3.5 w-3.5" /> {t('admin.bandwidth.bills.record', 'Record Purchase Bill')}
           </Button>
         }
       />
@@ -176,19 +186,19 @@ export function BandwidthBillsPage() {
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-y border-border/60 py-3 text-sm">
         <p>
           <span className="font-semibold tabular-nums text-foreground">{totals?.count ?? 0}</span>{' '}
-          <span className="text-muted-foreground">{filtered ? 'matching bills' : 'bills'}</span>
+          <span className="text-muted-foreground">{filtered ? t('admin.bandwidth.bills.statMatching', 'matching bills') : t('admin.bandwidth.bills.stat', 'bills')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-foreground">{formatBdtWithSymbol(totals?.total ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">billed</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.bills.statBilled', 'billed')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{formatBdtWithSymbol(totals?.paid ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">paid</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.bills.statPaid', 'paid')}</span>
         </p>
         <p>
           <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">{formatBdtWithSymbol(totals?.due ?? 0)}</span>{' '}
-          <span className="text-muted-foreground">outstanding · {totals?.dueCount ?? 0} marked due</span>
+          <span className="text-muted-foreground">{t('admin.bandwidth.bills.statOutstanding', 'outstanding · {n} marked due', { n: totals?.dueCount ?? 0 })}</span>
         </p>
         <RefreshState fetching={isFetching} error={isError ? error : null} onRetry={() => refetch()} />
       </div>
@@ -198,7 +208,7 @@ export function BandwidthBillsPage() {
           <OptionSelect
             value={providerId}
             onChange={filter(setProviderId)}
-            emptyLabel="All providers"
+            emptyLabel={t('admin.bandwidth.bills.allProviders', 'All providers')}
             options={(providers.data ?? []).map((p) => ({ value: String(p.id), label: p.companyName }))}
           />
         </div>
@@ -206,15 +216,15 @@ export function BandwidthBillsPage() {
           <OptionSelect
             value={status}
             onChange={filter((v: string) => setStatus(v === 'Paid' || v === 'Due' ? v : ''))}
-            emptyLabel="All statuses"
+            emptyLabel={t('admin.bandwidth.shared.allStatuses', 'All statuses')}
             options={[
-              { value: 'Due', label: 'Due' },
-              { value: 'Paid', label: 'Paid' },
+              { value: 'Due', label: paidDueLabel(t, false) },
+              { value: 'Paid', label: paidDueLabel(t, true) },
             ]}
           />
         </div>
-        <Input type="date" aria-label="From date" value={from} onChange={(e) => filter(setFrom)(e.target.value)} className="h-9 w-40 text-xs" />
-        <Input type="date" aria-label="To date" value={to} onChange={(e) => filter(setTo)(e.target.value)} className="h-9 w-40 text-xs" />
+        <Input type="date" aria-label={t('admin.bandwidth.shared.fromDate', 'From date')} value={from} onChange={(e) => filter(setFrom)(e.target.value)} className="h-9 w-40 text-xs" />
+        <Input type="date" aria-label={t('admin.bandwidth.shared.toDate', 'To date')} value={to} onChange={(e) => filter(setTo)(e.target.value)} className="h-9 w-40 text-xs" />
         {providerId || status || from || to ? (
           <Button
             variant="ghost"
@@ -228,21 +238,21 @@ export function BandwidthBillsPage() {
               table.resetPage();
             }}
           >
-            <X className="h-3.5 w-3.5" /> Clear filters
+            <X className="h-3.5 w-3.5" /> {t('admin.bandwidth.shared.clearFilters', 'Clear filters')}
           </Button>
         ) : null}
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={bills}
         getRowId={(row) => String(row.id)}
-        searchPlaceholder="Search invoice #, provider, or remarks..."
+        searchPlaceholder={t('admin.bandwidth.bills.search', 'Search invoice #, provider, or remarks...')}
         enableRowSelection
         onDeleteSelected={(rows) => setToDelete(rows)}
         server={table.server(data?.meta.total ?? 0)}
-        emptyTitle={filtered ? 'No bills match these filters' : 'No purchase bills'}
-        emptyDescription={filtered ? undefined : 'Record a provider bill to get started.'}
+        emptyTitle={filtered ? t('admin.bandwidth.bills.emptyFiltered', 'No bills match these filters') : t('admin.bandwidth.bills.emptyNone', 'No purchase bills')}
+        emptyDescription={filtered ? undefined : t('admin.bandwidth.bills.emptyHint', 'Record a provider bill to get started.')}
       />
 
       <Dialog open={voucher !== null} onOpenChange={(open) => !open && setVoucher(null)}>
@@ -254,11 +264,11 @@ export function BandwidthBillsPage() {
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold">Purchase Bill Voucher</DialogTitle>
+                  <DialogTitle className="text-base font-bold">{t('admin.bandwidth.bills.voucherTitle', 'Purchase Bill Voucher')}</DialogTitle>
                   <DialogDescription className="text-xs font-mono">{voucher?.invoiceNumber}</DialogDescription>
                 </div>
               </div>
-              {voucher ? <StatusBadge status={statusKey(voucher.paymentStatus)} label={voucher.paymentStatus} /> : null}
+              {voucher ? <StatusBadge status={statusKey(voucher.paymentStatus)} label={paidDueLabel(t, voucher.paymentStatus === 'Paid')} /> : null}
             </div>
           </DialogHeader>
 
@@ -266,14 +276,14 @@ export function BandwidthBillsPage() {
             <div className="space-y-4 pt-2 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  ['Provider', voucher.providerName || '—'],
-                  ['Billing date', voucher.billingDate || '—'],
-                  ['Payment method', voucher.paymentMethod || '—'],
-                  ['Paid by', voucher.paidBy || '—'],
-                  ['Received by', voucher.receivedBy || '—'],
-                  ['Remarks', voucher.remarks || '—'],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-2 border-b border-border/40 py-1">
+                  ['provider', t('admin.bandwidth.providers.colProvider', 'Provider'), voucher.providerName || '—'],
+                  ['billingDate', t('admin.bandwidth.billForm.billingDate', 'Billing date'), dayText(voucher.billingDate)],
+                  ['method', t('admin.bandwidth.shared.paymentMethod', 'Payment method'), voucher.paymentMethod ? paymentMethodLabel(t, voucher.paymentMethod) : '—'],
+                  ['paidBy', t('admin.bandwidth.shared.paidBy', 'Paid by'), voucher.paidBy || '—'],
+                  ['receivedBy', t('admin.bandwidth.shared.receivedBy', 'Received by'), voucher.receivedBy || '—'],
+                  ['remarks', t('admin.bandwidth.shared.remarks', 'Remarks'), voucher.remarks || '—'],
+                ].map(([id, k, v]) => (
+                  <div key={id} className="flex justify-between gap-2 border-b border-border/40 py-1">
                     <span className="text-muted-foreground">{k}</span>
                     <span className="font-medium text-foreground text-right">{v}</span>
                   </div>
@@ -284,12 +294,12 @@ export function BandwidthBillsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40">
-                      <TableHead>Item</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">VAT</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>{t('admin.bandwidth.shared.item', 'Item')}</TableHead>
+                      <TableHead>{t('admin.bandwidth.shared.period', 'Period')}</TableHead>
+                      <TableHead className="text-right">{t('admin.bandwidth.shared.qty', 'Qty')}</TableHead>
+                      <TableHead className="text-right">{t('admin.bandwidth.shared.rate', 'Rate')}</TableHead>
+                      <TableHead className="text-right">{t('admin.bandwidth.shared.vat', 'VAT')}</TableHead>
+                      <TableHead className="text-right">{t('admin.bandwidth.shared.total', 'Total')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -297,7 +307,7 @@ export function BandwidthBillsPage() {
                       <TableRow key={i}>
                         <TableCell className="text-xs">
                           <div className="font-semibold">{l.item || '—'}</div>
-                          {l.description ? <div className="text-[10px] text-muted-foreground">{l.description}</div> : null}
+                          {l.description ? <div className="text-xs text-muted-foreground">{l.description}</div> : null}
                         </TableCell>
                         <TableCell className="text-xs font-mono">{periodLabel(l.fromDate, l.toDate)}</TableCell>
                         <TableCell className="text-xs font-mono text-right">
@@ -314,18 +324,18 @@ export function BandwidthBillsPage() {
 
               <div className="flex justify-end">
                 <div className="w-64 space-y-1.5 p-3.5 rounded-xl bg-muted/20 border border-border/50">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono font-bold">{formatBdtWithSymbol(voucher.total)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="font-mono">{formatBdtWithSymbol(voucher.paid)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span className="font-mono">{formatBdtWithSymbol(voucher.discount)}</span></div>
-                  <div className="flex justify-between border-t border-border/60 pt-1.5 text-sm font-bold"><span>Due</span><span className="font-mono text-primary">{formatBdtWithSymbol(voucher.due)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.total', 'Total')}</span><span className="font-mono font-bold">{formatBdtWithSymbol(voucher.total)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('status.paid', 'Paid')}</span><span className="font-mono">{formatBdtWithSymbol(voucher.paid)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t('admin.bandwidth.shared.discount', 'Discount')}</span><span className="font-mono">{formatBdtWithSymbol(voucher.discount)}</span></div>
+                  <div className="flex justify-between border-t border-border/60 pt-1.5 text-sm font-bold"><span>{t('admin.bandwidth.shared.due', 'Due')}</span><span className="font-mono text-primary">{formatBdtWithSymbol(voucher.due)}</span></div>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button size="sm" variant="outline" onClick={() => window.print()} className="text-xs">
-                  <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                  <Printer className="mr-1.5 h-3.5 w-3.5" /> {t('admin.bandwidth.shared.print', 'Print')}
                 </Button>
-                <Button size="sm" onClick={() => setVoucher(null)} className="text-xs font-semibold">Close</Button>
+                <Button size="sm" onClick={() => setVoucher(null)} className="text-xs font-semibold">{t('common.close', 'Close')}</Button>
               </div>
             </div>
           ) : null}
@@ -337,9 +347,13 @@ export function BandwidthBillsPage() {
       <ConfirmDialog
         open={toDelete !== null}
         onOpenChange={(open) => !open && setToDelete(null)}
-        title={toDelete?.length === 1 ? `Delete bill ${toDelete[0]?.invoiceNumber ?? ''}?` : `Delete ${toDelete?.length ?? 0} bills?`}
-        description="This cannot be undone."
-        confirmLabel="Delete"
+        title={
+          toDelete?.length === 1
+            ? t('admin.bandwidth.bills.deleteTitle', 'Delete bill {no}?', { no: toDelete[0]?.invoiceNumber ?? '' })
+            : t('admin.bandwidth.bills.deleteManyTitle', 'Delete {n} bills?', { n: toDelete?.length ?? 0 })
+        }
+        description={t('admin.bandwidth.shared.cannotUndo', 'This cannot be undone.')}
+        confirmLabel={t('common.delete', 'Delete')}
         destructive
         onConfirm={confirmDelete}
       />

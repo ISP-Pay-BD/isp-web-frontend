@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { http, saveBlob } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /**
  * Customer IP assignment history (/v1/network-ops/ip-logs). Each row: which
@@ -82,14 +83,20 @@ export function useIpLogs({ page, pageSize, ...filters }: IpLogFilters & { page:
 
 /** Read live sessions + static IPs from the routers into the log. */
 export function useCaptureIpLogs() {
+  const t = useTranslations();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => obj(await http.post<unknown>('/v1/network-ops/ip-logs/capture')),
     onSuccess: (r) => {
       const unreachable = Array.isArray(r.unreachable) ? r.unreachable.length : 0;
       toast.success(
-        `Captured ${num(r.sessions)} sessions and ${num(r.static)} static IPs from ${num(r.reached)}/${num(r.routers)} routers (${num(r.new_entries)} new entries)` +
-          (unreachable ? ` — ${unreachable} unreachable` : ''),
+        t('admin.ops.ipLogs.captured', 'Captured {sessions} sessions and {statics} static IPs from {reached}/{routers} routers ({fresh} new entries)', {
+          sessions: num(r.sessions),
+          statics: num(r.static),
+          reached: num(r.reached),
+          routers: num(r.routers),
+          fresh: num(r.new_entries),
+        }) + (unreachable ? t('admin.ops.ipLogs.unreachable', ' — {n} unreachable', { n: unreachable }) : ''),
       );
       qc.invalidateQueries({ queryKey: ipLogKeys.all });
     },

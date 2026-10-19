@@ -1,62 +1,53 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import {
-  Receipt,
-  Download,
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  AlignJustify,
-  AlignCenter,
-  RefreshCw,
-} from 'lucide-react';
+import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
+import { Receipt, Download, Calendar, CheckCircle2, AlertCircle, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { CurrencyDisplay, PageSkeleton, EmptyState, TablePagination } from '@/components/shared';
+import { Card } from '@/components/ui/card';
+import { CurrencyDisplay, PageSkeleton, EmptyState } from '@/components/shared';
 import { useThemeCustomizerStore } from '@/stores/theme-store';
 import { PageHeader } from '@/features/admin/shared/components/PageHeader';
+import { DataTable } from '@/features/shared/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useUrlParam } from '@/hooks/use-url-state';
+import type { Tone } from '@/components/shared/status-tones';
 import { useServerTable } from '@/features/admin/accounting/shared/table-utils';
-import {
-  DateRangeInputs,
-  DebouncedSearchInput,
-} from '@/features/admin/accounting/shared/components';
+import { DateRangeInputs } from '@/features/admin/accounting/shared/components';
 import { humanize, ymd } from '@/features/admin/accounting/shared/format';
 import {
   useExportOtcReport,
   useOtcReport,
   type OtcFilters,
+  type OtcReportRow,
   type OtcStatusFilter,
 } from '../hooks/use-otc-report';
 
-const STATUS_TABS: Array<{ value: OtcStatusFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'paid', label: 'Paid' },
-  { value: 'due', label: 'Due' },
-  { value: 'pending', label: 'Pending' },
-];
+import { formatCount } from '@/lib/format';
+import { useTranslations } from '@/i18n/locale-context';
 
-const OTC_STATUS_STYLES: Record<string, string> = {
-  paid: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-  due: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-  pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-};
+const STATUS_TABS: OtcStatusFilter[] = ['all', 'paid', 'due', 'pending'];
+
+type Translate = ReturnType<typeof useTranslations>;
+
+function statusText(t: Translate, value: string): string {
+  return t(`status.${value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`, humanize(value));
+}
+
+function clientTypeText(t: Translate, value: string): string {
+  const key = value.toLowerCase();
+  if (key === 'home') return t('admin.reports.btrc.typeHome', 'Home');
+  if (key === 'corporate') return t('admin.reports.btrc.typeCorporate', 'Corporate');
+  return humanize(value);
+}
+
+const OTC_STATUS_TONE: Record<string, Tone> = { paid: 'success', due: 'danger', pending: 'warning' };
 
 export function OtcReportPage() {
+  const t = useTranslations();
   const globalTableLayout = useThemeCustomizerStore((s) => s.tableLayout);
-  const setGlobalTableLayout = useThemeCustomizerStore((s) => s.setTableLayout);
   const [layoutMode, setLayoutMode] = useState<'full' | 'centered'>(globalTableLayout ?? 'full');
 
   useEffect(() => {
@@ -65,14 +56,10 @@ export function OtcReportPage() {
     }
   }, [globalTableLayout]);
 
-  const toggleLayoutMode = (mode: 'full' | 'centered') => {
-    setLayoutMode(mode);
-    setGlobalTableLayout(mode);
-  };
-
   const { page, pageSize, search, setPage, onPageSizeChange, onSearchChange, resetPage } =
     useServerTable(20);
-  const [status, setStatus] = useState<OtcStatusFilter>('all');
+  const [statusParam, setStatusParam] = useUrlParam('status');
+  const status: OtcStatusFilter = STATUS_TABS.find((tab) => tab === statusParam) ?? 'all';
   const [range, setRange] = useState({ from: '', to: '' });
   const filters: OtcFilters = useMemo(
     () => ({ status, fromDate: range.from, toDate: range.to, search }),
@@ -85,26 +72,115 @@ export function OtcReportPage() {
     pageSize,
   );
   const exportCsv = useExportOtcReport();
-  const rows = data?.items ?? [];
+  const rows = useMemo(() => data?.items ?? [], [data?.items]);
   const summary = data?.summary;
+
+  const tabLabel = (value: OtcStatusFilter) =>
+    value === 'all'
+      ? t('admin.customers.list.pillAll', 'All')
+      : value === 'paid'
+        ? t('status.paid', 'Paid')
+        : value === 'due'
+          ? t('status.due', 'Due')
+          : t('status.pending', 'Pending');
+
+  const columns = useMemo<LegacyColumnDef<OtcReportRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'userName',
+        header: t('admin.reports.otc.colCustomer', 'Customer'),
+        enableHiding: false,
+        meta: { mobile: 'title' },
+        cell: ({ row }) => (
+          <div>
+            <div className="text-foreground font-medium">{row.original.userName || '—'}</div>
+            {row.original.userId && (
+              <div className="text-muted-foreground font-mono text-xs font-normal">#{row.original.userId}</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'connectionType',
+        header: t('admin.reports.otc.colConnection', 'Connection'),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.connectionType ? humanize(row.original.connectionType) : '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'clientType',
+        header: t('admin.reports.otc.colClientType', 'Client Type'),
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.clientType ? clientTypeText(t, row.original.clientType) : '—'}</span>
+        ),
+      },
+      {
+        accessorKey: 'fiberCode',
+        header: t('admin.reports.otc.colFiber', 'Fiber Code'),
+        cell: ({ row }) => <span className="text-muted-foreground font-mono">{row.original.fiberCode || '—'}</span>,
+      },
+      {
+        accessorKey: 'otc',
+        header: t('admin.reports.otc.colOtc', 'OTC Amount'),
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono font-bold">
+            <CurrencyDisplay amount={row.original.otc} />
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'otcStatus',
+        header: t('admin.reports.otc.colOtcStatus', 'OTC Status'),
+        cell: ({ row }) => (
+          <Badge variant="outline" tone={OTC_STATUS_TONE[row.original.otcStatus] ?? 'neutral'} className="font-medium">
+            {row.original.otcStatus ? statusText(t, row.original.otcStatus) : '—'}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: 'billingStatus',
+        id: 'billing',
+        header: t('admin.reports.otc.colBilling', 'Billing Status'),
+        cell: ({ row }) =>
+          row.original.billingStatus ? (
+            <Badge variant="outline" tone="neutral" className="font-medium">
+              {statusText(t, row.original.billingStatus)}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
+        accessorKey: 'createdAt',
+        header: t('admin.reports.otc.colCreated', 'Created'),
+        cell: ({ row }) => (
+          <div className="text-muted-foreground flex items-center gap-1.5 font-mono whitespace-nowrap">
+            <Calendar className="h-3.5 w-3.5" aria-hidden />
+            <span>{ymd(row.original.createdAt) || '—'}</span>
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
 
   if (isPending) return <PageSkeleton variant="table" rows={6} />;
 
   return (
     <div
       className={cn(
-        'space-y-6 pb-16 transition-all duration-200',
+        'space-y-6 pb-16',
         layoutMode === 'centered' ? 'mx-auto max-w-6xl' : 'w-full',
       )}
     >
       {/* Header */}
       <PageHeader
-        title="OTC Report — One-time connection charges"
-        subtitle="One-time installation / connection charges billed per customer connection, with their payment status."
+        title={t('admin.reports.otc.title', 'OTC Report — One-time connection charges')}
+        subtitle={t('admin.reports.otc.subtitle', 'One-time installation / connection charges billed per customer connection, with their payment status.')}
         breadcrumb={[
-          { label: 'Admin', url: '/admin/dashboard' },
-          { label: 'Reports' },
-          { label: 'OTC Report' },
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('common.crumb.reports', 'Reports') },
+          { label: t('admin.reports.otc.crumb', 'OTC Report') },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -120,7 +196,7 @@ export function OtcReportPage() {
                   isFetching && 'animate-spin',
                 )}
               />{' '}
-              Refresh
+              {t('admin.reports.otc.refresh', 'Refresh')}
             </Button>
             <Button
               size="sm"
@@ -128,13 +204,17 @@ export function OtcReportPage() {
               onClick={() =>
                 exportCsv.mutate(filters, {
                   onSuccess: (n) =>
-                    toast.success(n ? `Exported ${n} OTC records` : 'No OTC records to export'),
+                    toast.success(
+                      n
+                        ? t('admin.reports.otc.exported', 'Exported {n} OTC records', { n })
+                        : t('admin.reports.otc.nothingToExport', 'No OTC records to export'),
+                    ),
                 })
               }
               className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 gap-1.5 text-xs font-semibold shadow-sm"
             >
               <Download className="h-3.5 w-3.5" />{' '}
-              {exportCsv.isPending ? 'Exporting…' : 'Export CSV'}
+              {exportCsv.isPending ? t('admin.reports.otc.exporting', 'Exporting…') : t('admin.reports.otc.export', 'Export CSV')}
             </Button>
           </div>
         }
@@ -145,7 +225,7 @@ export function OtcReportPage() {
         <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Total OTC
+              {t('admin.reports.otc.kpiTotal', 'Total OTC')}
             </span>
             <div className="bg-primary/10 text-primary rounded-lg p-2">
               <Receipt className="h-4 w-4" />
@@ -166,7 +246,7 @@ export function OtcReportPage() {
         <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Paid OTC
+              {t('admin.reports.otc.kpiPaid', 'Paid OTC')}
             </span>
             <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-500">
               <CheckCircle2 className="h-4 w-4" />
@@ -180,7 +260,7 @@ export function OtcReportPage() {
                   className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400"
                 />
                 <span className="text-muted-foreground text-xs">
-                  {summary.paidCount.toLocaleString()} paid
+                  {t('admin.reports.otc.paidCount', '{n} paid', { n: formatCount(summary.paidCount) })}
                 </span>
               </>
             ) : (
@@ -192,7 +272,7 @@ export function OtcReportPage() {
         <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Due OTC
+              {t('admin.reports.otc.kpiDue', 'Due OTC')}
             </span>
             <div className="rounded-lg bg-rose-500/10 p-2 text-rose-500">
               <AlertCircle className="h-4 w-4" />
@@ -206,7 +286,7 @@ export function OtcReportPage() {
                   className="text-2xl font-bold tracking-tight text-rose-500"
                 />
                 <span className="text-muted-foreground text-xs">
-                  {summary.dueCount.toLocaleString()} due
+                  {t('admin.reports.otc.dueCount', '{n} due', { n: formatCount(summary.dueCount) })}
                 </span>
               </>
             ) : (
@@ -218,7 +298,7 @@ export function OtcReportPage() {
         <Card className="border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Pending
+              {t('status.pending', 'Pending')}
             </span>
             <div className="rounded-lg bg-amber-500/10 p-2 text-amber-500">
               <Clock className="h-4 w-4" />
@@ -226,206 +306,75 @@ export function OtcReportPage() {
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-mono text-2xl font-bold tracking-tight text-amber-600 tabular-nums dark:text-amber-400">
-              {summary ? summary.pendingCount.toLocaleString() : '—'}
+              {summary ? formatCount(summary.pendingCount) : '—'}
             </span>
-            {summary && <span className="text-muted-foreground text-xs">connections</span>}
+            {summary && <span className="text-muted-foreground text-xs">{t('admin.reports.otc.connections', 'connections')}</span>}
           </div>
         </Card>
       </div>
 
-      {/* Filter Toolbar */}
-      <Card className="border-border/70 bg-card shadow-2xs">
-        <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
-          <DebouncedSearchInput
-            onSearchChange={onSearchChange}
-            placeholder="Search customer, fiber code..."
-          />
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
-              {STATUS_TABS.map((t) => (
-                <Button
-                  key={t.value}
-                  type="button"
-                  size="sm"
-                  variant={status === t.value ? 'default' : 'ghost'}
-                  onClick={() => {
-                    setStatus(t.value);
-                    resetPage();
-                  }}
-                  className="h-7 px-2.5 text-xs"
-                >
-                  {t.label}
-                </Button>
-              ))}
-            </div>
-
-            <DateRangeInputs
-              from={range.from}
-              to={range.to}
-              onChange={(r) => {
-                setRange(r);
-                resetPage();
-              }}
-            />
-
-            {/* Table Layout Toggle */}
-            <div className="border-border/70 bg-muted/40 flex items-center rounded-lg border p-0.5">
-              <button
-                type="button"
-                onClick={() => toggleLayoutMode('full')}
-                className={cn(
-                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
-                  layoutMode === 'full'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                title="Full width layout"
-              >
-                <AlignJustify className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Full</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleLayoutMode('centered')}
-                className={cn(
-                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition duration-150',
-                  layoutMode === 'centered'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                title="Centered container layout"
-              >
-                <AlignCenter className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Center</span>
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
       {isError ? (
-        <EmptyState
-          title="Failed to load OTC report"
+        <EmptyState variant="error"
+          title={t('admin.reports.otc.loadFailed', 'Failed to load OTC report')}
           description={error.message}
-          actionLabel="Retry"
+          actionLabel={t('common.retry', 'Retry')}
           onAction={() => refetch()}
         />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          title="No OTC records"
-          description={
+      ) : (
+        <DataTable
+          urlState
+          className={cn('transition-opacity', isPlaceholderData && 'opacity-60')}
+          columns={columns}
+          data={rows}
+          getRowId={(r) => r.id}
+          searchPlaceholder={t('admin.reports.otc.searchPlaceholder', 'Search customer, fiber code...')}
+          emptyTitle={t('admin.reports.otc.emptyTitle', 'No OTC records')}
+          emptyDescription={
             search || status !== 'all' || range.from || range.to
-              ? 'No connections match the current filters.'
-              : 'Connections with a one-time charge will appear here.'
+              ? t('admin.reports.otc.emptyFiltered', 'No connections match the current filters.')
+              : t('admin.reports.otc.emptyHint', 'Connections with a one-time charge will appear here.')
+          }
+          server={{
+            page,
+            pageSize,
+            total: data?.meta.total ?? 0,
+            onPageChange: setPage,
+            onPageSizeChange,
+            search,
+            onSearchChange,
+          }}
+          toolbarActions={
+            <>
+              <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
+                {STATUS_TABS.map((tab) => (
+                  <Button
+                    key={tab}
+                    type="button"
+                    size="sm"
+                    variant={status === tab ? 'default' : 'ghost'}
+                    aria-pressed={status === tab}
+                    onClick={() => {
+                      setStatusParam(tab === 'all' ? '' : tab);
+                      resetPage();
+                    }}
+                    className="h-7 px-2.5 text-xs"
+                  >
+                    {tabLabel(tab)}
+                  </Button>
+                ))}
+              </div>
+
+              <DateRangeInputs
+                from={range.from}
+                to={range.to}
+                onChange={(r) => {
+                  setRange(r);
+                  resetPage();
+                }}
+              />
+            </>
           }
         />
-      ) : (
-        <Card
-          className={cn(
-            'border-border/70 bg-card ring-border/50 overflow-hidden shadow-2xs ring-1 transition-opacity',
-            isPlaceholderData && 'opacity-60',
-          )}
-        >
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border/60 bg-muted/40 hover:bg-transparent">
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Customer
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Connection
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Client Type
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Fiber Code
-                  </TableHead>
-                  <TableHead className="text-right text-xs font-semibold tracking-wider uppercase">
-                    OTC Amount
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    OTC Status
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Billing Status
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold tracking-wider uppercase">
-                    Created
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-border/60 divide-y">
-                {rows.map((row) => (
-                  <TableRow key={row.id} className="group hover:bg-muted/30 transition-colors">
-                    <TableCell className="text-xs">
-                      <div className="text-foreground font-medium">{row.userName || '—'}</div>
-                      {row.userId && (
-                        <div className="text-muted-foreground font-mono text-[10px]">
-                          #{row.userId}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {row.connectionType ? humanize(row.connectionType) : '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {row.clientType ? humanize(row.clientType) : '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      {row.fiberCode || '—'}
-                    </TableCell>
-                    <TableCell className="text-foreground text-right font-mono text-xs font-bold">
-                      <CurrencyDisplay amount={row.otc} />
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-medium',
-                          OTC_STATUS_STYLES[row.otcStatus] ?? 'text-muted-foreground',
-                        )}
-                      >
-                        {humanize(row.otcStatus) || '—'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {row.billingStatus ? (
-                        <Badge
-                          variant="outline"
-                          className="text-muted-foreground border-border/60 text-[10px] font-medium"
-                        >
-                          {humanize(row.billingStatus)}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      <div className="flex items-center gap-1.5 whitespace-nowrap">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{ymd(row.createdAt) || '—'}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Server pagination */}
-          <TablePagination
-            currentPage={page}
-            pageSize={pageSize}
-            totalItems={data?.meta.total ?? 0}
-            onPageChange={setPage}
-            onPageSizeChange={onPageSizeChange}
-            pageSizeOptions={[10, 20, 50, 100]}
-          />
-        </Card>
       )}
     </div>
   );

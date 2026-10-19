@@ -24,9 +24,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { handleApiError } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 import { todayYmd } from '../table-utils';
 import { ledgerEntrySchema, type LedgerEntryFormValues } from './schema';
 import { ManageCategoriesDialog } from './ManageCategoriesDialog';
+import { ledgerCopy } from './copy';
 import {
   LEDGER_CONFIG,
   useEntryOptions,
@@ -38,7 +40,6 @@ import {
 
 interface LedgerEntryModalProps {
   kind: LedgerKind;
-  noun: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** null = create */
@@ -51,10 +52,13 @@ function withCurrent(list: string[], current?: string): string[] {
 }
 
 function FieldError({ message }: { message?: string }) {
-  return message ? <p className="text-destructive text-xs">{message}</p> : null;
+  const { te } = useLocale();
+  return message ? <p className="text-destructive text-xs">{te(message)}</p> : null;
 }
 
-export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: LedgerEntryModalProps) {
+export function LedgerEntryModal({ kind, open, onOpenChange, entry }: LedgerEntryModalProps) {
+  const { t } = useLocale();
+  const copy = ledgerCopy(t, kind);
   const [manageOpen, setManageOpen] = useState(false);
   const categories = useLedgerCategories(kind);
   const options = useEntryOptions(open);
@@ -123,8 +127,8 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
         onSuccess: () => {
           toast.success(
             entry
-              ? `Entry #${entry.id} updated`
-              : `${noun.charAt(0).toUpperCase()}${noun.slice(1)} entry recorded (pending approval)`,
+              ? t('admin.accounting.ledger.toast.updated', 'Entry #{id} updated', { id: entry.id })
+              : copy.recorded,
           );
           onOpenChange(false);
         },
@@ -139,16 +143,16 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {entry ? `Edit ${noun} entry #${entry.id}` : `Record ${noun} entry`}
+            {entry ? copy.editTitle(entry.id) : copy.recordTitle}
           </DialogTitle>
           <DialogDescription>
-            New entries are saved as pending until an admin approves them.
+            {t('admin.accounting.ledger.modal.desc', 'New entries are saved as pending until an admin approves them.')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="ledger-name">Name *</Label>
+            <Label htmlFor="ledger-name">{t('admin.accounting.ledger.modal.name', 'Name *')}</Label>
             <Input id="ledger-name" {...form.register('name')} />
             <FieldError message={errors.name?.message} />
           </div>
@@ -156,13 +160,13 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="ledger-category">Category *</Label>
+                <Label htmlFor="ledger-category">{t('admin.accounting.ledger.modal.category', 'Category *')}</Label>
                 <button
                   type="button"
                   onClick={() => setManageOpen(true)}
-                  className="text-primary text-[11px] hover:underline"
+                  className="text-primary text-xs hover:underline"
                 >
-                  Manage
+                  {t('admin.accounting.ledger.modal.manage', 'Manage')}
                 </button>
               </div>
               <Controller
@@ -176,7 +180,11 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                   >
                     <SelectTrigger id="ledger-category" className="w-full">
                       <SelectValue
-                        placeholder={categories.isPending ? 'Loading…' : 'Select category'}
+                        placeholder={
+                          categories.isPending
+                            ? t('admin.accounting.ledger.modal.loading', 'Loading…')
+                            : t('admin.accounting.ledger.modal.selectCategory', 'Select category')
+                        }
                       />
                     </SelectTrigger>
                     <SelectContent>
@@ -190,18 +198,18 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                 )}
               />
               {categories.isSuccess && categoryNames.length === 0 && (
-                <p className="text-muted-foreground text-[11px]">
-                  No categories yet — add one via Manage.
+                <p className="text-muted-foreground text-xs">
+                  {t('admin.accounting.ledger.modal.noCategories', 'No categories yet — add one via Manage.')}
                 </p>
               )}
               {categories.isError && (
-                <p className="text-destructive text-xs">Could not load categories.</p>
+                <p className="text-destructive text-xs">{t('admin.accounting.ledger.modal.categoriesFailed', 'Could not load categories.')}</p>
               )}
               <FieldError message={errors.category?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ledger-date">Date *</Label>
+              <Label htmlFor="ledger-date">{t('admin.accounting.ledger.modal.date', 'Date *')}</Label>
               <Input id="ledger-date" type="date" {...form.register('date')} />
               <FieldError message={errors.date?.message} />
             </div>
@@ -209,7 +217,7 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="ledger-amount">Amount (৳) *</Label>
+              <Label htmlFor="ledger-amount">{t('admin.accounting.ledger.modal.amount', 'Amount (৳) *')}</Label>
               <Input
                 id="ledger-amount"
                 type="number"
@@ -221,7 +229,7 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ledger-employee">Employee *</Label>
+              <Label htmlFor="ledger-employee">{t('admin.accounting.ledger.modal.employee', 'Employee *')}</Label>
               <Controller
                 control={form.control}
                 name="employee"
@@ -233,7 +241,13 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                     disabled={optionsLoading}
                   >
                     <SelectTrigger id="ledger-employee" className="w-full">
-                      <SelectValue placeholder={optionsLoading ? 'Loading…' : 'Select employee'} />
+                      <SelectValue
+                        placeholder={
+                          optionsLoading
+                            ? t('admin.accounting.ledger.modal.loading', 'Loading…')
+                            : t('admin.accounting.ledger.modal.selectEmployee', 'Select employee')
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map((e) => (
@@ -246,7 +260,7 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                 )}
               />
               {options.isSuccess && employees.length === 0 && (
-                <p className="text-muted-foreground text-[11px]">No employees available.</p>
+                <p className="text-muted-foreground text-xs">{t('admin.accounting.ledger.modal.noEmployees', 'No employees available.')}</p>
               )}
               <FieldError message={errors.employee?.message} />
             </div>
@@ -254,7 +268,7 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="ledger-bank">Bank account *</Label>
+              <Label htmlFor="ledger-bank">{t('admin.accounting.ledger.modal.bank', 'Bank account *')}</Label>
               <Controller
                 control={form.control}
                 name="bank_account"
@@ -265,7 +279,13 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                     disabled={optionsLoading}
                   >
                     <SelectTrigger id="ledger-bank" className="w-full">
-                      <SelectValue placeholder={optionsLoading ? 'Loading…' : 'Select account'} />
+                      <SelectValue
+                        placeholder={
+                          optionsLoading
+                            ? t('admin.accounting.ledger.modal.loading', 'Loading…')
+                            : t('admin.accounting.ledger.modal.selectAccount', 'Select account')
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {bankAccounts.map((b) => (
@@ -278,25 +298,25 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
                 )}
               />
               {options.isSuccess && bankAccounts.length === 0 && (
-                <p className="text-muted-foreground text-[11px]">No bank accounts available.</p>
+                <p className="text-muted-foreground text-xs">{t('admin.accounting.ledger.modal.noBanks', 'No bank accounts available.')}</p>
               )}
               {options.isError && (
                 <p className="text-destructive text-xs">
-                  Could not load employees / bank accounts.
+                  {t('admin.accounting.ledger.modal.optionsFailed', 'Could not load employees / bank accounts.')}
                 </p>
               )}
               <FieldError message={errors.bank_account?.message} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ledger-invoice">Invoice no.</Label>
+              <Label htmlFor="ledger-invoice">{t('admin.accounting.ledger.invoiceNo', 'Invoice no.')}</Label>
               <Input id="ledger-invoice" {...form.register('invoice_no')} />
               <FieldError message={errors.invoice_no?.message} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ledger-description">Description</Label>
+            <Label htmlFor="ledger-description">{t('admin.accounting.ledger.description', 'Description')}</Label>
             <Textarea id="ledger-description" rows={2} {...form.register('description')} />
             <FieldError message={errors.description?.message} />
           </div>
@@ -308,21 +328,25 @@ export function LedgerEntryModal({ kind, noun, open, onOpenChange, entry }: Ledg
               onClick={() => onOpenChange(false)}
               disabled={save.isPending}
             >
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
             <Button
               type="submit"
               className="bg-primary hover:bg-primary/90"
               disabled={save.isPending}
             >
-              {save.isPending ? 'Saving…' : entry ? 'Save changes' : 'Record entry'}
+              {save.isPending
+                ? t('admin.accounting.ledger.modal.saving', 'Saving…')
+                : entry
+                  ? t('admin.accounting.ledger.modal.saveChanges', 'Save changes')
+                  : t('admin.accounting.ledger.modal.record', 'Record entry')}
             </Button>
           </DialogFooter>
         </form>
 
         {/* Nested in the popup so the category dialog stacks on top of this one. */}
         {manageOpen && (
-          <ManageCategoriesDialog kind={kind} noun={noun} open onOpenChange={setManageOpen} />
+          <ManageCategoriesDialog kind={kind} open onOpenChange={setManageOpen} />
         )}
       </DialogContent>
     </Dialog>

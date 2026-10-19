@@ -15,6 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { saveBlob } from '@/lib/api/client';
 import { errorMessage } from '@/lib/api/utils/error-handler';
 import { cn } from '@/lib/utils';
+import { useLocale } from '@/i18n/locale-context';
 import { monthToDateRange, usePackageRevenue, type PackageRevenueRow } from '@/features/admin/reports/hooks/use-billing-reports';
 
 const searchFilter = (row: LegacyRow<PackageRevenueRow>, _columnId: string, filterValue: unknown) => {
@@ -30,6 +31,7 @@ const csvCell = (v: string | number) => {
 
 /** Collected revenue per POP / package — only money actually received; no invented cost or margin. */
 export function PackageProfitPage() {
+  const { t } = useLocale();
   const [range, setRange] = useState(monthToDateRange);
   const { data, isLoading, isError, error, refetch } = usePackageRevenue(range);
   const rows = useMemo(() => data?.items ?? [], [data]);
@@ -43,14 +45,14 @@ export function PackageProfitPage() {
       [r.ownerName, r.ownerRole, r.packageName, r.listPriceBdt ?? '', r.customers, r.activeCustomers, r.collectedBdt, r.payments].map(csvCell).join(','),
     );
     saveBlob(new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }), `package_revenue_${range.from}_${range.to}.csv`);
-    toast.success('Package revenue exported to CSV');
+    toast.success(t('admin.ops.packageProfit.exported', 'Package revenue exported to CSV'));
   };
 
   const columns = useMemo<LegacyColumnDef<PackageRevenueRow, unknown>[]>(
     () => [
       {
         accessorKey: 'ownerName',
-        header: 'Owner (tenant / POP)',
+        header: t('admin.ops.packageProfit.colOwner', 'Owner (tenant / POP)'),
         enableHiding: false,
         size: 220,
         cell: ({ row }) => (
@@ -60,98 +62,102 @@ export function PackageProfitPage() {
             </div>
             <div>
               <div className="font-bold text-sm text-foreground">{row.original.ownerName || `#${row.original.ownerId}`}</div>
-              <div className="text-[10px] text-muted-foreground">{row.original.ownerRole === 'resellerAdmin' ? 'POP reseller' : 'Direct'}</div>
+              <div className="text-xs text-muted-foreground">{row.original.ownerRole === 'resellerAdmin' ? t('admin.ops.packageProfit.popReseller', 'POP reseller') : t('admin.ops.packageProfit.direct', 'Direct')}</div>
             </div>
           </div>
         ),
       },
       {
         accessorKey: 'packageName',
-        header: 'Package',
+        header: t('admin.customers.list.colPackage', 'Package'),
         size: 200,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-secondary/80 border border-border/50 text-foreground"><Boxes className="h-3.5 w-3.5" /></div>
-            <div className="font-semibold text-xs text-foreground">{row.original.packageName || 'No package'}</div>
+            <div className="font-semibold text-xs text-foreground">{row.original.packageName || t('admin.ops.packageProfit.noPackage', 'No package')}</div>
           </div>
         ),
       },
       {
         accessorKey: 'listPriceBdt',
-        header: 'List price',
+        header: t('admin.ops.packageProfit.colListPrice', 'List price'),
         size: 110,
         cell: ({ row }) => (row.original.listPriceBdt === null ? <span className="text-muted-foreground">—</span> : <CurrencyDisplay amount={row.original.listPriceBdt} />),
       },
       {
         accessorKey: 'customers',
-        header: 'Customers',
+        header: t('admin.ops.packageProfit.colCustomers', 'Customers'),
         size: 100,
         cell: ({ row }) => <span className="font-mono">{row.original.customers}</span>,
       },
       {
         accessorKey: 'activeCustomers',
-        header: 'Active',
+        header: t('status.active', 'Active'),
         size: 90,
         cell: ({ row }) => <span className="font-mono text-emerald-600 dark:text-emerald-400">{row.original.activeCustomers}</span>,
       },
       {
         accessorKey: 'collectedBdt',
-        header: 'Collected',
+        header: t('admin.ops.packageProfit.colCollected', 'Collected'),
         size: 130,
         cell: ({ row }) => <CurrencyDisplay amount={row.original.collectedBdt} className="font-bold text-foreground" />,
       },
       {
         accessorKey: 'payments',
-        header: 'Payments',
+        header: t('admin.ops.packageProfit.colPayments', 'Payments'),
         size: 90,
         cell: ({ row }) => <span className="font-mono text-muted-foreground">{row.original.payments}</span>,
       },
     ],
-    [],
+    [t],
   );
 
   if (isLoading) return <PageSkeleton variant="table" rows={6} />;
   if (isError || !data) {
-    return <EmptyState title="Failed to load package revenue" description={errorMessage(error)} actionLabel="Retry" onAction={() => refetch()} />;
+    return <EmptyState variant="error" title={t('admin.ops.packageProfit.loadFailed', 'Failed to load package revenue')} description={errorMessage(error)} actionLabel={t('admin.customers.list.retry', 'Retry')} onAction={() => refetch()} />;
   }
 
   return (
     <div className="space-y-6 w-full pb-12">
       <PageHeader
-        title="Package Revenue"
-        subtitle="Money collected per package and POP for the selected period"
-        breadcrumb={[{ label: 'Admin', url: '/admin/dashboard' }, { label: 'POP Suite' }, { label: 'Package revenue' }]}
+        title={t('admin.ops.packageProfit.title', 'Package Revenue')}
+        subtitle={t('admin.ops.packageProfit.subtitle', 'Money collected per package and POP for the selected period')}
+        breadcrumb={[
+          { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
+          { label: t('admin.ops.packageProfit.breadcrumbPop', 'POP Suite') },
+          { label: t('admin.ops.packageProfit.breadcrumb', 'Package revenue') },
+        ]}
         actions={
           <div className="flex items-center gap-2">
-            <Input type="date" value={range.from} max={range.to} onChange={(e) => e.target.value && setRange((r) => ({ ...r, from: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label="From" />
-            <Input type="date" value={range.to} min={range.from} onChange={(e) => e.target.value && setRange((r) => ({ ...r, to: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label="To" />
+            <Input type="date" value={range.from} max={range.to} onChange={(e) => e.target.value && setRange((r) => ({ ...r, from: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label={t('admin.ops.packageProfit.from', 'From')} />
+            <Input type="date" value={range.to} min={range.from} onChange={(e) => e.target.value && setRange((r) => ({ ...r, to: e.target.value }))} className="h-8 w-[140px] text-xs" aria-label={t('admin.ops.packageProfit.to', 'To')} />
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={!rows.length} className="text-xs h-8">
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+              <Download className="mr-1.5 h-3.5 w-3.5" /> {t('admin.ops.packageProfit.exportCsv', 'Export CSV')}
             </Button>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi label="Collected" icon={<DollarSign className="h-4 w-4" />} tone="bg-emerald-500/10 text-emerald-500">
+        <Kpi label={t('admin.ops.packageProfit.colCollected', 'Collected')} icon={<DollarSign className="h-4 w-4" />} tone="bg-emerald-500/10 text-emerald-500">
           <CurrencyDisplay amount={totals?.collectedBdt ?? 0} />
         </Kpi>
-        <Kpi label="Customers" icon={<Users className="h-4 w-4" />} tone="bg-primary/10 text-primary">{totals?.customers ?? 0}</Kpi>
-        <Kpi label="Active customers" icon={<UserCheck className="h-4 w-4" />} tone="bg-blue-500/10 text-blue-500">{totals?.activeCustomers ?? 0}</Kpi>
-        <Kpi label="Top package" icon={<TrendingUp className="h-4 w-4" />} tone="bg-amber-500/10 text-amber-500">
-          <span className="text-base">{top && top.collectedBdt > 0 ? top.packageName || 'No package' : '—'}</span>
+        <Kpi label={t('admin.ops.packageProfit.colCustomers', 'Customers')} icon={<Users className="h-4 w-4" />} tone="bg-primary/10 text-primary">{totals?.customers ?? 0}</Kpi>
+        <Kpi label={t('admin.ops.packageProfit.kpiActive', 'Active customers')} icon={<UserCheck className="h-4 w-4" />} tone="bg-blue-500/10 text-blue-500">{totals?.activeCustomers ?? 0}</Kpi>
+        <Kpi label={t('admin.ops.packageProfit.kpiTop', 'Top package')} icon={<TrendingUp className="h-4 w-4" />} tone="bg-amber-500/10 text-amber-500">
+          <span className="text-base">{top && top.collectedBdt > 0 ? top.packageName || t('admin.ops.packageProfit.noPackage', 'No package') : '—'}</span>
         </Kpi>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={rows}
         getRowId={(r) => r.key}
         searchKey="packageName"
         searchFilterFn={searchFilter}
-        searchPlaceholder="Search owner or package..."
-        emptyTitle="No packages"
-        emptyDescription="No customers are assigned to packages yet."
+        searchPlaceholder={t('admin.ops.packageProfit.search', 'Search owner or package...')}
+        emptyTitle={t('admin.ops.packageProfit.emptyTitle', 'No packages')}
+        emptyDescription={t('admin.ops.packageProfit.emptyHint', 'No customers are assigned to packages yet.')}
       />
     </div>
   );

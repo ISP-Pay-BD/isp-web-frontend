@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
+import { useTranslations } from '@/i18n/locale-context';
 
 /**
  * Per-screen network-ops reads (GET /v1/network-ops/*). Every list is server
@@ -311,9 +312,10 @@ export function useCustomerOptions(search: string, enabled = true) {
  * endpoint (POST /v1/routers/{id}/disconnect), which is the CoA action.
  */
 export function useDisconnectSession() {
+  const t = useTranslations();
   return useMutation({
     mutationFn: ({ routerId, username }: { routerId: string; username: string }) =>
       http.post<unknown>(`/v1/routers/${routerId}/disconnect`, { username }, { router_id: routerId }),
-    onSuccess: (_data, { username }) => toast.success(`${username} disconnected`),
+    onSuccess: (_data, { username }) => toast.success(t('admin.ops.networkOps.disconnected', '{username} disconnected', { username })),
   });
 }

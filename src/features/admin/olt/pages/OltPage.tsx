@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { formatDateTime } from '@/lib/format/date';
 import { errorMessage } from '@/lib/api/utils/error-handler';
+import { useLocale } from '@/i18n/locale-context';
 
 function OltHealthBar({ online, total }: { online: number; total: number }) {
   const pct = total > 0 ? Math.round((online / total) * 100) : 0;
@@ -44,22 +45,24 @@ function OltHealthBar({ online, total }: { online: number; total: number }) {
       <div className="flex-1 h-1.5 rounded-full bg-muted/60 overflow-hidden">
         <div
           className={cn(
-            'h-full rounded-full transition-all duration-700 ease-out',
+            'h-full rounded-full transition-[width] duration-700 ease-out',
             pct >= 90 ? 'bg-emerald-500' : pct >= 70 ? 'bg-amber-500' : 'bg-red-500',
           )}
           style={{ width: `${pct}%`, transitionDelay: '300ms' }}
         />
       </div>
-      <span className="text-[11px] font-semibold tabular-nums text-muted-foreground w-8 text-right">
+      <span className="text-xs font-semibold tabular-nums text-muted-foreground w-8 text-right">
         {pct}%
       </span>
     </div>
   );
 }
 
-function syncLabel(value: string | null): string {
+type Translate = ReturnType<typeof useLocale>['t'];
+
+function syncLabel(t: Translate, value: string | null): string {
   const d = parseBackendDate(value);
-  return d ? `Synced ${formatDateTime(d)}` : 'Never synced';
+  return d ? t('admin.olt.page.synced', 'Synced {time}', { time: formatDateTime(d) }) : t('admin.olt.page.neverSynced', 'Never synced');
 }
 
 const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -67,6 +70,7 @@ const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 const ALL_BRANDS = '__all__';
 
 export function OltPage() {
+  const { t } = useLocale();
   const table = useServerTable();
   const { page, pageSize, search, resetPage } = table;
   const [brandFilter, setBrandFilter] = useState(ALL_BRANDS);
@@ -98,7 +102,7 @@ export function OltPage() {
     if (!deleteTarget) return;
     const target = deleteTarget;
     deleteOlt.mutate(target.id, {
-      onSuccess: () => toast.success(`${target.name} removed.`),
+      onSuccess: () => toast.success(t('admin.olt.page.removed', '{name} removed.', { name: target.name })),
       onSettled: () => setDeleteTarget(null),
     });
   };
@@ -107,9 +111,9 @@ export function OltPage() {
     if (!rebootTarget) return;
     const target = rebootTarget;
     setRebootTarget(null);
-    const pending = toast.loading(`Resetting ${target.name} connection…`);
+    const pending = toast.loading(t('admin.olt.page.resetting', 'Resetting {name} connection…', { name: target.name }));
     rebootOlt.mutate(target.id, {
-      onSuccess: () => toast.success(`${target.name} connection reset and refreshed.`, { id: pending }),
+      onSuccess: () => toast.success(t('admin.olt.page.resetDone', '{name} connection reset and refreshed.', { name: target.name }), { id: pending }),
       onError: (err) => toast.error(err.message, { id: pending }),
     });
   };
@@ -133,9 +137,9 @@ export function OltPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(href);
-      toast.success(`${rows.length} OLT nodes exported to CSV`);
+      toast.success(t('admin.olt.page.exported', '{n} OLT nodes exported to CSV', { n: rows.length }));
     } catch (err) {
-      toast.error(errorMessage(err, 'Export failed.'));
+      toast.error(errorMessage(err, t('admin.olt.page.exportFailed', 'Export failed.')));
     } finally {
       setExporting(false);
     }
@@ -145,7 +149,7 @@ export function OltPage() {
     () => [
       {
         accessorKey: 'name',
-        header: 'OLT Node',
+        header: t('admin.olt.page.colNode', 'OLT Node'),
         enableHiding: false,
         size: 240,
         cell: ({ row }) => {
@@ -156,7 +160,7 @@ export function OltPage() {
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  'flex h-9 w-9 items-center justify-center rounded-lg border text-[11px] font-bold shrink-0',
+                  'flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-bold shrink-0',
                   olt.onuTotal === 0
                     ? 'bg-muted/40 text-muted-foreground border-border/60'
                     : onlinePct >= 90
@@ -172,7 +176,7 @@ export function OltPage() {
                 <div className="font-semibold text-foreground text-[13px] leading-tight truncate">
                   {olt.name}
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{syncLabel(olt.lastSyncedAt)}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{syncLabel(t, olt.lastSyncedAt)}</div>
               </div>
             </div>
           );
@@ -180,17 +184,17 @@ export function OltPage() {
       },
       {
         accessorKey: 'brand',
-        header: 'Vendor',
+        header: t('admin.olt.page.colVendor', 'Vendor'),
         size: 130,
         cell: ({ row }) => (
-          <Badge variant="outline" className="font-medium bg-muted/30 text-[11px] px-2 py-0.5">
+          <Badge variant="outline" className="font-medium bg-muted/30 text-xs px-2 py-0.5">
             {brandLabel(row.original.brand)}
           </Badge>
         ),
       },
       {
         accessorKey: 'ip',
-        header: 'Host IP & Port',
+        header: t('admin.olt.page.colHost', 'Host IP & Port'),
         size: 170,
         cell: ({ row }) => (
           <div>
@@ -199,8 +203,8 @@ export function OltPage() {
               {row.original.port !== null && <span className="text-muted-foreground">:{row.original.port}</span>}
             </div>
             {row.original.username && (
-              <div className="font-mono text-[10px] text-muted-foreground">
-                user: {row.original.username}
+              <div className="font-mono text-xs text-muted-foreground">
+                {t('admin.olt.page.userLabel', 'user: {name}', { name: row.original.username })}
               </div>
             )}
           </div>
@@ -208,12 +212,12 @@ export function OltPage() {
       },
       {
         accessorKey: 'protocol',
-        header: 'Protocol',
+        header: t('admin.olt.page.colProtocol', 'Protocol'),
         size: 110,
         cell: ({ row }) => (
           <Badge
             variant="secondary"
-            className="uppercase font-mono text-[10px] tracking-wider px-2 py-0.5"
+            className="uppercase font-mono text-xs tracking-wider px-2 py-0.5"
           >
             {row.original.protocol || '—'}
           </Badge>
@@ -221,21 +225,21 @@ export function OltPage() {
       },
       {
         accessorKey: 'ponPorts',
-        header: 'PON Ports',
+        header: t('admin.olt.page.colPonPorts', 'PON Ports'),
         size: 110,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-xs font-semibold text-foreground">
               {row.original.ponPorts ?? '—'}
             </span>
-            {row.original.ponPorts !== null && <span className="text-[10px] text-muted-foreground">PON</span>}
+            {row.original.ponPorts !== null && <span className="text-xs text-muted-foreground">PON</span>}
           </div>
         ),
       },
       {
         id: 'onus',
         accessorKey: 'onuOnline',
-        header: 'Connected ONUs',
+        header: t('admin.olt.page.colOnus', 'Connected ONUs'),
         size: 180,
         cell: ({ row }) => (
           <div className="space-y-1.5">
@@ -244,11 +248,11 @@ export function OltPage() {
                 <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
                   {row.original.onuOnline}
                 </span>
-                <span className="text-[11px] text-muted-foreground">/ {row.original.onuTotal}</span>
+                <span className="text-xs text-muted-foreground">/ {row.original.onuTotal}</span>
               </div>
               <Link
                 href={`/admin/olt/${row.original.id}/onus`}
-                className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                className="text-xs text-primary hover:underline flex items-center gap-0.5"
               >
                 ONUs <ExternalLink className="h-2.5 w-2.5" />
               </Link>
@@ -259,12 +263,12 @@ export function OltPage() {
       },
       {
         accessorKey: 'enabled',
-        header: 'Status',
+        header: t('admin.customers.list.statusLabel', 'Status'),
         size: 110,
         cell: ({ row }) => (
           <StatusBadge
             status={row.original.enabled ? 'active' : 'disabled'}
-            label={row.original.enabled ? 'Enabled' : 'Disabled'}
+            label={row.original.enabled ? t('admin.olt.page.enabled', 'Enabled') : t('admin.olt.page.disabled', 'Disabled')}
           />
         ),
       },
@@ -274,14 +278,15 @@ export function OltPage() {
         size: 140,
         cell: ({ row }) => {
           const olt = row.original;
-          const noDriver = `No ${brandLabel(olt.brand)} driver on this server`;
+          const noDriver = t('admin.olt.page.noDriver', 'No {brand} driver on this server', { brand: brandLabel(olt.brand) });
           return (
             <div className="flex items-center justify-end gap-0.5">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:bg-amber-500/10"
-                title={olt.syncSupported ? 'Live ONU diagnostics' : noDriver}
+                title={olt.syncSupported ? t('admin.olt.page.diagnostics', 'Live ONU diagnostics') : noDriver}
+                aria-label={olt.syncSupported ? t('admin.olt.page.diagnostics', 'Live ONU diagnostics') : noDriver}
                 disabled={!olt.syncSupported}
                 onClick={() => setDiagnosticsOlt(olt)}
               >
@@ -291,7 +296,8 @@ export function OltPage() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:bg-orange-500/10"
-                title={olt.syncSupported ? 'Reset / refresh line' : noDriver}
+                title={olt.syncSupported ? t('admin.olt.page.resetLine', 'Reset / refresh line') : noDriver}
+                aria-label={olt.syncSupported ? t('admin.olt.page.resetLine', 'Reset / refresh line') : noDriver}
                 disabled={!olt.syncSupported}
                 onClick={() => setRebootTarget(olt)}
               >
@@ -302,7 +308,8 @@ export function OltPage() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:bg-muted"
-                title="Edit OLT"
+                title={t('admin.olt.page.edit', 'Edit OLT')}
+                aria-label={t('admin.olt.page.edit', 'Edit OLT')}
                 onClick={() => {
                   setSelectedOlt(olt);
                   setModalOpen(true);
@@ -314,7 +321,8 @@ export function OltPage() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 hover:bg-destructive/10"
-                title="Delete OLT"
+                title={t('admin.olt.page.delete', 'Delete OLT')}
+                aria-label={t('admin.olt.page.delete', 'Delete OLT')}
                 onClick={() => setDeleteTarget(olt)}
               >
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -324,7 +332,7 @@ export function OltPage() {
         },
       },
     ],
-    [brandLabel],
+    [brandLabel, t],
   );
 
   if (isLoading) {
@@ -334,33 +342,33 @@ export function OltPage() {
   if (isError || !data) {
     return (
       <div className="p-6">
-        <EmptyState
-          title="Failed to load OLT nodes"
-          description="Could not load GPON/EPON headend inventory."
-          actionLabel="Retry"
+        <EmptyState variant="error"
+          title={t('admin.olt.page.loadFailed', 'Failed to load OLT nodes')}
+          description={t('admin.olt.page.loadFailedHint', 'Could not load GPON/EPON headend inventory.')}
+          actionLabel={t('admin.customers.list.retry', 'Retry')}
           onAction={() => refetch()}
         />
       </div>
     );
   }
 
-  const brandItems = [{ value: ALL_BRANDS, label: 'All vendors' }, ...brands.map((b) => ({ value: b.value, label: b.label }))];
+  const brandItems = [{ value: ALL_BRANDS, label: t('admin.olt.page.allVendors', 'All vendors') }, ...brands.map((b) => ({ value: b.value, label: b.label }))];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="OLT Nodes (GPON / EPON)"
-        subtitle="Manage fiber terminal headends, PON ports and synchronized ONUs."
+        title={t('admin.olt.page.title', 'OLT Nodes (GPON / EPON)')}
+        subtitle={t('admin.olt.page.subtitle', 'Manage fiber terminal headends, PON ports and synchronized ONUs.')}
         breadcrumb={[
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Network Ops', href: '/admin/olt' },
-          { label: 'OLT Nodes' },
+          { label: t('nav.dashboard', 'Dashboard'), href: '/admin/dashboard' },
+          { label: t('admin.olt.page.breadcrumbNetwork', 'Network Ops'), href: '/admin/olt' },
+          { label: t('admin.olt.page.breadcrumbNodes', 'OLT Nodes') },
         ]}
         actions={
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={exporting || summary?.olts === 0} className="h-9">
               {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Export Directory
+              {t('admin.olt.page.export', 'Export Directory')}
             </Button>
             <Button
               size="sm"
@@ -371,7 +379,7 @@ export function OltPage() {
               className="h-9"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Onboard New OLT
+              {t('admin.olt.page.onboard', 'Onboard New OLT')}
             </Button>
           </div>
         }
@@ -381,55 +389,55 @@ export function OltPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">OLT Nodes</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.olt.page.kpiNodes', 'OLT Nodes')}</span>
             <Server className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {summary?.olts ?? 0}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">Registered headends</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('admin.olt.page.kpiNodesHint', 'Registered headends')}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Total ONUs</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.olt.page.kpiTotal', 'Total ONUs')}</span>
             <Radio className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {summary?.onusTotal ?? 0}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">From the last sync of each OLT</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('admin.olt.page.kpiTotalHint', 'From the last sync of each OLT')}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Online ONUs</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.olt.page.kpiOnline', 'Online ONUs')}</span>
             <Activity className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
             {summary?.onusOnline ?? 0}
           </div>
-          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{healthPct}% online</p>
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('admin.olt.page.kpiOnlineHint', '{pct}% online', { pct: healthPct })}</p>
         </div>
 
         <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur-sm shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium uppercase tracking-wider">Offline / LOS</span>
+            <span className="text-xs font-medium uppercase tracking-wider">{t('admin.olt.page.kpiOffline', 'Offline / LOS')}</span>
             <AlertTriangle className="h-4 w-4 text-rose-500" />
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
             {summary?.onusOffline ?? 0}
           </div>
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">Not online at last sync</p>
+          <p className="mt-1 text-xs text-rose-600 dark:text-rose-400 font-medium">{t('admin.olt.page.kpiOfflineHint', 'Not online at last sync')}</p>
         </div>
       </div>
 
-      <DataTable
+      <DataTable urlState
         columns={columns}
         data={list}
         isLoading={isFetching && !list.length}
         getRowId={(row) => row.id}
-        searchPlaceholder="Search OLT name, vendor or IP..."
+        searchPlaceholder={t('admin.olt.page.search', 'Search OLT name, vendor or IP...')}
         server={table.server(data.meta.total)}
         toolbarActions={
           <div className="w-44">
@@ -443,7 +451,7 @@ export function OltPage() {
               }}
             >
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="All vendors" />
+                <SelectValue placeholder={t('admin.olt.page.allVendors', 'All vendors')} />
               </SelectTrigger>
               <SelectContent>
                 {brandItems.map((b) => (
@@ -453,8 +461,12 @@ export function OltPage() {
             </Select>
           </div>
         }
-        emptyTitle="No OLT nodes found"
-        emptyDescription={search || brandFilter !== ALL_BRANDS ? 'No OLT matches the current search.' : 'Onboard an OLT to start synchronizing its ONUs.'}
+        emptyTitle={t('admin.olt.page.emptyTitle', 'No OLT nodes found')}
+        emptyDescription={
+          search || brandFilter !== ALL_BRANDS
+            ? t('admin.olt.page.emptyFiltered', 'No OLT matches the current search.')
+            : t('admin.olt.page.emptyHint', 'Onboard an OLT to start synchronizing its ONUs.')
+        }
       />
 
       <OltModal
@@ -477,18 +489,18 @@ export function OltPage() {
       <ConfirmDialog
         open={!!rebootTarget}
         onOpenChange={(open) => !open && setRebootTarget(null)}
-        title={`Reset ${rebootTarget?.name ?? 'OLT'} connection?`}
-        description="Sends the vendor line-refresh command to the OLT and clears its cached session. Connected subscribers may see a short interruption."
-        confirmLabel="Reset connection"
+        title={t('admin.olt.page.resetTitle', 'Reset {name} connection?', { name: rebootTarget?.name ?? 'OLT' })}
+        description={t('admin.olt.page.resetDesc', 'Sends the vendor line-refresh command to the OLT and clears its cached session. Connected subscribers may see a short interruption.')}
+        confirmLabel={t('admin.olt.page.resetConfirm', 'Reset connection')}
         onConfirm={handleReboot}
       />
 
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Remove OLT Node?"
-        description={`Remove ${deleteTarget?.name ?? 'this OLT'}? Its synchronized ONU records are deleted as well.`}
-        confirmLabel="Delete OLT"
+        title={t('admin.olt.page.removeTitle', 'Remove OLT Node?')}
+        description={t('admin.olt.page.removeDesc', 'Remove {name}? Its synchronized ONU records are deleted as well.', { name: deleteTarget?.name ?? t('admin.olt.page.thisOlt', 'this OLT') })}
+        confirmLabel={t('admin.olt.page.delete', 'Delete OLT')}
         destructive
         onConfirm={handleDelete}
       />
