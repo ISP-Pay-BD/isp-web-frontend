@@ -171,10 +171,12 @@ export function transformPermissionIdsToMap(permissionIds?: number[]): Permissio
 export interface BackendAuthData {
   user_id: number | string;
   name?: string;
+  user_name?: string;
   email?: string;
   mobile?: string;
   phone?: string;
-  role: string;
+  role?: string;
+  user_role?: string;
   status?: string;
   tenant_id?: number | string;
   permissions?: number[] | PermissionMap;
@@ -192,17 +194,19 @@ export function transformBackendAuthUser(data: BackendAuthData): User {
     permissions = data.permissions as PermissionMap;
   }
 
+  const rawRole = (data.role || data.user_role || '').trim();
+
   const roleNormalized: UserRole = (
-    ['super_admin', 'admin', 'resellerAdmin', 'employee', 'user'].includes(data.role)
-      ? data.role
-      : data.role === 'customer'
+    ['super_admin', 'admin', 'resellerAdmin', 'employee', 'user'].includes(rawRole)
+      ? rawRole
+      : rawRole === 'customer'
         ? 'user'
         : 'employee' // unknown staff designations get the least-privileged portal
   ) as UserRole;
 
   return {
     id: String(data.user_id),
-    name: data.name || (roleNormalized === 'super_admin' ? 'Super Admin' : 'User'),
+    name: data.name || data.user_name || (roleNormalized === 'super_admin' ? 'Super Admin' : 'User'),
     email: data.email || '',
     phone: data.mobile || data.phone || '',
     role: roleNormalized,

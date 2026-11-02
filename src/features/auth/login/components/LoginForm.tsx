@@ -1,11 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Zap,
+  Crown,
+  Shield,
+  Users,
+  UserCheck,
+  User,
+  ChevronRight,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -17,6 +28,7 @@ import { getPostLoginRedirect } from '@/lib/auth/route-access';
 import { brandAssets } from '@/config/assets';
 import { siteConfig } from '@/config/site';
 import { ApiError } from '@/lib/api/client';
+import { authService, type DebugAccountItem } from '@/lib/api/services/auth.service';
 import { useLocale } from '@/i18n/locale-context';
 import { loginSchema, type LoginFormValues } from '../schemas/login.schema';
 
@@ -28,10 +40,35 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsOtp, setNeedsOtp] = useState(false);
+  const [debugAccounts, setDebugAccounts] = useState<DebugAccountItem[]>([]);
+  const [quickLoginId, setQuickLoginId] = useState<number | null>(null);
+
+  const isDebugMode =
+    process.env.NEXT_PUBLIC_APP_ENV === 'debug' ||
+    process.env.NODE_ENV === 'development';
+
+  useEffect(() => {
+    if (!isDebugMode) return;
+    let cancelled = false;
+    authService
+      .getDebugAccounts()
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          setDebugAccounts(data);
+        }
+      })
+      .catch(() => {
+        // Silently skip if debug accounts endpoint is unavailable
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDebugMode]);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -51,6 +88,59 @@ export function LoginForm() {
         setNeedsOtp(true);
       }
       setError(err instanceof Error && err.message ? err.message : t('auth.login.failed', 'Sign in failed. Please try again.'));
+    }
+  };
+
+  const handleQuickLogin = async (acc: DebugAccountItem) => {
+    setError(null);
+    setQuickLoginId(acc.id);
+    setValue('email', acc.email);
+    setValue('password', 'debug');
+    try {
+      const user = await login(acc.email, 'debug');
+      toast.success(t('auth.login.welcomeToast', 'Welcome back, {name}', { name: user.name }));
+      const redirect = searchParams.get('redirect');
+      const destination = getPostLoginRedirect(user.role, redirect);
+      router.replace(destination);
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : 'Quick sign in failed');
+      setQuickLoginId(null);
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return {
+          icon: Crown,
+          label: 'Super Admin',
+          color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+        };
+      case 'admin':
+        return {
+          icon: Shield,
+          label: 'ISP Admin',
+          color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+        };
+      case 'resellerAdmin':
+        return {
+          icon: Users,
+          label: 'Reseller Admin',
+          color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+        };
+      case 'employee':
+        return {
+          icon: UserCheck,
+          label: 'Employee / Staff',
+          color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        };
+      case 'user':
+      default:
+        return {
+          icon: User,
+          label: 'Customer / Subscriber',
+          color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+        };
     }
   };
 
@@ -167,6 +257,68 @@ export function LoginForm() {
             {t('auth.login.createTrial', 'Create free trial')}
           </Link>
         </p>
+
+        {isDebugMode && debugAccounts.length > 0 ? (
+          <div className="rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4 dark:bg-amber-950/20 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5" /> Quick Access (Debug Mode)
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+                APP_ENV=debug
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Real database accounts per role. Click any card for instant 1-click access:
+            </p>
+            <div className="space-y-1.5">
+              {debugAccounts.map((acc) => {
+                const badge = getRoleBadge(acc.role);
+                const Icon = badge.icon;
+                const isLoggingIn = quickLoginId === acc.id;
+
+                return (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    disabled={isSubmitting || quickLoginId !== null}
+                    onClick={() => handleQuickLogin(acc)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background/90 hover:bg-accent/70 hover:border-primary/50 text-left transition-all group disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`p-1.5 rounded-lg border ${badge.color}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-foreground truncate max-w-[130px]">
+                            {acc.name}
+                          </span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${badge.color}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono truncate max-w-[210px]">
+                          {acc.email}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shrink-0 flex items-center text-primary group-hover:translate-x-0.5 transition-transform pl-1">
+                      {isLoggingIn ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

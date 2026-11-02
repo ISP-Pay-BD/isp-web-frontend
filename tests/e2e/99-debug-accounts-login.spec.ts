@@ -1,0 +1,70 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Debug Accounts Quick Login', () => {
+  test('renders debug accounts panel and allows 1-click login', async ({ page }) => {
+    await page.goto('/login');
+
+    // Expect the debug accounts panel to be visible when APP_ENV=debug
+    const debugHeading = page.getByText('Quick Access (Debug Mode)');
+    await expect(debugHeading).toBeVisible({ timeout: 10000 });
+
+    // Verify key roles and real users from database are displayed
+    await expect(page.getByText('Parvez Rahman')).toBeVisible();
+    await expect(page.getByText('parvezrahman9696@gmail.com')).toBeVisible();
+    await expect(page.getByText('Isppaybd', { exact: true })).toBeVisible();
+    await expect(page.getByText('info@isppaybd.com')).toBeVisible();
+    await expect(page.getByText('MD Bappy')).toBeVisible();
+    await expect(page.getByText('Sajid', { exact: true })).toBeVisible();
+    await expect(page.getByText('Pulok', { exact: true })).toBeVisible();
+
+    // Take screenshot of the debug login UI
+    await page.screenshot({
+      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/debug_accounts_screenshot.png',
+      fullPage: true,
+    });
+
+    // Click on Parvez Rahman (ISP Admin)
+    const parvezCard = page.locator('button', { hasText: 'parvezrahman9696@gmail.com' });
+    await parvezCard.click();
+
+    // Verify redirection to /admin/dashboard
+    await page.waitForURL('**/admin/**', { timeout: 15000 });
+    expect(page.url()).toContain('/admin');
+  });
+
+  test('Super Admin 1-click login redirects to /platform', async ({ page }) => {
+    await page.goto('/login');
+    const card = page.locator('button', { hasText: 'info@isppaybd.com' });
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.click();
+    await page.waitForURL('**/platform/**', { timeout: 15000 });
+    expect(page.url()).toContain('/platform');
+  });
+
+  test('Customer / Subscriber 1-click login redirects to /customer', async ({ page }) => {
+    await page.goto('/login');
+    const card = page.locator('button', { hasText: 'pulok138Hbag@rnb.com' });
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.click();
+    await page.waitForURL('**/customer/**', { timeout: 15000 });
+    expect(page.url()).toContain('/customer');
+  });
+
+  test('Employee 1-click login redirects to /employee', async ({ page }) => {
+    await page.goto('/login');
+    const card = page.locator('button', { hasText: 'sajid@gmail.com' });
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.click();
+    await page.waitForURL('**/employee/**', { timeout: 15000 });
+    expect(page.url()).toContain('/employee');
+  });
+
+  test('Reseller Admin 1-click login redirects to dashboard', async ({ page }) => {
+    await page.goto('/login');
+    const card = page.locator('button', { hasText: 'bappy1234@gmail.com' });
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.click();
+    await page.waitForURL(/\/admin\//, { timeout: 15000 });
+    expect(page.url()).toContain('/admin');
+  });
+});

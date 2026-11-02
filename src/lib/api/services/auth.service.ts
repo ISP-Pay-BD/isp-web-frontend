@@ -8,6 +8,17 @@ const AUTH_LOGIN = '/v1/auth/login';
 const AUTH_REFRESH = '/v1/auth/refresh';
 const AUTH_ME = '/v1/auth/me';
 const AUTH_RESET_PASSWORD = '/v1/auth/reset-password';
+const AUTH_DEBUG_ACCOUNTS = '/v1/auth/debug-accounts';
+
+export interface DebugAccountItem {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  role_label: string;
+  mobile?: string;
+  tenant_slug: string;
+}
 
 export interface LoginCredentials {
   email: string;
@@ -72,6 +83,15 @@ export const authService = {
   logout: async (): Promise<void> => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('isp_refresh_token');
+    }
+  },
+
+  getDebugAccounts: async (): Promise<DebugAccountItem[]> => {
+    try {
+      const data = await http.get<DebugAccountItem[]>(AUTH_DEBUG_ACCOUNTS);
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
     }
   },
 };
