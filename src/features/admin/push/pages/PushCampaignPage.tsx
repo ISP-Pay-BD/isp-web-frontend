@@ -160,7 +160,7 @@ export function PushCampaignPage() {
             Total Devices
           </div>
           <div className="text-2xl font-bold font-mono mt-2">{status?.total_devices ?? 0}</div>
-          <p className="text-[10px] text-muted-foreground mt-1">Registered tokens</p>
+          <p className="text-xs text-muted-foreground mt-1">Registered tokens</p>
         </Card>
 
         <Card className="p-4">
@@ -169,7 +169,7 @@ export function PushCampaignPage() {
             Android
           </div>
           <div className="text-2xl font-bold font-mono mt-2">{status?.android_devices ?? 0}</div>
-          <p className="text-[10px] text-muted-foreground mt-1">Google FCM tokens</p>
+          <p className="text-xs text-muted-foreground mt-1">Google FCM tokens</p>
         </Card>
 
         <Card className="p-4">
@@ -178,7 +178,7 @@ export function PushCampaignPage() {
             iOS
           </div>
           <div className="text-2xl font-bold font-mono mt-2">{status?.ios_devices ?? 0}</div>
-          <p className="text-[10px] text-muted-foreground mt-1">Apple APNs devices</p>
+          <p className="text-xs text-muted-foreground mt-1">Apple APNs devices</p>
         </Card>
 
         <Card className="p-4">
@@ -187,7 +187,7 @@ export function PushCampaignPage() {
             Web Browser
           </div>
           <div className="text-2xl font-bold font-mono mt-2">{status?.web_devices ?? 0}</div>
-          <p className="text-[10px] text-muted-foreground mt-1">Web push subscribers</p>
+          <p className="text-xs text-muted-foreground mt-1">Web push subscribers</p>
         </Card>
 
         <Card className="p-4">
@@ -196,7 +196,7 @@ export function PushCampaignPage() {
             Active Tenants
           </div>
           <div className="text-2xl font-bold font-mono mt-2">{status?.active_tenants ?? 0}</div>
-          <p className="text-[10px] text-muted-foreground mt-1">ISPs with active tokens</p>
+          <p className="text-xs text-muted-foreground mt-1">ISPs with active tokens</p>
         </Card>
       </div>
 
@@ -302,12 +302,12 @@ export function PushCampaignPage() {
           </CardHeader>
           <CardContent className="flex-1 flex items-center justify-center p-4">
             <div className="w-full max-w-[280px] rounded-2xl bg-slate-900 text-white p-4 shadow-2xl border border-slate-700/60 space-y-3">
-              <div className="flex items-center justify-between text-[10px] text-slate-400">
+              <div className="flex items-center justify-between text-xs text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <div className="h-3.5 w-3.5 rounded bg-primary flex items-center justify-center">
                     <Bell className="h-2 w-2 text-white" />
                   </div>
-                  <span className="font-semibold uppercase tracking-wider text-[9px] text-slate-300">ISP Billing</span>
+                  <span className="font-semibold uppercase tracking-wider text-xs text-slate-300">ISP Billing</span>
                 </div>
                 <span>Just now</span>
               </div>
@@ -316,7 +316,7 @@ export function PushCampaignPage() {
                 <h5 className="font-bold text-xs text-slate-100">
                   {title.trim() || 'Notification Title'}
                 </h5>
-                <p className="text-[11px] text-slate-300 mt-1 line-clamp-3">
+                <p className="text-xs text-slate-300 mt-1 line-clamp-3">
                   {body.trim() || 'Your notification message preview will render here just as it appears on customer phones.'}
                 </p>
               </div>
@@ -366,10 +366,10 @@ export function PushCampaignPage() {
                 <TableRow key={c.id}>
                   <TableCell>
                     <div className="font-semibold text-xs text-foreground">{c.title}</div>
-                    <div className="text-[11px] text-muted-foreground line-clamp-1">{c.body}</div>
+                    <div className="text-xs text-muted-foreground line-clamp-1">{c.body}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-[10px] capitalize">
+                    <Badge variant="outline" className="capitalize">
                       {c.audience_type}
                     </Badge>
                   </TableCell>
@@ -381,11 +381,11 @@ export function PushCampaignPage() {
                     {c.failed_deliveries}
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-0 text-[10px] gap-1">
+                    <Badge tone="success" className="gap-1">
                       <CheckCircle2 className="h-3 w-3" /> {c.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono text-[11px] text-muted-foreground">
+                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
                     {c.sent_at || c.created_at || '—'}
                   </TableCell>
                 </TableRow>

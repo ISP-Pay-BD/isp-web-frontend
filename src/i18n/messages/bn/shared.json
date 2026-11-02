@@ -27,7 +27,9 @@
       "tickets": "সাপোর্ট টিকেট",
       "switchAccount": "অ্যাকাউন্ট পরিবর্তন",
       "logout": "লগ আউট",
-      "login": "লগ ইন"
+      "login": "লগ ইন",
+      "markAllRead": "সব পঠিত হিসেবে চিহ্নিত করুন",
+      "notificationsMarkedRead": "সব নোটিফিকেশন পঠিত হিসেবে চিহ্নিত করা হয়েছে"
     },
     "shortcuts": {
       "title": "কীবোর্ড শর্টকাট",

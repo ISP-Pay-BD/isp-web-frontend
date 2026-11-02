@@ -18,26 +18,28 @@ tests/
 ## Commands
 
 ```bash
-pnpm test                  # All tests
+pnpm test                  # Unit, architecture, and ratchet tests (Vitest)
 pnpm test:architecture     # Structure / architecture only
 pnpm test:unit             # Unit tests only
+pnpm test:e2e              # Playwright End-to-End test suite (Chromium headless)
+pnpm test:e2e:ui           # Playwright E2E interactive UI mode
 pnpm test:watch            # Watch mode
 ```
 
 ## What architecture tests guard
 
-- Required folders exist (`features/`, `lib/mock-api/`, `mocks/`, etc.)
+- Required folders exist (`features/`, `components/`, etc.)
 - `tests/` is separate from `src/app/`
-- Mock API client exists as single data boundary
+- Clean API client exists as data boundary
 
 ## Adding tests
 
 | Type | Location | Example |
 |------|----------|---------|
 | Permission/utils | `tests/unit/` | `can.test.ts` |
-| Architecture rules | `tests/architecture/` | import boundary scans |
-| Component (later) | `tests/unit/components/` | Button renders |
-| E2E (Phase 7) | `tests/e2e/` | Playwright |
+| Architecture rules | `tests/architecture/` | import boundary scans & ui ratchets |
+| Component | `tests/unit/components/` | Button renders |
+| E2E | `tests/e2e/` | Playwright (`*.spec.ts`) |
 
 ## Rules
 

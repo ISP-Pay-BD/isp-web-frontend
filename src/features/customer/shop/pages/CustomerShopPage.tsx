@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { formatBdtWithSymbol } from '@/lib/format';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -128,25 +129,25 @@ export function CustomerShopPage() {
     switch (status.toLowerCase()) {
       case 'delivered':
         return (
-          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1">
+          <Badge tone="success" className="gap-1">
             <CheckCircle2 className="h-3 w-3" /> Delivered
           </Badge>
         );
       case 'processing':
         return (
-          <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 gap-1">
+          <Badge tone="info" className="gap-1">
             <Truck className="h-3 w-3" /> Processing
           </Badge>
         );
       case 'cancelled':
         return (
-          <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 gap-1">
+          <Badge tone="danger" className="gap-1">
             <XCircle className="h-3 w-3" /> Cancelled
           </Badge>
         );
       default:
         return (
-          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 gap-1">
+          <Badge tone="warning" className="gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
         );
@@ -225,7 +226,7 @@ export function CustomerShopPage() {
               {filteredProducts.map((p) => {
                 const inStock = p.stock_status !== 'out_of_stock' && p.stock_quantity > 0;
                 return (
-                  <Card key={p.id} className="flex flex-col overflow-hidden transition-all duration-200 hover:shadow-lg border-border/80">
+                  <Card key={p.id} className="flex flex-col overflow-hidden transition-shadow duration-200 hover:shadow-lg border-border/80">
                     <div className="aspect-video w-full bg-muted/30 relative flex items-center justify-center border-b">
                       {p.image ? (
                         <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
@@ -233,17 +234,17 @@ export function CustomerShopPage() {
                         <Package className="h-12 w-12 text-muted-foreground/40" />
                       )}
                       <span className="absolute top-2 left-2">
-                        <Badge variant="secondary" className="text-[10px] uppercase font-mono tracking-wide">
+                        <Badge variant="secondary" className="uppercase font-mono tracking-wide">
                           {p.category}
                         </Badge>
                       </span>
                       <span className="absolute top-2 right-2">
                         {inStock ? (
-                          <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-0 text-[10px]">
+                          <Badge tone="success">
                             In Stock
                           </Badge>
                         ) : (
-                          <Badge variant="destructive" className="text-[10px]">
+                          <Badge variant="destructive">
                             Out of Stock
                           </Badge>
                         )}
@@ -261,10 +262,10 @@ export function CustomerShopPage() {
 
                     <CardContent className="p-4 pt-0 flex-1 flex flex-col justify-end">
                       <div className="flex items-baseline gap-2 mt-3">
-                        <span className="text-lg font-bold text-foreground font-mono">৳{p.price.toLocaleString()}</span>
+                        <span className="text-lg font-bold text-foreground font-mono">{formatBdtWithSymbol(p.price)}</span>
                         {p.original_price && p.original_price > p.price && (
                           <span className="text-xs text-muted-foreground line-through font-mono">
-                            ৳{p.original_price.toLocaleString()}
+                            {formatBdtWithSymbol(p.original_price)}
                           </span>
                         )}
                       </div>
@@ -319,7 +320,7 @@ export function CustomerShopPage() {
                       <CardTitle className="text-base font-bold mt-1.5">{o.product_title}</CardTitle>
                     </div>
                     <div className="text-right">
-                      <div className="text-base font-bold font-mono text-foreground">৳{o.total_price.toLocaleString()}</div>
+                      <div className="text-base font-bold font-mono text-foreground">{formatBdtWithSymbol(o.total_price)}</div>
                       <div className="text-xs text-muted-foreground font-mono">Qty: {o.quantity}</div>
                     </div>
                   </CardHeader>
@@ -340,7 +341,7 @@ export function CustomerShopPage() {
                         <span className="font-semibold">Support Note:</span> {o.admin_notes}
                       </p>
                     )}
-                    <p className="text-[11px] text-muted-foreground/80 pt-1">
+                    <p className="text-xs text-muted-foreground/80 pt-1">
                       Ordered on: {o.created_at || 'Recently'}
                     </p>
                   </CardContent>
@@ -383,13 +384,13 @@ export function CustomerShopPage() {
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border">
                 <div>
                   <h4 className="font-semibold text-sm">{selectedProduct.title}</h4>
-                  <p className="text-xs text-muted-foreground">Unit Price: ৳{selectedProduct.price.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Unit Price: {formatBdtWithSymbol(selectedProduct.price)}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-bold font-mono text-primary">
-                    ৳{(selectedProduct.price * orderQuantity).toLocaleString()}
+                    {formatBdtWithSymbol(selectedProduct.price * orderQuantity)}
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-mono">Total</p>
+                  <p className="text-xs text-muted-foreground font-mono">Total</p>
                 </div>
               </div>
 

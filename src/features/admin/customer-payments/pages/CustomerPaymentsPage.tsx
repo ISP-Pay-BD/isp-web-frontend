@@ -142,7 +142,7 @@ export function CustomerPaymentsPage() {
             <div className="font-bold text-sm text-foreground flex items-center gap-1.5">
               <span>{row.original.customerName}</span>
               {row.original.cid && (
-                <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-primary/10 text-primary font-semibold">
+                <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">
                   {row.original.cid}
                 </span>
               )}

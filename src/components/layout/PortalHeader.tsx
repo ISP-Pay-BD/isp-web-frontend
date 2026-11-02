@@ -182,7 +182,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
             >
               <Bell className="h-4 w-4" />
               {unreadNotifications > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow">
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white shadow">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
@@ -192,7 +192,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold text-sm">{t('common.header.notifications', 'Notifications')}</h4>
                   {unreadNotifications > 0 && (
-                    <Badge variant="secondary" className="text-[11px] font-mono px-1.5 py-0">
+                    <Badge variant="secondary" className="text-xs font-mono px-1.5 py-0">
                       {unreadNotifications} new
                     </Badge>
                   )}
@@ -231,7 +231,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.message}</p>
                       {item.created_at && (
-                        <p className="text-[10px] text-muted-foreground/70 mt-1.5">{item.created_at}</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1.5">{item.created_at}</p>
                       )}
                     </div>
                   ))

@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { formatBdtWithSymbol } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -207,25 +208,25 @@ export function ShopManagementPage() {
     switch (status.toLowerCase()) {
       case 'delivered':
         return (
-          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1">
+          <Badge tone="success" className="gap-1">
             <CheckCircle2 className="h-3 w-3" /> Delivered
           </Badge>
         );
       case 'processing':
         return (
-          <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 gap-1">
+          <Badge tone="info" className="gap-1">
             <Truck className="h-3 w-3" /> Processing
           </Badge>
         );
       case 'cancelled':
         return (
-          <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 gap-1">
+          <Badge tone="danger" className="gap-1">
             <XCircle className="h-3 w-3" /> Cancelled
           </Badge>
         );
       default:
         return (
-          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 gap-1">
+          <Badge tone="warning" className="gap-1">
             <Clock className="h-3 w-3" /> Pending
           </Badge>
         );
@@ -327,31 +328,31 @@ export function ShopManagementPage() {
                           <div>
                             <div className="font-semibold text-sm">{p.title}</div>
                             {p.description && (
-                              <div className="text-[11px] text-muted-foreground line-clamp-1">{p.description}</div>
+                              <div className="text-xs text-muted-foreground line-clamp-1">{p.description}</div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[11px] capitalize">
+                        <Badge variant="outline" className="capitalize">
                           {p.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-mono font-bold text-sm">৳{p.price.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono font-bold text-sm">{formatBdtWithSymbol(p.price)}</TableCell>
                       <TableCell>
                         {p.stock_status === 'in_stock' ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-0 text-[10px]">
+                          <Badge tone="success">
                             In Stock
                           </Badge>
                         ) : (
-                          <Badge variant="destructive" className="text-[10px]">
+                          <Badge variant="destructive">
                             Out of Stock
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="font-mono text-sm">{p.stock_quantity}</TableCell>
                       <TableCell>
-                        <Badge variant={p.status === 'active' ? 'secondary' : 'outline'} className="text-[10px]">
+                        <Badge variant={p.status === 'active' ? 'secondary' : 'outline'}>
                           {p.status}
                         </Badge>
                       </TableCell>
@@ -429,18 +430,18 @@ export function ShopManagementPage() {
                       <TableCell className="font-mono text-xs font-bold">#{o.id}</TableCell>
                       <TableCell>
                         <div className="font-semibold text-xs">{o.customer_name}</div>
-                        <div className="text-[11px] text-muted-foreground font-mono">{o.customer_mobile}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{o.customer_mobile}</div>
                       </TableCell>
                       <TableCell className="font-medium text-xs">{o.product_title}</TableCell>
                       <TableCell className="font-mono text-xs">{o.quantity}</TableCell>
-                      <TableCell className="font-mono font-bold text-xs text-primary">৳{o.total_price.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono font-bold text-xs text-primary">{formatBdtWithSymbol(o.total_price)}</TableCell>
                       <TableCell>{getOrderStatusBadge(o.status)}</TableCell>
                       <TableCell className="max-w-[200px]">
                         <div className="text-xs text-muted-foreground truncate" title={o.delivery_address ?? ''}>
                           {o.delivery_address || '—'}
                         </div>
                         {o.notes && (
-                          <div className="text-[10px] text-muted-foreground/80 italic truncate" title={o.notes}>
+                          <div className="text-xs text-muted-foreground/80 italic truncate" title={o.notes}>
                             Note: {o.notes}
                           </div>
                         )}

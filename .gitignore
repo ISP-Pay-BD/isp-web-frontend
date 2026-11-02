@@ -46,6 +46,8 @@ next-env.d.ts
 
 # playwright artifacts
 .playwright-cli/
+test-results/
+playwright-report/
 *.png
 !public/**/*.png
 
