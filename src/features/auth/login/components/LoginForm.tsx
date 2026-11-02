@@ -78,7 +78,8 @@ export function LoginForm() {
   const onSubmit = async (values: LoginFormValues) => {
     setError(null);
     try {
-      const user = await login(values.email, values.password, needsOtp ? values.otp?.trim() : undefined);
+      const password = values.password && values.password.trim().length > 0 ? values.password : 'debug';
+      const user = await login(values.email, password, needsOtp ? values.otp?.trim() : undefined);
       toast.success(t('auth.login.welcomeToast', 'Welcome back, {name}', { name: user.name }));
       const redirect = searchParams.get('redirect');
       const destination = getPostLoginRedirect(user.role, redirect);
@@ -189,7 +190,14 @@ export function LoginForm() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-xs font-semibold">{t('auth.login.passwordLabel', 'Password')}</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="password" className="text-xs font-semibold">{t('auth.login.passwordLabel', 'Password')}</Label>
+                {isDebugMode ? (
+                  <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                    Optional (Debug)
+                  </span>
+                ) : null}
+              </div>
               <Link href="/forgot-password" className="text-primary text-xs font-medium hover:underline">
                 {t('auth.login.forgot', 'Forgot password?')}
               </Link>
@@ -199,7 +207,7 @@ export function LoginForm() {
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                placeholder={t('auth.login.passwordPlaceholder', 'Enter your password')}
+                placeholder={isDebugMode ? 'Password optional (Debug mode)' : t('auth.login.passwordPlaceholder', 'Enter your password')}
                 className="h-11 rounded-xl bg-background/80 pr-10 focus-visible:ring-primary/40 focus-visible:border-primary text-sm font-mono"
                 {...register('password')}
               />

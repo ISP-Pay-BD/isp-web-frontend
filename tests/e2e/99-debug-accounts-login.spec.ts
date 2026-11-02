@@ -67,4 +67,16 @@ test.describe('Debug Accounts Quick Login', () => {
     await page.waitForURL(/\/admin\//, { timeout: 15000 });
     expect(page.url()).toContain('/admin');
   });
+
+  test('manual login with email only (password skipped in debug mode) signs in successfully', async ({ page }) => {
+    await page.goto('/login');
+    // Type email only, leave password empty
+    await page.fill('#email', 'parvezrahman9696@gmail.com');
+    expect(await page.inputValue('#password')).toBe('');
+    // Click submit
+    await page.click('button[type="submit"]');
+    // Verify redirection to /admin/dashboard
+    await page.waitForURL('**/admin/**', { timeout: 15000 });
+    expect(page.url()).toContain('/admin');
+  });
 });
