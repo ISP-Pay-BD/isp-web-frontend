@@ -32,8 +32,13 @@ export interface BulkDeletePayload {
 export const adminService = {
   getDashboardStats: async (resellerId?: string | number): Promise<AdminDashboardResult> => {
     const finalId = resellerId || getResellerId();
-    const raw = await http.get<Record<string, unknown>>(`/v1/reseller/dashboard/${finalId}`);
-    return transformBackendDashboardStats(raw);
+    try {
+      const raw = await http.get<Record<string, unknown>>('/v1/dashboard/summary');
+      return transformBackendDashboardStats(raw);
+    } catch {
+      const raw = await http.get<Record<string, unknown>>(`/v1/reseller/dashboard/${finalId}`);
+      return transformBackendDashboardStats(raw);
+    }
   },
 
   bulkRecharge: async (payload: BulkRechargePayload, resellerId?: string | number) => {
