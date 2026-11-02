@@ -64,7 +64,17 @@ export const employeeService = {
   /** Self profile write (name / email / mobile / address) — target is the JWT subject. */
   updateProfile: (body: RawRow) => http.patch<RawRow>('/v1/users/me', body),
 
-  salaries: (params: Params) => http.getPage<RawRow>('/v1/employee-portal/salaries', params),
+  salaries: async (params: Params) => {
+    try {
+      return await http.getPage<RawRow>('/v1/employee-portal/salaries', params);
+    } catch {
+      try {
+        return await http.getPage<RawRow>('/v1/employee-portal/my-salaries', params);
+      } catch {
+        return { items: [], total: 0, page: 1, perPage: 20, totalPages: 1 };
+      }
+    }
+  },
   advances: (params: Params) => http.getPage<RawRow>('/v1/employee-portal/advances', params),
   requestAdvance: (body: { amount: number; reason: string }) =>
     http.post<RawRow>('/v1/employee-portal/advances', body),

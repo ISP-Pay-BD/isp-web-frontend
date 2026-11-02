@@ -101,4 +101,56 @@ test.describe('Debug Accounts Quick Login', () => {
       fullPage: true,
     });
   });
+
+  test('Super Admin platform dashboard loads without errors and displays platform metrics', async ({ page }) => {
+    await page.goto('/login');
+    const saCard = page.locator('button', { hasText: 'info@isppaybd.com' });
+    await expect(saCard).toBeVisible({ timeout: 10000 });
+    await saCard.click();
+
+    await page.waitForURL('**/platform/**', { timeout: 15000 });
+    await page.waitForTimeout(2000);
+
+    // Verify error card is NOT displayed
+    await expect(page.getByText('Failed to load platform dashboard')).not.toBeVisible();
+    await expect(page.locator('text=Failed to load platform dashboard')).toHaveCount(0);
+
+    // Save screenshot of the loaded platform dashboard
+    await page.screenshot({
+      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/platform_dashboard_success.png',
+      fullPage: true,
+    });
+  });
+
+  test('Customer portal dashboard loads without errors', async ({ page }) => {
+    await page.goto('/login');
+    const custCard = page.locator('button', { hasText: 'pulok138Hbag@rnb.com' });
+    await expect(custCard).toBeVisible({ timeout: 10000 });
+    await custCard.click();
+
+    await page.waitForURL('**/customer/**', { timeout: 15000 });
+    await page.waitForTimeout(2000);
+
+    // Save screenshot of customer portal
+    await page.screenshot({
+      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/customer_dashboard_success.png',
+      fullPage: true,
+    });
+  });
+
+  test('Employee portal dashboard loads without errors', async ({ page }) => {
+    await page.goto('/login');
+    const empCard = page.locator('button', { hasText: 'sajid@gmail.com' });
+    await expect(empCard).toBeVisible({ timeout: 10000 });
+    await empCard.click();
+
+    await page.waitForURL('**/employee/**', { timeout: 15000 });
+    await page.waitForTimeout(2000);
+
+    // Save screenshot of employee portal
+    await page.screenshot({
+      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/employee_dashboard_success.png',
+      fullPage: true,
+    });
+  });
 });

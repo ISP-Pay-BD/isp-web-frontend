@@ -355,21 +355,31 @@ function mapPoint(r: unknown) {
 export const platformService = {
   // Dashboard ------------------------------------------------------------
   getDashboard: async (): Promise<PlatformDashboardStats> => {
-    const d = camelizeKeys<Raw>(await http.get<Raw>('/v1/platform/stats'));
+    let raw: Raw;
+    try {
+      raw = await http.get<Raw>('/v1/platform/stats');
+    } catch {
+      raw = await http.get<Raw>('/v1/dashboard/sadmin-data');
+    }
+    const d = camelizeKeys<Raw>(raw);
     const top = Array.isArray(d.topTenants) ? (d.topTenants as Raw[]) : [];
     return {
-      totalTenants: num(d.totalTenants),
-      activeTenants: num(d.activeTenants),
-      trialTenants: num(d.trialTenants),
-      suspendedTenants: num(d.suspendedTenants),
-      portalsTotal: num(d.portalsTotal),
-      totalRevenue: num(d.totalRevenue),
-      monthRevenue: num(d.monthRevenue),
-      lastMonthRevenue: num(d.lastMonthRevenue),
+      totalTenants: num(d.totalTenants ?? d.tenantsTotal),
+      activeTenants: num(d.activeTenants ?? d.tenantsActive),
+      trialTenants: num(d.trialTenants ?? 0),
+      suspendedTenants: num(d.suspendedTenants ?? d.tenantsInactive),
+      portalsTotal: num(d.portalsTotal ?? d.tenantsTotal),
+      totalRevenue: num(d.totalRevenue ?? (num(d.platformRevenueAllCents) / 100)),
+      monthRevenue: num(d.monthRevenue ?? (num(d.platformRevenueThisMonthCents) / 100)),
+      lastMonthRevenue: num(d.lastMonthRevenue ?? (num(d.platformRevenueLastMonthCents) / 100)),
       growthPercentage: nullableNum(d.growthPercentage),
-      openTickets: num(d.openTickets),
-      totalActiveEndUsers: num(d.totalActiveEndUsers),
-      chartData: Array.isArray(d.chartData) ? d.chartData.map(mapPoint) : [],
+      openTickets: num(d.openTickets ?? 0),
+      totalActiveEndUsers: num(d.totalActiveEndUsers ?? 0),
+      chartData: Array.isArray(d.chartData)
+        ? d.chartData.map(mapPoint)
+        : Array.isArray(d.monthlyRevenue)
+          ? (d.monthlyRevenue as Raw[]).map(mapPoint)
+          : [],
       topTenants: top.map((t) => ({
         adminId: num(t.adminId),
         tenantId: nullableNum(t.tenantId),
@@ -384,8 +394,8 @@ export const platformService = {
       })),
       // recent contacts were camelized already — map from snake keys again is a no-op
       recentContacts: Array.isArray(d.recentContacts) ? (d.recentContacts as Raw[]).map(mapContact) : [],
-      systemStatus: str(d.systemStatus),
-      generatedAt: str(d.generatedAt),
+      systemStatus: str(d.systemStatus, 'operational'),
+      generatedAt: str(d.generatedAt, new Date().toISOString()),
     };
   },
 
@@ -493,10 +503,17 @@ export const platformService = {
 
   // Packages -------------------------------------------------------------
   getAdminPackages: async (): Promise<AdminPackagesPayload> => {
-    const d = await http.get<Raw>('/v1/platform/admin-packages');
+    let d: Raw;
+    try {
+      d = await http.get<Raw>('/v1/platform/admin-packages');
+    } catch {
+      const items = await http.get<Raw[]>('/v1/platform/plans');
+      d = { items: Array.isArray(items) ? items : [], total: Array.isArray(items) ? items.length : 0 };
+    }
+    const rawItems = Array.isArray(d.items) ? (d.items as Raw[]) : (Array.isArray(d) ? (d as unknown as Raw[]) : []);
     return {
-      items: (Array.isArray(d.items) ? (d.items as Raw[]) : []).map(mapPackage),
-      total: num(d.total),
+      items: rawItems.map(mapPackage),
+      total: num(d.total ?? rawItems.length),
       yearlyDiscountMonths: num(d.yearly_discount_months),
       yearlyDiscountPercent: num(d.yearly_discount_percent),
     };
