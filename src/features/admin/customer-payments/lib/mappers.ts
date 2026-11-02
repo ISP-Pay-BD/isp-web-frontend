@@ -54,10 +54,12 @@ export function mapPaymentRow(r: Raw): CustomerPaymentRow {
   const id = str(r.id);
   const methodRaw = str(r.paid_via);
   const name = str(r.customer_name);
+  const cidVal = str(r.cid) || str(r.customer_code);
   return {
     id,
     invoiceNo: str(r.invoice) || `#${id}`,
     customerId: str(r.user_id),
+    cid: cidVal || undefined,
     customerName: name && name !== '--' ? name : '—',
     customerMobile: str(r.customer_mobile),
     amountBdt: num(r.amount),

@@ -9,6 +9,7 @@ export interface CustomerPaymentRow {
   id: string;
   invoiceNo: string;
   customerId: string;
+  cid?: string;
   customerName: string;
   customerMobile: string;
   amountBdt: number;

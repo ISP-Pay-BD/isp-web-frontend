@@ -7,6 +7,7 @@ import {
   CreditCard,
   ChevronDown,
   Bell,
+  CheckCheck,
   ArrowRightLeft,
   LifeBuoy,
   Palette,
@@ -18,7 +19,9 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { LocaleToggle } from '@/components/shared/LocaleToggle';
+import { notificationService, type AppNotification } from '@/lib/api/services/notification.service';
 import { useTranslations } from '@/i18n/locale-context';
 import { ThemeCustomizerModal } from './ThemeCustomizerModal';
 import { ThemeToggle } from './ThemeToggle';
@@ -50,6 +53,9 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
   const logout = useAuthStore((s) => s.logout);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [themeCustomizerOpen, setThemeCustomizerOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationsList, setNotificationsList] = useState<AppNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const showCommandPalette = true;
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
@@ -74,6 +80,28 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  useEffect(() => {
+    notificationService.getUnreadCount().then((count) => setUnreadNotifications(count));
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    const list = await notificationService.getNotifications(1, 10);
+    setNotificationsList(list);
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    await notificationService.markAllAsRead();
+    setUnreadNotifications(0);
+    setNotificationsList((prev) => prev.map((n) => ({ ...n, read: true })));
+    toast.success(t('common.header.notificationsMarkedRead', 'All notifications marked as read'));
+  };
+
+  const handleMarkItemRead = async (id: number) => {
+    await notificationService.markAsRead(id);
+    setUnreadNotifications((prev) => Math.max(0, prev - 1));
+    setNotificationsList((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
 
   const handleLogout = () => {
     logout();
@@ -139,16 +167,78 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
             </Button>
           ) : null}
 
-          {/* Quick Notifications */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:bg-accent hover:text-foreground relative h-10 w-10 rounded-lg border border-transparent sm:h-8 sm:w-8 transition-colors hover:border-border"
-            onClick={() => toast.info(t('common.header.noNotifications', 'You are all caught up'))}
-            aria-label={t('common.header.notifications', 'Notifications')}
+          {/* Live Notifications Popover */}
+          <Popover
+            open={notificationsOpen}
+            onOpenChange={(open) => {
+              setNotificationsOpen(open);
+              if (open) loadNotifications();
+            }}
           >
-            <Bell className="h-4 w-4" />
-          </Button>
+            <PopoverTrigger
+              type="button"
+              className="text-muted-foreground hover:bg-accent hover:text-foreground relative flex h-10 w-10 items-center justify-center rounded-lg border border-transparent sm:h-8 sm:w-8 transition-colors hover:border-border cursor-pointer"
+              aria-label={t('common.header.notifications', 'Notifications')}
+            >
+              <Bell className="h-4 w-4" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 sm:w-96 p-0 shadow-xl border-border">
+              <div className="flex items-center justify-between border-b px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold text-sm">{t('common.header.notifications', 'Notifications')}</h4>
+                  {unreadNotifications > 0 && (
+                    <Badge variant="secondary" className="text-[11px] font-mono px-1.5 py-0">
+                      {unreadNotifications} new
+                    </Badge>
+                  )}
+                </div>
+                {unreadNotifications > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1"
+                    onClick={handleMarkAllRead}
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    {t('common.header.markAllRead', 'Mark all read')}
+                  </Button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
+                {notificationsList.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    {t('common.header.noNotifications', 'You are all caught up')}
+                  </div>
+                ) : (
+                  notificationsList.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => !item.read && handleMarkItemRead(item.id)}
+                      className={`p-3 text-left transition-colors cursor-pointer hover:bg-muted/50 ${
+                        !item.read ? 'bg-primary/5 font-medium' : 'text-muted-foreground'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-foreground line-clamp-1">{item.title}</p>
+                        {!item.read && (
+                          <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-0.5" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.message}</p>
+                      {item.created_at && (
+                        <p className="text-[10px] text-muted-foreground/70 mt-1.5">{item.created_at}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           {/* Theme Studio Customizer Trigger Button */}
           <Button

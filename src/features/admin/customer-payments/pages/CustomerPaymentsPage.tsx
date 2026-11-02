@@ -139,7 +139,14 @@ export function CustomerPaymentsPage() {
         size: 190,
         cell: ({ row }) => (
           <div>
-            <div className="font-bold text-sm text-foreground">{row.original.customerName}</div>
+            <div className="font-bold text-sm text-foreground flex items-center gap-1.5">
+              <span>{row.original.customerName}</span>
+              {row.original.cid && (
+                <span className="text-[11px] font-mono px-1.5 py-0.2 rounded bg-primary/10 text-primary font-semibold">
+                  {row.original.cid}
+                </span>
+              )}
+            </div>
             <div className="text-xs text-muted-foreground font-mono">
               {t('admin.customerPayments.list.id', 'ID')}: {row.original.customerId}
               {row.original.customerMobile ? ` · ${row.original.customerMobile}` : ''}

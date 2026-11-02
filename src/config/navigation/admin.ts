@@ -337,6 +337,15 @@ export const adminNavigation: NavItem[] = [
       { id: 'purchase-vendors', label: 'Vendors', href: '/admin/purchase/vendors' },
     ],
   },
+  {
+    id: 'shop-manage',
+    label: 'Equipment Shop',
+    href: '/admin/shop',
+    icon: 'ShoppingBag',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Finance & Back Office',
+    hideWhenExpired: true,
+  },
 
   // ── Network ────────────────────────────────────────────────
   {
@@ -514,6 +523,15 @@ export const adminNavigation: NavItem[] = [
     label: 'Announcements',
     href: '/admin/announcements',
     icon: 'Megaphone',
+    roles: ['admin', 'resellerAdmin'],
+    section: 'Messaging & Engagement',
+    hideWhenExpired: true,
+  },
+  {
+    id: 'push-notifications',
+    label: 'Push Notifications',
+    href: '/admin/push',
+    icon: 'Bell',
     roles: ['admin', 'resellerAdmin'],
     section: 'Messaging & Engagement',
     hideWhenExpired: true,

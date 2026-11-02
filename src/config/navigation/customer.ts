@@ -64,6 +64,14 @@ export const customerNavigation: NavItem[] = [
     hideWhenExpired: true,
   },
   {
+    id: 'customer-shop',
+    label: 'Equipment Shop',
+    href: '/customer/shop',
+    icon: 'ShoppingBag',
+    roles: ['user'],
+    hideWhenExpired: true,
+  },
+  {
     id: 'customer-rewards',
     label: 'Rewards',
     href: '/customer/rewards',
