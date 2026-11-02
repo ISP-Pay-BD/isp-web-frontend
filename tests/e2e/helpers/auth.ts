@@ -36,6 +36,15 @@ export const PLATFORM_SESSION: TestUserSession = {
   tenantId: 'platform_system',
 };
 
+export const EMPLOYEE_SESSION: TestUserSession = {
+  id: 'emp_e2e_01',
+  name: 'Field Technician Employee',
+  email: 'technician@isppaybd.com',
+  role: 'employee',
+  status: 'active',
+  tenantId: 'tenant_001',
+};
+
 export async function loginAs(context: BrowserContext, page: Page, session: TestUserSession) {
   // 1. Set the server-side proxy cookie
   const cookiePayload = {
