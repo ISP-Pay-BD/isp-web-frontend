@@ -50,6 +50,7 @@ export function AdminPaymentPage() {
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [payFor, setPayFor] = useState<PlatformPayment | null>(null);
   const [gateway, setGateway] = useState('');
+  const [trxId, setTrxId] = useState('');
   const receipt = usePaymentReceipt(receiptId);
   const subscription = useAdminSubscription({ enabled: Boolean(payFor) });
   const checkout = usePlatformCheckout();
@@ -274,13 +275,21 @@ export function AdminPaymentPage() {
           ) : subscription.isError ? (
             <p className="text-xs text-destructive">{errorMessage(subscription.error)}</p>
           ) : (
-            <GatewayPicker providers={providers} value={gateway} onChange={setGateway} />
+            <>
+              <GatewayPicker providers={providers} value={gateway} onChange={setGateway} />
+              <input
+                value={trxId}
+                onChange={(e) => setTrxId(e.target.value)}
+                placeholder={t('admin.payment.page.trxPlaceholder', 'Transaction ID (after you send the payment)')}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </>
           )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPayFor(null)}>{t('common.cancel', 'Cancel')}</Button>
             <Button
               disabled={!payFor || !gateway || checkout.isPending}
-              onClick={() => payFor && checkout.mutate({ paymentId: payFor.id, gateway })}
+              onClick={() => payFor && checkout.mutate({ paymentId: payFor.id, gateway, trxId }, { onSuccess: (d) => d?.manual && d.status === 'pending' && setPayFor(null) })}
             >
               {checkout.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CreditCard className="mr-1.5 h-4 w-4" />}
               {t('admin.payment.page.continue', 'Continue to gateway')}

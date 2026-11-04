@@ -136,7 +136,9 @@ export function useWalletTopup() {
     onSuccess: (data) => {
       invalidatePlatformBilling(qc);
       const url = str(data?.redirect_url);
-      if (url) {
+      if (data?.manual) {
+        toast.message(t('admin.wallet.toast.topupManual', 'Top-up request saved. Pay it from Payments by entering your transaction ID.'));
+      } else if (url) {
         toast.message(t('admin.wallet.toast.topupRedirect', 'Top-up invoice created — redirecting to the payment gateway…'));
         window.location.assign(url);
       } else {

@@ -131,7 +131,9 @@ export function useSelfRecharge() {
     onSuccess: (data) => {
       invalidatePlatformBilling(qc);
       const url = str(data?.redirect_url);
-      if (url) {
+      if (data?.manual) {
+        toast.message(t('admin.subscription.selfRecharge.manualInvoice', 'Invoice created. Pay it from Payments by entering your transaction ID.'));
+      } else if (url) {
         toast.message(t('admin.subscription.selfRecharge.invoiceRedirect', 'Invoice created — redirecting to the payment gateway…'));
         window.location.assign(url);
       } else {

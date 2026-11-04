@@ -32,10 +32,22 @@ export function invalidatePlatformBilling(qc: ReturnType<typeof useQueryClient>)
  */
 export function usePlatformCheckout() {
   const t = useTranslations();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ paymentId, gateway }: { paymentId: string; gateway: string }) =>
-      http.post<Record<string, unknown>>(`/v1/reseller/billing/checkout/${gateway}`, { payment_id: Number(paymentId) }),
+    mutationFn: async ({ paymentId, gateway, trxId }: { paymentId: string; gateway: string; trxId?: string }) =>
+      http.post<Record<string, unknown>>(`/v1/reseller/billing/checkout/${gateway}`, {
+        // Ledger ids are "inv-12" / "top-3"; the backend also takes a bare number.
+        payment_id: /^\d+$/.test(paymentId) ? Number(paymentId) : paymentId,
+        trx_id: trxId?.trim() || undefined,
+      }),
     onSuccess: (data) => {
+      invalidatePlatformBilling(qc);
+      // Manual flow: no gateway page — the trx id goes to the platform team for review.
+      if (data?.manual) {
+        if (str(data.status) === 'pending') toast.success(t('admin.payment.toast.submitted', 'Payment submitted. The platform team will confirm it shortly.'));
+        else toast.message(str(data.instructions) || t('admin.payment.toast.sendThenSubmit', 'Send the payment, then enter the transaction id.'));
+        return;
+      }
       const url = str(data?.redirect_url ?? data?.gateway_page_url);
       if (url) {
         toast.message(t('admin.payment.toast.redirecting', 'Redirecting to the payment gateway…'));
