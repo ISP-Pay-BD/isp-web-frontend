@@ -71,7 +71,7 @@ export const employeeService = {
       try {
         return await http.getPage<RawRow>('/v1/employee-portal/my-salaries', params);
       } catch {
-        return { items: [], total: 0, page: 1, perPage: 20, totalPages: 1 };
+        return { items: [], meta: { total: 0, page: 1, perPage: 20, totalPages: 1 }, raw: {} };
       }
     }
   },
