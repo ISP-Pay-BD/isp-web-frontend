@@ -32,6 +32,12 @@ import bnMore16 from './messages/bn/admin-more-16.json';
 import bnMore17 from './messages/bn/admin-more-17.json';
 import bnMore18 from './messages/bn/admin-more-18.json';
 import bnMore19 from './messages/bn/admin-more-19.json';
+import bnPlatformOps from './messages/bn/platform-ops.json';
+import bnUplinksAiKnowledge from './messages/bn/uplinks-ai-knowledge.json';
+import bnBillingEmployeeOps from './messages/bn/billing-employee-ops.json';
+import bnContentCms from './messages/bn/content-cms.json';
+import bnWave2Wiring from './messages/bn/wave2-wiring.json';
+import bnPublicPay from './messages/bn/public-pay.json';
 import type { AppLocale } from './config';
 
 type Tree = { [key: string]: string | Tree };
@@ -40,7 +46,9 @@ function merge(target: Tree, source: Tree): Tree {
   for (const [key, value] of Object.entries(source)) {
     const existing = target[key];
     target[key] =
-      typeof value === 'object' && typeof existing === 'object' ? merge(existing, value) : (value as string | Tree);
+      typeof value === 'object' && typeof existing === 'object'
+        ? merge(existing, value)
+        : (value as string | Tree);
   }
   return target;
 }
@@ -50,10 +58,44 @@ function merge(target: Tree, source: Tree): Tree {
  * each file nests under its own top-level key (`customer`, `employee`, `admin`, `common`…).
  * English is the fallback written at the call site: `t('customer.pay.title', 'Pay your bill')`.
  */
-const bn = [bnCustomerHome, bnCustomerDashboard, bnCustomerPayments, bnCustomerRouter, bnCustomerSupport, bnCustomerAccount, bnEmployee, bnAdmin, bnAdminSupport, bnAdminOps, bnMore1, bnMore2, bnMore3, bnMore4, bnMore5, bnMore6, bnMore7, bnMore8, bnMore9, bnMore10, bnMore11, bnMore12, bnMore13, bnMore14, bnMore15, bnMore16, bnMore17, bnMore18, bnMore19, bnShared].reduce<Tree>(
-  (acc, part) => merge(acc, part as Tree),
-  structuredClone(bnBase) as Tree,
-);
+const bn = [
+  bnCustomerHome,
+  bnCustomerDashboard,
+  bnCustomerPayments,
+  bnCustomerRouter,
+  bnCustomerSupport,
+  bnCustomerAccount,
+  bnEmployee,
+  bnAdmin,
+  bnAdminSupport,
+  bnAdminOps,
+  bnMore1,
+  bnMore2,
+  bnMore3,
+  bnMore4,
+  bnMore5,
+  bnMore6,
+  bnMore7,
+  bnMore8,
+  bnMore9,
+  bnMore10,
+  bnMore11,
+  bnMore12,
+  bnMore13,
+  bnMore14,
+  bnMore15,
+  bnMore16,
+  bnMore17,
+  bnMore18,
+  bnMore19,
+  bnPlatformOps,
+  bnUplinksAiKnowledge,
+  bnBillingEmployeeOps,
+  bnContentCms,
+  bnWave2Wiring,
+  bnPublicPay,
+  bnShared,
+].reduce<Tree>((acc, part) => merge(acc, part as Tree), structuredClone(bnBase) as Tree);
 
 export const messages = { en: en as Tree, bn } as const;
 
@@ -62,7 +104,9 @@ export type Messages = typeof en;
 export type TranslateVars = Record<string, string | number>;
 
 export function interpolate(message: string, vars?: TranslateVars): string {
-  return vars ? message.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? `{${name}}`)) : message;
+  return vars
+    ? message.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? `{${name}}`))
+    : message;
 }
 
 /** Simple nested key lookup: `marketing.hero.title`. Returns the path itself when the key is missing. */

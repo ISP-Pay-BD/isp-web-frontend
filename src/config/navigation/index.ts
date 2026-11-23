@@ -25,6 +25,39 @@ export function getNavigationForRole(role: UserRole, isExpired: boolean): NavIte
 
 export const employeeNavigation: NavItem[] = [
   {
+    id: 'emp-dashboard',
+    label: 'Dashboard',
+    href: '/employee/dashboard',
+    icon: 'LayoutDashboard',
+    roles: ['employee'],
+  },
+  // Admin-endpoint screens: shown only with the employee's real permission (login / `GET /v1/auth/me`
+  // `permission_codes`, lane W2-R13) — the same codes the API gates these calls on.
+  {
+    id: 'emp-collect-payment',
+    label: 'Collect Payment',
+    href: '/employee/collect-payment',
+    icon: 'HandCoins',
+    roles: ['employee'],
+    permission: { menu: 'customer_payment', action: 'create' },
+  },
+  {
+    id: 'emp-add-customer',
+    label: 'Add Customer',
+    href: '/employee/customers/new',
+    icon: 'Users',
+    roles: ['employee'],
+    permission: { menu: 'customer', action: 'create' },
+  },
+  {
+    id: 'emp-tickets',
+    label: 'Tickets',
+    href: '/employee/tickets',
+    icon: 'Ticket',
+    roles: ['employee'],
+    permission: { menu: 'support_ticket', action: 'read' },
+  },
+  {
     id: 'emp-salaries',
     label: 'Salaries',
     href: '/employee/salaries',

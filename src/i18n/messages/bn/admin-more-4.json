@@ -300,6 +300,9 @@
         "fieldName": "প্যাকেজের নাম",
         "fieldPrice": "মূল্য (৳)",
         "fieldSellingPrice": "বিক্রয়মূল্য (৳, ঐচ্ছিক)",
+        "fieldPreview": "প্রিভিউ দিন (ঐচ্ছিক)",
+        "previewHint": "এই প্যাকেজের নতুন গ্রাহক প্রথম বিলের আগে কত দিন পরিশোধিত থাকবেন। ০ = এখনই বিল; ফাঁকা = প্যাকেজের মেয়াদ।",
+        "previewDays": "প্রিভিউ দিন",
         "gridView": "গ্রিড ভিউ",
         "idLabel": "আইডি: {id}",
         "kpiActive": "সক্রিয় প্যাকেজ",
@@ -518,6 +521,7 @@
     "password_must_be_at_least_6_characters": "পাসওয়ার্ড কমপক্ষে ছয় অক্ষরের হতে হবে",
     "package_name_required": "প্যাকেজের নাম দিতে হবে",
     "bandwidth_is_required": "ব্যান্ডউইথ দিতে হবে",
-    "enter_a_valid_price": "সঠিক মূল্য লিখুন"
+    "enter_a_valid_price": "সঠিক মূল্য লিখুন",
+    "enter_whole_days_0_or_more": "পূর্ণ দিন লিখুন (০ বা বেশি)"
   }
 }

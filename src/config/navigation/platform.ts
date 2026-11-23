@@ -68,6 +68,34 @@ export const platformNavigation: NavItem[] = [
     roles: ['super_admin'],
   },
   {
+    id: 'platform-blogs',
+    label: 'Blog Posts',
+    href: '/platform/blogs',
+    icon: 'Newspaper',
+    roles: ['super_admin'],
+  },
+  {
+    id: 'platform-templates',
+    label: 'Website Templates',
+    href: '/platform/templates',
+    icon: 'Palette',
+    roles: ['super_admin'],
+  },
+  {
+    id: 'platform-reviews',
+    label: 'Reviews & Testimonials',
+    href: '/platform/reviews',
+    icon: 'MessageSquare',
+    roles: ['super_admin'],
+  },
+  {
+    id: 'platform-ai-knowledge',
+    label: 'AI Knowledge Base',
+    href: '/platform/ai-knowledge',
+    icon: 'Bot',
+    roles: ['super_admin'],
+  },
+  {
     id: 'platform-plugins',
     label: 'Plugins & Addons',
     href: '/platform/plugins',
@@ -103,6 +131,20 @@ export const platformNavigation: NavItem[] = [
     roles: ['super_admin'],
   },
   {
+    id: 'platform-system-settings',
+    label: 'System Settings',
+    href: '/platform/settings/system',
+    icon: 'Layers',
+    roles: ['super_admin'],
+  },
+  {
+    id: 'platform-cron',
+    label: 'Cron Jobs',
+    href: '/platform/cron',
+    icon: 'Calendar',
+    roles: ['super_admin'],
+  },
+  {
     id: 'platform-redis',
     label: 'Redis & Logs',
     href: '/platform/redis-logs',
@@ -122,8 +164,6 @@ export const platformNavigation: NavItem[] = [
     icon: 'Workflow',
     roles: ['super_admin'],
     section: 'Engines',
-    children: [
-      { id: 'platform-engines-index', label: 'All Engines', href: '/platform/engines' },
-    ],
+    children: [{ id: 'platform-engines-index', label: 'All Engines', href: '/platform/engines' }],
   },
 ];
