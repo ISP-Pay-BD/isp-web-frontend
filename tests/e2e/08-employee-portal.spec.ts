@@ -13,7 +13,7 @@ test.describe('Employee Portal End-to-End Journeys', () => {
     await expect(page.locator('header')).toBeVisible();
 
     // Verify employee identity is rendered in header or sidebar
-    const profileBtn = page.getByText(/Field Technician Employee/i).first();
+    const profileBtn = page.getByText(new RegExp(EMPLOYEE_SESSION.name, 'i')).first();
     await expect(profileBtn).toBeVisible();
 
     // Verify attendance and employee navigation links
@@ -27,7 +27,7 @@ test.describe('Employee Portal End-to-End Journeys', () => {
     await page.goto('/employee/profile');
 
     // Profile page should show employee details
-    await expect(page.getByText('technician@isppaybd.com').first()).toBeVisible();
+    await expect(page.getByText(EMPLOYEE_SESSION.email).first()).toBeVisible();
   });
 
   test('enforces role isolation: employee is blocked from admin portal', async ({ page }) => {

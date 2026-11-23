@@ -9,23 +9,17 @@ test.describe('Debug Accounts Quick Login', () => {
     await expect(debugHeading).toBeVisible({ timeout: 10000 });
 
     // Verify key roles and real users from database are displayed
-    await expect(page.getByText('Parvez Rahman')).toBeVisible();
-    await expect(page.getByText('parvezrahman9696@gmail.com')).toBeVisible();
-    await expect(page.getByText('Isppaybd', { exact: true })).toBeVisible();
-    await expect(page.getByText('info@isppaybd.com')).toBeVisible();
-    await expect(page.getByText('MD Bappy')).toBeVisible();
-    await expect(page.getByText('Sajid', { exact: true })).toBeVisible();
-    await expect(page.getByText('Pulok', { exact: true })).toBeVisible();
+    await expect(page.getByText('Alpha Owner')).toBeVisible();
+    await expect(page.getByText('owner@example.com')).toBeVisible();
+    await expect(page.getByText('Super Admin', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('root@isppaybd.local')).toBeVisible();
+    await expect(page.getByText('Alpha POP')).toBeVisible();
+    await expect(page.getByText('Alpha Emp')).toBeVisible();
+    await expect(page.getByText('Alpha User')).toBeVisible();
 
-    // Take screenshot of the debug login UI
-    await page.screenshot({
-      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/debug_accounts_screenshot.png',
-      fullPage: true,
-    });
-
-    // Click on Parvez Rahman (ISP Admin)
-    const parvezCard = page.locator('button', { hasText: 'parvezrahman9696@gmail.com' });
-    await parvezCard.click();
+    // Click on Alpha Owner (ISP Admin)
+    const ownerCard = page.locator('button', { hasText: 'owner@example.com' });
+    await ownerCard.click();
 
     // Verify redirection to /admin/dashboard
     await page.waitForURL('**/admin/**', { timeout: 15000 });
@@ -34,7 +28,7 @@ test.describe('Debug Accounts Quick Login', () => {
 
   test('Super Admin 1-click login redirects to /platform', async ({ page }) => {
     await page.goto('/login');
-    const card = page.locator('button', { hasText: 'info@isppaybd.com' });
+    const card = page.locator('button', { hasText: 'root@isppaybd.local' });
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
     await page.waitForURL('**/platform/**', { timeout: 15000 });
@@ -43,7 +37,7 @@ test.describe('Debug Accounts Quick Login', () => {
 
   test('Customer / Subscriber 1-click login redirects to /customer', async ({ page }) => {
     await page.goto('/login');
-    const card = page.locator('button', { hasText: 'pulok138Hbag@rnb.com' });
+    const card = page.locator('button', { hasText: 'user@alpha.example' });
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
     await page.waitForURL('**/customer/**', { timeout: 15000 });
@@ -52,7 +46,7 @@ test.describe('Debug Accounts Quick Login', () => {
 
   test('Employee 1-click login redirects to /employee', async ({ page }) => {
     await page.goto('/login');
-    const card = page.locator('button', { hasText: 'sajid@gmail.com' });
+    const card = page.locator('button', { hasText: 'emp@alpha.example' });
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
     await page.waitForURL('**/employee/**', { timeout: 15000 });
@@ -61,7 +55,7 @@ test.describe('Debug Accounts Quick Login', () => {
 
   test('Reseller Admin 1-click login redirects to dashboard', async ({ page }) => {
     await page.goto('/login');
-    const card = page.locator('button', { hasText: 'bappy1234@gmail.com' });
+    const card = page.locator('button', { hasText: 'pop@alpha.example' });
     await expect(card).toBeVisible({ timeout: 10000 });
     await card.click();
     await page.waitForURL(/\/admin\//, { timeout: 15000 });
@@ -71,7 +65,7 @@ test.describe('Debug Accounts Quick Login', () => {
   test('manual login with email only (password skipped in debug mode) signs in successfully', async ({ page }) => {
     await page.goto('/login');
     // Type email only, leave password empty
-    await page.fill('#email', 'parvezrahman9696@gmail.com');
+    await page.fill('#email', 'owner@example.com');
     expect(await page.inputValue('#password')).toBe('');
     // Click submit
     await page.click('button[type="submit"]');
@@ -82,9 +76,9 @@ test.describe('Debug Accounts Quick Login', () => {
 
   test('Admin dashboard loads successfully without errors and displays live metrics', async ({ page }) => {
     await page.goto('/login');
-    const parvezCard = page.locator('button', { hasText: 'parvezrahman9696@gmail.com' });
-    await expect(parvezCard).toBeVisible({ timeout: 10000 });
-    await parvezCard.click();
+    const ownerCard = page.locator('button', { hasText: 'owner@example.com' });
+    await expect(ownerCard).toBeVisible({ timeout: 10000 });
+    await ownerCard.click();
 
     await page.waitForURL('**/admin/dashboard', { timeout: 15000 });
     await page.waitForTimeout(2000);
@@ -94,17 +88,11 @@ test.describe('Debug Accounts Quick Login', () => {
 
     // Verify key dashboard widgets and content load
     await expect(page.locator('text=Failed to load dashboard')).toHaveCount(0);
-
-    // Save screenshot of the loaded admin dashboard
-    await page.screenshot({
-      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/admin_dashboard_success.png',
-      fullPage: true,
-    });
   });
 
   test('Super Admin platform dashboard loads without errors and displays platform metrics', async ({ page }) => {
     await page.goto('/login');
-    const saCard = page.locator('button', { hasText: 'info@isppaybd.com' });
+    const saCard = page.locator('button', { hasText: 'root@isppaybd.local' });
     await expect(saCard).toBeVisible({ timeout: 10000 });
     await saCard.click();
 
@@ -114,43 +102,25 @@ test.describe('Debug Accounts Quick Login', () => {
     // Verify error card is NOT displayed
     await expect(page.getByText('Failed to load platform dashboard')).not.toBeVisible();
     await expect(page.locator('text=Failed to load platform dashboard')).toHaveCount(0);
-
-    // Save screenshot of the loaded platform dashboard
-    await page.screenshot({
-      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/platform_dashboard_success.png',
-      fullPage: true,
-    });
   });
 
   test('Customer portal dashboard loads without errors', async ({ page }) => {
     await page.goto('/login');
-    const custCard = page.locator('button', { hasText: 'pulok138Hbag@rnb.com' });
+    const custCard = page.locator('button', { hasText: 'user@alpha.example' });
     await expect(custCard).toBeVisible({ timeout: 10000 });
     await custCard.click();
 
     await page.waitForURL('**/customer/**', { timeout: 15000 });
     await page.waitForTimeout(2000);
-
-    // Save screenshot of customer portal
-    await page.screenshot({
-      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/customer_dashboard_success.png',
-      fullPage: true,
-    });
   });
 
   test('Employee portal dashboard loads without errors', async ({ page }) => {
     await page.goto('/login');
-    const empCard = page.locator('button', { hasText: 'sajid@gmail.com' });
+    const empCard = page.locator('button', { hasText: 'emp@alpha.example' });
     await expect(empCard).toBeVisible({ timeout: 10000 });
     await empCard.click();
 
     await page.waitForURL('**/employee/**', { timeout: 15000 });
     await page.waitForTimeout(2000);
-
-    // Save screenshot of employee portal
-    await page.screenshot({
-      path: '/Users/bluebayit/.gemini/antigravity/brain/15325176-e6c0-482a-972d-837050f4ecc7/employee_dashboard_success.png',
-      fullPage: true,
-    });
   });
 });

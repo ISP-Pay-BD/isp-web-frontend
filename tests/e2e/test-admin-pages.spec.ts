@@ -30,7 +30,7 @@ test('audit admin pages for errors and data loading', async ({ page }) => {
 
   // 1. Login as Admin
   await page.goto('/login');
-  const card = page.locator('button', { hasText: 'parvezrahman9696@gmail.com' });
+  const card = page.locator('button', { hasText: 'owner@example.com' });
   await expect(card).toBeVisible({ timeout: 10000 });
   await card.click();
   await page.waitForURL('**/admin/**', { timeout: 15000 });

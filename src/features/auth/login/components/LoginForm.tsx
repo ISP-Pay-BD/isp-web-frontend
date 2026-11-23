@@ -193,7 +193,7 @@ export function LoginForm() {
               <div className="flex items-center gap-1.5">
                 <Label htmlFor="password" className="text-xs font-semibold">{t('auth.login.passwordLabel', 'Password')}</Label>
                 {isDebugMode ? (
-                  <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
                     Optional (Debug)
                   </span>
                 ) : null}
@@ -275,11 +275,11 @@ export function LoginForm() {
                   <Zap className="h-3.5 w-3.5" /> Quick Access (Debug Mode)
                 </span>
               </div>
-              <span className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+              <span className="text-xs text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
                 APP_ENV=debug
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Real database accounts per role. Click any card for instant 1-click access:
             </p>
             <div className="space-y-1.5">
@@ -294,7 +294,7 @@ export function LoginForm() {
                     type="button"
                     disabled={isSubmitting || quickLoginId !== null}
                     onClick={() => handleQuickLogin(acc)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background/90 hover:bg-accent/70 hover:border-primary/50 text-left transition-all group disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background/90 hover:bg-accent/70 hover:border-primary/50 text-left transition-colors group disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className={`p-1.5 rounded-lg border ${badge.color}`}>
@@ -305,11 +305,11 @@ export function LoginForm() {
                           <span className="text-xs font-semibold text-foreground truncate max-w-[130px]">
                             {acc.name}
                           </span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${badge.color}`}>
+                          <span className={`text-xs px-1.5 py-0.2 rounded font-medium border ${badge.color}`}>
                             {badge.label}
                           </span>
                         </div>
-                        <div className="text-[11px] text-muted-foreground font-mono truncate max-w-[210px]">
+                        <div className="text-xs text-muted-foreground font-mono truncate max-w-[210px]">
                           {acc.email}
                         </div>
                       </div>
