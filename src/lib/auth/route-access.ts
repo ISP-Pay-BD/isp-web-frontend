@@ -4,7 +4,7 @@ export const ROLE_HOME: Record<UserRole, string> = {
   user: '/customer/dashboard',
   admin: '/admin/dashboard',
   resellerAdmin: '/admin/dashboard',
-  employee: '/employee/salaries',
+  employee: '/employee/dashboard',
   super_admin: '/platform/dashboard',
 };
 
@@ -21,7 +21,12 @@ export const EXPIRED_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
   admin: ['/admin/packages', '/admin/subscription', '/admin/payment'],
   resellerAdmin: ['/admin/subscription', '/admin/payment'],
   user: ['/customer/packages', '/customer/subscription', '/customer/payments'],
-  employee: ['/employee/salaries', '/employee/advance-salary', '/employee/profile'],
+  employee: [
+    '/employee/dashboard',
+    '/employee/salaries',
+    '/employee/advance-salary',
+    '/employee/profile',
+  ],
   super_admin: ['/platform'],
 };
 
@@ -91,4 +96,3 @@ export function getPostLoginRedirect(role: UserRole, redirectUrl?: string | null
   }
   return redirectUrl;
 }
-

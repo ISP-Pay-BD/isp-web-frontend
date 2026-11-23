@@ -168,6 +168,25 @@ export function transformPermissionIdsToMap(permissionIds?: number[]): Permissio
   return map;
 }
 
+/**
+ * Employee `permission_codes` (Rust `POST /v1/auth/login` + `GET /v1/auth/me`, lane W2-R13 — the same codes as
+ * `GET /v1/permissions/me`) folded into the id-derived map. A `menu.action` code grants that action; a bare `menu`
+ * code (role-shell grant, carries no id) grants only `read`, like the API: it opens a section, never a write.
+ */
+export function mergePermissionCodes(map: PermissionMap, codes: unknown): PermissionMap {
+  if (!Array.isArray(codes)) return map;
+  const merged: PermissionMap = Object.fromEntries(
+    Object.entries(map).map(([m, a]) => [m, [...a]]),
+  );
+  for (const code of codes) {
+    if (typeof code !== 'string' || code.trim() === '') continue;
+    const [menu, action = 'read'] = code.trim().split('.', 2);
+    const actions = (merged[menu] ??= []);
+    if (!actions.includes(action)) actions.push(action);
+  }
+  return merged;
+}
+
 export interface BackendAuthData {
   user_id: number | string;
   name?: string;
@@ -180,6 +199,8 @@ export interface BackendAuthData {
   status?: string;
   tenant_id?: number | string;
   permissions?: number[] | PermissionMap;
+  /** Employee tokens only: effective `menu` / `menu.action` codes. */
+  permission_codes?: string[];
   access_token?: string;
   refresh_token?: string;
   expires_in?: number;
@@ -201,12 +222,16 @@ export function transformBackendAuthUser(data: BackendAuthData): User {
       ? rawRole
       : rawRole === 'customer'
         ? 'user'
-        : 'employee' // unknown staff designations get the least-privileged portal
-  ) as UserRole;
+        : 'employee'
+  ) as UserRole; // unknown staff designations get the least-privileged portal
+
+  if (roleNormalized === 'employee')
+    permissions = mergePermissionCodes(permissions, data.permission_codes);
 
   return {
     id: String(data.user_id),
-    name: data.name || data.user_name || (roleNormalized === 'super_admin' ? 'Super Admin' : 'User'),
+    name:
+      data.name || data.user_name || (roleNormalized === 'super_admin' ? 'Super Admin' : 'User'),
     email: data.email || '',
     phone: data.mobile || data.phone || '',
     role: roleNormalized,
