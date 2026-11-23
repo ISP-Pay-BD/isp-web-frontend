@@ -18,9 +18,11 @@ import {
   manualPaymentSchema,
   type ManualPaymentInput,
 } from '@/features/customer/shared';
-import { useRenewSubscription, openPaymentPage } from '@/features/customer/subscription/hooks/use-customer-subscription';
+import {
+  useRenewSubscription,
+  openPaymentPage,
+} from '@/features/customer/subscription/hooks/use-customer-subscription';
 import { useCustomerPayments, useSubmitManualPayment } from '../hooks/use-customer-payments';
-import { resolveBackendUrl } from '@/lib/api/adapters/customer.adapter';
 import { handleApiError } from '@/lib/api/utils/error-handler';
 import { formatBdtWithSymbol, formatDate } from '@/lib/format';
 import { useLocale } from '@/i18n/locale-context';
@@ -55,7 +57,9 @@ export function CustomerPayPage() {
     formState: { errors },
   } = useForm<ManualPaymentInput>({
     resolver: zodResolver(manualPaymentSchema),
-    values: subscription.data ? { amount: monthlyFee, method: '', trxId: '', accountNumber: '' } : undefined,
+    values: subscription.data
+      ? { amount: monthlyFee, method: '', trxId: '', accountNumber: '' }
+      : undefined,
     resetOptions: { keepDirtyValues: true },
   });
 
@@ -64,12 +68,15 @@ export function CustomerPayPage() {
 
   // The renew call creates a new invoice every time. A pending payment with no TrxID is an unpaid invoice the
   // customer already has (a manual submission always carries a TrxID), so pay that one instead of piling up more.
-  const openInvoice = recent.data?.items.find((p) => p.status === 'pending' && !p.trxId && p.amountBdt > 0);
+  const openInvoice = recent.data?.items.find(
+    (p) => p.status === 'pending' && !p.trxId && p.amountBdt > 0,
+  );
 
   const payOnline = () => {
     if (openInvoice) {
       toast.info(t('customer.pay.opening', 'Opening the payment page…'));
-      openPaymentPage(resolveBackendUrl(`/payment/make-payment/${openInvoice.id}`));
+      // The public pay page is this frontend's `/payment/make-payment/{id}` route.
+      openPaymentPage(`/payment/make-payment/${openInvoice.id}`);
       return;
     }
     const packageId = subscription.data?.packageId;
@@ -86,7 +93,10 @@ export function CustomerPayPage() {
           }
           lastCheckoutAt.current = 0;
           setNoGateway(true);
-          toast.info(checkout.message || t('customer.pay.noGatewayToast', 'Online payment is not available right now.'));
+          toast.info(
+            checkout.message ||
+              t('customer.pay.noGatewayToast', 'Online payment is not available right now.'),
+          );
         },
         onError: () => {
           lastCheckoutAt.current = 0;
@@ -104,7 +114,10 @@ export function CustomerPayPage() {
         accountNumber: values.accountNumber,
       });
       toast.success(
-        t('customer.pay.submitted', 'Payment submitted for verification. It will show as pending until your provider confirms it.'),
+        t(
+          'customer.pay.submitted',
+          'Payment submitted for verification. It will show as pending until your provider confirms it.',
+        ),
       );
       router.push('/customer/payments');
     } catch (err) {
@@ -116,7 +129,10 @@ export function CustomerPayPage() {
 
   if (subscription.isLoading) {
     return (
-      <CustomerPageShell title={shellTitle} subtitle={t('customer.pay.loading', 'Loading your bill…')}>
+      <CustomerPageShell
+        title={shellTitle}
+        subtitle={t('customer.pay.loading', 'Loading your bill…')}
+      >
         <CustomerLoadingSkeleton variant="form" />
       </CustomerPageShell>
     );
@@ -125,7 +141,10 @@ export function CustomerPayPage() {
   if (subscription.isError || !subscription.data) {
     return (
       <CustomerPageShell title={shellTitle}>
-        <CustomerErrorState message={subscription.error?.message || undefined} onRetry={() => subscription.refetch()} />
+        <CustomerErrorState
+          message={subscription.error?.message || undefined}
+          onRetry={() => subscription.refetch()}
+        />
       </CustomerPageShell>
     );
   }
@@ -136,7 +155,10 @@ export function CustomerPayPage() {
   return (
     <CustomerPageShell
       title={shellTitle}
-      subtitle={t('customer.pay.subtitle', 'Pay online in one tap, or submit a payment you already made.')}
+      subtitle={t(
+        'customer.pay.subtitle',
+        'Pay online in one tap, or submit a payment you already made.',
+      )}
       breadcrumbs={[
         { label: t('customer.nav.home', 'Customer'), href: '/customer/dashboard' },
         { label: t('customer.nav.payments', 'Payments'), href: '/customer/payments' },
@@ -148,12 +170,18 @@ export function CustomerPayPage() {
           <CardContent className="space-y-5 p-5 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-muted-foreground text-xs font-medium">{pkg?.name || t('customer.pay.yourPlan', 'Your plan')}</p>
-                <p className="text-foreground mt-1 font-mono text-3xl font-bold tabular-nums">{formatBdtWithSymbol(monthlyFee)}</p>
+                <p className="text-muted-foreground text-xs font-medium">
+                  {pkg?.name || t('customer.pay.yourPlan', 'Your plan')}
+                </p>
+                <p className="text-foreground mt-1 font-mono text-3xl font-bold tabular-nums">
+                  {formatBdtWithSymbol(monthlyFee)}
+                </p>
               </div>
               {validTill ? (
                 <p className="text-muted-foreground text-sm">
-                  {t('customer.pay.validTill', 'Valid till {date}', { date: formatDate(validTill) })}
+                  {t('customer.pay.validTill', 'Valid till {date}', {
+                    date: formatDate(validTill),
+                  })}
                 </p>
               ) : null}
             </div>
@@ -163,19 +191,33 @@ export function CustomerPayPage() {
               size="lg"
               className="h-12 w-full gap-2 text-base font-semibold"
               onClick={payOnline}
-              disabled={renew.isPending || !subscription.data.packageId || (recent.isLoading && !recent.data)}
+              disabled={
+                renew.isPending ||
+                !subscription.data.packageId ||
+                (recent.isLoading && !recent.data)
+              }
             >
-              {renew.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+              {renew.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <CreditCard className="h-5 w-5" />
+              )}
               {renew.isPending
                 ? t('customer.pay.opening', 'Opening the payment page…')
-                : t('customer.pay.online', 'Pay {amount} online', { amount: formatBdtWithSymbol(openInvoice?.amountBdt ?? monthlyFee) })}
+                : t('customer.pay.online', 'Pay {amount} online', {
+                    amount: formatBdtWithSymbol(openInvoice?.amountBdt ?? monthlyFee),
+                  })}
             </Button>
 
             {openInvoice ? (
               <p className="text-muted-foreground text-sm">
-                {t('customer.pay.openInvoice', 'You already have an unpaid invoice ({invoice}) — this pays that one.', {
-                  invoice: openInvoice.invoice || `#${openInvoice.id}`,
-                })}
+                {t(
+                  'customer.pay.openInvoice',
+                  'You already have an unpaid invoice ({invoice}) — this pays that one.',
+                  {
+                    invoice: openInvoice.invoice || `#${openInvoice.id}`,
+                  },
+                )}
               </p>
             ) : null}
 
@@ -201,10 +243,18 @@ export function CustomerPayPage() {
                 {t('customer.pay.paidElsewhere', 'Already paid outside the app?')}
               </span>
               <span className="text-muted-foreground block text-sm">
-                {t('customer.pay.paidElsewhereAction', 'Submit your transaction ID (TrxID) for verification')}
+                {t(
+                  'customer.pay.paidElsewhereAction',
+                  'Submit your transaction ID (TrxID) for verification',
+                )}
               </span>
             </span>
-            <ChevronDown className={cn('text-muted-foreground h-5 w-5 shrink-0 transition-transform', showManual && 'rotate-180')} />
+            <ChevronDown
+              className={cn(
+                'text-muted-foreground h-5 w-5 shrink-0 transition-transform',
+                showManual && 'rotate-180',
+              )}
+            />
           </button>
 
           {showManual ? (
@@ -223,15 +273,22 @@ export function CustomerPayPage() {
 
               <Card className="border-0 shadow-none">
                 <CardHeader className="px-0 pt-0 pb-3">
-                  <CardTitle className="text-base font-bold">{t('customer.pay.amountPaid', 'Amount paid')}</CardTitle>
+                  <CardTitle className="text-base font-bold">
+                    {t('customer.pay.amountPaid', 'Amount paid')}
+                  </CardTitle>
                   <CardDescription className="text-sm">
-                    {t('customer.pay.amountHint', 'Pre-filled with your monthly fee — change it if you paid a different amount.')}
+                    {t(
+                      'customer.pay.amountHint',
+                      'Pre-filled with your monthly fee — change it if you paid a different amount.',
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-1.5 px-0">
                   <Label htmlFor="amount">{t('customer.pay.amountLabel', 'Amount (৳ BDT)')}</Label>
                   <div className="relative">
-                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold">৳</span>
+                    <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold">
+                      ৳
+                    </span>
                     <Input
                       id="amount"
                       type="number"
@@ -242,7 +299,9 @@ export function CustomerPayPage() {
                       className="h-11 pl-8 text-base font-bold"
                     />
                   </div>
-                  {errors.amount && <p className="text-destructive text-sm">{te(errors.amount.message ?? '')}</p>}
+                  {errors.amount && (
+                    <p className="text-destructive text-sm">{te(errors.amount.message ?? '')}</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -255,18 +314,31 @@ export function CustomerPayPage() {
                     placeholder={t('customer.pay.methodPlaceholder', 'Mobile wallet or bank name')}
                     className="h-11"
                   />
-                  {errors.method && <p className="text-destructive text-sm">{te(errors.method.message ?? '')}</p>}
+                  {errors.method && (
+                    <p className="text-destructive text-sm">{te(errors.method.message ?? '')}</p>
+                  )}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="accountNumber">{t('customer.pay.sender', 'Sender account / phone (optional)')}</Label>
-                    <Input id="accountNumber" inputMode="tel" {...register('accountNumber')} className="h-11 font-mono" />
+                    <Label htmlFor="accountNumber">
+                      {t('customer.pay.sender', 'Sender account / phone (optional)')}
+                    </Label>
+                    <Input
+                      id="accountNumber"
+                      inputMode="tel"
+                      {...register('accountNumber')}
+                      className="h-11 font-mono"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="trxId">{t('customer.pay.trxId', 'Transaction ID (TrxID)')}</Label>
+                    <Label htmlFor="trxId">
+                      {t('customer.pay.trxId', 'Transaction ID (TrxID)')}
+                    </Label>
                     <Input id="trxId" {...register('trxId')} className="h-11 font-mono uppercase" />
-                    {errors.trxId && <p className="text-destructive text-sm">{te(errors.trxId.message ?? '')}</p>}
+                    {errors.trxId && (
+                      <p className="text-destructive text-sm">{te(errors.trxId.message ?? '')}</p>
+                    )}
                   </div>
                 </div>
 
@@ -282,10 +354,19 @@ export function CustomerPayPage() {
               </div>
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <Button variant="outline" type="button" className="h-11 w-full sm:w-auto" render={<Link href="/customer/payments" />}>
+                <Button
+                  variant="outline"
+                  type="button"
+                  className="h-11 w-full sm:w-auto"
+                  render={<Link href="/customer/payments" />}
+                >
                   {t('common.cancel', 'Cancel')}
                 </Button>
-                <Button type="submit" disabled={payMutation.isPending} className="h-11 w-full gap-2 font-semibold sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={payMutation.isPending}
+                  className="h-11 w-full gap-2 font-semibold sm:w-auto"
+                >
                   {payMutation.isPending
                     ? t('customer.pay.submitting', 'Submitting…')
                     : t('customer.pay.submit', 'Submit {amount} for verification', {
