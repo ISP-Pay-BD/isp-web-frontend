@@ -36,6 +36,8 @@ const footerColumns: Record<'product' | 'solutions' | 'company', FooterLink[]> =
   ],
   company: [
     { id: 'aboutUs', label: 'About Us', href: '/contact' },
+    { id: 'blog', label: 'Blog', href: '/blog' },
+    { id: 'websiteTemplates', label: 'Website Templates', href: '/templates' },
     { id: 'liveSandboxDemos', label: 'Live Sandbox Demos', href: '/#try-it' },
     { id: 'contactSupport', label: 'Contact Support', href: '/contact' },
   ],
@@ -47,7 +49,11 @@ function useLegalLinks() {
     queryKey: ['marketing', 'legal'],
     staleTime: 5 * 60_000,
     queryFn: async ({ signal }) => {
-      const raw = await http.get<{ documents?: { slug: string; title: string }[] }>('/v1/public/legal', undefined, signal);
+      const raw = await http.get<{ documents?: { slug: string; title: string }[] }>(
+        '/v1/public/legal',
+        undefined,
+        signal,
+      );
       return (raw.documents ?? []).map((d) => ({ label: d.title, href: `/${d.slug}` }));
     },
   });
@@ -56,7 +62,8 @@ function useLegalLinks() {
 export function MarketingFooter() {
   const t = useTranslations();
   const legalLinks: FooterLink[] = useLegalLinks().data ?? [];
-  const linkLabel = (l: FooterLink) => (l.id ? t(`marketing.footer.links.${l.id}`, l.label) : l.label);
+  const linkLabel = (l: FooterLink) =>
+    l.id ? t(`marketing.footer.links.${l.id}`, l.label) : l.label;
 
   return (
     <footer className="bg-landing-bg relative z-[1] overflow-hidden border-t border-white/10 text-white">
@@ -90,7 +97,9 @@ export function MarketingFooter() {
             <div className="space-y-2 pt-1 font-mono text-xs text-white/60">
               <div className="flex items-center gap-2.5">
                 <Phone className="text-landing-accent h-3.5 w-3.5 shrink-0" />
-                <span>+880 1781-808231 ({t('marketing.landing.contact.phoneSales', 'Support & Sales')})</span>
+                <span>
+                  +880 1781-808231 ({t('marketing.landing.contact.phoneSales', 'Support & Sales')})
+                </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="text-landing-accent h-3.5 w-3.5 shrink-0" />
@@ -181,7 +190,10 @@ export function MarketingFooter() {
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>
-              {t('marketing.footer.compliance', 'Bank-grade 256-bit SSL · BTRC Compliant Logging · ISO Standard')}
+              {t(
+                'marketing.footer.compliance',
+                'Bank-grade 256-bit SSL · BTRC Compliant Logging · ISO Standard',
+              )}
             </span>
           </div>
           <div>
@@ -194,7 +206,10 @@ export function MarketingFooter() {
 }
 
 const STATUS_STYLE = {
-  operational: { dot: 'bg-emerald-500', ring: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' },
+  operational: {
+    dot: 'bg-emerald-500',
+    ring: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+  },
   degraded: { dot: 'bg-amber-500', ring: 'border-amber-500/20 bg-amber-500/10 text-amber-400' },
   outage: { dot: 'bg-red-500', ring: 'border-red-500/20 bg-red-500/10 text-red-400' },
 } as const;
@@ -220,7 +235,10 @@ function FooterStatusBadge() {
   return (
     <Link
       href="/status"
-      className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80', style.ring)}
+      className={cn(
+        'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80',
+        style.ring,
+      )}
     >
       <span className={cn('relative inline-flex h-2 w-2 rounded-full', style.dot)} />
       {label}
