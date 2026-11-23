@@ -9,6 +9,8 @@ export interface IspPackage {
   pricingType: 'weekly' | 'monthly' | 'yearly';
   status: 'active' | 'inactive';
   mikrotikProfile: string | null;
+  /** `reseller_packages.preview` days; null = none recorded (package period applies). */
+  preview: number | null;
   subscriberCount: number;
   createdAt: string | null;
 }

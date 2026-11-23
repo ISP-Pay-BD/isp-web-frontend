@@ -25,7 +25,12 @@ export interface PopPackage {
   /** What the POP charges its customers. */
   sellingPrice: number | null;
   mikrotikProfile: string | null;
+  /** `reseller_packages.preview` days a new customer stays paid; null = package period. */
+  preview: number | null;
 }
+
+const optionalNum = (v: unknown): number | null =>
+  str(v).trim() === '' || !Number.isFinite(Number(v)) ? null : Number(v);
 
 const mapPopPackage = (r: Raw): PopPackage => ({
   id: str(r.id),
@@ -33,8 +38,10 @@ const mapPopPackage = (r: Raw): PopPackage => ({
   bandwidth: str(r.bandwidth),
   packageType: str(r.package_type),
   price: num(r.price),
-  sellingPrice: r.selling_price === null || r.selling_price === undefined ? null : num(r.selling_price),
+  sellingPrice:
+    r.selling_price === null || r.selling_price === undefined ? null : num(r.selling_price),
   mikrotikProfile: str(r.mikrotik_profile) || null,
+  preview: optionalNum(r.preview),
 });
 
 export function usePops() {
@@ -42,7 +49,11 @@ export function usePops() {
     queryKey: ['admin', 'pops', 'options'],
     queryFn: async () => {
       const res = await http.getPage<Raw>('/v1/pops', { per_page: 100 });
-      return res.items.map((p): Pop => ({ id: str(p.id), name: str(p.name) || `POP #${str(p.id)}`, status: str(p.status) }));
+      return res.items.map((p): Pop => ({
+        id: str(p.id),
+        name: str(p.name) || `POP #${str(p.id)}`,
+        status: str(p.status),
+      }));
     },
     staleTime: 5 * 60_000,
   });
@@ -52,7 +63,9 @@ export function usePopPackages(popId: string | null, search: string) {
   return useQuery({
     queryKey: ['admin', 'pops', popId, 'packages', search],
     queryFn: async () => {
-      const res = await http.getPage<Raw>(`/v1/pops/${popId}/packages`, { search: search || undefined });
+      const res = await http.getPage<Raw>(`/v1/pops/${popId}/packages`, {
+        search: search || undefined,
+      });
       return res.items.map(mapPopPackage);
     },
     enabled: Boolean(popId),
@@ -66,10 +79,16 @@ export function usePopPackageMutations(popId: string | null) {
   const refresh = () => qc.invalidateQueries({ queryKey: ['admin', 'pops', popId, 'packages'] });
   return {
     updatePrice: useMutation({
-      mutationFn: (v: { packageId: string; price: string; sellingPrice: string }) =>
+      mutationFn: (v: {
+        packageId: string;
+        price: string;
+        sellingPrice: string;
+        preview: string;
+      }) =>
         http.put(`/v1/pops/${popId}/packages/${v.packageId}`, {
           price: v.price === '' ? undefined : v.price,
           selling_price: v.sellingPrice === '' ? undefined : v.sellingPrice,
+          preview: v.preview === '' ? undefined : Number(v.preview),
         }),
       meta: { silent: true },
       onSuccess: () => {
@@ -82,7 +101,9 @@ export function usePopPackageMutations(popId: string | null) {
       onSuccess: (res) => {
         refresh();
         toast.success(
-          t('admin.popPackages.packages.synced', 'Synced {n} package(s) from the catalogue', { n: Array.isArray(res) ? res.length : 0 }),
+          t('admin.popPackages.packages.synced', 'Synced {n} package(s) from the catalogue', {
+            n: Array.isArray(res) ? res.length : 0,
+          }),
         );
       },
     }),

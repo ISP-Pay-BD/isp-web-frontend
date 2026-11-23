@@ -22,6 +22,7 @@ export function mapPackage(r: Raw): IspPackage {
     pricingType: pricing === 'weekly' || pricing === 'yearly' ? pricing : 'monthly',
     status: str(r.status) === 'inactive' ? 'inactive' : 'active',
     mikrotikProfile: str(r.mikrotik_profile) || null,
+    preview: numeric(r.preview),
     subscriberCount: num(r.subscriber_count),
     createdAt: str(r.created_at) || null,
   };
@@ -45,7 +46,13 @@ export const packagesApi = {
   },
   summary: async (): Promise<PackageSummary> => {
     const r = await http.get<Raw>(`${base()}/summary`);
-    return { total: num(r.total), active: num(r.active), inactive: num(r.inactive), subscribers: num(r.subscribers), avgPrice: num(r.avg_price) };
+    return {
+      total: num(r.total),
+      active: num(r.active),
+      inactive: num(r.inactive),
+      subscribers: num(r.subscribers),
+      avgPrice: num(r.avg_price),
+    };
   },
   create: (v: PackageFormValues) => http.post(base(), body(v)),
   update: (id: string, v: PackageFormValues) => http.put(`${base()}/${id}`, body(v)),

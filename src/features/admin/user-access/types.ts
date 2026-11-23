@@ -24,6 +24,8 @@ export interface RolePermissions {
   exists: boolean;
   editable: boolean;
   source: 'platform' | 'tenant';
+  /** Id of the tenant default row (`/v1/access/defaults/{id}`) when `source` is `tenant`. */
+  defaultId?: string;
 }
 
 export interface CustomAccessRecord {

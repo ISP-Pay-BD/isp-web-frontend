@@ -77,6 +77,7 @@ const EMPTY_FORM: PackageFormValues = {
   pricing_type: 'monthly',
   status: 'active',
   mikrotik_profile: '',
+  preview: '',
 };
 
 const priceOf = (pkg: IspPackage) => pkg.sellingPrice ?? pkg.price;
@@ -130,7 +131,7 @@ export function PackagesPage() {
 
   const items = data?.items ?? [];
   const summary = summaryQuery.data;
-  const kpi = (n: number | undefined) => (summary ? n ?? 0 : '…');
+  const kpi = (n: number | undefined) => (summary ? (n ?? 0) : '…');
 
   const openCreate = () => {
     setEditPkg(null);
@@ -149,6 +150,7 @@ export function PackagesPage() {
         pricing_type: pkg.pricingType,
         status: pkg.status,
         mikrotik_profile: pkg.mikrotikProfile ?? '',
+        preview: pkg.preview !== null ? String(pkg.preview) : '',
       });
       setDialogOpen(true);
     },
@@ -166,18 +168,18 @@ export function PackagesPage() {
           const pkg = row.original;
           return (
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg font-bold shrink-0 bg-primary/10 text-primary border border-primary/20">
+              <div className="bg-primary/10 text-primary border-primary/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border font-bold">
                 <PackageIcon className="h-4 w-4" />
               </div>
               <div className="min-w-0 text-left">
                 <button
                   type="button"
                   onClick={() => setSelectedPkg(pkg)}
-                  className="block text-left font-semibold text-foreground text-sm hover:text-primary transition-colors"
+                  className="text-foreground hover:text-primary block text-left text-sm font-semibold transition-colors"
                 >
                   {pkg.name}
                 </button>
-                <div className="text-xs font-normal text-muted-foreground font-mono">#{pkg.id}</div>
+                <div className="text-muted-foreground font-mono text-xs font-normal">#{pkg.id}</div>
               </div>
             </div>
           );
@@ -186,13 +188,19 @@ export function PackagesPage() {
       {
         accessorKey: 'bandwidth',
         header: t('admin.packages.page.bandwidth', 'Bandwidth'),
-        cell: ({ row }) => <span className="font-mono font-bold text-foreground text-sm">{row.original.bandwidth || '—'}</span>,
+        cell: ({ row }) => (
+          <span className="text-foreground font-mono text-sm font-bold">
+            {row.original.bandwidth || '—'}
+          </span>
+        ),
       },
       {
         accessorKey: 'mikrotikProfile',
         header: t('admin.packages.page.mikrotikProfile', 'MikroTik Profile'),
         cell: ({ row }) => (
-          <div className="truncate max-w-[160px] font-mono text-xs text-muted-foreground">{row.original.mikrotikProfile ?? '—'}</div>
+          <div className="text-muted-foreground max-w-[160px] truncate font-mono text-xs">
+            {row.original.mikrotikProfile ?? '—'}
+          </div>
         ),
       },
       {
@@ -203,11 +211,11 @@ export function PackagesPage() {
           const pkg = row.original;
           return (
             <div className="font-mono">
-              <div className="font-bold text-primary text-sm">
+              <div className="text-primary text-sm font-bold">
                 <CurrencyDisplay amount={priceOf(pkg)} />
               </div>
               {pkg.sellingPrice !== null && pkg.sellingPrice !== pkg.price && (
-                <div className="text-xs font-normal text-muted-foreground">
+                <div className="text-muted-foreground text-xs font-normal">
                   {t('admin.packages.page.base', 'base')} <CurrencyDisplay amount={pkg.price} />
                 </div>
               )}
@@ -218,15 +226,19 @@ export function PackagesPage() {
       {
         accessorKey: 'pricingType',
         header: t('admin.packages.page.colCycle', 'Cycle'),
-        cell: ({ row }) => <span className="text-muted-foreground">{cycleLabel[row.original.pricingType]}</span>,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{cycleLabel[row.original.pricingType]}</span>
+        ),
       },
       {
         accessorKey: 'subscriberCount',
         header: t('admin.packages.page.subscribers', 'Subscribers'),
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-mono font-semibold text-foreground">{formatCount(row.original.subscriberCount)}</span>
+            <Users className="text-muted-foreground h-3.5 w-3.5" />
+            <span className="text-foreground font-mono font-semibold">
+              {formatCount(row.original.subscriberCount)}
+            </span>
           </div>
         ),
       },
@@ -242,12 +254,24 @@ export function PackagesPage() {
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-1">
             <Can menu="packages" action="update">
-              <Button variant="ghost" size="icon" aria-label={t('admin.packages.page.editAria', 'Edit package')} className="h-7 w-7 hover:bg-primary/10 hover:text-primary" onClick={() => openEdit(row.original)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('admin.packages.page.editAria', 'Edit package')}
+                className="hover:bg-primary/10 hover:text-primary h-7 w-7"
+                onClick={() => openEdit(row.original)}
+              >
                 <Edit className="h-3.5 w-3.5" />
               </Button>
             </Can>
             <Can menu="packages" action="delete">
-              <Button variant="ghost" size="icon" aria-label={t('admin.packages.page.deleteAria', 'Delete package')} className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(row.original)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t('admin.packages.page.deleteAria', 'Delete package')}
+                className="text-destructive hover:bg-destructive/10 h-7 w-7"
+                onClick={() => setDeleteTarget(row.original)}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </Can>
@@ -271,9 +295,13 @@ export function PackagesPage() {
   if (isLoading) return <PageSkeleton variant="cards" rows={6} />;
   if (isError) {
     return (
-      <EmptyState variant="error"
+      <EmptyState
+        variant="error"
         title={t('admin.packages.page.loadFailed', 'Failed to load packages')}
-        description={errorMessage(error, t('admin.packages.page.loadFailedHint', 'Could not fetch package catalog from backend.'))}
+        description={errorMessage(
+          error,
+          t('admin.packages.page.loadFailedHint', 'Could not fetch package catalog from backend.'),
+        )}
         actionLabel={t('admin.customers.list.retry', 'Retry')}
         onAction={() => refetch()}
       />
@@ -285,7 +313,10 @@ export function PackagesPage() {
       {/* Header */}
       <PageHeader
         title={t('admin.packages.page.title', 'Internet Packages & Bandwidth Tiers')}
-        subtitle={t('admin.packages.page.subtitle', 'Manage subscriber broadband packages, MikroTik profiles and prices')}
+        subtitle={t(
+          'admin.packages.page.subtitle',
+          'Manage subscriber broadband packages, MikroTik profiles and prices',
+        )}
         breadcrumb={[
           { label: t('admin.customers.list.breadcrumbAdmin', 'Admin'), url: '/admin/dashboard' },
           { label: t('common.crumb.billing', 'Billing') },
@@ -296,7 +327,7 @@ export function PackagesPage() {
             <Button
               size="sm"
               onClick={openCreate}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-sm gap-1.5"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs font-semibold shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" /> {t('admin.packages.page.add', 'Add Package')}
             </Button>
@@ -305,12 +336,34 @@ export function PackagesPage() {
       />
 
       {/* KPI Ribbon (backend summary over every package) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         {(
           [
-            { label: t('nav.packages', 'Packages'), value: kpi(summary?.total), sub: t('admin.packages.page.kpiActiveInactive', '{active} active · {inactive} inactive', { active: kpi(summary?.active), inactive: kpi(summary?.inactive) }), icon: Layers, tone: 'bg-primary/10 text-primary' },
-            { label: t('admin.packages.page.kpiActive', 'Active Packages'), value: kpi(summary?.active), sub: t('admin.packages.page.kpiActiveHint', 'Available for new customers'), icon: CheckCircle2, tone: 'bg-emerald-500/10 text-emerald-400' },
-            { label: t('admin.packages.page.subscribers', 'Subscribers'), value: summary ? formatCount(summary.subscribers) : '…', sub: t('admin.packages.page.kpiSubscribersHint', 'Customers on these packages'), icon: Users, tone: 'bg-purple-500/10 text-purple-400' },
+            {
+              label: t('nav.packages', 'Packages'),
+              value: kpi(summary?.total),
+              sub: t(
+                'admin.packages.page.kpiActiveInactive',
+                '{active} active · {inactive} inactive',
+                { active: kpi(summary?.active), inactive: kpi(summary?.inactive) },
+              ),
+              icon: Layers,
+              tone: 'bg-primary/10 text-primary',
+            },
+            {
+              label: t('admin.packages.page.kpiActive', 'Active Packages'),
+              value: kpi(summary?.active),
+              sub: t('admin.packages.page.kpiActiveHint', 'Available for new customers'),
+              icon: CheckCircle2,
+              tone: 'bg-emerald-500/10 text-emerald-400',
+            },
+            {
+              label: t('admin.packages.page.subscribers', 'Subscribers'),
+              value: summary ? formatCount(summary.subscribers) : '…',
+              sub: t('admin.packages.page.kpiSubscribersHint', 'Customers on these packages'),
+              icon: Users,
+              tone: 'bg-purple-500/10 text-purple-400',
+            },
             {
               label: t('admin.packages.page.kpiAvgPrice', 'Average Price'),
               value: summary ? <CurrencyDisplay amount={summary.avgPrice} /> : '…',
@@ -320,37 +373,44 @@ export function PackagesPage() {
             },
           ] as const
         ).map((k) => (
-          <Card key={k.label} className="border border-border/70 bg-card/60 backdrop-blur-md shadow-sm relative overflow-hidden">
+          <Card
+            key={k.label}
+            className="border-border/70 bg-card/60 relative overflow-hidden border shadow-sm backdrop-blur-md"
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{k.label}</span>
-                <div className={cn('p-2 rounded-lg', k.tone)}>
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  {k.label}
+                </span>
+                <div className={cn('rounded-lg p-2', k.tone)}>
                   <k.icon className="h-4 w-4" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-black tracking-tight text-foreground font-mono">{k.value}</div>
-              <div className="mt-2 text-xs text-muted-foreground">{k.sub}</div>
+              <div className="text-foreground mt-2 font-mono text-2xl font-black tracking-tight">
+                {k.value}
+              </div>
+              <div className="text-muted-foreground mt-2 text-xs">{k.sub}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Control Bar: Search + Status Pills + View Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="border-border/60 bg-card/60 flex flex-col justify-between gap-3 rounded-xl border p-3.5 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center">
+        <div className="relative max-w-md flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder={t('admin.packages.page.searchPlaceholder', 'Search by package name...')}
             aria-label={t('admin.packages.page.searchPlaceholder', 'Search by package name...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-xs bg-background/80"
+            className="bg-background/80 h-9 pl-9 text-xs"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
               aria-label={t('admin.packages.page.clearSearch', 'Clear search')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -358,12 +418,25 @@ export function PackagesPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/40 border border-border/60">
+          <div className="bg-muted/40 border-border/60 flex items-center gap-1 rounded-xl border p-1">
             {(
               [
-                { key: 'all', label: t('admin.packages.page.pillAll', 'All ({n})', { n: kpi(summary?.total) }) },
-                { key: 'active', label: t('admin.packages.page.pillActive', 'Active ({n})', { n: kpi(summary?.active) }) },
-                { key: 'inactive', label: t('admin.packages.page.pillInactive', 'Inactive ({n})', { n: kpi(summary?.inactive) }) },
+                {
+                  key: 'all',
+                  label: t('admin.packages.page.pillAll', 'All ({n})', { n: kpi(summary?.total) }),
+                },
+                {
+                  key: 'active',
+                  label: t('admin.packages.page.pillActive', 'Active ({n})', {
+                    n: kpi(summary?.active),
+                  }),
+                },
+                {
+                  key: 'inactive',
+                  label: t('admin.packages.page.pillInactive', 'Inactive ({n})', {
+                    n: kpi(summary?.inactive),
+                  }),
+                },
               ] as const
             ).map((pill) => (
               <Button
@@ -373,10 +446,10 @@ export function PackagesPage() {
                 variant={statusFilter === pill.key ? 'default' : 'ghost'}
                 onClick={() => setStatusFilter(pill.key)}
                 className={cn(
-                  'text-xs h-7 px-2.5 font-medium transition',
+                  'h-7 px-2.5 text-xs font-medium transition',
                   statusFilter === pill.key
                     ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {pill.label}
@@ -384,13 +457,15 @@ export function PackagesPage() {
             ))}
           </div>
 
-          <div className="flex items-center p-1 rounded-xl bg-muted/40 border border-border/60">
+          <div className="bg-muted/40 border-border/60 flex items-center rounded-xl border p-1">
             <button
               type="button"
               onClick={() => setViewMode('table')}
               className={cn(
-                'p-1.5 rounded-lg transition-colors',
-                viewMode === 'table' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                'rounded-lg p-1.5 transition-colors',
+                viewMode === 'table'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
               title={t('admin.packages.page.tableView', 'Table View')}
               aria-label={t('admin.packages.page.tableView', 'Table View')}
@@ -401,8 +476,10 @@ export function PackagesPage() {
               type="button"
               onClick={() => setViewMode('grid')}
               className={cn(
-                'p-1.5 rounded-lg transition-colors',
-                viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                'rounded-lg p-1.5 transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
               title={t('admin.packages.page.gridView', 'Grid View')}
               aria-label={t('admin.packages.page.gridView', 'Grid View')}
@@ -416,11 +493,18 @@ export function PackagesPage() {
       {/* Main Content Area */}
       {items.length === 0 ? (
         <EmptyState
-          title={debouncedSearch || statusFilter !== 'all' ? t('admin.packages.page.emptyFiltered', 'No packages found') : t('admin.packages.page.emptyNone', 'No packages yet')}
+          title={
+            debouncedSearch || statusFilter !== 'all'
+              ? t('admin.packages.page.emptyFiltered', 'No packages found')
+              : t('admin.packages.page.emptyNone', 'No packages yet')
+          }
           description={
             debouncedSearch || statusFilter !== 'all'
               ? t('admin.packages.page.emptyFilteredHint', 'No packages match your filter.')
-              : t('admin.packages.page.emptyNoneHint', 'Create the first package customers can subscribe to.')
+              : t(
+                  'admin.packages.page.emptyNoneHint',
+                  'Create the first package customers can subscribe to.',
+                )
           }
           actionLabel={t('admin.packages.page.add', 'Add Package')}
           onAction={openCreate}
@@ -446,67 +530,109 @@ export function PackagesPage() {
             <div
               key={pkg.id}
               onClick={() => setSelectedPkg(pkg)}
-              className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-md p-5 flex flex-col justify-between hover:border-primary/40 hover:shadow-lg transition duration-200 group relative cursor-pointer"
+              className="border-border/60 bg-card/80 hover:border-primary/40 group relative flex cursor-pointer flex-col justify-between rounded-xl border p-5 backdrop-blur-md transition duration-200 hover:shadow-lg"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
+                    <Badge
+                      variant="secondary"
+                      className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold tracking-wider uppercase"
+                    >
                       {cycleLabel[pkg.pricingType]}
                     </Badge>
-                    <h3 className="font-bold text-base text-foreground mt-2 group-hover:text-primary transition-colors">{pkg.name}</h3>
-                    <div className="text-xs text-muted-foreground font-mono mt-0.5">#{pkg.id}</div>
+                    <h3 className="text-foreground group-hover:text-primary mt-2 text-base font-bold transition-colors">
+                      {pkg.name}
+                    </h3>
+                    <div className="text-muted-foreground mt-0.5 font-mono text-xs">#{pkg.id}</div>
                   </div>
-                  <Badge variant="outline" className="capitalize text-xs">{statusLabel(pkg.status)}</Badge>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {statusLabel(pkg.status)}
+                  </Badge>
                 </div>
 
-                <div className="mt-4 p-3 rounded-xl bg-muted/20 border border-border/50 flex items-center justify-between group-hover:border-primary/20 transition-colors">
+                <div className="bg-muted/20 border-border/50 group-hover:border-primary/20 mt-4 flex items-center justify-between rounded-xl border p-3 transition-colors">
                   <div>
-                    <div className="text-xs text-muted-foreground">{t('admin.packages.page.bandwidth', 'Bandwidth')}</div>
-                    <div className="text-xl font-black font-mono text-foreground">{pkg.bandwidth || '—'}</div>
+                    <div className="text-muted-foreground text-xs">
+                      {t('admin.packages.page.bandwidth', 'Bandwidth')}
+                    </div>
+                    <div className="text-foreground font-mono text-xl font-black">
+                      {pkg.bandwidth || '—'}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-muted-foreground">{t('admin.packages.page.price', 'Price')}</div>
-                    <div className="text-xl font-black font-mono text-primary">
+                    <div className="text-muted-foreground text-xs">
+                      {t('admin.packages.page.price', 'Price')}
+                    </div>
+                    <div className="text-primary font-mono text-xl font-black">
                       <CurrencyDisplay amount={priceOf(pkg)} />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-4 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-emerald-400" /> {t('admin.packages.page.billingCycle', 'Billing Cycle')}
+                      <Clock className="h-3.5 w-3.5 text-emerald-400" />{' '}
+                      {t('admin.packages.page.billingCycle', 'Billing Cycle')}
                     </span>
-                    <span className="font-semibold text-foreground">{cycleLabel[pkg.pricingType]}</span>
+                    <span className="text-foreground font-semibold">
+                      {cycleLabel[pkg.pricingType]}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-purple-400" /> {t('admin.packages.page.subscribers', 'Subscribers')}
+                      <Users className="h-3.5 w-3.5 text-purple-400" />{' '}
+                      {t('admin.packages.page.subscribers', 'Subscribers')}
                     </span>
-                    <span className="font-mono font-semibold text-foreground">{formatCount(pkg.subscriberCount)}</span>
+                    <span className="text-foreground font-mono font-semibold">
+                      {formatCount(pkg.subscriberCount)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <Router className="h-3.5 w-3.5 text-blue-400" /> {t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}
+                      <Router className="h-3.5 w-3.5 text-blue-400" />{' '}
+                      {t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}
                     </span>
-                    <span className="font-mono text-xs text-muted-foreground truncate max-w-[130px]">{pkg.mikrotikProfile ?? '—'}</span>
+                    <span className="text-muted-foreground max-w-[130px] truncate font-mono text-xs">
+                      {pkg.mikrotikProfile ?? '—'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="outline" onClick={() => setSelectedPkg(pkg)} className="h-8 text-xs border-border/60 hover:bg-accent gap-1">
-                  {t('admin.packages.page.details', 'Details')} <ChevronRight className="h-3.5 w-3.5" />
+              <div
+                className="border-border/50 mt-4 flex items-center justify-between border-t pt-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedPkg(pkg)}
+                  className="border-border/60 hover:bg-accent h-8 gap-1 text-xs"
+                >
+                  {t('admin.packages.page.details', 'Details')}{' '}
+                  <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
                 <div className="flex items-center gap-1">
                   <Can menu="packages" action="update">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(pkg)} className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary">
-                      <Edit className="h-3.5 w-3.5 mr-1" /> {t('admin.packages.page.edit', 'Edit')}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openEdit(pkg)}
+                      className="hover:bg-primary/10 hover:text-primary h-8 px-2 text-xs"
+                    >
+                      <Edit className="mr-1 h-3.5 w-3.5" /> {t('admin.packages.page.edit', 'Edit')}
                     </Button>
                   </Can>
                   <Can menu="packages" action="delete">
-                    <Button size="sm" variant="ghost" aria-label={t('admin.packages.page.deleteAria', 'Delete package')} onClick={() => setDeleteTarget(pkg)} className="h-8 px-2 text-xs text-destructive hover:bg-destructive/10">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={t('admin.packages.page.deleteAria', 'Delete package')}
+                      onClick={() => setDeleteTarget(pkg)}
+                      className="text-destructive hover:bg-destructive/10 h-8 px-2 text-xs"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </Can>
@@ -530,52 +656,80 @@ export function PackagesPage() {
 
       {/* Package Inspector Sheet */}
       <Sheet open={Boolean(selectedPkg)} onOpenChange={(open) => !open && setSelectedPkg(null)}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto border-l border-border/80 p-6 space-y-6">
+        <SheetContent className="border-border/80 w-full space-y-6 overflow-y-auto border-l p-6 sm:max-w-md">
           {selectedPkg && (
             <>
               <SheetHeader className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="capitalize text-xs font-semibold tracking-wider bg-primary/10 text-primary border-primary/20">
+                  <Badge
+                    variant="outline"
+                    className="bg-primary/10 text-primary border-primary/20 text-xs font-semibold tracking-wider capitalize"
+                  >
                     {cycleLabel[selectedPkg.pricingType]}
                   </Badge>
-                  <Badge variant="outline" className="text-xs capitalize">{statusLabel(selectedPkg.status)}</Badge>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {statusLabel(selectedPkg.status)}
+                  </Badge>
                 </div>
-                <SheetTitle className="text-xl font-bold text-foreground">{selectedPkg.name}</SheetTitle>
-                <SheetDescription className="text-xs font-mono text-muted-foreground">{t('admin.packages.page.idLabel', 'ID: {id}', { id: selectedPkg.id })}</SheetDescription>
+                <SheetTitle className="text-foreground text-xl font-bold">
+                  {selectedPkg.name}
+                </SheetTitle>
+                <SheetDescription className="text-muted-foreground font-mono text-xs">
+                  {t('admin.packages.page.idLabel', 'ID: {id}', { id: selectedPkg.id })}
+                </SheetDescription>
               </SheetHeader>
 
-              <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-muted/20 border border-border/50">
+              <div className="bg-muted/20 border-border/50 grid grid-cols-2 gap-3 rounded-xl border p-4">
                 <div>
-                  <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
+                  <div className="text-muted-foreground flex items-center gap-1 text-xs font-semibold">
                     <Gauge className="h-3 w-3" /> {t('admin.packages.page.bandwidth', 'Bandwidth')}
                   </div>
-                  <div className="text-2xl font-black font-mono text-foreground mt-0.5">{selectedPkg.bandwidth || '—'}</div>
+                  <div className="text-foreground mt-0.5 font-mono text-2xl font-black">
+                    {selectedPkg.bandwidth || '—'}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-muted-foreground font-semibold">{t('admin.packages.page.price', 'Price')}</div>
-                  <div className="text-2xl font-black font-mono text-primary mt-0.5">
+                  <div className="text-muted-foreground text-xs font-semibold">
+                    {t('admin.packages.page.price', 'Price')}
+                  </div>
+                  <div className="text-primary mt-0.5 font-mono text-2xl font-black">
                     <CurrencyDisplay amount={priceOf(selectedPkg)} />
                   </div>
                   {selectedPkg.sellingPrice !== null && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {t('admin.packages.page.base', 'base')} <CurrencyDisplay amount={selectedPkg.price} />
+                    <div className="text-muted-foreground mt-1 text-xs">
+                      {t('admin.packages.page.base', 'base')}{' '}
+                      <CurrencyDisplay amount={selectedPkg.price} />
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50 font-mono">
-                  <span className="text-muted-foreground">{t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}</span>
-                  <span className="font-bold text-foreground">{selectedPkg.mikrotikProfile ?? '—'}</span>
+                <div className="bg-card border-border/50 flex items-center justify-between rounded-lg border p-2.5 font-mono">
+                  <span className="text-muted-foreground">
+                    {t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}
+                  </span>
+                  <span className="text-foreground font-bold">
+                    {selectedPkg.mikrotikProfile ?? '—'}
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-card border border-border/50">
-                  <span className="text-muted-foreground">{t('admin.packages.page.subscribers', 'Subscribers')}</span>
-                  <span className="font-bold text-foreground font-mono">{formatCount(selectedPkg.subscriberCount)}</span>
+                <div className="bg-card border-border/50 flex items-center justify-between rounded-lg border p-2.5 font-mono">
+                  <span className="text-muted-foreground">
+                    {t('admin.packages.page.previewDays', 'Preview days')}
+                  </span>
+                  <span className="text-foreground font-bold">{selectedPkg.preview ?? '—'}</span>
+                </div>
+                <div className="bg-card border-border/50 flex items-center justify-between rounded-lg border p-2.5">
+                  <span className="text-muted-foreground">
+                    {t('admin.packages.page.subscribers', 'Subscribers')}
+                  </span>
+                  <span className="text-foreground font-mono font-bold">
+                    {formatCount(selectedPkg.subscriberCount)}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-4 border-t border-border/60">
+              <div className="border-border/60 flex items-center gap-2 border-t pt-4">
                 <Can menu="packages" action="update">
                   <Button
                     onClick={() => {
@@ -583,12 +737,17 @@ export function PackagesPage() {
                       setSelectedPkg(null);
                       openEdit(p);
                     }}
-                    className="flex-1 bg-primary text-primary-foreground text-xs font-semibold h-9"
+                    className="bg-primary text-primary-foreground h-9 flex-1 text-xs font-semibold"
                   >
-                    <Edit className="h-3.5 w-3.5 mr-1.5" /> {t('admin.packages.page.editPackage', 'Edit Package')}
+                    <Edit className="mr-1.5 h-3.5 w-3.5" />{' '}
+                    {t('admin.packages.page.editPackage', 'Edit Package')}
                   </Button>
                 </Can>
-                <Button variant="outline" onClick={() => setSelectedPkg(null)} className="text-xs h-9">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedPkg(null)}
+                  className="h-9 text-xs"
+                >
                   {t('common.close', 'Close')}
                 </Button>
               </div>
@@ -599,61 +758,138 @@ export function PackagesPage() {
 
       {/* Package Create & Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg p-6 border-border/80 shadow-xl">
+        <DialogContent className="border-border/80 p-6 shadow-xl sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2.5">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <DialogTitle className="flex items-center gap-2.5 text-base font-bold">
+              <div className="bg-primary/10 text-primary rounded-lg p-2">
                 {editPkg ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               </div>
-              {editPkg ? t('admin.packages.page.dialogEdit', 'Edit Internet Package') : t('admin.packages.page.dialogCreate', 'Create New Internet Package')}
+              {editPkg
+                ? t('admin.packages.page.dialogEdit', 'Edit Internet Package')
+                : t('admin.packages.page.dialogCreate', 'Create New Internet Package')}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              {t('admin.packages.page.dialogDesc', 'Bandwidth, price, billing cycle and the MikroTik profile applied to customers.')}
+              {t(
+                'admin.packages.page.dialogDesc',
+                'Bandwidth, price, billing cycle and the MikroTik profile applied to customers.',
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="package_name" className="text-xs font-semibold">{t('admin.packages.page.fieldName', 'Package Name')}</Label>
-              <Input id="package_name" {...register('package_name')} className="text-xs h-9 shadow-xs" />
-              {errors.package_name && <p className="text-xs text-destructive">{te(errors.package_name.message ?? '')}</p>}
+              <Label htmlFor="package_name" className="text-xs font-semibold">
+                {t('admin.packages.page.fieldName', 'Package Name')}
+              </Label>
+              <Input
+                id="package_name"
+                {...register('package_name')}
+                className="h-9 text-xs shadow-xs"
+              />
+              {errors.package_name && (
+                <p className="text-destructive text-xs">{te(errors.package_name.message ?? '')}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="bandwidth" className="text-xs font-semibold">{t('admin.packages.page.fieldBandwidth', 'Bandwidth (Mbps)')}</Label>
-                <Input id="bandwidth" {...register('bandwidth')} inputMode="numeric" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.bandwidth && <p className="text-xs text-destructive">{te(errors.bandwidth.message ?? '')}</p>}
+                <Label htmlFor="bandwidth" className="text-xs font-semibold">
+                  {t('admin.packages.page.fieldBandwidth', 'Bandwidth (Mbps)')}
+                </Label>
+                <Input
+                  id="bandwidth"
+                  {...register('bandwidth')}
+                  inputMode="numeric"
+                  className="h-9 font-mono text-xs shadow-xs"
+                />
+                {errors.bandwidth && (
+                  <p className="text-destructive text-xs">{te(errors.bandwidth.message ?? '')}</p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="mikrotik_profile" className="text-xs font-semibold">{t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}</Label>
-                <Input id="mikrotik_profile" {...register('mikrotik_profile')} className="text-xs h-9 font-mono shadow-xs" />
-                {errors.mikrotik_profile && <p className="text-xs text-destructive">{te(errors.mikrotik_profile.message ?? '')}</p>}
+                <Label htmlFor="mikrotik_profile" className="text-xs font-semibold">
+                  {t('admin.packages.page.mikrotikProfile', 'MikroTik Profile')}
+                </Label>
+                <Input
+                  id="mikrotik_profile"
+                  {...register('mikrotik_profile')}
+                  className="h-9 font-mono text-xs shadow-xs"
+                />
+                {errors.mikrotik_profile && (
+                  <p className="text-destructive text-xs">
+                    {te(errors.mikrotik_profile.message ?? '')}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="price" className="text-xs font-semibold">{t('admin.packages.page.fieldPrice', 'Price (৳)')}</Label>
-                <Input id="price" {...register('price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.price && <p className="text-xs text-destructive">{te(errors.price.message ?? '')}</p>}
+                <Label htmlFor="price" className="text-xs font-semibold">
+                  {t('admin.packages.page.fieldPrice', 'Price (৳)')}
+                </Label>
+                <Input
+                  id="price"
+                  {...register('price')}
+                  inputMode="decimal"
+                  className="h-9 font-mono text-xs shadow-xs"
+                />
+                {errors.price && (
+                  <p className="text-destructive text-xs">{te(errors.price.message ?? '')}</p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="selling_price" className="text-xs font-semibold">{t('admin.packages.page.fieldSellingPrice', 'Selling Price (৳, optional)')}</Label>
-                <Input id="selling_price" {...register('selling_price')} inputMode="decimal" className="text-xs h-9 font-mono shadow-xs" />
-                {errors.selling_price && <p className="text-xs text-destructive">{te(errors.selling_price.message ?? '')}</p>}
+                <Label htmlFor="selling_price" className="text-xs font-semibold">
+                  {t('admin.packages.page.fieldSellingPrice', 'Selling Price (৳, optional)')}
+                </Label>
+                <Input
+                  id="selling_price"
+                  {...register('selling_price')}
+                  inputMode="decimal"
+                  className="h-9 font-mono text-xs shadow-xs"
+                />
+                {errors.selling_price && (
+                  <p className="text-destructive text-xs">
+                    {te(errors.selling_price.message ?? '')}
+                  </p>
+                )}
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="preview" className="text-xs font-semibold">
+                {t('admin.packages.page.fieldPreview', 'Preview days (optional)')}
+              </Label>
+              <Input
+                id="preview"
+                {...register('preview')}
+                inputMode="numeric"
+                className="h-9 font-mono text-xs shadow-xs"
+              />
+              <p className="text-muted-foreground text-xs">
+                {t(
+                  'admin.packages.page.previewHint',
+                  'Days a new customer on this package stays paid before the first bill. 0 = bill now; blank = the package period.',
+                )}
+              </p>
+              {errors.preview && (
+                <p className="text-destructive text-xs">{te(errors.preview.message ?? '')}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="billing-cycle" className="text-xs font-semibold">{t('admin.packages.page.billingCycle', 'Billing Cycle')}</Label>
+                <Label htmlFor="billing-cycle" className="text-xs font-semibold">
+                  {t('admin.packages.page.billingCycle', 'Billing Cycle')}
+                </Label>
                 <Select
                   value={watch('pricing_type')}
-                  onValueChange={(v) => v && setValue('pricing_type', v as PackageFormValues['pricing_type'])}
+                  onValueChange={(v) =>
+                    v && setValue('pricing_type', v as PackageFormValues['pricing_type'])
+                  }
                   items={cycleLabel}
                 >
-                  <SelectTrigger id="billing-cycle" className="text-xs h-9 shadow-xs w-full">
+                  <SelectTrigger id="billing-cycle" className="h-9 w-full text-xs shadow-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -662,16 +898,22 @@ export function PackagesPage() {
                     <SelectItem value="yearly">{cycleLabel.yearly}</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.pricing_type && <p className="text-xs text-destructive">{te(errors.pricing_type.message ?? '')}</p>}
+                {errors.pricing_type && (
+                  <p className="text-destructive text-xs">
+                    {te(errors.pricing_type.message ?? '')}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="status" className="text-xs font-semibold">{t('admin.customers.list.statusLabel', 'Status')}</Label>
+                <Label htmlFor="status" className="text-xs font-semibold">
+                  {t('admin.customers.list.statusLabel', 'Status')}
+                </Label>
                 <Select
                   value={watch('status')}
                   onValueChange={(v) => v && setValue('status', v as PackageFormValues['status'])}
                   items={{ active: statusLabel('active'), inactive: statusLabel('inactive') }}
                 >
-                  <SelectTrigger id="status" className="text-xs h-9 shadow-xs w-full">
+                  <SelectTrigger id="status" className="h-9 w-full text-xs shadow-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -679,17 +921,23 @@ export function PackagesPage() {
                     <SelectItem value="inactive">{statusLabel('inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.status && <p className="text-xs text-destructive">{te(errors.status.message ?? '')}</p>}
+                {errors.status && (
+                  <p className="text-destructive text-xs">{te(errors.status.message ?? '')}</p>
+                )}
               </div>
             </div>
 
             <div className="pt-2">
               <Button
                 type="submit"
-                className="w-full text-xs font-semibold shadow-xs bg-primary hover:bg-primary/90 text-primary-foreground h-9"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 w-full text-xs font-semibold shadow-xs"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? t('admin.packages.page.saving', 'Saving…') : editPkg ? t('admin.packages.page.saveChanges', 'Save Changes') : t('admin.packages.page.create', 'Create Package')}
+                {isSubmitting
+                  ? t('admin.packages.page.saving', 'Saving…')
+                  : editPkg
+                    ? t('admin.packages.page.saveChanges', 'Save Changes')
+                    : t('admin.packages.page.create', 'Create Package')}
               </Button>
             </div>
           </form>
@@ -703,7 +951,11 @@ export function PackagesPage() {
         title={t('admin.packages.page.deleteTitle', 'Delete Package')}
         description={
           deleteTarget && deleteTarget.subscriberCount > 0
-            ? t('admin.packages.page.deleteWithCustomers', '{n} customers are on this package and will need reassignment. Delete it anyway?', { n: deleteTarget.subscriberCount })
+            ? t(
+                'admin.packages.page.deleteWithCustomers',
+                '{n} customers are on this package and will need reassignment. Delete it anyway?',
+                { n: deleteTarget.subscriberCount },
+              )
             : t('admin.packages.page.deleteHint', 'Are you sure you want to delete this package?')
         }
         confirmLabel={t('admin.packages.page.deleteTitle', 'Delete Package')}

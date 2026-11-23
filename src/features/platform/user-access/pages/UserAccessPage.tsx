@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/features/shared/data-table';
 import type { PlatformAdminUser } from '@/features/platform/types';
+import { PlatformRoleDefaultsCard } from '../components/PlatformRoleDefaultsCard';
 
 import { formatCount } from '@/lib/format';
 import { useLocale } from '@/i18n/locale-context';
@@ -35,7 +36,7 @@ const getColumns = (t: Translate): LegacyColumnDef<PlatformAdminUser, unknown>[]
     cell: ({ row }) => (
       <div>
         <div className="font-medium">{row.original.name}</div>
-        <div className="text-xs text-muted-foreground">{row.original.email}</div>
+        <div className="text-muted-foreground text-xs">{row.original.email}</div>
       </div>
     ),
   },
@@ -56,7 +57,10 @@ const getColumns = (t: Translate): LegacyColumnDef<PlatformAdminUser, unknown>[]
     header: t('platform.userAccess.page.colStatus', 'Status'),
     size: 100,
     cell: ({ row }) => (
-      <Badge variant={row.original.status === 'active' ? 'default' : 'secondary'} className="text-xs capitalize">
+      <Badge
+        variant={row.original.status === 'active' ? 'default' : 'secondary'}
+        className="text-xs capitalize"
+      >
         {statusLabel(t, row.original.status)}
       </Badge>
     ),
@@ -66,8 +70,10 @@ const getColumns = (t: Translate): LegacyColumnDef<PlatformAdminUser, unknown>[]
     header: t('platform.userAccess.page.colLastLogin', 'Last Login'),
     size: 160,
     cell: ({ row }) => (
-      <span className="text-xs text-muted-foreground">
-        {row.original.lastLoginAt ? platformDateTime(row.original.lastLoginAt) : t('platform.userAccess.page.neverRecorded', 'Never recorded')}
+      <span className="text-muted-foreground text-xs">
+        {row.original.lastLoginAt
+          ? platformDateTime(row.original.lastLoginAt)
+          : t('platform.userAccess.page.neverRecorded', 'Never recorded')}
       </span>
     ),
   },
@@ -87,7 +93,8 @@ export function UserAccessPage() {
 
   const admins = useQuery({
     queryKey: ['platform', 'admins', 'list', { role: 'super_admin', page, pageSize, search }],
-    queryFn: () => platformService.getAdmins({ role: 'super_admin', page, perPage: pageSize, search }),
+    queryFn: () =>
+      platformService.getAdmins({ role: 'super_admin', page, perPage: pageSize, search }),
     placeholderData: keepPreviousData,
   });
 
@@ -95,10 +102,16 @@ export function UserAccessPage() {
   if (roles.error || admins.error || !roles.data || !admins.data) {
     const err = roles.error ?? admins.error;
     return (
-      <EmptyState variant="error"
+      <EmptyState
+        variant="error"
         title={t('platform.userAccess.page.loadFailed', 'Failed to load user access')}
         description={
-          err instanceof Error ? err.message : t('platform.userAccess.page.loadFailedDesc', 'Could not retrieve roles and administrators.')
+          err instanceof Error
+            ? err.message
+            : t(
+                'platform.userAccess.page.loadFailedDesc',
+                'Could not retrieve roles and administrators.',
+              )
         }
         actionLabel={t('common.retry', 'Retry')}
         onAction={() => {
@@ -125,21 +138,25 @@ export function UserAccessPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {roles.data.map((role) => (
-          <Card key={role.id} className="border-border/60 bg-card hover:border-primary/40 transition">
-            <CardContent className="p-4 space-y-1.5">
+          <Card
+            key={role.id}
+            className="border-border/60 bg-card hover:border-primary/40 transition"
+          >
+            <CardContent className="space-y-1.5 p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-sm text-foreground">{role.name}</span>
-                <Badge variant="secondary" className="font-mono text-xs shrink-0">
+                <span className="text-foreground text-sm font-bold">{role.name}</span>
+                <Badge variant="secondary" className="shrink-0 font-mono text-xs">
                   {t('platform.userAccess.page.perms', '{n} perms', { n: role.permissions })}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground">{role.description}</p>
-              <div className="pt-2 flex items-center justify-between text-xs font-semibold">
-                <span className="text-muted-foreground">{role.modules !== null
+              <p className="text-muted-foreground text-xs">{role.description}</p>
+              <div className="flex items-center justify-between pt-2 text-xs font-semibold">
+                <span className="text-muted-foreground">
+                  {role.modules !== null
                     ? t('platform.userAccess.page.modules', '{n} modules', { n: role.modules })
                     : t('platform.userAccess.page.allModules', 'All modules')}
                 </span>
-                <span className="font-mono text-primary">
+                <span className="text-primary font-mono">
                   {t('platform.userAccess.page.users', '{n} users', { n: formatCount(role.users) })}
                 </span>
               </div>
@@ -148,12 +165,15 @@ export function UserAccessPage() {
         ))}
       </div>
 
+      <PlatformRoleDefaultsCard />
+
       <Card className="border-border/60 bg-card shadow-xs">
-        <CardHeader className="pb-3 border-b border-border/40">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <UserLock className="h-4 w-4 text-primary" /> {t('platform.userAccess.page.superAdmins', 'Platform Super-Administrators')}
+        <CardHeader className="border-border/40 border-b pb-3">
+          <CardTitle className="flex items-center gap-2 text-base font-bold">
+            <UserLock className="text-primary h-4 w-4" />{' '}
+            {t('platform.userAccess.page.superAdmins', 'Platform Super-Administrators')}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {t('platform.userAccess.page.managedPrefix', 'Tenant owner accounts are managed on')}{' '}
             <Link href="/platform/admins" className="underline">
               {t('platform.userAccess.page.secondAdmins', 'Second Admins')}
@@ -162,7 +182,8 @@ export function UserAccessPage() {
           </p>
         </CardHeader>
         <CardContent className="pt-4">
-          <DataTable urlState
+          <DataTable
+            urlState
             columns={columns}
             data={admins.data.items}
             getRowId={(row) => row.id}
@@ -183,7 +204,10 @@ export function UserAccessPage() {
               },
             }}
             emptyTitle={t('platform.userAccess.page.emptyTitle', 'No platform administrators')}
-            emptyDescription={t('platform.userAccess.page.emptyDesc', 'No super-admin accounts match.')}
+            emptyDescription={t(
+              'platform.userAccess.page.emptyDesc',
+              'No super-admin accounts match.',
+            )}
           />
         </CardContent>
       </Card>
