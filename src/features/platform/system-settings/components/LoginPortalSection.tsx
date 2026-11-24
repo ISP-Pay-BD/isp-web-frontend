@@ -147,7 +147,7 @@ export function LoginPortalSection() {
                 };
                 return (
                   <Select
-                    value={field.value}
+                    value={field.value ?? ''}
                     items={items}
                     onValueChange={(v) => field.onChange(v)}
                   >

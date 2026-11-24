@@ -502,7 +502,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                     <DataTable
                       columns={attendanceColumns}
                       data={data.attendance}
-                      getRowId={(row) => row.id}
+                      getRowId={(row, idx) => row.id || `att-${idx}`}
                       enableColumnVisibility={false}
                       enableLayoutToggle={false}
                     />
@@ -589,7 +589,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {pings.map((p, i) => (
                             <div
-                              key={p.id}
+                              key={p.id || `ping-${i}`}
                               onClick={() => setSelectedLocationId(p.id)}
                               className={cn(
                                 'p-2.5 rounded-lg border text-xs cursor-pointer transition duration-150',
@@ -626,7 +626,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                     <DataTable
                       columns={advanceColumns}
                       data={data.advances}
-                      getRowId={(row) => row.id}
+                      getRowId={(row, idx) => row.id || `adv-${idx}`}
                       enableColumnVisibility={false}
                       enableLayoutToggle={false}
                     />
@@ -657,7 +657,7 @@ export function EmployeeDetailsPage({ employeeId }: { employeeId: string }) {
                     <DataTable
                       columns={installationColumns}
                       data={installItems}
-                      getRowId={(row) => row.id}
+                      getRowId={(row, idx) => row.id || `inst-${idx}`}
                       enableColumnVisibility={false}
                       enableLayoutToggle={false}
                       pageSizeOptions={[10, 20, 50]}

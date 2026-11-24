@@ -132,7 +132,7 @@ export function SettingsSectionForm({ section, groups, footer }: Props) {
                       control={form.control}
                       render={({ field }) => (
                         <Select
-                          value={field.value}
+                          value={field.value ?? ''}
                           items={f.options}
                           onValueChange={(v) => field.onChange(v)}
                         >

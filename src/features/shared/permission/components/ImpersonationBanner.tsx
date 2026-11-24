@@ -6,18 +6,16 @@ import { Loader2, UserRoundCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { http } from '@/lib/api/client';
 import { setAuthCookie } from '@/lib/auth/session-cookie';
-import { clearParkedSession, readParkedSession } from '@/lib/auth/impersonation';
+import { clearParkedSession, readParkedSession, subscribeImpersonation } from '@/lib/auth/impersonation';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { useTranslations } from '@/i18n/locale-context';
-
-const subscribe = () => () => {};
 
 /** Shown while an admin is acting as another account ("Log in as" a tenant admin or POP). */
 export function ImpersonationBanner() {
   const t = useTranslations();
   const router = useRouter();
-  const parked = useSyncExternalStore(subscribe, readParkedSession, () => null);
+  const parked = useSyncExternalStore(subscribeImpersonation, readParkedSession, () => null);
   const [returning, setReturning] = useState(false);
 
   if (!parked) return null;
@@ -36,7 +34,8 @@ export function ImpersonationBanner() {
     queryClient.clear();
     useAuthStore.setState({ user: parked.user, token: parked.token, isAuthenticated: true });
     setAuthCookie({ userId: parked.user.id, role: parked.user.role, status: parked.user.status });
-    router.replace(parked.returnTo ?? '/platform/admins');
+    const target = parked.returnTo ?? '/platform/admins';
+    window.location.href = target;
   };
 
   const [signedInBefore, signedInAfter = ''] = t(

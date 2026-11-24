@@ -48,6 +48,17 @@ type FundingFormValues = z.infer<typeof fundingSchema>;
 
 const CARD_PAGE_SIZE = 8;
 
+function normalizeDate(d?: string): string | undefined {
+  if (!d) return undefined;
+  const trimmed = d.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return trimmed;
+}
+
 const emptyForm = (): FundingFormValues => ({
   type: 'credit',
   amount: 0,
@@ -170,7 +181,7 @@ export function PopFundingPage() {
           type: values.type,
           amount: values.amount,
           paid_via: values.paid_via || undefined,
-          received_date: values.received_date || undefined,
+          received_date: normalizeDate(values.received_date),
           invoice_number: values.invoice_number || undefined,
           comments: values.comments || undefined,
           request_id: requestId,

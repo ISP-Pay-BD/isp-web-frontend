@@ -516,8 +516,8 @@ export function AdminDashboardPage() {
                   <PackageDonutChart data={stats.packageDistribution} />
                 </div>
                 <div className="space-y-1.5 pt-1">
-                  {stats.packageDistribution.map((pkg) => (
-                    <div key={pkg.name} className="flex items-center justify-between text-xs py-0.5">
+                  {stats.packageDistribution.map((pkg, idx) => (
+                    <div key={`${pkg.name}-${idx}`} className="flex items-center justify-between text-xs py-0.5">
                       <span className="flex items-center gap-2 text-foreground font-medium">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: pkg.color }} />
                         {pkg.name}
@@ -550,8 +550,8 @@ export function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
             {stats.paymentMethods.length ? (
-              stats.paymentMethods.map((method) => (
-                <div key={method.name} className="space-y-1.5 p-2 rounded-lg">
+              stats.paymentMethods.map((method, idx) => (
+                <div key={`${method.name}-${idx}`} className="space-y-1.5 p-2 rounded-lg">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-foreground flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: method.color }} />
@@ -620,8 +620,8 @@ export function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {filteredGeoRevenue.length ? (
-              filteredGeoRevenue.map((geo) => (
-                <Link key={geo.area} href="/admin/areas" className="block group no-underline">
+              filteredGeoRevenue.map((geo, idx) => (
+                <Link key={`${geo.area}-${idx}`} href="/admin/areas" className="block group no-underline">
                   <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer border border-border/40">
                     <div>
                       <div className="font-medium text-xs text-foreground flex items-center gap-1.5">

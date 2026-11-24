@@ -26,7 +26,11 @@ export const notificationService = {
 
   getNotifications: async (page = 1, limit = 20): Promise<AppNotification[]> => {
     try {
-      return await http.get<AppNotification[]>('/v1/notifications', { page, limit });
+      const res = await http.get<any>('/v1/notifications', { page, limit });
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res?.notifications)) return res.notifications;
+      if (Array.isArray(res?.items)) return res.items;
+      return [];
     } catch {
       return [];
     }

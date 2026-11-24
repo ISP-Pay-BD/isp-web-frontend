@@ -106,6 +106,9 @@ function ThemeEditor({ saved }: { saved: TenantTheme | null }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       try {

@@ -25,13 +25,16 @@ function toInvoice(value: unknown): PublicInvoice {
   };
 }
 
-const path = (id: string) => `/v1/public/payments/make-payment/${encodeURIComponent(id)}`;
+const path = (id: string, sig?: string) => {
+  const base = `/v1/public/payments/make-payment/${encodeURIComponent(id)}`;
+  return sig ? `${base}?sig=${encodeURIComponent(sig)}` : base;
+};
 
-/** GET /v1/public/payments/make-payment/{id} — 404 when the invoice is unknown or no longer pending. */
-export function usePublicInvoice(id: string) {
+/** GET /v1/public/payments/make-payment/{id} — 404 when the invoice is unknown, wrong signature, or no longer pending. */
+export function usePublicInvoice(id: string, sig?: string) {
   return useQuery({
-    queryKey: ['public', 'make-payment', id],
-    queryFn: async ({ signal }) => toInvoice(await http.get<unknown>(path(id), undefined, signal)),
+    queryKey: ['public', 'make-payment', id, sig],
+    queryFn: async ({ signal }) => toInvoice(await http.get<unknown>(path(id, sig), undefined, signal)),
     enabled: /^\d+$/.test(id),
     retry: false,
     staleTime: 0,
@@ -39,10 +42,12 @@ export function usePublicInvoice(id: string) {
 }
 
 /** POST /v1/public/payments/make-payment/{id}/{gateway} → `{redirect_url}` (the hosted gateway page). */
-export function useStartPayment(id: string) {
+export function useStartPayment(id: string, sig?: string) {
   return useMutation({
     mutationFn: async (gateway: string) => {
-      const r = (await http.post<Raw>(`${path(id)}/${encodeURIComponent(gateway)}`)) ?? {};
+      const base = `${path(id, sig)}/${encodeURIComponent(gateway)}`;
+      const url = sig ? `${base}?sig=${encodeURIComponent(sig)}` : base;
+      const r = (await http.post<Raw>(url)) ?? {};
       return str(r.redirect_url);
     },
   });

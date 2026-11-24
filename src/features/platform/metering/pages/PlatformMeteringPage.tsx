@@ -125,7 +125,7 @@ export function PlatformMeteringPage() {
       <DataTable urlState
         columns={columns}
         data={data.items}
-        getRowId={(row) => row.adminId}
+        getRowId={(row, idx) => row.adminId || row.tenantId || `metering-${idx}`}
         searchPlaceholder={t('platform.metering.page.searchPlaceholder', 'Search tenant admin name, email or phone...')}
         server={{
           page,

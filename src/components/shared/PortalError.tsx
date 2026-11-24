@@ -20,7 +20,7 @@ export function PortalError({ error, reset, homeHref }: PortalErrorProps) {
   }, [error]);
 
   return (
-    <div role="alert" className="mx-auto flex max-w-md flex-col items-center px-6 py-20 text-center">
+    <div role="alert" className="mx-auto flex flex-1 w-full min-h-[calc(100vh-12rem)] max-w-md flex-col items-center justify-center px-6 py-20 text-center">
       <div className="bg-destructive/10 text-destructive mb-5 flex h-14 w-14 items-center justify-center rounded-2xl">
         <ServerCrash className="h-7 w-7" />
       </div>

@@ -208,8 +208,9 @@ export function useSmsTemplateOptions() {
   return useQuery({
     queryKey: smsKeys.templateOptions,
     queryFn: async () => {
-      const res = await http.get<{ items?: unknown[] }>('/v1/sms/templates');
-      return (res?.items ?? []).map(mapTemplate);
+      const res = await http.get<unknown>('/v1/sms/templates');
+      const list = Array.isArray(res) ? res : (res as { items?: unknown[] })?.items ?? [];
+      return list.map(mapTemplate);
     },
     staleTime: 5 * 60_000,
   });

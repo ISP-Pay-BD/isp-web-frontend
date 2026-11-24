@@ -13,7 +13,7 @@ import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 export function PortalPageMotion({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
-    <div key={pathname} className="ui-page-enter min-w-0">
+    <div key={pathname} className="ui-page-enter min-w-0 flex-1 flex flex-col">
       <Suspense fallback={<PageSkeleton variant="table" rows={6} />}>{children}</Suspense>
     </div>
   );

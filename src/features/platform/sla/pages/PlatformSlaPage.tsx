@@ -136,7 +136,7 @@ export function PlatformSlaPage() {
       <DataTable urlState
         columns={columns}
         data={data.items}
-        getRowId={(row) => row.adminId}
+        getRowId={(row, idx) => row.adminId || row.tenantId || `sla-${idx}`}
         searchPlaceholder={t('platform.sla.page.searchPlaceholder', 'Search tenant admin name, email or phone...')}
         server={{
           page,

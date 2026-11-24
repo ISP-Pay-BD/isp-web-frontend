@@ -57,10 +57,12 @@ export function mapEmployeeSummary(r: RawRow): EmployeeSummary {
   };
 }
 
-function mapAttendanceLog(r: RawRow): AttendanceLog {
+function mapAttendanceLog(r: RawRow, idx?: number): AttendanceLog {
+  const checkIn = str(r.check_in);
+  const date = str(r.date) || checkIn.slice(0, 10);
   return {
-    id: str(r.id),
-    date: str(r.date),
+    id: str(r.id) || (checkIn ? `att-${checkIn}-${idx ?? 0}` : `att-${date}-${idx ?? 0}`),
+    date,
     checkIn: str(r.check_in),
     checkOut: str(r.check_out),
     status: str(r.status),
@@ -96,7 +98,7 @@ export function mapActivity(r: RawRow): EmployeeActivity {
     locationRequired: flag(summary.location_required),
     locationInterval: num(summary.location_interval),
     lastLocationUpdate: str(summary.last_location_update),
-    attendance: rows(r.attendance).map(mapAttendanceLog),
+    attendance: rows(r.attendance).map((row, i) => mapAttendanceLog(row, i)),
     locations: rows(r.locations)
       .map(mapPing)
       .filter((p): p is LocationPing => p !== null),

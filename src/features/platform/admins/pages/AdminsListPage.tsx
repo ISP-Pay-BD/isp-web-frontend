@@ -68,7 +68,7 @@ export function AdminsListPage() {
         } catch {
           /* storage unavailable */
         }
-        parkImpersonatorSession({ user: current.user, token: current.token, refreshToken, impersonatedName: user.name });
+        parkImpersonatorSession({ user: current.user, token: current.token, refreshToken, impersonatedName: user.name, returnTo: '/platform/admins' });
       }
       try {
         localStorage.removeItem('isp_refresh_token');

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { CreditCard, Receipt, SearchX } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,9 +21,11 @@ const panel =
  * invoice amount and one card per enabled gateway (amount, surcharge, total); "Pay" redirects to the gateway.
  */
 export function MakePaymentPage({ paymentId }: { paymentId: string }) {
+  const searchParams = useSearchParams();
+  const sig = searchParams.get('sig') || undefined;
   const t = useTranslations();
-  const invoice = usePublicInvoice(paymentId);
-  const start = useStartPayment(paymentId);
+  const invoice = usePublicInvoice(paymentId, sig);
+  const start = useStartPayment(paymentId, sig);
   const [active, setActive] = useState<string | null>(null);
 
   const pay = (gateway: string) => {

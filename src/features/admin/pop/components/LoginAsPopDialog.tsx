@@ -1,13 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { http } from '@/lib/api/client';
 import { authService } from '@/lib/api/services/auth.service';
@@ -20,24 +17,25 @@ import { useTranslations } from '@/i18n/locale-context';
 interface ImpersonationResult {
   access_token: string;
   expires_in: number;
-  name: string;
+  name?: string;
+  user_name?: string;
 }
 
 /**
  * "Login as POP" — POST /api/v1/pops/{id}/impersonate. The backend issues a
- * short-lived, audit-logged access token (no refresh token). The admin's own
- * session is parked in this tab so the shell can offer "Return".
+ * short-lived, audit-logged access token (no refresh token). Direct 1-click
+ * login without requiring any password. The admin's own session is parked
+ * in this tab so the shell can offer "Return".
  */
 export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: string } | null; onClose: () => void }) {
   const router = useRouter();
   const t = useTranslations();
-  const [password, setPassword] = useState('');
 
   const login = useMutation({
     mutationFn: async () => {
       const original = useAuthStore.getState();
       if (!original.user || !original.token) throw new Error(t('admin.pop.loginAs.notSignedIn', 'You are not signed in.'));
-      const result = await http.post<ImpersonationResult>(`/v1/pops/${pop?.id}/impersonate`, password ? { password } : {});
+      const result = await http.post<ImpersonationResult>(`/v1/pops/${pop?.id}/impersonate`, {});
 
       let refreshToken: string | null = null;
       try {
@@ -49,7 +47,7 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
         user: original.user,
         token: original.token,
         refreshToken,
-        impersonatedName: result.name,
+        impersonatedName: result.name || result.user_name || pop?.name || 'POP',
         returnTo: '/admin/pop/resellers',
       });
 
@@ -68,7 +66,6 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
     },
     onSuccess: (user) => {
       toast.success(t('admin.pop.loginAs.signedIn', 'Signed in as {name}', { name: user.name }));
-      setPassword('');
       onClose();
       router.replace('/admin/dashboard');
     },
@@ -86,21 +83,8 @@ export function LoginAsPopDialog({ pop, onClose }: { pop: { id: string; name: st
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-1.5 py-2">
-          <Label htmlFor="pop-imp-password">{t('admin.pop.loginAs.password', 'Your password')}</Label>
-          <Input
-            id="pop-imp-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <p className="text-muted-foreground text-xs">
-            {t('admin.pop.loginAs.passwordHint', "Confirms it's you. Optional unless your platform requires it.")}
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+        <DialogFooter className="mt-4">
+          <Button variant="ghost" onClick={onClose} disabled={login.isPending}>
             {t('common.cancel', 'Cancel')}
           </Button>
           <Button onClick={() => login.mutate()} disabled={login.isPending}>

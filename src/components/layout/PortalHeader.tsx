@@ -87,7 +87,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
 
   const loadNotifications = useCallback(async () => {
     const list = await notificationService.getNotifications(1, 10);
-    setNotificationsList(list);
+    setNotificationsList(Array.isArray(list) ? list : []);
   }, []);
 
   const handleMarkAllRead = async () => {
@@ -210,7 +210,7 @@ export function PortalHeader({ portal }: PortalHeaderProps) {
                 )}
               </div>
               <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
-                {notificationsList.length === 0 ? (
+                {!Array.isArray(notificationsList) || notificationsList.length === 0 ? (
                   <div className="py-8 text-center text-xs text-muted-foreground">
                     {t('common.header.noNotifications', 'You are all caught up')}
                   </div>

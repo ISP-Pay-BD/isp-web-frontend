@@ -77,6 +77,13 @@ function BrandingEditor({ initial, onRefresh, refreshing }: { initial: GeneralSe
 
   const handleUpload = (file: File | undefined, kind: 'logo' | 'icon') => {
     if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const allowed = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];
+    if (!allowed.includes(ext) && !file.type.startsWith('image/')) {
+      const input = kind === 'logo' ? logoInput.current : iconInput.current;
+      if (input) input.value = '';
+      return;
+    }
     upload.mutate(
       { file, kind },
       {

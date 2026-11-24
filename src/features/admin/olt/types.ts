@@ -33,6 +33,18 @@ export interface OltBrandOption {
   syncSupported: boolean;
 }
 
+export const DEFAULT_OLT_BRANDS: OltBrandOption[] = [
+  { value: 'bdcom', label: 'BDCOM', syncSupported: true },
+  { value: 'vsol', label: 'V-SOL', syncSupported: true },
+  { value: 'atop', label: 'ATOP', syncSupported: true },
+  { value: 'corelink', label: 'Corelink', syncSupported: true },
+  { value: 'dbc', label: 'DBC', syncSupported: true },
+  { value: 'avies', label: 'Avies', syncSupported: true },
+  { value: 'airmedia', label: 'Airmedia', syncSupported: true },
+  { value: 'dn_optic', label: 'DN Optic', syncSupported: true },
+  { value: 'photon', label: 'Photon', syncSupported: true },
+];
+
 export function mapBrandOption(raw: unknown): OltBrandOption {
   const r = asRaw(raw);
   return { value: str(r.value), label: str(r.label, str(r.value)), syncSupported: r.sync_supported === true };

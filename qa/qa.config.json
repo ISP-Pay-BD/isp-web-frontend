@@ -1,0 +1,95 @@
+{
+  "_doc": "srs-test-all config for isp-web-frontend. Run from the repo root: node ~/.claude/skills/srs-test-all/scripts/runner.mjs --config qa/qa.config.json. Passwords come from env vars only. VERIFY the persona emails below against the isppay_suite_run seed before the first run.",
+
+  "baseUrl": "http://127.0.0.1:3000",
+
+  "routes": { "source": "next-app", "dir": "src/app" },
+
+  "personas": {
+    "public": {},
+    "admin":    { "prefix": "/admin",    "login": { "username": "owner@example.com",    "passwordEnv": "QA_PASSWORD_ADMIN" } },
+    "customer": { "prefix": "/customer", "login": { "username": "user@alpha.example",   "passwordEnv": "QA_PASSWORD_CUSTOMER" } },
+    "employee": { "prefix": "/employee", "login": { "username": "emp@alpha.example",    "passwordEnv": "QA_PASSWORD_EMPLOYEE" } },
+    "platform": { "prefix": "/platform", "login": { "username": "root@isppaybd.local",  "passwordEnv": "QA_PASSWORD_PLATFORM" } }
+  },
+
+  "login": {
+    "path": "/login",
+    "fields": { "username": "#email", "password": "#password" },
+    "submit": "button[type=submit]"
+  },
+
+  "dynamicParams": {
+    "routes": {
+      "/payment/make-payment/[id]": "/payment/make-payment/1099?sig=vf7_ohtL9mx7XqwkINDapl",
+      "/admin/customer-payments/[id]": "/admin/customer-payments/1051",
+      "/admin/routers/[id]": "/admin/routers/1060",
+      "/admin/invoices/[id]": "/admin/invoices/1051",
+      "/admin/support/[id]": "/admin/support/1080",
+      "/admin/hr/employees/[id]": "/admin/hr/employees/1070",
+      "/admin/olt/[id]": "/admin/olt/1",
+      "/admin/payment-gateways/[id]": "/admin/payment-gateways/bkash",
+      "/customer/payments/[id]": "/customer/payments/1051",
+      "/customer/support/[id]": "/customer/support/1080",
+      "/employee/tickets/[id]": "/employee/tickets/1080",
+      "/platform/tenants/[id]": "/platform/tenants/1",
+      "/platform/admins/[id]": "/platform/admins/1001",
+      "/plugins/[slug]": "/plugins/mobile-app-white-label",
+      "/engines/[slug]": "/engines/mobile-app-white-label",
+      "/admin/engines/[slug]": "/admin/engines/mobile-app-white-label",
+      "/platform/engines/[slug]": "/platform/engines/mobile-app-white-label"
+    },
+    "defaults": { "id": "1041", "slug": "getting-started-with-isppaybd" }
+  },
+
+  "allowedRedirects": {
+    "/admin": "^/admin/dashboard$",
+    "/platform": "^/platform/dashboard$",
+    "/platform/settings": "^/platform/settings/software$",
+    "/platform/support": "^/platform/support-tickets$"
+  },
+  "allowEmptyRoutes": [],
+
+  "accessProbes": [
+    { "persona": "customer", "path": "/admin" },
+    { "persona": "customer", "path": "/platform" },
+    { "persona": "customer", "path": "/employee" },
+    { "persona": "employee", "path": "/admin" },
+    { "persona": "employee", "path": "/platform" },
+    { "persona": "admin",    "path": "/platform" }
+  ],
+
+  "knownIgnores": {
+    "console": [
+      { "pattern": "'measure' on 'Performance'", "reason": "React/Next dev-mode performance.measure noise; does not occur in production builds" }
+    ],
+    "api": [
+      { "pattern": "/favicon\\.ico", "status": 404, "reason": "dev server has no favicon route" }
+    ]
+  },
+
+  "checks": {
+    "minBodyChars": 80,
+    "requireTableRows": true,
+    "warningsFail": true,
+    "failOnInteractionError": true,
+    "failOnUnresolved": true
+  },
+
+  "safety": { "denyWords": ["ping", "onu", "olt sync", "radius", "mikrotik", "sms", "whatsapp", "notify"] },
+  "forms": { "submit": false },
+  "searchTerm": "a",
+  "sampleValues": { "amount": "1250", "price": "1250", "ip": "192.168.1.100", "voucher": "QA-9921", "code": "QA-9921" },
+  "fixtures": { "importFile": "fixtures/sample_customers.csv" },
+  "viewports": ["desktop"],
+  "reportsDir": "reports",
+
+  "db": {
+    "name": "isppay_suite_run",
+    "allowed": ["isppay_suite_run"],
+    "command": ["docker", "exec", "-i", "-e", "MYSQL_PWD", "dev-stack-mysql-1", "mysql", "-uisppay", "{db}"],
+    "passwordEnv": "QA_DB_PASSWORD",
+    "seedFiles": ["seed/01-suite.sql"],
+    "tables": {"customers": 1, "packages": 1, "routers": 1, "addons": 1, "payments": 1, "income_entries": 1, "expense_entries": 1, "employees": 1, "attendances": 1, "inventory_items": 1, "bandwidth_items": 1, "tickets": 1, "customer_contracts": 1, "customer_deposits": 1, "customer_feedback": 1, "customer_groups": 1, "bandwidth_sell_invoices": 1, "installations": 1, "shop_products": 1, "blogs": 1, "billing_policies": 1, "billing_tax_configs": 1, "bandwidth_slas": 1, "customer_kyc_documents": 1, "developer_api_keys": 1, "developer_webhooks": 1, "fraud_flags": 1, "free_user_requests": 1, "network_nodes": 1, "noc_incidents": 1, "pop_commission_rules": 1, "purchase_bills": 1, "requisitions": 1, "reward_programs": 1, "reward_transactions": 1, "referrals": 1, "service_catalog": 1, "shop_orders": 1, "voice_sms_messages": 1, "vpn_accounts": 1, "wallet_topup_requests": 1, "whatsapp_campaigns": 1, "recycle_bin_items": 1, "dealers": 1, "suppliers": 1, "units": 1, "expense_types": 1, "income_types": 1, "inventory_categories": 1, "inventory_providers": 1, "bandwidth_vendors": 1, "pon_ports": 1, "splitters": 1, "purchase_orders": 1, "purchase_order_items": 1, "registration_requests": 1, "store_locations": 1, "app_releases": 1, "dunning_rules": 1, "landing_testimonials": 1, "captive_pages": 1, "customer_credit_notes": 1, "usage_alert_rules": 1, "whatsapp_templates": 1, "hotspot_profiles": 1, "hotspot_users": 1}
+  }
+}

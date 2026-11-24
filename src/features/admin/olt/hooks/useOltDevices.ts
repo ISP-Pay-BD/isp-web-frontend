@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient, http } from '@/lib/api/client';
 import type { ApiResponse } from '@/lib/api/types';
-import { asList, mapBrandOption, mapBrandUsage, mapOlt, mapOltSummary } from '../types';
+import { asList, DEFAULT_OLT_BRANDS, mapBrandOption, mapBrandUsage, mapOlt, mapOltSummary } from '../types';
 
 export const oltKeys = {
   /** Everything derived from the OLT tables (lists, ONUs, topology). */
@@ -40,11 +40,12 @@ export function useOltDevices({ page, pageSize, search, brand }: OltListParams) 
     queryKey: oltKeys.list(params),
     queryFn: async () => {
       const res = await http.getPage<unknown>('/v1/olts', params);
+      const rawBrands = asList(res.raw.brands).map(mapBrandOption);
       return {
         items: res.items.map(mapOlt),
         meta: res.meta,
         summary: mapOltSummary(res.raw.summary),
-        brands: asList(res.raw.brands).map(mapBrandOption),
+        brands: rawBrands.length > 0 ? rawBrands : DEFAULT_OLT_BRANDS,
       };
     },
     placeholderData: keepPreviousData,
