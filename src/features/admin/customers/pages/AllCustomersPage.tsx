@@ -243,17 +243,21 @@ export function AllCustomersPage() {
       {
         id: 'id',
         header: t('admin.customers.list.colId', 'C.ID'),
+        size: 75,
+        minSize: 55,
         cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">{row.original.id}</span>,
         meta: { mobile: 'hide' },
       },
       {
         id: 'customer',
         header: t('admin.customers.list.colSubscriber', 'Subscriber'),
+        size: 240,
+        minSize: 160,
         enableHiding: false,
         cell: ({ row }) => {
           const c = row.original;
           return (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-xs font-bold text-primary">
                   {c.name.slice(0, 2).toUpperCase()}
@@ -265,12 +269,12 @@ export function AllCustomersPage() {
                   )}
                 />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <Link
                   href={`/admin/customers/${c.id}`}
                   onMouseEnter={() => void prefetchCustomer(c.id)}
                   onFocus={() => void prefetchCustomer(c.id)}
-                  className="block max-w-[200px] truncate py-0.5 text-left text-sm font-bold text-foreground transition-colors hover:text-primary hover:underline"
+                  className="block w-full truncate py-0.5 text-left text-sm font-bold text-foreground transition-colors hover:text-primary hover:underline"
                 >
                   {c.name}
                 </Link>
@@ -284,59 +288,71 @@ export function AllCustomersPage() {
       {
         id: 'package',
         header: t('admin.customers.list.colPackage', 'Package'),
+        size: 180,
+        minSize: 120,
         cell: ({ row }) => (
-          <>
-            <div className="max-w-[140px] truncate font-semibold text-foreground">{row.original.packageName || '—'}</div>
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-foreground">{row.original.packageName || '—'}</div>
             {row.original.packagePrice !== null && (
               <div className="font-mono text-xs text-muted-foreground">
                 <CurrencyDisplay amount={row.original.packagePrice} />
               </div>
             )}
-          </>
+          </div>
         ),
       },
       {
         id: 'area',
         header: t('admin.customers.list.colArea', 'Area / Sub-area'),
+        size: 180,
+        minSize: 120,
         cell: ({ row }) => (
-          <>
-            <div className="max-w-[130px] truncate font-medium text-foreground">{row.original.areaName || '—'}</div>
+          <div className="min-w-0">
+            <div className="truncate font-medium text-foreground">{row.original.areaName || '—'}</div>
             {row.original.subAreaName && <div className="truncate text-xs text-muted-foreground">{row.original.subAreaName}</div>}
-          </>
+          </div>
         ),
       },
       {
         id: 'mobile',
         header: t('admin.customers.list.colMobile', 'Mobile'),
+        size: 150,
+        minSize: 110,
         cell: ({ row }) => (
           <div className="flex items-center gap-1 font-mono text-xs text-foreground">
-            <Phone className="h-3 w-3 text-muted-foreground" />
-            {row.original.phone ? <a href={`tel:${row.original.phone}`} className="hover:underline">{row.original.phone}</a> : <span>—</span>}
+            <Phone className="h-3 w-3 text-muted-foreground shrink-0" />
+            {row.original.phone ? <a href={`tel:${row.original.phone}`} className="hover:underline truncate">{row.original.phone}</a> : <span>—</span>}
           </div>
         ),
       },
       {
         id: 'address',
         header: t('admin.customers.list.colAddress', 'Address'),
-        cell: ({ row }) => <span className="block max-w-[160px] truncate text-xs text-muted-foreground">{row.original.address || '—'}</span>,
+        size: 220,
+        minSize: 120,
+        cell: ({ row }) => <span className="block truncate text-xs text-muted-foreground">{row.original.address || '—'}</span>,
         meta: { mobile: 'hide' },
       },
       {
         id: 'router',
         header: t('admin.customers.list.colRouter', 'Router'),
+        size: 160,
+        minSize: 110,
         cell: ({ row }) => (
-          <div className="flex max-w-[130px] items-center gap-1 truncate font-mono text-xs text-foreground">
+          <div className="flex items-center gap-1 min-w-0 font-mono text-xs text-foreground">
             <Server className="h-3 w-3 shrink-0 text-primary/70" />
-            <span>{row.original.routerName || '—'}</span>
+            <span className="truncate">{row.original.routerName || '—'}</span>
           </div>
         ),
       },
       {
         id: 'pppoeSecret',
         header: t('admin.customers.list.colPppoe', 'PPPoE Secret'),
+        size: 170,
+        minSize: 120,
         cell: ({ row }) =>
           row.original.username ? (
-            <div className="flex max-w-[140px] items-center justify-between gap-1 rounded border border-border/50 bg-muted/40 px-2 py-0.5 font-mono text-xs text-foreground">
+            <div className="flex items-center justify-between gap-1 rounded border border-border/50 bg-muted/40 px-2 py-0.5 font-mono text-xs text-foreground min-w-0">
               <span className="truncate">{row.original.username}</span>
               <button
                 type="button"
@@ -355,16 +371,18 @@ export function AllCustomersPage() {
       {
         id: 'payment',
         header: t('admin.customers.list.colExpiry', 'Expiry Date'),
+        size: 140,
+        minSize: 110,
         cell: ({ row }) => {
           const isExpired = row.original.status === 'expired';
           return (
-            <>
+            <div className="min-w-0">
               <div className={cn('font-mono text-xs font-semibold', isExpired ? 'flex items-center gap-1 text-destructive' : 'text-foreground')}>
                 {isExpired && <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />}
                 <span>{ymd(row.original.expiryDate)}</span>
               </div>
-              {row.original.paymentSummary && <div className="text-xs text-muted-foreground">{row.original.paymentSummary}</div>}
-            </>
+              {row.original.paymentSummary && <div className="text-xs text-muted-foreground truncate">{row.original.paymentSummary}</div>}
+            </div>
           );
         },
         meta: { mobileLabel: t('admin.customers.list.expires', 'Expires') },
@@ -372,6 +390,8 @@ export function AllCustomersPage() {
       {
         id: 'connStatus',
         header: t('admin.customers.list.colConn', 'Conn Status'),
+        size: 120,
+        minSize: 90,
         cell: ({ row }) => (
           <StatusBadge status={row.original.online ? 'online' : 'offline'} label={customerStatusLabel(t, row.original.online ? 'online' : 'offline')} />
         ),
@@ -380,6 +400,8 @@ export function AllCustomersPage() {
       {
         id: 'accStatus',
         header: t('admin.customers.list.colAcc', 'Acc Status'),
+        size: 120,
+        minSize: 90,
         cell: ({ row }) => (
           <StatusBadge status={row.original.status} label={customerStatusLabel(t, row.original.status)} />
         ),
@@ -388,6 +410,8 @@ export function AllCustomersPage() {
       {
         id: 'balance',
         header: t('admin.customers.list.colBalance', 'Balance'),
+        size: 110,
+        minSize: 85,
         cell: ({ row }) => (
           <span className={cn('font-mono text-xs font-bold', row.original.balanceBdt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
             <CurrencyDisplay amount={row.original.balanceBdt} />
@@ -397,6 +421,10 @@ export function AllCustomersPage() {
       {
         id: 'actions',
         header: () => <span className="sr-only">{t('admin.customers.list.colActions', 'Actions')}</span>,
+        size: 55,
+        minSize: 55,
+        maxSize: 55,
+        enableResizing: false,
         enableHiding: false,
         enableSorting: false,
         cell: ({ row }) => {

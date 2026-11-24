@@ -125,6 +125,10 @@ export interface DataTableProps<TData extends RowData> {
   facetFilters?: DataTableFacetFilter[];
   enableColumnVisibility?: boolean;
   enableRowSelection?: boolean;
+  /** Enable column drag-to-resize across all columns. Defaults to true. */
+  enableColumnResizing?: boolean;
+  /** Live resizing mode ('onChange' live while dragging or 'onEnd' on release). Defaults to 'onChange'. */
+  columnResizeMode?: 'onChange' | 'onEnd';
   onDeleteSelected?: (rows: TData[]) => void;
   toolbarActions?: ReactNode;
   defaultPageSize?: number;
@@ -187,6 +191,8 @@ export function DataTable<TData extends RowData>({
   facetFilters = [],
   enableColumnVisibility = true,
   enableRowSelection = false,
+  enableColumnResizing = true,
+  columnResizeMode = 'onChange',
   onDeleteSelected,
   toolbarActions,
   defaultPageSize = DEFAULT_PAGE_SIZE,
@@ -239,6 +245,7 @@ export function DataTable<TData extends RowData>({
     return next;
   });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
   const [localSelection, setLocalSelection] = useState<RowSelectionState>({});
   const rowSelection = controlledSelection ?? localSelection;
   const setRowSelection = (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => {
@@ -340,7 +347,10 @@ export function DataTable<TData extends RowData>({
           aria-label={t('common.table.selectRow', 'Select row')}
         />
       ),
-      size: 28,
+      size: 38,
+      minSize: 38,
+      maxSize: 38,
+      enableResizing: false,
       enableSorting: false,
       enableHiding: false,
     };
@@ -358,8 +368,16 @@ export function DataTable<TData extends RowData>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      columnSizing,
     },
     enableRowSelection,
+    enableColumnResizing,
+    columnResizeMode,
+    onColumnSizingChange: setColumnSizing,
+    defaultColumn: {
+      minSize: 40,
+      maxSize: 1000,
+    },
     enableSortingRemoval: false,
     manualPagination: Boolean(server),
     rowCount: server?.total,
@@ -624,7 +642,13 @@ export function DataTable<TData extends RowData>({
           <DataTableCards table={table} />
         ) : (
         <div>
-          <Table containerClassName="md:max-h-[calc(100dvh-15rem)]">
+          <Table
+            containerClassName="md:max-h-[calc(100dvh-15rem)]"
+            style={{
+              width: table.getTotalSize(),
+              minWidth: '100%',
+            }}
+          >
             <TableHeader className="sticky top-0 z-10 bg-muted shadow-[0_1px_0_var(--border)]">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-b border-border/80 bg-muted/40 hover:bg-muted/40">
@@ -640,13 +664,16 @@ export function DataTable<TData extends RowData>({
                               ? 'none'
                               : undefined
                       }
-                      style={{ width: `${header.getSize()}px` }}
-                      className="h-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      style={{
+                        width: `${header.getSize()}px`,
+                        minWidth: `${header.column.columnDef.minSize ?? 40}px`,
+                      }}
+                      className="group/th relative h-10 text-xs font-semibold uppercase tracking-wide text-muted-foreground select-none overflow-hidden"
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <div
                           className={cn(
-                            'flex h-full cursor-pointer select-none items-center justify-between gap-2',
+                            'flex h-full cursor-pointer select-none items-center justify-between gap-2 pr-2.5',
                           )}
                           onClick={header.column.getToggleSortingHandler()}
                           onKeyDown={(e) => {
@@ -658,7 +685,7 @@ export function DataTable<TData extends RowData>({
                           tabIndex={0}
                           role="button"
                         >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          <div className="truncate">{flexRender(header.column.columnDef.header, header.getContext())}</div>
                           {{
                             asc: (
                               <ChevronUp
@@ -679,8 +706,31 @@ export function DataTable<TData extends RowData>({
                           }[header.column.getIsSorted() as string] ?? null}
                         </div>
                       ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
+                        <div className="pr-2.5 truncate">{flexRender(header.column.columnDef.header, header.getContext())}</div>
                       )}
+
+                      {enableColumnResizing && header.column.getCanResize() ? (
+                        <div
+                          onDoubleClick={() => header.column.resetSize()}
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          className={cn(
+                            'absolute right-0 top-0 h-full w-2.5 cursor-col-resize select-none touch-none z-20 flex items-center justify-center group/resizer',
+                            header.column.getIsResizing() ? 'opacity-100' : 'opacity-0 hover:opacity-100 group-hover/th:opacity-60'
+                          )}
+                          onClick={(e) => e.stopPropagation()}
+                          title={t('common.table.resizeHint', 'Drag to resize · Double click to reset')}
+                        >
+                          <div
+                            className={cn(
+                              'h-4 w-[1.5px] rounded-full transition-colors',
+                              header.column.getIsResizing()
+                                ? 'bg-primary h-full w-[2px] rounded-none'
+                                : 'bg-border/90 group-hover/resizer:bg-primary/80'
+                            )}
+                          />
+                        </div>
+                      ) : null}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -695,7 +745,14 @@ export function DataTable<TData extends RowData>({
                     className="transition-colors duration-150 ease-out hover:bg-muted/30"
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3 px-3.5 text-xs">
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: `${cell.column.getSize()}px`,
+                          minWidth: `${cell.column.columnDef.minSize ?? 40}px`,
+                        }}
+                        className="py-3 px-3.5 text-xs overflow-hidden"
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
