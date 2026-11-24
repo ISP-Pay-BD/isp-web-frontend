@@ -149,7 +149,7 @@ export function NewCustomerPaymentPage() {
   const dueBdt = liveCustomer ? Math.max(0, liveCustomer.balanceBdt) : 0;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="w-full space-y-6 pb-16">
       <PageHero className="flex items-center gap-3">
         <Button variant="ghost" size="icon" aria-label={presetId ? t('admin.customerPayments.form.backToCustomer', 'Back to customer') : t('admin.customerPayments.form.backToPayments', 'Back to payments')} render={<Link href={presetId ? `/admin/customers/${presetId}` : '/admin/customer-payments'} />}><ArrowLeft className="h-4 w-4" /></Button>
         <div>

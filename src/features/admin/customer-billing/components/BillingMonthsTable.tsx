@@ -76,8 +76,10 @@ export function BillingMonthsTable({
 
   return (
     <div className="border-border/60 overflow-hidden rounded-xl border">
-      <div
-        className={cn(
+      <div className="overflow-x-auto">
+        <div className="min-w-[620px]">
+          <div
+            className={cn(
           'bg-muted/40 text-muted-foreground hidden gap-3 px-4 py-2.5 text-xs font-semibold tracking-wide uppercase md:grid',
           grid,
         )}
@@ -215,6 +217,8 @@ export function BillingMonthsTable({
           );
         })}
       </ul>
+        </div>
+      </div>
     </div>
   );
 }

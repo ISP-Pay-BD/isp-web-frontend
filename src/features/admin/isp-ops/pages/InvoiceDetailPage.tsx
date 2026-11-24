@@ -45,7 +45,7 @@ export function InvoiceDetailPage() {
       .catch(() => toast.error(t('admin.customerPayments.list.clipboardUnavailable', 'Clipboard is not available')));
 
   return (
-    <div className="space-y-6 w-full max-w-5xl mx-auto pb-24">
+    <div className="space-y-6 w-full pb-24">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/admin/invoices" aria-label={t('admin.ops.invoiceDetail.backToInvoices', 'Back to Invoices')} className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border/70 hover:bg-accent">

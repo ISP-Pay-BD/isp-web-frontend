@@ -57,7 +57,7 @@ export function CustomerSubscriptionPage({ id }: { id: string }) {
   const expiry = sub.expiresAt ? formatDate(sub.expiresAt) : '—';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       <PageHero className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -127,7 +127,7 @@ export function CustomerSubscriptionPage({ id }: { id: string }) {
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="grid gap-6 grid-cols-1 xl:grid-cols-[minmax(380px,440px)_minmax(0,1fr)]">
           <RenewSubscriptionCard key={`renew-${dataUpdatedAt}`} sub={sub} />
           <MultiMonthBillingCard
             key={`batch-${dataUpdatedAt}`}

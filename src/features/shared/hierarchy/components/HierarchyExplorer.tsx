@@ -72,7 +72,7 @@ export function HierarchyExplorer({ scope, resellerId, breadcrumb }: HierarchyEx
   const { summary, root, title, subtitle } = data;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+    <div className="w-full space-y-6 pb-12">
       <PageHeader title={title} subtitle={subtitle} breadcrumb={breadcrumb} />
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card px-3 py-2 text-xs text-muted-foreground">

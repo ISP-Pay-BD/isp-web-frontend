@@ -93,7 +93,7 @@ export function EditCustomerPage({ id }: { id: string }) {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="w-full space-y-6 pb-16">
       <PageHero className="flex items-center gap-3">
         <Button variant="ghost" size="icon" aria-label={t('admin.customers.form.backToCustomer', 'Back to customer')} render={<Link href={`/admin/customers/${id}`} />}>
             <ArrowLeft className="h-4 w-4" />

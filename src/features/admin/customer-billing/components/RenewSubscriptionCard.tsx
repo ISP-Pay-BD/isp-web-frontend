@@ -105,7 +105,7 @@ export function RenewSubscriptionCard({ sub }: { sub: CustomerSubscription }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="renew-package">{t('admin.customerBilling.package', 'Package')}</Label>
             <Controller
               control={form.control}
@@ -201,7 +201,7 @@ export function RenewSubscriptionCard({ sub }: { sub: CustomerSubscription }) {
                   <p className="text-destructive text-xs">{err('paid_via')}</p>
                 ) : null}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="renew-trx">
                   {t('admin.customerBilling.trx', 'Transaction ID')}
                 </Label>
