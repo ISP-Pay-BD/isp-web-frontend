@@ -5,6 +5,28 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')}/api`
   : 'http://localhost:8080/api';
 
+const RESERVED_SUBDOMAINS = new Set(['www', 'api', 'app', 'admin', 'platform']);
+
+/**
+ * Extracts the tenant slug from the browser hostname when visiting a tenant
+ * subdomain (e.g. `alpha.isppaybd.com` -> `"alpha"`, `alpha.localhost` -> `"alpha"`).
+ * Returns `null` on apex domains (`isppaybd.com`, `localhost`, IPs).
+ */
+export function getTenantSlugFromHost(): string | null {
+  if (typeof window === 'undefined') return null;
+  const host = window.location.hostname.toLowerCase();
+  if (!host || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return null;
+
+  const parts = host.split('.');
+  if (parts.length === 2 && parts[1] === 'localhost') {
+    return RESERVED_SUBDOMAINS.has(parts[0]) ? null : parts[0];
+  }
+  if (parts.length >= 3) {
+    return RESERVED_SUBDOMAINS.has(parts[0]) ? null : parts[0];
+  }
+  return null;
+}
+
 const AUTH_STORAGE_KEY = 'isp-auth-storage';
 const REFRESH_STORAGE_KEY = 'isp_refresh_token';
 
@@ -121,12 +143,16 @@ async function refreshAccessToken(): Promise<string> {
   return accessToken;
 }
 
-// Request Interceptor: Attach Access Token
+// Request Interceptor: Attach Access Token and Subdomain Tenant Slug
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = readStoredAuth()?.state?.token;
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const hostSlug = getTenantSlugFromHost();
+    if (hostSlug && config.headers && !config.headers['X-Tenant-Slug']) {
+      config.headers['X-Tenant-Slug'] = hostSlug;
     }
     return config;
   },

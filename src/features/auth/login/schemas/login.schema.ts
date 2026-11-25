@@ -5,7 +5,7 @@ const isDebug =
   process.env.NODE_ENV === 'development';
 
 export const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
+  email: z.string().trim().min(1, 'Email, username, phone, or ID is required'),
   password: isDebug
     ? z.string().optional()
     : z.string().min(1, 'Password is required'),

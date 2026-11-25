@@ -1,6 +1,34 @@
-import { http } from '../client';
+import { getTenantSlugFromHost, http } from '../client';
 import { BackendAuthData, transformBackendAuthUser } from '../adapters/auth.adapter';
 import type { User } from '@/types/auth';
+
+export type IdentifierType = 'email' | 'phone' | 'id' | 'username';
+
+/**
+ * Detects the login identifier type on the client so the backend can hit the
+ * exact indexed column:
+ * - Contains `@` -> `email`
+ * - Starts with `0` (or `+880` / `880`) and 10..15 digits -> `phone`
+ * - Numeric and does NOT start with `0` -> `id`
+ * - Everything else -> `username`
+ */
+export function detectIdentifierType(raw: string): IdentifierType {
+  const trimmed = raw.trim();
+  if (trimmed.includes('@')) return 'email';
+
+  const digits = trimmed.replace(/\D/g, '');
+  const isBdPhonePrefix =
+    trimmed.startsWith('0') || trimmed.startsWith('+880') || trimmed.startsWith('880');
+  if (isBdPhonePrefix && digits.length >= 10 && digits.length <= 15) {
+    return 'phone';
+  }
+
+  if (trimmed.length > 0 && !trimmed.startsWith('0') && /^\d+$/.test(trimmed)) {
+    return 'id';
+  }
+
+  return 'username';
+}
 
 // Endpoint literals (mirrors API_ENDPOINTS in `../endpoints` — kept inline so
 // the route cross-check script can see every call site as a static URL).
@@ -25,6 +53,10 @@ export interface LoginCredentials {
   password?: string;
   /** TOTP code for accounts with two-factor authentication enabled */
   otp?: string;
+  /** Explicit tenant slug (e.g. from tenant picker or subdomain). */
+  tenant_slug?: string;
+  /** Hint for backend indexed lookup (`email`, `phone`, `id`, `username`). */
+  identifier_type?: IdentifierType;
 }
 
 export interface LoginResponse {
@@ -35,7 +67,15 @@ export interface LoginResponse {
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-    const rawData = await http.post<BackendAuthData>(AUTH_LOGIN, credentials);
+    const identifier = credentials.email.trim();
+    const tenantSlug = credentials.tenant_slug ?? getTenantSlugFromHost() ?? undefined;
+    const rawData = await http.post<BackendAuthData>(AUTH_LOGIN, {
+      ...credentials,
+      email: identifier,
+      identifier,
+      identifier_type: credentials.identifier_type ?? detectIdentifierType(identifier),
+      ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
+    });
 
     if (rawData.refresh_token && typeof window !== 'undefined') {
       localStorage.setItem('isp_refresh_token', rawData.refresh_token);

@@ -16,7 +16,7 @@ interface AuthState {
   /** False until zustand persist rehydrates from localStorage */
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  login: (email: string, password?: string, otp?: string) => Promise<User>;
+  login: (email: string, password?: string, otp?: string, tenantSlug?: string) => Promise<User>;
   logout: () => void;
   syncSessionCookie: () => void;
   role: () => UserRole | null;
@@ -36,8 +36,13 @@ export const useAuthStore = create<AuthState>()(
 
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
-      login: async (email, password = '', otp) => {
-        const response = await authService.login({ email, password, ...(otp ? { otp } : {}) });
+      login: async (email, password = '', otp, tenantSlug) => {
+        const response = await authService.login({
+          email,
+          password,
+          ...(otp ? { otp } : {}),
+          ...(tenantSlug ? { tenant_slug: tenantSlug } : {}),
+        });
         // A previous account's cached lists must never leak into this session.
         queryClient.clear();
         set({

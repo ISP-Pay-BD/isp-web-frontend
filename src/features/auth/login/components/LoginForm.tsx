@@ -40,6 +40,8 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsOtp, setNeedsOtp] = useState(false);
+  const [tenantChoices, setTenantChoices] = useState<Array<{ slug: string; name: string }>>([]);
+  const [selectedTenantSlug, setSelectedTenantSlug] = useState<string | null>(null);
   const [debugAccounts, setDebugAccounts] = useState<DebugAccountItem[]>([]);
   const [quickLoginId, setQuickLoginId] = useState<number | null>(null);
 
@@ -69,27 +71,46 @@ export function LoginForm() {
     register,
     handleSubmit,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const performLogin = async (values: LoginFormValues, tenantSlug?: string) => {
     setError(null);
     try {
       const password = values.password && values.password.trim().length > 0 ? values.password : 'debug';
-      const user = await login(values.email, password, needsOtp ? values.otp?.trim() : undefined);
+      const user = await login(
+        values.email,
+        password,
+        needsOtp ? values.otp?.trim() : undefined,
+        tenantSlug ?? selectedTenantSlug ?? undefined,
+      );
       toast.success(t('auth.login.welcomeToast', 'Welcome back, {name}', { name: user.name }));
       const redirect = searchParams.get('redirect');
       const destination = getPostLoginRedirect(user.role, redirect);
       router.replace(destination);
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'TENANT_SELECTION_REQUIRED') {
+        const rawTenants = (err.details as unknown as { tenants?: Array<{ slug: string; name: string }> })?.tenants;
+        if (Array.isArray(rawTenants) && rawTenants.length > 0) {
+          setTenantChoices(rawTenants);
+          setError(null);
+          return;
+        }
+      }
       if (err instanceof ApiError && (err.code === 'TWO_FACTOR_REQUIRED' || err.code === 'TWO_FACTOR_INVALID')) {
         setNeedsOtp(true);
       }
       setError(err instanceof Error && err.message ? err.message : t('auth.login.failed', 'Sign in failed. Please try again.'));
     }
+  };
+
+  const onSubmit = async (values: LoginFormValues) => {
+    setTenantChoices([]);
+    await performLogin(values);
   };
 
   const handleQuickLogin = async (acc: DebugAccountItem) => {
@@ -174,12 +195,12 @@ export function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs font-semibold">{t('auth.login.emailLabel', 'Email or Operator ID')}</Label>
+            <Label htmlFor="email" className="text-xs font-semibold">{t('auth.login.identifierLabel', 'Email, Username, Phone, or ID')}</Label>
             <Input
               id="email"
-              type="email"
+              type="text"
               autoComplete="username"
-              placeholder="operator@company.com"
+              placeholder={t('auth.login.identifierPlaceholder', 'email, username, 017..., or ID')}
               className="h-11 rounded-xl bg-background/80 focus-visible:ring-primary/40 focus-visible:border-primary text-sm"
               {...register('email')}
             />
@@ -187,6 +208,32 @@ export function LoginForm() {
               <p className="text-destructive text-xs mt-1">{te(errors.email.message ?? '')}</p>
             ) : null}
           </div>
+
+          {tenantChoices.length > 0 ? (
+            <div className="space-y-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+              <p className="text-xs font-semibold text-foreground">
+                {t('auth.login.selectIspPrompt', 'Select your ISP provider to continue:')}
+              </p>
+              <div className="grid gap-2">
+                {tenantChoices.map((tenant) => (
+                  <Button
+                    key={tenant.slug}
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between h-10 rounded-lg text-xs font-medium"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      setSelectedTenantSlug(tenant.slug);
+                      performLogin(getValues(), tenant.slug);
+                    }}
+                  >
+                    <span>{tenant.name}</span>
+                    <span className="text-muted-foreground font-mono">{tenant.slug}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
