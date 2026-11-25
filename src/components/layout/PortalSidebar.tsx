@@ -147,7 +147,7 @@ function NavTree({ items, currentPath, isPinnable, pinnedHrefs, onTogglePin }: N
                             ? 'ipb-sidebar-sub-button active-child relative rounded-md py-[7px] pl-3 pr-7 text-xs font-semibold text-primary'
                             : 'ipb-sidebar-sub-button rounded-md py-[7px] pl-3 pr-7 text-xs text-sidebar-foreground/55 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground/85'
                         }
-                        render={<Link href={child.href ?? '#'} />}
+                        render={<Link href={child.href ?? '#'} prefetch={false} />}
                       >
                         {isChildActive && (
                           <>
@@ -199,7 +199,7 @@ function NavTree({ items, currentPath, isPinnable, pinnedHrefs, onTogglePin }: N
                   ? 'ipb-sidebar-button active-leaf group relative rounded-lg py-5 font-semibold text-primary pr-8'
                   : 'ipb-sidebar-button rounded-lg py-5 text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground pr-8'
               }
-              render={<Link href={item.href ?? '#'} />}
+              render={<Link href={item.href ?? '#'} prefetch={false} />}
             >
               {isLeafActive && (
                 <>
