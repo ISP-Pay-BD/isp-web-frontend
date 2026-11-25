@@ -224,7 +224,7 @@ export function CustomerRouterSkeleton() {
 /** Profile Screen Skeleton */
 export function CustomerProfileSkeleton() {
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="w-full space-y-6">
       {/* Profile Overview */}
       <div className="p-6 rounded-2xl border border-border/60 bg-card flex flex-col sm:flex-row items-center gap-5">
         <Skeleton className="h-20 w-20 rounded-md shrink-0" />

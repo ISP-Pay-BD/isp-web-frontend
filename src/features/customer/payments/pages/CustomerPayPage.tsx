@@ -165,7 +165,7 @@ export function CustomerPayPage() {
         { label: t('customer.pay.crumb', 'Pay now') },
       ]}
     >
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="w-full space-y-6">
         <Card>
           <CardContent className="space-y-5 p-5 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3">

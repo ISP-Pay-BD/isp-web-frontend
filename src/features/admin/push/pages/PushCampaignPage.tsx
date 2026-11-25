@@ -9,11 +9,12 @@ import {
   Globe,
   Users,
   CheckCircle2,
-  Clock,
   Sparkles,
   History,
   Building2,
 } from 'lucide-react';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +57,7 @@ export function PushCampaignPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [sending, setSending] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [confirmBroadcast, setConfirmBroadcast] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -77,7 +79,7 @@ export function PushCampaignPage() {
     loadData();
   }, [loadData]);
 
-  const handleSendCampaign = async () => {
+  const handleSendCampaign = () => {
     if (!title.trim()) {
       toast.error('Campaign title is required');
       return;
@@ -86,11 +88,11 @@ export function PushCampaignPage() {
       toast.error('Notification message body is required');
       return;
     }
+    setConfirmBroadcast(true);
+  };
 
-    if (!confirm(`Are you sure you want to broadcast this push notification to audience "${audience}"?`)) {
-      return;
-    }
-
+  const executeSendCampaign = async () => {
+    setConfirmBroadcast(false);
     setSending(true);
     try {
       const payload: CreateCampaignPayload = {
@@ -137,8 +139,10 @@ export function PushCampaignPage() {
     }
   };
 
+  if (loading) return <PageSkeleton variant="table" rows={6} />;
+
   return (
-    <div className="space-y-6 p-4 sm:p-6 w-full pb-16">
+    <div className="w-full space-y-6 pb-16">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5">
         <div>
@@ -394,6 +398,15 @@ export function PushCampaignPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <ConfirmDialog
+        open={confirmBroadcast}
+        onOpenChange={setConfirmBroadcast}
+        title="Broadcast Push Notification"
+        description={`Are you sure you want to broadcast this push notification to audience "${audience}"?`}
+        confirmLabel="Broadcast Now"
+        onConfirm={executeSendCampaign}
+      />
     </div>
   );
 }

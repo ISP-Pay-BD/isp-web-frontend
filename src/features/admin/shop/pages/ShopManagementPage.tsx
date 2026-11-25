@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { formatBdtWithSymbol } from '@/lib/format';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -246,8 +247,10 @@ export function ShopManagementPage() {
     );
   });
 
+  if (loading) return <PageSkeleton variant="table" rows={6} />;
+
   return (
-    <div className="space-y-6 p-4 sm:p-6 w-full pb-16">
+    <div className="w-full space-y-6 pb-16">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5">
         <div>

@@ -10,8 +10,6 @@ import {
   Clock,
   Truck,
   XCircle,
-  AlertCircle,
-  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,12 +27,11 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { toast } from 'sonner';
 import { shopService, type ShopProduct, type ShopOrder } from '@/lib/api/services/shop.service';
-import { useTranslations } from '@/i18n/locale-context';
 
 export function CustomerShopPage() {
-  const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -154,8 +151,10 @@ export function CustomerShopPage() {
     }
   };
 
+  if (loading) return <PageSkeleton variant="cards" rows={6} />;
+
   return (
-    <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="w-full space-y-6 pb-16">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5">
         <div>

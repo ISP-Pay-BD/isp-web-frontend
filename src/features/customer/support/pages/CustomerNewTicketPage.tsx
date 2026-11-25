@@ -75,7 +75,7 @@ export function CustomerNewTicketPage() {
         </Button>
       }
     >
-      <div className="mx-auto max-w-2xl">
+      <div className="w-full">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pb-4">

@@ -102,7 +102,7 @@ export function CustomerWifiSettingsPage() {
         </Button>
       }
     >
-      <div className="mx-auto max-w-xl space-y-6">
+      <div className="w-full space-y-6">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pb-4">

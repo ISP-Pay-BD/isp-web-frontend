@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader2, UserRoundCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { http } from '@/lib/api/client';
@@ -14,7 +13,6 @@ import { useTranslations } from '@/i18n/locale-context';
 /** Shown while an admin is acting as another account ("Log in as" a tenant admin or POP). */
 export function ImpersonationBanner() {
   const t = useTranslations();
-  const router = useRouter();
   const parked = useSyncExternalStore(subscribeImpersonation, readParkedSession, () => null);
   const [returning, setReturning] = useState(false);
 

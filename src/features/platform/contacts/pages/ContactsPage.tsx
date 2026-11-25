@@ -187,7 +187,7 @@ export function ContactsPage() {
                     disabled={statusMutation.isPending}
                     onValueChange={(value) => statusMutation.mutate({ id: c.id, status: value as PlatformContact['status'] })}
                   >
-                    <SelectTrigger aria-label={t('platform.contacts.list.contactStatus', 'Contact status')} className="h-8 min-w-[130px] capitalize shrink-0 text-xs font-semibold">
+                    <SelectTrigger aria-label={t('platform.contacts.list.contactStatus', 'Contact status')} className="h-8 w-fit min-w-[130px] capitalize shrink-0 text-xs font-semibold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

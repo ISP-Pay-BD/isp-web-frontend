@@ -300,6 +300,7 @@
       "pageOf": "পৃষ্ঠা {page} / {pages}",
       "selectAll": "সব বেছে নিন",
       "selectRow": "সারি বেছে নিন",
+      "resizeHint": "টেনে আকার বদলান · রিসেট করতে ডাবল ক্লিক করুন",
       "filters": "ফিল্টার"
     },
     "pageHeader": {

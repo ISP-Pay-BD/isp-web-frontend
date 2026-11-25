@@ -371,13 +371,13 @@ export function AllCustomersPage() {
       {
         id: 'payment',
         header: t('admin.customers.list.colExpiry', 'Expiry Date'),
-        size: 140,
-        minSize: 110,
+        size: 155,
+        minSize: 115,
         cell: ({ row }) => {
           const isExpired = row.original.status === 'expired';
           return (
             <div className="min-w-0">
-              <div className={cn('font-mono text-xs font-semibold', isExpired ? 'flex items-center gap-1 text-destructive' : 'text-foreground')}>
+              <div className={cn('font-mono text-xs font-semibold whitespace-nowrap', isExpired ? 'flex items-center gap-1 text-destructive' : 'text-foreground')}>
                 {isExpired && <AlertCircle className="h-3 w-3 shrink-0 text-destructive" />}
                 <span>{ymd(row.original.expiryDate)}</span>
               </div>

@@ -542,7 +542,7 @@ export function LedgerEntriesPage({
                     resetPage();
                   }}
                 >
-                  <SelectTrigger className="bg-background/80 h-9 min-w-[180px] text-xs" aria-label={t('admin.accounting.ledger.colCategory', 'Category')}>
+                  <SelectTrigger className="bg-background/80 h-9 w-fit min-w-[180px] text-xs" aria-label={t('admin.accounting.ledger.colCategory', 'Category')}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="text-xs">

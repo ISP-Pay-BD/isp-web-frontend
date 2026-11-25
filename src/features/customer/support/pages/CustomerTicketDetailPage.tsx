@@ -136,7 +136,7 @@ export function CustomerTicketDetailPage({ params }: PageProps) {
         </Button>
       }
     >
-      <div className="mx-auto max-w-4xl pb-24 md:pb-0">
+      <div className="w-full pb-24 md:pb-0">
         <Card>
           <CardHeader className="border-b pb-4">
             <div className="flex flex-wrap items-center gap-2">

@@ -84,7 +84,7 @@ export function CustomerChangePasswordPage() {
         </Button>
       }
     >
-      <div className="mx-auto max-w-md">
+      <div className="w-full">
         <form onSubmit={handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pb-4">

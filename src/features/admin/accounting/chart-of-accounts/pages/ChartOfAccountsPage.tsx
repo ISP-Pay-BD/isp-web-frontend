@@ -477,7 +477,7 @@ export function ChartOfAccountsPage() {
           onValueChange={(v) => v && setTypeFilter(v as AccountTypeFilter)}
         >
           <SelectTrigger
-            className="bg-background/80 h-9 min-w-[200px] text-xs"
+            className="bg-background/80 h-9 w-fit min-w-[200px] text-xs"
             aria-label={t('admin.accounting.coa.accountType', 'Account type')}
           >
             <SelectValue />

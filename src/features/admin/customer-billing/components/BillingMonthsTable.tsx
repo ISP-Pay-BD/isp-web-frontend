@@ -77,16 +77,18 @@ export function BillingMonthsTable({
   return (
     <div className="border-border/60 overflow-hidden rounded-xl border">
       <div className="overflow-x-auto">
-        <div className="min-w-[620px]">
+        <div className={selectable ? 'md:min-w-[812px]' : 'md:min-w-[768px]'}>
           <div
             className={cn(
-          'bg-muted/40 text-muted-foreground hidden gap-3 px-4 py-2.5 text-xs font-semibold tracking-wide uppercase md:grid',
-          grid,
-        )}
-      >
-        {selectable ? (
-          <span className="sr-only">{t('admin.customerBilling.select', 'Select')}</span>
-        ) : null}
+              'bg-muted/40 text-muted-foreground hidden gap-3 px-4 py-2.5 text-xs font-semibold tracking-wide uppercase md:grid',
+              grid,
+            )}
+          >
+            {selectable ? (
+              <span className="flex items-center">
+                <span className="sr-only">{t('admin.customerBilling.select', 'Select')}</span>
+              </span>
+            ) : null}
         <span>{t('admin.customerBilling.col.month', 'Billing month')}</span>
         <span>{t('admin.customerBilling.col.status', 'Status')}</span>
         <span>{t('admin.customerBilling.col.amount', 'Amount (৳)')}</span>

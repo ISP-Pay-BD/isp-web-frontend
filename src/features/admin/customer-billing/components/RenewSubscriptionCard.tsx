@@ -104,8 +104,8 @@ export function RenewSubscriptionCard({ sub }: { sub: CustomerSubscription }) {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="min-w-0 space-y-1.5 sm:col-span-2">
             <Label htmlFor="renew-package">{t('admin.customerBilling.package', 'Package')}</Label>
             <Controller
               control={form.control}
