@@ -225,7 +225,7 @@ export function transformBackendAuthUser(data: BackendAuthData): User {
         : 'employee'
   ) as UserRole; // unknown staff designations get the least-privileged portal
 
-  if (roleNormalized === 'employee')
+  if (roleNormalized === 'employee' || roleNormalized === 'resellerAdmin')
     permissions = mergePermissionCodes(permissions, data.permission_codes);
 
   return {
