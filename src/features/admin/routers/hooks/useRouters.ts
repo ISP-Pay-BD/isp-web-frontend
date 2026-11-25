@@ -25,6 +25,7 @@ export function useRouters({ page, pageSize, search }: RouterListParams) {
       return { items: res.items.map(mapRouter), meta: res.meta };
     },
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
   });
 }
 

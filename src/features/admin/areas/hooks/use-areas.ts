@@ -13,6 +13,7 @@ export function useAreas(params: { page: number; perPage: number; search?: strin
     queryKey: [...AREAS, 'list', params],
     queryFn: () => areasApi.list(params),
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
   });
 }
 

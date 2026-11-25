@@ -27,6 +27,7 @@ export function useSoftwareSettings() {
   return useQuery({
     queryKey: settingsKey('general'),
     queryFn: async () => toGeneral(await http.get<Record<string, unknown>>(`/v1/reseller/settings/${getResellerId()}`)),
+    staleTime: 5 * 60_000,
   });
 }
 

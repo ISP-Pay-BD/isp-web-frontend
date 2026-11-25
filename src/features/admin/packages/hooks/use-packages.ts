@@ -13,6 +13,7 @@ export function usePackages(params: { page: number; perPage: number; search?: st
     queryKey: [...PACKAGES, 'list', params],
     queryFn: () => packagesApi.list(params),
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
   });
 }
 
