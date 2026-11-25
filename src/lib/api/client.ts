@@ -35,7 +35,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 15000,
 });
 
 /** Bare client for the refresh call — no interceptors, so no 401 loop. */
