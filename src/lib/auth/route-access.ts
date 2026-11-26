@@ -39,6 +39,9 @@ export function getRoleForPath(pathname: string): UserRole | null {
 }
 
 export function isRoleAllowedForPrefix(role: UserRole, pathname: string): boolean {
+  if (role === 'employee' && (pathname.startsWith('/employee') || pathname.startsWith('/admin'))) {
+    return true;
+  }
   const prefix = ROLE_PREFIX[role];
   return pathname.startsWith(prefix);
 }

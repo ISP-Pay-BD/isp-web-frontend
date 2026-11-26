@@ -60,7 +60,7 @@ export const customerNavigation: NavItem[] = [
     href: '/customer/support',
     icon: 'LifeBuoy',
     roles: ['user'],
-    permission: { menu: 'support', action: 'read' },
+    permission: { menu: 'support_ticket', action: 'read' },
     hideWhenExpired: true,
   },
   {
@@ -77,7 +77,7 @@ export const customerNavigation: NavItem[] = [
     href: '/customer/rewards',
     icon: 'Gift',
     roles: ['user'],
-    permission: { menu: 'reward', action: 'read' },
+    permission: { menu: 'referral', action: 'read' },
     hideWhenExpired: true,
   },
   {

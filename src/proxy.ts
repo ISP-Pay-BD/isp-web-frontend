@@ -14,7 +14,11 @@ const PROTECTED_PREFIXES = ['/customer', '/admin', '/platform', '/employee'];
 
 function resolveAdminRole(pathname: string, cookieRole: UserRole): boolean {
   if (!pathname.startsWith('/admin')) return true;
-  return cookieRole === 'admin' || cookieRole === 'resellerAdmin';
+  return (
+    cookieRole === 'admin' ||
+    cookieRole === 'resellerAdmin' ||
+    cookieRole === 'employee'
+  );
 }
 
 export function proxy(request: NextRequest) {
