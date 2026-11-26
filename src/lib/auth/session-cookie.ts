@@ -1,6 +1,6 @@
 import type { UserRole, UserStatus } from '@/types/auth';
 
-export const AUTH_COOKIE_NAME = 'isp-auth-mock';
+export const AUTH_COOKIE_NAME = 'isp-session';
 
 export interface AuthCookiePayload {
   userId: string;

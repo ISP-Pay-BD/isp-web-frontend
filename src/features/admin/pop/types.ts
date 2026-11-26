@@ -16,6 +16,7 @@ export interface PopReseller {
   balanceBdt: number;
   billingType: 'prepaid' | 'postpaid';
   fundEnabled: boolean;
+  allowNegative?: boolean;
   /** All customers under the POP (backend clients_running). */
   customers: number;
   clientsEnabled: number;
@@ -57,6 +58,7 @@ export function mapPop(raw: Raw): PopReseller {
     balanceBdt: num(raw.fund),
     billingType: str(raw.billing_type) === 'prepaid' ? 'prepaid' : 'postpaid',
     fundEnabled: raw.fund_enabled !== false,
+    allowNegative: raw.allow_negative === true || raw.allow_negative === 1,
     customers: num(raw.clients_running ?? raw.client_count),
     clientsEnabled: num(raw.clients_enabled),
     clientsDisabled: num(raw.clients_disabled),

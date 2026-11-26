@@ -32,6 +32,7 @@ const REFRESH_STORAGE_KEY = 'isp_refresh_token';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,6 +42,7 @@ export const apiClient = axios.create({
 /** Bare client for the refresh call — no interceptors, so no 401 loop. */
 const refreshClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 });
@@ -107,14 +109,13 @@ function toApiError(error: unknown): ApiError {
   return new ApiError('Unexpected error', 0);
 }
 
-function readStoredAuth(): { state?: { token?: string | null } } | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+/** In-memory access token (never persisted to localStorage — FS-1). */
+let memoryAccessToken: string | null = null;
+export function setMemoryAccessToken(token: string | null): void {
+  memoryAccessToken = token;
+}
+export function getMemoryAccessToken(): string | null {
+  return memoryAccessToken;
 }
 
 /** Session-expiry hook, wired by the auth store (avoids an import cycle). */
@@ -129,16 +130,18 @@ let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_STORAGE_KEY) : null;
-  if (!refreshToken) throw new ApiError('Session expired', 401, 'UNAUTHORIZED');
 
-  // POST /api/v1/auth/refresh
-  const res = await refreshClient.post<ApiResponse<{ access_token: string; refresh_token?: string }>>('/v1/auth/refresh', {
-    refresh_token: refreshToken,
-  });
+  // POST /api/v1/auth/refresh (uses HttpOnly isp_refresh cookie, or legacy refresh_token if present)
+  const res = await refreshClient.post<ApiResponse<{ access_token: string; refresh_token?: string }>>(
+    '/v1/auth/refresh',
+    refreshToken ? { refresh_token: refreshToken } : {},
+  );
   const accessToken = res.data?.data?.access_token;
-  const nextRefresh = res.data?.data?.refresh_token;
   if (!accessToken) throw new ApiError('Session expired', 401, 'UNAUTHORIZED');
-  if (nextRefresh) localStorage.setItem(REFRESH_STORAGE_KEY, nextRefresh);
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(REFRESH_STORAGE_KEY);
+  }
+  setMemoryAccessToken(accessToken);
   onTokenRefreshed?.(accessToken);
   return accessToken;
 }
@@ -146,7 +149,7 @@ async function refreshAccessToken(): Promise<string> {
 // Request Interceptor: Attach Access Token and Subdomain Tenant Slug
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = readStoredAuth()?.state?.token;
+    const token = getMemoryAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

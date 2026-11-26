@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserRole } from '@/types/auth';
 import { clearAuthCookie, setAuthCookie } from '@/lib/auth/session-cookie';
-import { registerAuthHandlers } from '@/lib/api/client';
+import { registerAuthHandlers, setMemoryAccessToken } from '@/lib/api/client';
 import { queryClient } from '@/lib/query-client';
 
 import { authService } from '@/lib/api/services/auth.service';
@@ -45,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
         });
         // A previous account's cached lists must never leak into this session.
         queryClient.clear();
+        setMemoryAccessToken(response.token);
         set({
           user: response.user,
           token: response.token,
@@ -60,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         authService.logout().catch(() => {});
+        setMemoryAccessToken(null);
         set({ user: null, token: null, isAuthenticated: false });
         queryClient.clear();
         clearAuthCookie();
@@ -84,7 +86,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'isp-auth-storage',
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state, error) => {
