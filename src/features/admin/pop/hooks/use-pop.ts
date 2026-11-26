@@ -83,3 +83,12 @@ export function useCreatePop() {
     onSuccess: () => qc.invalidateQueries({ queryKey: popKeys.all }),
   });
 }
+
+/** POST /v1/pops/{id}/toggle-negative — toggles allow_negative for postpaid POPs. */
+export function useTogglePopNegative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (popId: string) => adminService.togglePopNegative(popId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: popKeys.all }),
+  });
+}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '@/lib/api/client';
 import { num, str } from '@/lib/api/case';
 import { mapRouter } from '../types';
@@ -96,5 +96,17 @@ export function useRouterLive(id: string) {
     enabled: Boolean(id),
     retry: false,
     staleTime: 30_000,
+  });
+}
+
+/** POST /v1/routers/{id}/import-secrets — pulls PPPoE secrets from MikroTik into customers. */
+export function useImportRouterSecrets(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      http.post<{ total_secrets: number; imported: number; updated: number; skipped: number }>(
+        `/v1/routers/${id}/import-secrets`,
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: routerKeys.detail(id) }),
   });
 }

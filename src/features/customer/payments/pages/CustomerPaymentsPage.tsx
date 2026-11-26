@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { CreditCard, Receipt } from 'lucide-react';
+import { CreditCard, Download, Receipt } from 'lucide-react';
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy';
 import { Button } from '@/components/ui/button';
+import { http, saveBlob } from '@/lib/api/client';
 import { CustomerPageShell, CustomerLoadingSkeleton, CustomerErrorState } from '@/features/customer/shared';
 import { DataTable } from '@/features/shared/data-table';
 import { useCustomerPayments } from '../hooks/use-customer-payments';
@@ -82,7 +83,7 @@ export function CustomerPaymentsPage() {
         meta: { mobile: 'actions' },
         cell: ({ row }) =>
           row.original.status === 'paid' ? (
-            <div className="flex w-full justify-end">
+            <div className="flex w-full justify-end gap-1.5">
               <Button
                 variant="outline"
                 className="h-11 gap-2 max-md:w-full md:h-8"
@@ -93,6 +94,18 @@ export function CustomerPaymentsPage() {
               >
                 <Receipt className="h-4 w-4" />
                 {t('customer.payments.invoice', 'Invoice')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-11 px-2 md:h-8"
+                aria-label={t('customer.payments.downloadPdf', 'Download PDF')}
+                onClick={async () => {
+                  const { blob, filename } = await http.download(`/v1/payments/${row.original.id}/pdf`);
+                  saveBlob(blob, filename ?? `invoice-${row.original.invoice || row.original.id}.pdf`);
+                }}
+              >
+                <Download className="h-4 w-4" />
               </Button>
             </div>
           ) : null,

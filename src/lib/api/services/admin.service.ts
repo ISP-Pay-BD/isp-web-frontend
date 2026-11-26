@@ -98,6 +98,11 @@ export const adminService = {
     return await http.post<Record<string, unknown>>('/v1/pops', payload);
   },
 
+  /** POST /api/v1/pops/{id}/toggle-negative — toggle allow_negative flag. */
+  togglePopNegative: async (popId: string | number) => {
+    return await http.post<{ allow_negative: boolean }>(`/v1/pops/${popId}/toggle-negative`);
+  },
+
   /** GET /api/v1/pops/{id}/funding?type=&page=&per_page= — POP funding ledger + `summary`. */
   getPopFunding: async (popId: string | number, params?: Record<string, unknown>) => {
     return await http.getPage<Record<string, unknown>>(`/v1/pops/${popId}/funding`, params);

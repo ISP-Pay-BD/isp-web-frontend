@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Activity, Cable, RefreshCw, WifiOff } from 'lucide-react';
+import { Activity, Cable, Download, RefreshCw, WifiOff } from 'lucide-react';
 import { PageHeader } from '@/features/shared/page-header';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useRouterDetail, useRouterLive } from '@/features/admin/routers/hooks/useRouterDetail';
+import { useImportRouterSecrets, useRouterDetail, useRouterLive } from '@/features/admin/routers/hooks/useRouterDetail';
 import { useTranslations } from '@/i18n/locale-context';
 
 const pct = (v: number | null) => (v === null ? '—' : `${v}%`);
@@ -23,6 +23,7 @@ export function RouterDetailPage() {
   const nav = useRouter();
   const detail = useRouterDetail(params.id);
   const live = useRouterLive(params.id);
+  const importSecrets = useImportRouterSecrets(params.id);
 
   if (detail.isLoading) return <PageSkeleton variant="detail" />;
   if (detail.isError || !detail.data) {
@@ -81,6 +82,17 @@ export function RouterDetailPage() {
             >
               <RefreshCw className={cn('mr-1.5 h-4 w-4', live.isFetching && 'animate-spin')} />
               {t('admin.dashboard.refresh', 'Refresh')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => importSecrets.mutate()}
+              disabled={importSecrets.isPending}
+            >
+              <Download className="mr-1.5 h-4 w-4" />
+              {importSecrets.isPending
+                ? t('admin.ops.routerDetail.importing', 'Importing…')
+                : t('admin.ops.routerDetail.importSecrets', 'Import Secrets')}
             </Button>
             <Link
               href={`/admin/routers/uplinks?router_id=${router.id}`}

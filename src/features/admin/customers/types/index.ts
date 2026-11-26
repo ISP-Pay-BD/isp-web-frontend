@@ -139,7 +139,7 @@ export interface CustomerSummary {
 /** Server-side list filters (sent as query params). */
 export interface CustomerListFilters {
   search?: string;
-  status?: 'active' | 'inactive' | 'expired' | 'new';
+  status?: 'active' | 'inactive' | 'expired' | 'new' | 'due';
   connection?: 'online' | 'offline';
   connStatus?: 'conn' | 'disconn';
   expiry?: string;

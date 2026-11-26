@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Building2, Users, Phone, Plus, Download, Wallet, MapPin, CreditCard } from 'lucide-react';
-import { usePops, type PopReseller } from '../../hooks/use-pop';
+import { usePops, useTogglePopNegative, type PopReseller } from '../../hooks/use-pop';
 import { RegisterPopDialog } from '../../components/RegisterPopDialog';
 import { LoginAsPopDialog } from '../../components/LoginAsPopDialog';
 import { PageSkeleton } from '@/components/shared/LoadingSkeleton';
@@ -38,6 +38,7 @@ export function PopResellersPage() {
   const [selectedReseller, setSelectedReseller] = useState<PopReseller | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [loginAs, setLoginAs] = useState<PopReseller | null>(null);
+  const toggleNegative = useTogglePopNegative();
 
   const onSearchChange = useCallback((value: string) => {
     setSearch(value);
@@ -368,6 +369,22 @@ export function PopResellersPage() {
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={toggleNegative.isPending}
+                  onClick={async () => {
+                    const res = await toggleNegative.mutateAsync(selectedReseller.id);
+                    setSelectedReseller((prev) =>
+                      prev ? { ...prev, allowNegative: res.allow_negative } : prev,
+                    );
+                  }}
+                  className="text-xs mr-auto"
+                >
+                  {selectedReseller.allowNegative
+                    ? t('admin.pop.resellers.disableNegative', 'Disable Negative')
+                    : t('admin.pop.resellers.allowNegative', 'Allow Negative')}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setSelectedReseller(null)} className="text-xs">
                   {t('common.close', 'Close')}
                 </Button>

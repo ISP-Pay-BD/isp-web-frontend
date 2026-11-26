@@ -87,10 +87,10 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from '@/i18n/locale-context';
 import { customerStatusLabel } from '../lib/labels';
 
-type QuickStatus = 'all' | 'active' | 'online' | 'offline' | 'expired' | 'suspended';
+type QuickStatus = 'all' | 'active' | 'online' | 'offline' | 'expired' | 'suspended' | 'due';
 type BulkModal = 'delete' | 'sms' | 'router' | 'package' | 'accStatus' | 'recharge' | null;
 
-const QUICK_STATUSES: QuickStatus[] = ['all', 'active', 'online', 'offline', 'expired', 'suspended'];
+const QUICK_STATUSES: QuickStatus[] = ['all', 'active', 'online', 'offline', 'expired', 'suspended', 'due'];
 
 /** Quick status pill → backend list filter. */
 const QUICK_FILTER: Record<QuickStatus, CustomerListFilters> = {
@@ -100,6 +100,7 @@ const QUICK_FILTER: Record<QuickStatus, CustomerListFilters> = {
   offline: { connection: 'offline' },
   expired: { status: 'expired' },
   suspended: { connStatus: 'disconn' },
+  due: { status: 'due' },
 };
 
 const ymd = (value: string | null | undefined) => (value ? value.slice(0, 10) : '—');
